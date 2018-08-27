@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Rhino Inside Revit</Name>
+    <Assembly>RhinoInside.Revit\RhinoInside.Revit.dll</Assembly>
+    <ClientId>02EFF7F0-4921-4FD3-91F6-A87B6BA9BF74</ClientId>
+    <FullClassName>RhinoInside.Revit</FullClassName>
+    <VendorId>RMA</VendorId>
+    <VendorDescription>Robert McNeel &amp; Associates</VendorDescription>
+  </AddIn>
+</RevitAddIns>
