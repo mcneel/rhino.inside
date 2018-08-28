@@ -104,28 +104,38 @@ namespace RhinoInside
 
     static internal IList<GeometryObject> Convert(Rhino.Geometry.Mesh[] meshes)
     {
-      List<XYZ> vertexs = new List<XYZ>(4);
+      List<XYZ> faceVertices = new List<XYZ>(4);
 
       var builder = new TessellatedShapeBuilder();
-      builder.OpenConnectedFaceSet(false);
       foreach (var mesh in meshes)
       {
-        var vertices = mesh.Vertices;
-        foreach (var face in mesh.Faces)
+        Rhino.Geometry.Mesh[] pieces = mesh.DisjointMeshCount > 1 ?
+                                       mesh.SplitDisjointPieces() :
+                                       new Rhino.Geometry.Mesh[1] { mesh };
+
+        foreach (var piece in pieces)
         {
-          var v = new Point3d[] { vertices[face.A], vertices[face.B], vertices[face.C], vertices[face.D] };
+          bool isOriented = false;
+          bool hasBoundary = false;
+          bool isSolid = piece.IsClosed && piece.IsManifold(true, out isOriented, out hasBoundary) && isOriented;
+          var vertices = piece.Vertices;
 
-          vertexs.Add(Convert(v[0]));
-          vertexs.Add(Convert(v[1]));
-          vertexs.Add(Convert(v[2]));
-          if (face.IsQuad)
-            vertexs.Add(Convert(v[3]));
+          builder.OpenConnectedFaceSet(isSolid);
+          foreach (var face in piece.Faces)
+          {
+            faceVertices.Add(Convert(vertices[face.A]));
+            faceVertices.Add(Convert(vertices[face.B]));
+            faceVertices.Add(Convert(vertices[face.C]));
+            if (face.IsQuad)
+              faceVertices.Add(Convert(vertices[face.D]));
 
-          builder.AddFace(new TessellatedFace(vertexs, ElementId.InvalidElementId));
-          vertexs.Clear();
+            builder.AddFace(new TessellatedFace(faceVertices, ElementId.InvalidElementId));
+            faceVertices.Clear();
+          }
+          builder.CloseConnectedFaceSet();
         }
       }
-      builder.CloseConnectedFaceSet();
+
       builder.Target = TessellatedShapeBuilderTarget.AnyGeometry;
       builder.Fallback = TessellatedShapeBuilderFallback.Mesh;
       builder.Build();
@@ -133,8 +143,7 @@ namespace RhinoInside
       TessellatedShapeBuilderResult result = builder.GetBuildResult();
       return result.GetGeometricalObjects();
     }
-
-    #endregion
+#endregion
   }
 
 }
