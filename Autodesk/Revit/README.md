@@ -14,7 +14,7 @@ These instructions will get you a copy of the project up and running on your loc
 git clone --recursive https://github.com/mcneel/rhino.inside.git rhino.inside
 ```
 2. In Visual Studio: open _rhino.inside\Autodesk\Revit\RhinoInside.Revit.sln_.
-3. Set the current configuration acording the Revit version you have installed.
+3. Set the solution configuration acording the Revit version you have installed.
 4. Navigate to _Build_ > _Build Solution_ to begin your build.
 
 ### Installing & Uninstalling
