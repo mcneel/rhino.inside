@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2003
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RhinoInside.AutoCAD", "RhinoInside.AutoCAD.csproj", "{313CF970-019B-47F4-AA8E-728F3864B6EE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug 2019|Any CPU = Debug 2019|Any CPU
+		Release 2019|Any CPU = Release 2019|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{313CF970-019B-47F4-AA8E-728F3864B6EE}.Debug 2019|Any CPU.ActiveCfg = Debug 2019|Any CPU
+		{313CF970-019B-47F4-AA8E-728F3864B6EE}.Debug 2019|Any CPU.Build.0 = Debug 2019|Any CPU
+		{313CF970-019B-47F4-AA8E-728F3864B6EE}.Release 2019|Any CPU.ActiveCfg = Release 2019|Any CPU
+		{313CF970-019B-47F4-AA8E-728F3864B6EE}.Release 2019|Any CPU.Build.0 = Release 2019|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8573FBDD-898C-4BAE-9B99-D3F85933DF86}
+	EndGlobalSection
+EndGlobal
