@@ -6,5 +6,5 @@ The samples in this repository are organized by folders that correspond to the C
 
 This repository contains samples for:
 - [Autodesk](Autodesk)
-   - [Revit](Autodesk/Revit)
    - [AutoCAD](Autodesk/AutoCAD)
+   - [Revit](Autodesk/Revit)
