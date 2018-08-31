@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using Autodesk.Revit.UI;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
 
 using Rhino.Geometry;
 
@@ -26,7 +26,7 @@ namespace RhinoInside
       var buttonData = new PushButtonData("cmdRhinoInsideSample1", "Sample 1", thisAssembly.Location, MethodBase.GetCurrentMethod().DeclaringType.FullName);
       PushButton pushButton = ribbonPanel.AddItem(buttonData) as PushButton;
       pushButton.ToolTip = "Creates a mesh sphere";
-      pushButton.LargeImage = Revit.rhinoLogo;
+      pushButton.LargeImage = Revit._rhinoLogo;
     }
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {

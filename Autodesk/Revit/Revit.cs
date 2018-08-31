@@ -12,6 +12,7 @@ using Autodesk;
 using Autodesk.Revit;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Events;
 using Autodesk.Revit.ApplicationServices;
 
 using Rhino.Runtime.InProcess;
@@ -46,8 +47,110 @@ namespace RhinoInside
 
     #region IExternalApplication Members
 
-    private RhinoCore rhinoCore;
+    internal static BitmapImage _rhinoLogo = LoadImage("RhinoInside.Resources.Rhino.png");
 
+    private RhinoCore _rhinoCore;
+    public IntPtr MainWindowHandle { get; private set; }
+    public UIControlledApplication ApplicationUI { get; private set; }
+
+    public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
+    {
+      ApplicationUI = applicationUI;
+
+#if REVIT_2019
+      MainWindowHandle = ApplicationUI.MainWindowHandle;
+#else
+      MainWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
+#endif
+
+      // Load Rhino
+      try
+      {
+        var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
+        _rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Normal, MainWindowHandle);
+      }
+      catch (Exception)
+      {
+        return Autodesk.Revit.UI.Result.Failed;
+      }
+
+      // Register UI
+      {
+        RibbonPanel ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
+
+        Sample1.CreateUI(ribbonPanel);
+      }
+
+      // Add an Idling event handler to notify Rhino when the process is idle
+      ApplicationUI.Idling += new EventHandler<IdlingEventArgs>(OnIdle);
+
+      return Autodesk.Revit.UI.Result.Succeeded;
+    }
+
+    public Autodesk.Revit.UI.Result OnShutdown(UIControlledApplication applicationUI)
+    {
+      // Remove the Idling event handler
+      ApplicationUI.Idling -= new EventHandler<IdlingEventArgs>(OnIdle);
+
+      // Unload Rhino
+      try
+      {
+        _rhinoCore.Dispose();
+      }
+      catch (Exception)
+      {
+        return Autodesk.Revit.UI.Result.Failed;
+      }
+
+      ApplicationUI = null;
+      return Autodesk.Revit.UI.Result.Succeeded;
+    }
+
+    public void OnIdle(object sender, IdlingEventArgs e)
+    {
+      if (_rhinoCore.OnIdle())
+        e.SetRaiseWithoutDelay();
+
+      var uiApp = sender as UIApplication;
+      if (uiApp == null)
+        return;
+
+      var doc = uiApp.ActiveUIDocument?.Document;
+      if (doc == null)
+        return;
+
+      if (_bakeQueue.Count > 0)
+      {
+        using (var trans = new Transaction(doc))
+        {
+          if (trans.Start("BakeGeometry") == TransactionStatus.Started)
+          {
+            var categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
+            while (_bakeQueue.Count > 0)
+            {
+              var ds = DirectShape.CreateElement(doc, categoryId);
+              ds.SetShape(_bakeQueue.Dequeue());
+            }
+          }
+
+          trans.Commit();
+        }
+      }
+    }
+
+    private static Queue<IList<GeometryObject>> _bakeQueue = new Queue<IList<GeometryObject>>();
+    public static void BakeGeometry(IEnumerable<Rhino.Geometry.Brep> breps)
+    {
+      lock(_bakeQueue)
+      {
+        foreach (var list in Convert(breps))
+          _bakeQueue.Enqueue(list);
+      }
+    }
+
+    #endregion
+
+    #region Utility methods
     static private BitmapImage LoadImage(string name)
     {
       var bmi = new BitmapImage();
@@ -56,53 +159,13 @@ namespace RhinoInside
       bmi.EndInit();
       return bmi;
     }
-    internal static BitmapImage rhinoLogo = LoadImage("RhinoInside.Resources.Rhino.png");
 
-    public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication application)
-    {
-      // Load Rhino
-      try
-      {
-        var schemeName = application.ControlledApplication.VersionName.Replace(' ', '-');
-        rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}" });
-      }
-      catch (Exception )
-      {
-        return Autodesk.Revit.UI.Result.Failed;
-      }
-
-      // Add a new ribbon panel
-      RibbonPanel ribbonPanel = application.CreateRibbonPanel("Rhinoceros");
-
-      Sample1.CreateUI(ribbonPanel);
-
-      return Autodesk.Revit.UI.Result.Succeeded;
-    }
-
-    public Autodesk.Revit.UI.Result OnShutdown(UIControlledApplication application)
-    {
-      // Unload Rhino
-      try
-      {
-        rhinoCore.Dispose();
-      }
-      catch (Exception)
-      {
-        return Autodesk.Revit.UI.Result.Failed;
-      }
-
-      return Autodesk.Revit.UI.Result.Succeeded;
-    }
-
-    #endregion
-
-    #region Utility methods
     static internal XYZ Convert(Point3d p)
     {
       return new XYZ(p.X, p.Y, p.Z);
     }
 
-    static internal IList<GeometryObject> Convert(Rhino.Geometry.Mesh[] meshes)
+    static internal IList<GeometryObject> Convert(IEnumerable<Rhino.Geometry.Mesh> meshes)
     {
       List<XYZ> faceVertices = new List<XYZ>(4);
 
@@ -115,6 +178,8 @@ namespace RhinoInside
 
         foreach (var piece in pieces)
         {
+          piece.Faces.ConvertNonPlanarQuadsToTriangles(0.001, Rhino.RhinoMath.UnsetValue, 5);
+
           bool isOriented = false;
           bool hasBoundary = false;
           bool isSolid = piece.IsClosed && piece.IsManifold(true, out isOriented, out hasBoundary) && isOriented;
@@ -143,7 +208,16 @@ namespace RhinoInside
       TessellatedShapeBuilderResult result = builder.GetBuildResult();
       return result.GetGeometricalObjects();
     }
-#endregion
+
+    static internal IEnumerable<IList<GeometryObject>> Convert(IEnumerable<Rhino.Geometry.Brep> breps)
+    {
+      foreach(var brep in breps)
+      {
+        var meshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, MeshingParameters.Default);
+        yield return Convert(meshes);
+      }
+    }
+    #endregion
   }
 
 }
