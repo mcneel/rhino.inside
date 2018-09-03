@@ -15,6 +15,7 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using Autodesk.Revit.ApplicationServices;
 
+using Rhino;
 using Rhino.Runtime.InProcess;
 using Rhino.Geometry;
 
@@ -50,8 +51,6 @@ namespace RhinoInside
     internal static BitmapImage _rhinoLogo = LoadImage("RhinoInside.Resources.Rhino.png");
 
     private RhinoCore _rhinoCore;
-    public IntPtr MainWindowHandle { get; private set; }
-    public UIControlledApplication ApplicationUI { get; private set; }
 
     public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
     {
@@ -111,31 +110,33 @@ namespace RhinoInside
       if (_rhinoCore.OnIdle())
         e.SetRaiseWithoutDelay();
 
-      var uiApp = sender as UIApplication;
-      if (uiApp == null)
-        return;
-
-      var doc = uiApp.ActiveUIDocument?.Document;
-      if (doc == null)
-        return;
-
-      if (_bakeQueue.Count > 0)
+      lock (_bakeQueue)
       {
-        using (var trans = new Transaction(doc))
-        {
-          if (trans.Start("BakeGeometry") == TransactionStatus.Started)
-          {
-            var categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
-            while (_bakeQueue.Count > 0)
-            {
-              var ds = DirectShape.CreateElement(doc, categoryId);
-              ds.SetShape(_bakeQueue.Dequeue());
-            }
-          }
+        var uiApp = sender as UIApplication;
+        var doc = uiApp?.ActiveUIDocument?.Document;
 
-          trans.Commit();
+        if (_bakeQueue.Count > 0 && doc != null)
+        {
+          using (var trans = new Transaction(doc))
+          {
+            if (trans.Start("BakeGeometry") == TransactionStatus.Started)
+            {
+              var categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
+              while (_bakeQueue.Count > 0)
+              {
+                var geometryList = _bakeQueue.Dequeue();
+                if (geometryList != null)
+                {
+                  var ds = DirectShape.CreateElement(doc, categoryId);
+                  ds.SetShape(geometryList);
+                }
+              }
+            }
+
+            trans.Commit();
+          }
         }
-      }
+      }      
     }
 
     private static Queue<IList<GeometryObject>> _bakeQueue = new Queue<IList<GeometryObject>>();
@@ -150,7 +151,14 @@ namespace RhinoInside
 
     #endregion
 
-    #region Utility methods
+    #region Public SDK
+    public static IntPtr MainWindowHandle { get; private set; }
+    public static UIControlledApplication ApplicationUI { get; private set; }
+
+    public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? 1.0 : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Rhino.UnitSystem.Feet);
+    public const double AbsoluteRevitTolerance = (1.0 / 12.0) / 32.0; // in feets
+    public static double AbsoluteTolerance => AbsoluteRevitTolerance / RhinoToRevitModelScaleFactor; // in Rhino model units
+
     static private BitmapImage LoadImage(string name)
     {
       var bmi = new BitmapImage();
@@ -170,15 +178,21 @@ namespace RhinoInside
       List<XYZ> faceVertices = new List<XYZ>(4);
 
       var builder = new TessellatedShapeBuilder();
+      builder.Target = TessellatedShapeBuilderTarget.AnyGeometry;
+      builder.Fallback = TessellatedShapeBuilderFallback.Mesh;
+
       foreach (var mesh in meshes)
       {
         Rhino.Geometry.Mesh[] pieces = mesh.DisjointMeshCount > 1 ?
                                        mesh.SplitDisjointPieces() :
-                                       new Rhino.Geometry.Mesh[1] { mesh };
+                                       new Rhino.Geometry.Mesh[] { mesh };
 
         foreach (var piece in pieces)
         {
-          piece.Faces.ConvertNonPlanarQuadsToTriangles(0.001, Rhino.RhinoMath.UnsetValue, 5);
+          if(RhinoToRevitModelScaleFactor != 1.0)
+            piece.Scale(RhinoToRevitModelScaleFactor);
+
+          piece.Faces.ConvertNonPlanarQuadsToTriangles(RhinoMath.ZeroTolerance, RhinoMath.UnsetValue, 5);
 
           bool isOriented = false;
           bool hasBoundary = false;
@@ -201,9 +215,14 @@ namespace RhinoInside
         }
       }
 
-      builder.Target = TessellatedShapeBuilderTarget.AnyGeometry;
-      builder.Fallback = TessellatedShapeBuilderFallback.Mesh;
-      builder.Build();
+      try
+      {
+        builder.Build();
+      }
+      catch(Autodesk.Revit.Exceptions.InternalException)
+      {
+        return null;
+      }
 
       TessellatedShapeBuilderResult result = builder.GetBuildResult();
       return result.GetGeometricalObjects();
@@ -211,10 +230,33 @@ namespace RhinoInside
 
     static internal IEnumerable<IList<GeometryObject>> Convert(IEnumerable<Rhino.Geometry.Brep> breps)
     {
-      foreach(var brep in breps)
+      // TODO: Use Autodesk.Revit.DB.BRepBuilder meanwile we mesh the BREP
+
+      var mp = MeshingParameters.Default;
+      mp.MinimumEdgeLength = AbsoluteTolerance;
+
+      foreach (var brep in breps)
+        yield return Convert(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp));
+    }
+
+    static internal IEnumerable<IList<GeometryObject>> Convert(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
+    {
+      var mp = MeshingParameters.Default;
+      mp.MinimumEdgeLength = AbsoluteTolerance;
+
+      foreach (var geometry in geometries)
       {
-        var meshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, MeshingParameters.Default);
-        yield return Convert(meshes);
+        switch (geometry)
+        {
+          case Rhino.Geometry.Brep brep:
+            yield return Convert(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp));
+            break;
+          case Rhino.Geometry.Mesh mesh:
+            yield return Convert(new Rhino.Geometry.Mesh[] { mesh.DuplicateMesh() });
+            break;
+        }
+
+        yield return null;
       }
     }
     #endregion
