@@ -140,11 +140,11 @@ namespace RhinoInside
     }
 
     private static Queue<IList<GeometryObject>> _bakeQueue = new Queue<IList<GeometryObject>>();
-    public static void BakeGeometry(IEnumerable<Rhino.Geometry.Brep> breps)
+    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
       lock(_bakeQueue)
       {
-        foreach (var list in Convert(breps))
+        foreach (var list in Convert(geometries))
           _bakeQueue.Enqueue(list);
       }
     }
@@ -155,8 +155,8 @@ namespace RhinoInside
     public static IntPtr MainWindowHandle { get; private set; }
     public static UIControlledApplication ApplicationUI { get; private set; }
 
-    public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? 1.0 : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Rhino.UnitSystem.Feet);
-    public const double AbsoluteRevitTolerance = (1.0 / 12.0) / 32.0; // in feets
+    public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? Double.NaN : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Rhino.UnitSystem.Feet);
+    public const double AbsoluteRevitTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feets
     public static double AbsoluteTolerance => AbsoluteRevitTolerance / RhinoToRevitModelScaleFactor; // in Rhino model units
 
     static private BitmapImage LoadImage(string name)
@@ -191,6 +191,9 @@ namespace RhinoInside
         {
           if(RhinoToRevitModelScaleFactor != 1.0)
             piece.Scale(RhinoToRevitModelScaleFactor);
+
+          // Meshes with edges smaller than AbsoluteRevitTolerance (1/16 inch) are not welcome in Revit
+          while (piece.CollapseFacesByEdgeLength(false, AbsoluteRevitTolerance) > 0) ;
 
           piece.Faces.ConvertNonPlanarQuadsToTriangles(RhinoMath.ZeroTolerance, RhinoMath.UnsetValue, 5);
 
