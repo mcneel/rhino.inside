@@ -1,7 +1,16 @@
 # Rhino Inside Revit
-This folder contains the Revit sample project.
+The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.  This folder contains the Rhino inside Revit sample project.  This project demonstrates:
+
+1. Starting Rhino and Grasshopper as a Revit Addon.
+
+2. Grasshopper definitions can be opened and previewed in Rhino.
+
+3. Geometry from Rhino and Grasshopper can be pushed into Revit.
+
+![](Resources\sample-shot.jpg)
+
 ## Getting started
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 ### Prerequisites
 1. Git client. ([download](https://git-scm.com/downloads))
 2. Visual Studio 2017 ([download](https://visualstudio.microsoft.com/downloads/))
@@ -14,7 +23,7 @@ These instructions will get you a copy of the project up and running on your loc
 git clone --recursive https://github.com/mcneel/rhino.inside.git rhino.inside
 ```
 2. In Visual Studio: open _rhino.inside\Autodesk\Revit\RhinoInside.Revit.sln_.
-3. Set the solution configuration acording the Revit version you have installed.
+3. Set the Solution Configuration drop-down according the Revit version you have installed. This will properly link the correct Revit API libraries to the project.
 4. Navigate to _Build_ > _Build Solution_ to begin your build.
 
 ### Installing & Uninstalling
@@ -31,7 +40,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 3. You should have an sphere in the Revil model.
 ### Sample2
 1. Rhino window will open on top of Revit window.
-2. Create some breps in Rhino.
+2. Create some breps in Rhino. (It is best if they are building size objects to start.)
 3. Run _Grasshopper_ command.
 4. Open Sample2.ghx file in Grasshopper.
 5. Inside Grasshopper using the _Brep_ param pick the breps you created in step 2.
