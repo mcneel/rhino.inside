@@ -7,7 +7,7 @@ The Rhino Inside technology allows Rhino and Grasshopper to be embedded within o
 
 3. Geometry from Rhino and Grasshopper can be pushed into Revit.
 
-![](Resources\sample-shot.jpg)
+![](Resources/sample-shot.jpg)
 
 ## Getting started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
