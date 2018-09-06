@@ -1,5 +1,5 @@
 # Rhino Inside 
-The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.  For instance it may be possible to:
+The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.  It may be possible to:
 
 1. Starting Rhino and Grasshopper as an add in another product.
 2. Call directly into the native APIs from a Grashopper or RHino plugin.
