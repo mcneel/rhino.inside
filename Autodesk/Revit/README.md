@@ -1,10 +1,10 @@
 # Rhino Inside Revit
-The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.  This folder contains the Rhino inside Revit sample project.  This project demonstrates:
+The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.
+
+This folder contains a Rhino inside Revit sample project that demonstrates:
 
 1. Starting Rhino and Grasshopper as a Revit Addon.
-
 2. Grasshopper definitions can be opened and previewed in Rhino.
-
 3. Geometry from Rhino and Grasshopper can be pushed into Revit.
 
 ![](Resources/sample-shot.jpg)
@@ -42,7 +42,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 1. Rhino window will open on top of Revit window.
 2. Create some breps in Rhino. (It is best if they are building size objects to start.)
 3. Run _Grasshopper_ command.
-4. Open Sample2.ghx file in Grasshopper.
+4. Open _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\RhinoInside.Revit\\Sample2.ghx"_ file in Grasshopper.
 5. Inside Grasshopper using the _Brep_ param pick the breps you created in step 2.
 6. Inside Grasshopper click on the button _Push to Bake_.
 7. You should have the breps created in step 2 in the Revit model.
