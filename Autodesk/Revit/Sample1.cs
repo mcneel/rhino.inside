@@ -48,7 +48,7 @@ namespace RhinoInside
 
           var ds = DirectShape.CreateElement(doc, categoryId);
           ds.Name = "Sphere";
-          ds.SetShape(Revit.Convert(meshes));
+          ds.SetShape(Revit.Convert(meshes).ToList());
 
           trans.Commit();
         }

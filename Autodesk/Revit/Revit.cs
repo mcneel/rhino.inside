@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
@@ -68,8 +69,9 @@ namespace RhinoInside
         var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
         _rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Normal, MainWindowHandle);
       }
-      catch (Exception)
+      catch (Exception e)
       {
+        Debug.Fail(e.Source, e.Message);
         return Autodesk.Revit.UI.Result.Failed;
       }
 
@@ -96,8 +98,9 @@ namespace RhinoInside
       {
         _rhinoCore.Dispose();
       }
-      catch (Exception)
+      catch (Exception e)
       {
+        Debug.Fail(e.Source, e.Message);
         return Autodesk.Revit.UI.Result.Failed;
       }
 
@@ -107,15 +110,22 @@ namespace RhinoInside
 
     public void OnIdle(object sender, IdlingEventArgs e)
     {
+      // 1. Do Rhino pending OnIdle tasks
       if (_rhinoCore.OnIdle())
-        e.SetRaiseWithoutDelay();
-
-      lock (_bakeQueue)
       {
-        var uiApp = sender as UIApplication;
-        var doc = uiApp?.ActiveUIDocument?.Document;
+        e.SetRaiseWithoutDelay();
+        return;
+      }
 
-        if (_bakeQueue.Count > 0 && doc != null)
+      // Document dependant tasks need a document
+      var doc = (sender as UIApplication)?.ActiveUIDocument?.Document;
+      if (doc == null)
+        return;
+
+      // 2. Do all BakeGeometry pending tasks
+      lock(_bakeQueue)
+      {
+        if (_bakeQueue.Count > 0)
         {
           using (var trans = new Transaction(doc))
           {
@@ -136,13 +146,13 @@ namespace RhinoInside
             trans.Commit();
           }
         }
-      }      
+      }
     }
 
     private static Queue<IList<GeometryObject>> _bakeQueue = new Queue<IList<GeometryObject>>();
     public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
-      lock(_bakeQueue)
+      lock (_bakeQueue)
       {
         foreach (var list in Convert(geometries))
           _bakeQueue.Enqueue(list);
@@ -173,7 +183,7 @@ namespace RhinoInside
       return new XYZ(p.X, p.Y, p.Z);
     }
 
-    static internal IList<GeometryObject> Convert(IEnumerable<Rhino.Geometry.Mesh> meshes)
+    static internal IEnumerable<GeometryObject> Convert(IEnumerable<Rhino.Geometry.Mesh> meshes)
     {
       List<XYZ> faceVertices = new List<XYZ>(4);
 
@@ -189,9 +199,6 @@ namespace RhinoInside
 
         foreach (var piece in pieces)
         {
-          if(RhinoToRevitModelScaleFactor != 1.0)
-            piece.Scale(RhinoToRevitModelScaleFactor);
-
           // Meshes with edges smaller than AbsoluteRevitTolerance (1/16 inch) are not welcome in Revit
           while (piece.CollapseFacesByEdgeLength(false, AbsoluteRevitTolerance) > 0) ;
 
@@ -222,8 +229,9 @@ namespace RhinoInside
       {
         builder.Build();
       }
-      catch(Autodesk.Revit.Exceptions.InternalException)
+      catch (Autodesk.Revit.Exceptions.ApplicationException e)
       {
+        Debug.Fail(e.Source, e.Message);
         return null;
       }
 
@@ -231,31 +239,272 @@ namespace RhinoInside
       return result.GetGeometricalObjects();
     }
 
-    static internal IEnumerable<IList<GeometryObject>> Convert(IEnumerable<Rhino.Geometry.Brep> breps)
+    static internal IEnumerable<Autodesk.Revit.DB.Curve> Convert(Rhino.Geometry.Curve curve)
     {
-      // TODO: Use Autodesk.Revit.DB.BRepBuilder meanwile we mesh the BREP
+      var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, AbsoluteTolerance, 0.00628318530717958647692528676656);
+      if (simplifiedCurve != null)
+        curve = simplifiedCurve;
 
-      var mp = MeshingParameters.Default;
-      mp.MinimumEdgeLength = AbsoluteTolerance;
+      switch (curve)
+      {
+        case Rhino.Geometry.PolyCurve polyCurve:
 
-      foreach (var brep in breps)
-        yield return Convert(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp));
+          polyCurve.RemoveNesting();
+          for (int s = 0; s < polyCurve.SegmentCount; ++s)
+          {
+            foreach (var segment in Convert(polyCurve.SegmentCurve(s)))
+              yield return segment;
+          }
+          break;
+
+        case Rhino.Geometry.NurbsCurve nurbsCurve:
+
+          nurbsCurve.Knots.RemoveMultipleKnots(1, nurbsCurve.Degree, Revit.AbsoluteRevitTolerance);
+
+          var knots = new List<double>(nurbsCurve.Knots.Count + 2);
+          knots.Add(nurbsCurve.Knots[0]);
+          foreach (var k in nurbsCurve.Knots)
+            knots.Add(k);
+          knots.Add(knots[knots.Count - 1]);
+
+          int controlPointsCount = nurbsCurve.Points.Count;
+          var controlPoints = new List<XYZ>(controlPointsCount);
+          foreach (var p in nurbsCurve.Points)
+            controlPoints.Add(Convert(p.Location));
+
+          Debug.Assert(nurbsCurve.Degree >= 1);
+          Debug.Assert(controlPoints.Count > nurbsCurve.Degree);
+          Debug.Assert(knots.Count == nurbsCurve.Degree + controlPoints.Count + 1);
+
+          Autodesk.Revit.DB.Curve nurbSpline = null;
+          try
+          {
+            if (nurbsCurve.IsRational)
+            {
+              var weights = new List<double>(controlPointsCount);
+              foreach (var p in nurbsCurve.Points)
+              {
+                Debug.Assert(p.Weight > 0.0);
+                weights.Add(p.Weight);
+              }
+
+              Debug.Assert(weights.Count == controlPoints.Count);
+
+              nurbSpline = NurbSpline.CreateCurve(nurbsCurve.Degree, knots, controlPoints, weights);
+            }
+            else
+            {
+              nurbSpline = NurbSpline.CreateCurve(nurbsCurve.Degree, knots, controlPoints);
+            }
+          }
+          catch (Autodesk.Revit.Exceptions.ApplicationException e)
+          {
+            Debug.Fail(e.Source, e.Message);
+          }
+
+          yield return nurbSpline;
+          break;
+
+        default:
+          foreach (var c in Convert(curve.ToNurbsCurve()))
+            yield return c;
+          break;
+      }
+    }
+
+    static internal BRepBuilderSurfaceGeometry Convert(Rhino.Geometry.Surface faceSurface)
+    {
+      switch (faceSurface)
+      {
+        case Rhino.Geometry.NurbsSurface nurbsSurface:
+
+          int degreeU = nurbsSurface.Degree(0), degreeV = nurbsSurface.Degree(1);
+
+          var knotsU = new List<double>(nurbsSurface.KnotsU.Count + 2);
+          knotsU.Add(nurbsSurface.KnotsU[0]);
+          foreach (var k in nurbsSurface.KnotsU)
+            knotsU.Add(k);
+          knotsU.Add(knotsU[knotsU.Count - 1]);
+
+          var knotsV = new List<double>(nurbsSurface.KnotsV.Count + 2);
+          knotsV.Add(nurbsSurface.KnotsV[0]);
+          foreach (var k in nurbsSurface.KnotsV)
+            knotsV.Add(k);
+          knotsV.Add(knotsV[knotsV.Count - 1]);
+
+          int controlPointsCount = nurbsSurface.Points.CountU * nurbsSurface.Points.CountV;
+          var controlPoints = new List<XYZ>(controlPointsCount);
+          foreach (var p in nurbsSurface.Points)
+            controlPoints.Add(Convert(p.Location));
+
+          Debug.Assert(degreeU >= 1);
+          Debug.Assert(degreeV >= 1);
+          Debug.Assert(knotsU.Count >= 2 * (degreeU + 1));
+          Debug.Assert(knotsV.Count >= 2 * (degreeV + 1));
+          Debug.Assert(controlPoints.Count == (knotsU.Count - degreeU - 1) * (knotsV.Count - degreeV - 1));
+
+
+          try
+          {
+            if (nurbsSurface.IsRational)
+            {
+              var weights = new List<double>(controlPointsCount);
+              foreach (var p in nurbsSurface.Points)
+                weights.Add(p.Weight);
+
+              return BRepBuilderSurfaceGeometry.CreateNURBSSurface
+              (
+                degreeU, degreeV, knotsU, knotsV, controlPoints, weights, false, null
+              );
+            }
+            else
+            {
+              return BRepBuilderSurfaceGeometry.CreateNURBSSurface
+              (
+                degreeU, degreeV, knotsU, knotsV, controlPoints, false, null
+              );
+            }
+          }
+          catch (Autodesk.Revit.Exceptions.ApplicationException e)
+          {
+            Debug.Fail(e.Source, e.Message);
+            return null;
+          }
+      }
+
+      return Convert(faceSurface.ToNurbsSurface());
+    }
+
+    private static Rhino.Geometry.Brep SplitClosedFaces(Rhino.Geometry.Brep brep, double tolerance)
+    {
+      Brep brepToSplit;
+      do
+      {
+        brepToSplit = brep;
+        foreach (var face in brepToSplit.Faces)
+        {
+          var splittersU = face.IsClosed(0) ? face.TrimAwareIsoCurve(0, face.Domain(0).Mid) : null;
+          var splittersV = face.IsClosed(1) ? face.TrimAwareIsoCurve(1, face.Domain(1).Mid) : null;
+
+          var splittersULength = (splittersU?.Length).GetValueOrDefault();
+          var splittersVLength = (splittersV?.Length).GetValueOrDefault();
+          var splittersLength = splittersULength + splittersVLength;
+          if (splittersLength > 0)
+          {
+            var splitters = new Rhino.Geometry.Curve[splittersLength];
+            splittersU?.CopyTo(splitters, 0);
+            splittersV?.CopyTo(splitters, splittersULength);
+            brep = face.Split(splitters, tolerance);
+            break;
+          }
+        }
+      } while (brepToSplit != brep);
+
+      return brep;
+    }
+
+    static internal IEnumerable<GeometryObject> Convert(Rhino.Geometry.Brep brep)
+    {
+      // Convert everything inside brep to NURBS
+      if (brep.MakeValidForV2())
+      {
+        brep.Standardize();
+        //brep = SplitClosedFaces(brep, AbsoluteRevitTolerance);
+
+        foreach (var face in brep.Faces)
+        {
+          face.ShrinkFace(BrepFace.ShrinkDisableSide.ShrinkAllSides);
+
+          var builder = new BRepBuilder(face.IsSolid ? BRepType.Solid : BRepType.OpenShell);
+          //builder.AllowRemovalOfProblematicFaces();
+          //builder.SetAllowShortEdges();
+
+          var brepSurface = Convert(face.UnderlyingSurface());
+          var brepEdges = new List<BRepBuilderGeometryId>[brep.Edges.Count];
+
+          var faceId = builder.AddFace(brepSurface, face.OrientationIsReversed);
+          foreach (var loop in face.Loops)
+          {
+            var loopId = builder.AddLoop(faceId);
+            foreach (var trim in loop.Trims)
+            {
+              if (trim.TrimType != BrepTrimType.Boundary)
+                continue;
+
+              var edge = trim.Edge;
+              if (edge == null)
+                continue;
+
+              var edgeIds = brepEdges[edge.EdgeIndex];
+              if (edgeIds == null)
+              {
+                edgeIds = brepEdges[edge.EdgeIndex] = new List<BRepBuilderGeometryId>();
+                foreach (var c in Convert(edge.EdgeCurve))
+                  edgeIds.Add(builder.AddEdge(BRepBuilderEdgeGeometry.Create(c)));
+              }
+
+              if (trim.IsReversed())
+              {
+                for (int e = edgeIds.Count - 1; e >= 0; --e)
+                  builder.AddCoEdge(loopId, edgeIds[e], true);
+              }
+              else
+              {
+                for (int e = 0; e < edgeIds.Count; ++e)
+                  builder.AddCoEdge(loopId, edgeIds[e], false);
+              }
+            }
+            builder.FinishLoop(loopId);
+          }
+          builder.FinishFace(faceId);
+          builder.Finish();
+
+          if (!builder.IsResultAvailable())
+            continue;
+
+          yield return builder.GetResult();
+        }
+      }
+      else
+      {
+        // Emergency code
+        var mp = MeshingParameters.Default;
+        mp.MinimumEdgeLength = AbsoluteRevitTolerance;
+        foreach (var m in Convert(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp)))
+          yield return m;
+      }
     }
 
     static internal IEnumerable<IList<GeometryObject>> Convert(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
-      var mp = MeshingParameters.Default;
-      mp.MinimumEdgeLength = AbsoluteTolerance;
-
+      double scaleFactor = RhinoToRevitModelScaleFactor;
       foreach (var geometry in geometries)
       {
         switch (geometry)
         {
+          case Rhino.Geometry.Curve curve:
+            curve = curve.DuplicateCurve();
+
+            if (scaleFactor != 1.0)
+              curve.Scale(scaleFactor);
+
+            yield return ((IEnumerable<GeometryObject>)Convert(curve)).ToList();
+            break;
           case Rhino.Geometry.Brep brep:
-            yield return Convert(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp));
+            brep = brep.DuplicateBrep();
+
+            if (scaleFactor != 1.0)
+              brep.Scale(scaleFactor);
+
+            yield return Convert(brep).ToList();
             break;
           case Rhino.Geometry.Mesh mesh:
-            yield return Convert(new Rhino.Geometry.Mesh[] { mesh.DuplicateMesh() });
+            mesh = mesh.DuplicateMesh();
+
+            if (scaleFactor != 1.0)
+              mesh.Scale(scaleFactor);
+
+            yield return Convert(new Rhino.Geometry.Mesh[] { mesh }).ToList();
             break;
         }
 
