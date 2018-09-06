@@ -94,7 +94,7 @@
                     <item name="Name" type_name="gh_string" type_code="10">C# Script</item>
                     <item name="NickName" type_name="gh_string" type_code="10">Revit Bake</item>
                     <item name="OutParameter" type_name="gh_bool" type_code="1">true</item>
-                    <item name="Reference" index="0" type_name="gh_string" type_code="10">.\RhinoInside.Revit.dll</item>
+                    <item name="Reference" index="0" type_name="gh_string" type_code="10">%APPDATA%\Autodesk\Revit\Addins\2019\RhinoInside.Revit\RhinoInside.Revit.dll</item>
                     <item name="Reference" index="1" type_name="gh_string" type_code="10">C:\Program Files\Autodesk\Revit 2019\RevitAPIUI.dll</item>
                     <item name="Reference" index="2" type_name="gh_string" type_code="10">C:\Program Files\Autodesk\Revit 2019\RevitAPI.dll</item>
                     <item name="ReferenceCount" type_name="gh_int32" type_code="3">3</item>
