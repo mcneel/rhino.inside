@@ -3,7 +3,7 @@ The Rhino Inside technology allows Rhino and Grasshopper to be embedded within o
 
 1. Starting Rhino and Grasshopper as an add in another product.
 2. Call directly into the native APIs from a Grasshopper or Rhino plugin.
-2. Grasshopper definitions can be opened and previewed in Rhino withing the same process as the parent.
+2. Grasshopper definitions can be opened and previewed in Rhino within the same process as the parent.
 3. Object can be natively created by Rhino or Grasshopper within the parent product.
 
 ![sample-shot](Autodesk/Revit/Resources/sample-shot.jpg)
