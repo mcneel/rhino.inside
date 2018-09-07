@@ -5,7 +5,7 @@ The Rhino Inside technology allows Rhino and Grasshopper to be embedded within o
 2. Grasshopper definitions can be opened and previewed in Rhino.
 3. Geometry from Rhino and Grasshopper can be pushed into the parent product.
 
-![sample-shot](Autodesk/Revit/Resources/sample-shot.jpg)
+![sample-shot](Autodesk/Revit/doc/Sample3.gif)
 
 This repository contains all the sample developer code for loading Rhino inside other 64-bit Windows applications.
 
