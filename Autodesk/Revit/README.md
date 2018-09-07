@@ -3,9 +3,10 @@ The Rhino Inside technology allows Rhino and Grasshopper to be embedded within o
 
 This folder contains a sample project that demonstrates:
 
-* Starting Rhino and Grasshopper as a Revit Addon.
-* Grasshopper definitions can be opened and previewed in Rhino.
-* Geometry from Rhino and Grasshopper can be pushed into Revit.
+1. Starting Rhino and Grasshopper as a Revit Addon.
+2. Call directly into the native Revit APIs from a Grasshopper or Rhino plugin.
+2. Grasshopper definitions can be opened and previewed in Rhino within the Revit process.
+3. Object can be natively created by Rhino or Grasshopper within Revit through the API.
 
 ## Getting started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
