@@ -28,12 +28,14 @@ namespace RhinoInside
       pushButton.ToolTip = "Creates a mesh sphere";
       pushButton.LargeImage = Revit._rhinoLogo;
     }
+
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       // RhinoCommon code
       var sphere = new Sphere(Point3d.Origin, 12);
       var brep = sphere.ToBrep();
-      var mp = new MeshingParameters(0.5);
+      var mp = MeshingParameters.Default;
+      mp.MinimumEdgeLength = Revit.ModelAbsoluteTolerance;
       var meshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, mp);
 
       // Revit code
@@ -48,7 +50,7 @@ namespace RhinoInside
 
           var ds = DirectShape.CreateElement(doc, categoryId);
           ds.Name = "Sphere";
-          ds.SetShape(Revit.Convert(meshes));
+          ds.SetShape(Revit.Convert(meshes).ToList());
 
           trans.Commit();
         }

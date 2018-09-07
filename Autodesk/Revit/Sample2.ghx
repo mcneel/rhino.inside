@@ -98,8 +98,10 @@
                     <item name="Reference" index="1" type_name="gh_string" type_code="10">C:\Program Files\Autodesk\Revit 2019\RevitAPIUI.dll</item>
                     <item name="Reference" index="2" type_name="gh_string" type_code="10">C:\Program Files\Autodesk\Revit 2019\RevitAPI.dll</item>
                     <item name="ReferenceCount" type_name="gh_int32" type_code="3">3</item>
-                    <item name="ScriptSource" type_name="gh_string" type_code="10">    if(Bake)
-      RhinoInside.Revit.BakeGeometry(Geometry);</item>
+                    <item name="ScriptSource" type_name="gh_string" type_code="10">
+                      if(Bake)
+                      RhinoInside.Revit.BakeGeometry(Geometry);
+                    </item>
                   </items>
                   <chunks count="2">
                     <chunk name="Attributes">
