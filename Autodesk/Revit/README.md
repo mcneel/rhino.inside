@@ -51,7 +51,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 7. You should have the breps created in step 2 in the Revit model.
 
 ### Sample3
-![](doc/Sample3.jpg)
+![](doc/Sample3.gif)
 
 1. Rhino window will open on top of Revit window.
 2. Create a surface on Rhino. (It is best if it is site size objects to start.)
