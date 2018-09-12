@@ -1,28 +1,52 @@
 ﻿using System;
+using System.IO;
+using System.Reflection;
+
+using Rhino.Runtime.InProcess;
 using Rhino.Geometry;
 
 namespace HelloWorld
 {
   class Program
   {
+    #region Revit static constructor
+    static Program()
+    {
+      ResolveEventHandler OnRhinoCommonResolve = null;
+      AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
+      {
+        const string rhinoCommonAssemblyName = "RhinoCommon";
+        var assemblyName = new AssemblyName(args.Name).Name;
+
+        if (assemblyName != rhinoCommonAssemblyName)
+          return null;
+
+        AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
+
+        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+        return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
+      };
+    }
+    #endregion
+
+    [System.STAThread]
     static void Main(string[] args)
     {
       try
       {
-        RhinoLib.LaunchInProcess(RhinoLib.LoadMode.Headless, 0);
-        MeshABrep();
+        using (new RhinoCore(args))
+        {
+          MeshABrep();
+          Console.WriteLine("press any key to exit");
+          Console.ReadKey();
+        }
       }
       catch (Exception ex)
       {
-        Console.WriteLine(ex.Message);
+        Console.Error.WriteLine(ex.Message);
       }
-      Console.WriteLine("press any key to exit");
-      Console.ReadKey();
-      RhinoLib.ExitInProcess();
     }
 
-    // Place calls to RhinoCommon in a separate function from main so the jit doesn't
-    // try to load RhinoCommon until after RhinoLib.LaunchInProcess is called
     static void MeshABrep()
     {
       var sphere = new Sphere(Point3d.Origin, 12);
