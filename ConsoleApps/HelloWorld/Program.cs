@@ -9,7 +9,7 @@ namespace HelloWorld
 {
   class Program
   {
-    #region Revit static constructor
+    #region Program static constructor
     static Program()
     {
       ResolveEventHandler OnRhinoCommonResolve = null;
