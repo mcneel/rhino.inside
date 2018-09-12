@@ -19,4 +19,4 @@ This repository contains samples for:
 - [Autodesk](Autodesk)
    - [AutoCAD](Autodesk/AutoCAD)
    - [Revit](Autodesk/Revit)
-- [A simple console application](ConsoleApps)
+- [A simple console application](ConsoleApps/HelloWorld)
