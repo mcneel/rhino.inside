@@ -22,4 +22,4 @@ This repository contains samples for:
    - [Revit](Autodesk/Revit)
 - [A simple console application](ConsoleApps/HelloWorld)
 
-If you have any *questions*, [visit the discussion forum...](https://discourse.mcneel.com/c/serengeti/inside)
+If you have any questions, [visit the discussion forum...](https://discourse.mcneel.com/c/serengeti/inside)
