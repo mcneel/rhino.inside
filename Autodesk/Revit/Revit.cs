@@ -49,9 +49,9 @@ namespace RhinoInside
 
     #region IExternalApplication Members
 
-    internal static BitmapImage _rhinoLogo = LoadImage("RhinoInside.Resources.Rhino.png");
+    internal static BitmapImage RhinoLogo = LoadImage("RhinoInside.Resources.Rhino.png");
 
-    private RhinoCore _rhinoCore;
+    private RhinoCore rhinoCore;
 
     public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
     {
@@ -67,7 +67,7 @@ namespace RhinoInside
       try
       {
         var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
-        _rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Normal, MainWindowHandle);
+        rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Normal, MainWindowHandle);
       }
       catch (Exception e)
       {
@@ -96,7 +96,7 @@ namespace RhinoInside
       // Unload Rhino
       try
       {
-        _rhinoCore.Dispose();
+        rhinoCore.Dispose();
       }
       catch (Exception e)
       {
@@ -111,7 +111,7 @@ namespace RhinoInside
     public void OnIdle(object sender, IdlingEventArgs args)
     {
       // 1. Do Rhino pending OnIdle tasks
-      if (_rhinoCore.OnIdle())
+      if (rhinoCore.OnIdle())
       {
         args.SetRaiseWithoutDelay();
         return;
@@ -123,18 +123,18 @@ namespace RhinoInside
         return;
 
       // 2. Do all BakeGeometry pending tasks
-      lock (_bakeQueue)
+      lock (bakeQueue)
       {
-        if (_bakeQueue.Count > 0)
+        if (bakeQueue.Count > 0)
         {
           using (var trans = new Transaction(doc))
           {
             if (trans.Start("BakeGeometry") == TransactionStatus.Started)
             {
               var categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
-              while (_bakeQueue.Count > 0)
+              while (bakeQueue.Count > 0)
               {
-                var geometryList = _bakeQueue.Dequeue();
+                var geometryList = bakeQueue.Dequeue();
                 if (geometryList != null)
                 {
                   var ds = DirectShape.CreateElement(doc, categoryId);
@@ -149,20 +149,18 @@ namespace RhinoInside
       }
 
       // 3. Do all document actions
-      lock (_documentActions)
+      lock (documentActions)
       {
-        if (_documentActions.Count > 0)
+        if (documentActions.Count > 0)
         {
           using (var trans = new Transaction(doc))
           {
-            var a = _documentActions.Peek();
-            var name = a.GetMethodInfo().Name;
-            var s = trans.Start(name);
-            if (s == TransactionStatus.Started)
+            var action = documentActions.Peek();
+            if (trans.Start(action.GetMethodInfo().Name) == TransactionStatus.Started)
             {
               try
               {
-                _documentActions.Dequeue().Invoke(doc);
+                documentActions.Dequeue().Invoke(doc);
                 trans.Commit();
               }
               catch (Exception e)
@@ -174,26 +172,26 @@ namespace RhinoInside
           }
         }
 
-        if (_documentActions.Count > 0)
+        if (documentActions.Count > 0)
           args.SetRaiseWithoutDelay();
       }
     }
 
-    private static Queue<IList<GeometryObject>> _bakeQueue = new Queue<IList<GeometryObject>>();
+    private static Queue<IList<GeometryObject>> bakeQueue = new Queue<IList<GeometryObject>>();
     public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
-      lock (_bakeQueue)
+      lock (bakeQueue)
       {
         foreach (var list in Convert(geometries))
-          _bakeQueue.Enqueue(list);
+          bakeQueue.Enqueue(list);
       }
     }
 
-    private static Queue<Action<Document>> _documentActions = new Queue<Action<Document>>();
+    private static Queue<Action<Document>> documentActions = new Queue<Action<Document>>();
     public static void EnqueueAction(Action<Document> action)
     {
-      lock (_documentActions)
-        _documentActions.Enqueue(action);
+      lock (documentActions)
+        documentActions.Enqueue(action);
     }
 
     #endregion
