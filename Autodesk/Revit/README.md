@@ -8,6 +8,8 @@ This folder contains a sample project that demonstrates:
 2. Grasshopper definitions can be opened and previewed in Rhino within the Revit process.
 3. Object can be natively created by Rhino or Grasshopper within Revit through the API.
 
+[**Questions?** *Join the discussion...*](https://discourse.mcneel.com/c/serengeti/inside)
+
 ## Getting started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
