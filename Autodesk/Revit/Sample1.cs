@@ -12,7 +12,7 @@ using Autodesk.Revit.UI;
 
 using Rhino.Geometry;
 
-namespace RhinoInside
+namespace RhinoInside.Revit
 {
   [Transaction(TransactionMode.Manual)]
   [Regeneration(RegenerationOption.Manual)]
@@ -26,7 +26,7 @@ namespace RhinoInside
       var buttonData = new PushButtonData("cmdRhinoInsideSample1", "Sample 1", thisAssembly.Location, MethodBase.GetCurrentMethod().DeclaringType.FullName);
       PushButton pushButton = ribbonPanel.AddItem(buttonData) as PushButton;
       pushButton.ToolTip = "Creates a mesh sphere";
-      pushButton.LargeImage = Revit._rhinoLogo;
+      pushButton.LargeImage = Revit.RhinoLogo;
     }
 
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
@@ -50,7 +50,7 @@ namespace RhinoInside
 
           var ds = DirectShape.CreateElement(doc, categoryId);
           ds.Name = "Sphere";
-          ds.SetShape(Revit.Convert(meshes).ToList());
+          ds.SetShape(meshes.ToHost().ToList());
 
           trans.Commit();
         }
