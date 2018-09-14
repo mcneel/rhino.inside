@@ -12,7 +12,7 @@ using Autodesk.Revit.UI;
 
 using Rhino.Geometry;
 
-namespace RhinoInside
+namespace RhinoInside.Revit
 {
   [Transaction(TransactionMode.Manual)]
   [Regeneration(RegenerationOption.Manual)]
@@ -50,7 +50,7 @@ namespace RhinoInside
 
           var ds = DirectShape.CreateElement(doc, categoryId);
           ds.Name = "Sphere";
-          ds.SetShape(Revit.Convert(meshes).ToList());
+          ds.SetShape(meshes.ToHost().ToList());
 
           trans.Commit();
         }
