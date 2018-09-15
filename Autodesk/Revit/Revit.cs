@@ -225,6 +225,7 @@ namespace RhinoInside.Revit
     public static UIControlledApplication ApplicationUI { get; private set; }
 
     public const double ModelAbsoluteTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feets
+    public const double ModelAbsolutePlanarTolerance = Revit.ModelAbsoluteTolerance / 10; // in feets
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
 
     public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? Double.NaN : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Revit.ModelUnitSystem);
