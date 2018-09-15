@@ -58,6 +58,15 @@ namespace RhinoInside.Revit
       return xyz;
     }
 
+    static internal IList<XYZ> ToHost(this IEnumerable<ControlPoint> points)
+    {
+      var xyz = new List<XYZ>();
+      foreach (var p in points)
+        xyz.Add(p.Location.ToHost());
+
+      return xyz;
+    }
+
     static internal IList<double> ToHost(this NurbsCurveKnotList knotList)
     {
       int knotListCount = knotList.Count;
@@ -92,71 +101,6 @@ namespace RhinoInside.Revit
       }
 
       return new List<double>();
-    }
-
-    static internal IList<XYZ> ToHost(this IEnumerable<ControlPoint> points)
-    {
-      var xyz = new List<XYZ>();
-      foreach (var p in points)
-        xyz.Add(p.Location.ToHost());
-
-      return xyz;
-    }
-
-    static internal IEnumerable<GeometryObject> ToHost(this IEnumerable<Rhino.Geometry.Mesh> meshes)
-    {
-      List<XYZ> faceVertices = new List<XYZ>(4);
-
-      var builder = new TessellatedShapeBuilder();
-      builder.Target = TessellatedShapeBuilderTarget.AnyGeometry;
-      builder.Fallback = TessellatedShapeBuilderFallback.Mesh;
-
-      foreach (var mesh in meshes)
-      {
-        Rhino.Geometry.Mesh[] pieces = mesh.DisjointMeshCount > 1 ?
-                                       mesh.SplitDisjointPieces() :
-                                       new Rhino.Geometry.Mesh[] { mesh };
-
-        foreach (var piece in pieces)
-        {
-          // Meshes with edges smaller than AbsoluteRevitTolerance (1/16 inch) are not welcome in Revit
-          while (piece.CollapseFacesByEdgeLength(false, Revit.ModelAbsoluteTolerance) > 0) ;
-
-          piece.Faces.ConvertNonPlanarQuadsToTriangles(RhinoMath.ZeroTolerance, RhinoMath.UnsetValue, 5);
-
-          bool isOriented = false;
-          bool hasBoundary = false;
-          bool isSolid = piece.IsClosed && piece.IsManifold(true, out isOriented, out hasBoundary) && isOriented;
-          var vertices = piece.Vertices.ToPoint3dArray();
-
-          builder.OpenConnectedFaceSet(isSolid);
-          foreach (var face in piece.Faces)
-          {
-            faceVertices.Add(vertices[face.A].ToHost());
-            faceVertices.Add(vertices[face.B].ToHost());
-            faceVertices.Add(vertices[face.C].ToHost());
-            if (face.IsQuad)
-              faceVertices.Add(vertices[face.D].ToHost());
-
-            builder.AddFace(new TessellatedFace(faceVertices, ElementId.InvalidElementId));
-            faceVertices.Clear();
-          }
-          builder.CloseConnectedFaceSet();
-        }
-      }
-
-      try
-      {
-        builder.Build();
-      }
-      catch (Autodesk.Revit.Exceptions.ApplicationException e)
-      {
-        Debug.Fail(e.Source, e.Message);
-        return null;
-      }
-
-      TessellatedShapeBuilderResult result = builder.GetBuildResult();
-      return result.GetGeometricalObjects();
     }
 
     static internal IEnumerable<Autodesk.Revit.DB.Point> ToHost(this Rhino.Geometry.Point point)
@@ -296,8 +240,9 @@ namespace RhinoInside.Revit
 
     static private Rhino.Geometry.Brep SplitClosedFaces(Rhino.Geometry.Brep brep, double tolerance)
     {
-      Brep brepToSplit;
-      do
+      Brep brepToSplit = null;
+
+      while (brepToSplit != brep && brep != null)
       {
         brep.Standardize();
         brepToSplit = brep;
@@ -317,10 +262,12 @@ namespace RhinoInside.Revit
             splittersU?.CopyTo(splitters, 0);
             splittersV?.CopyTo(splitters, splittersULength);
             brep = face.Split(splitters, tolerance);
-            break;
+
+            if (brep == null || brep.Faces.Count == brepToSplit.Faces.Count)
+              return null;
           }
         }
-      } while (brepToSplit != brep);
+      }
 
       return brep;
     }
@@ -332,64 +279,72 @@ namespace RhinoInside.Revit
       // MakeValidForV2 converts everything inside brep to NURBS
       if (brep.MakeValidForV2())
       {
-        try
+        var splittedBrep = SplitClosedFaces(brep, Revit.ModelAbsoluteTolerance);
+        if (splittedBrep != null)
         {
-          brep = SplitClosedFaces(brep, Revit.ModelAbsoluteTolerance);
+          brep = splittedBrep;
 
-          var builder = new BRepBuilder(brep.IsSolid ? BRepType.Solid : BRepType.OpenShell);
-          //builder.AllowRemovalOfProblematicFaces();
-          builder.SetAllowShortEdges();
-
-          var brepEdges = new List<BRepBuilderGeometryId>[brep.Edges.Count];
-          foreach (var face in brep.Faces)
+          try
           {
-            var brepSurface = BuildFaceSurface(face);
+            var builder = new BRepBuilder(brep.IsSolid ? BRepType.Solid : BRepType.OpenShell);
+            //builder.AllowRemovalOfProblematicFaces();
+            builder.SetAllowShortEdges();
 
-            var faceId = builder.AddFace(brepSurface, face.OrientationIsReversed);
-            foreach (var loop in face.Loops)
+            var brepEdges = new List<BRepBuilderGeometryId>[brep.Edges.Count];
+            foreach (var face in brep.Faces)
             {
-              var loopId = builder.AddLoop(faceId);
-              foreach (var trim in loop.Trims)
+              var brepSurface = BuildFaceSurface(face);
+
+              var faceId = builder.AddFace(brepSurface, face.OrientationIsReversed);
+              foreach (var loop in face.Loops)
               {
-                if (trim.TrimType != BrepTrimType.Boundary && trim.TrimType != BrepTrimType.Mated)
-                  continue;
-
-                var edge = trim.Edge;
-                if (edge == null)
-                  continue;
-
-                var edgeIds = brepEdges[edge.EdgeIndex];
-                if (edgeIds == null)
+                var loopId = builder.AddLoop(faceId);
+                foreach (var trim in loop.Trims)
                 {
-                  edgeIds = brepEdges[edge.EdgeIndex] = new List<BRepBuilderGeometryId>();
-                  foreach (var e in edge.ToHost())
-                    edgeIds.Add(builder.AddEdge(BRepBuilderEdgeGeometry.Create(e)));
-                }
+                  if (trim.TrimType != BrepTrimType.Boundary && trim.TrimType != BrepTrimType.Mated)
+                    continue;
 
-                if (trim.IsReversed())
-                {
-                  for (int e = edgeIds.Count - 1; e >= 0; --e)
-                    builder.AddCoEdge(loopId, edgeIds[e], true);
+                  var edge = trim.Edge;
+                  if (edge == null)
+                    continue;
+
+                  var edgeIds = brepEdges[edge.EdgeIndex];
+                  if (edgeIds == null)
+                  {
+                    edgeIds = brepEdges[edge.EdgeIndex] = new List<BRepBuilderGeometryId>();
+                    foreach (var e in edge.ToHost())
+                      edgeIds.Add(builder.AddEdge(BRepBuilderEdgeGeometry.Create(e)));
+                  }
+
+                  if (trim.IsReversed())
+                  {
+                    for (int e = edgeIds.Count - 1; e >= 0; --e)
+                      builder.AddCoEdge(loopId, edgeIds[e], true);
+                  }
+                  else
+                  {
+                    for (int e = 0; e < edgeIds.Count; ++e)
+                      builder.AddCoEdge(loopId, edgeIds[e], false);
+                  }
                 }
-                else
-                {
-                  for (int e = 0; e < edgeIds.Count; ++e)
-                    builder.AddCoEdge(loopId, edgeIds[e], false);
-                }
+                builder.FinishLoop(loopId);
               }
-              builder.FinishLoop(loopId);
+              builder.FinishFace(faceId);
             }
-            builder.FinishFace(faceId);
-          }
-          builder.Finish();
+            builder.Finish();
 
-          if (builder.IsResultAvailable())
-            solid = builder.GetResult();
+            if (builder.IsResultAvailable())
+              solid = builder.GetResult();
+          }
+          catch (Autodesk.Revit.Exceptions.ApplicationException /*e*/)
+          {
+            // TODO: Fix cases with singularities
+            //Debug.Fail(e.Source, e.Message);
+          }
         }
-        catch(Exception /*e*/)
+        else
         {
-          // TODO: Fix cases with singularities
-          //Debug.Fail(e.Source, e.Message);
+          Debug.Fail("SplitClosedFaces", "SplitClosedFaces failed to split a closed surface.");
         }
       }
 
@@ -399,13 +354,68 @@ namespace RhinoInside.Revit
       }
       else
       {
-        // Emergency result is a mesh
+        // Emergency result as a mesh
         var mp = MeshingParameters.Default;
         mp.MinimumEdgeLength = Revit.ModelAbsoluteTolerance;
+        mp.ClosedObjectPostProcess = true;
+        mp.JaggedSeams = false;
 
-        foreach (var m in Rhino.Geometry.Mesh.CreateFromBrep(brep, mp).ToHost())
-          yield return m;
+        var brepMesh = new Rhino.Geometry.Mesh();
+        brepMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp));
+
+        foreach(var g in brepMesh.ToHost())
+          yield return g;
       }
+    }
+
+    static internal IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.Mesh mesh)
+    {
+      List<XYZ> faceVertices = new List<XYZ>(4);
+
+      var builder = new TessellatedShapeBuilder();
+      builder.Target = TessellatedShapeBuilderTarget.AnyGeometry;
+      builder.Fallback = TessellatedShapeBuilderFallback.Mesh;
+
+      Rhino.Geometry.Mesh[] pieces = mesh.DisjointMeshCount > 1 ?
+                                      mesh.SplitDisjointPieces() :
+                                      new Rhino.Geometry.Mesh[] { mesh };
+
+      foreach (var piece in pieces)
+      {
+        piece.Faces.ConvertNonPlanarQuadsToTriangles(Revit.ModelAbsolutePlanarTolerance, RhinoMath.UnsetValue, 5);
+
+        bool isOriented = false;
+        bool hasBoundary = false;
+        bool isSolid = piece.IsClosed && piece.IsManifold(true, out isOriented, out hasBoundary) && isOriented;
+        var vertices = piece.Vertices.ToPoint3dArray();
+
+        builder.OpenConnectedFaceSet(isSolid);
+        foreach (var face in piece.Faces)
+        {
+          faceVertices.Add(vertices[face.A].ToHost());
+          faceVertices.Add(vertices[face.B].ToHost());
+          faceVertices.Add(vertices[face.C].ToHost());
+          if (face.IsQuad)
+            faceVertices.Add(vertices[face.D].ToHost());
+
+          builder.AddFace(new TessellatedFace(faceVertices, ElementId.InvalidElementId));
+          faceVertices.Clear();
+        }
+        builder.CloseConnectedFaceSet();
+      }
+
+      IList<GeometryObject> objects = null;
+      try
+      {
+        builder.Build();
+        objects = builder.GetBuildResult().GetGeometricalObjects();
+      }
+      catch (Autodesk.Revit.Exceptions.ApplicationException e)
+      {
+        Debug.Fail(e.Source, e.Message);
+      }
+
+      return objects;
     }
 
     static internal IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
@@ -421,7 +431,7 @@ namespace RhinoInside.Revit
             if (scaleFactor != 1.0)
               point.Scale(scaleFactor);
 
-            yield return (IList<GeometryObject>) point.ToHost().ToList();
+            yield return point.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.PointCloud pointCloud:
             pointCloud = (Rhino.Geometry.PointCloud) pointCloud.DuplicateShallow();
@@ -429,7 +439,7 @@ namespace RhinoInside.Revit
             if (scaleFactor != 1.0)
               pointCloud.Scale(scaleFactor);
 
-            yield return (IList<GeometryObject>) pointCloud.ToHost().ToList();
+            yield return pointCloud.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Curve curve:
             curve = (Rhino.Geometry.Curve) curve.DuplicateShallow();
@@ -437,7 +447,7 @@ namespace RhinoInside.Revit
             if (scaleFactor != 1.0)
               curve.Scale(scaleFactor);
 
-            yield return (IList<GeometryObject>) curve.ToHost().ToList();
+            yield return curve.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Brep brep:
             brep = (Rhino.Geometry.Brep) brep.DuplicateShallow();
@@ -445,7 +455,7 @@ namespace RhinoInside.Revit
             if (scaleFactor != 1.0)
               brep.Scale(scaleFactor);
 
-            yield return (IList<GeometryObject>) brep.ToHost().ToList();
+            yield return brep.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Mesh mesh:
             mesh = (Rhino.Geometry.Mesh) mesh.DuplicateShallow();
@@ -453,7 +463,10 @@ namespace RhinoInside.Revit
             if (scaleFactor != 1.0)
               mesh.Scale(scaleFactor);
 
-            yield return (IList<GeometryObject>) (new Rhino.Geometry.Mesh[] { mesh }).ToHost().ToList();
+            // Meshes with edges smaller than AbsoluteRevitTolerance (1/16 inch) are not welcome in Revit
+            while (mesh.CollapseFacesByEdgeLength(false, Revit.ModelAbsoluteTolerance) > 0) ;
+
+            yield return mesh.ToHost().Cast<GeometryObject>().ToList();
             break;
         }
 
@@ -462,4 +475,3 @@ namespace RhinoInside.Revit
     }
   };
 }
-

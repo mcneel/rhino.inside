@@ -50,7 +50,8 @@ namespace RhinoInside.Revit
 
           var ds = DirectShape.CreateElement(doc, categoryId);
           ds.Name = "Sphere";
-          ds.SetShape(meshes.ToHost().ToList());
+          foreach(var geometryList in meshes.ToHost().ToList())
+            ds.AppendShape(geometryList);
 
           trans.Commit();
         }
