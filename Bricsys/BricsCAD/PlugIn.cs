@@ -50,6 +50,10 @@ namespace RhinoInside.BricsCAD
       {
         // ignored
       }
+
+      var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+      var editor = Application.DocumentManager.MdiActiveDocument.Editor;
+      editor.WriteMessage($"\nRhinoInside {version}");
     }
 
     public void Terminate()
