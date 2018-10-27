@@ -469,8 +469,6 @@ namespace RhinoInside.Revit
             yield return mesh.ToHost().Cast<GeometryObject>().ToList();
             break;
         }
-
-        yield return null;
       }
     }
   };
