@@ -41,10 +41,11 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 ![](doc/Sample4.png)
 
 1. Rhino window will open on top of Revit window. Minimize it.
-2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 4_.
-3. Open _"Sample4.ghx"_ file.
-4. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
-4. You should have a collection of pipes over a 3D Voronoi diagram in Revit.
+2. Open the ribbon tab called Add-Ins.
+3. Click on the button you will found on the _Rhinoceros_ panel called _Sample 4_.
+4. Open _"Sample4.ghx"_ file.
+5. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
+6. You should have a collection of pipes over a 3D Voronoi diagram in Revit.
 
 ### Sample3
 ![](doc/Sample3.gif)
