@@ -35,10 +35,25 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 * Once you launch Revit it will warn you this addon is not verified, please click on "Load allways" or "Load once".
 * Create a new project or open an existing one.
 
-### Sample1
-1. Open the ribbon tab called _Add-Ins_.
-2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 1_.
-3. You should have an sphere in the Revil model.
+### Sample4
+![](doc/Sample4.png)
+
+1. Rhino window will open on top of Revit window.
+2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 4_.
+3. Open _"Sample4.ghx"_ file.
+4. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
+4. You should have a collection of pipes over a 3D Voronoi diagram in Revit.
+
+### Sample3
+![](doc/Sample3.gif)
+
+1. Rhino window will open on top of Revit window.
+2. Create a surface on Rhino. (It is best if it is site size objects to start.)
+4. Run _Grasshopper_ command.
+5. Open _"Sample3.ghx"_ file in Grasshopper.
+6. Inside Grasshopper using the _Surface_ param pick the breps you created in step 2.
+7. Inside Grasshopper click on the button _Update Topography surface_.
+8. You should have a Topography surface in Revit.
 
 ### Sample2
 ![](doc/Sample2.jpg)
@@ -51,13 +66,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 6. Inside Grasshopper click on the button _Push to Bake_.
 7. You should have the breps created in step 2 in the Revit model.
 
-### Sample3
-![](doc/Sample3.gif)
-
-1. Rhino window will open on top of Revit window.
-2. Create a surface on Rhino. (It is best if it is site size objects to start.)
-4. Run _Grasshopper_ command.
-5. Open _"Sample3.ghx"_ file in Grasshopper.
-6. Inside Grasshopper using the _Surface_ param pick the breps you created in step 2.
-7. Inside Grasshopper click on the button _Update Topography surface_.
-8. You should have a Topography surface in Revit.
+### Sample1
+1. Open the ribbon tab called _Add-Ins_.
+2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 1_.
+3. You should have an sphere in the Revil model.
