@@ -413,6 +413,7 @@ namespace RhinoInside.Revit
       catch (Autodesk.Revit.Exceptions.ApplicationException e)
       {
         Debug.Fail(e.Source, e.Message);
+        objects = new List<GeometryObject>();
       }
 
       return objects;
