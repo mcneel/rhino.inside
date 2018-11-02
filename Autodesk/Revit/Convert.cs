@@ -413,6 +413,7 @@ namespace RhinoInside.Revit
       catch (Autodesk.Revit.Exceptions.ApplicationException e)
       {
         Debug.Fail(e.Source, e.Message);
+        objects = new List<GeometryObject>();
       }
 
       return objects;
@@ -469,8 +470,6 @@ namespace RhinoInside.Revit
             yield return mesh.ToHost().Cast<GeometryObject>().ToList();
             break;
         }
-
-        yield return null;
       }
     }
   };

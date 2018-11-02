@@ -26,7 +26,7 @@ namespace RhinoInside.Revit
   [Autodesk.Revit.Attributes.Journaling(Autodesk.Revit.Attributes.JournalingMode.NoCommandData)]
   public class Revit : IExternalApplication
   {
-    #region Revit static constructor
+#region Revit static constructor
     static Revit()
     {
       ResolveEventHandler OnRhinoCommonResolve = null;
@@ -44,12 +44,13 @@ namespace RhinoInside.Revit
         return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }
-    #endregion
+#endregion
 
-    #region IExternalApplication Members
+#region IExternalApplication Members
 
-    internal static BitmapImage RhinoLogo = LoadImage("RhinoInside.Resources.Rhino.png");
-
+    internal static BitmapImage RhinoLogo       = LoadImage("RhinoInside.Resources.Rhino.png");
+    internal static BitmapImage GrasshopperLogo = LoadImage("RhinoInside.Resources.Grasshopper.png");
+    
     private RhinoCore rhinoCore;
 
     public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
@@ -79,6 +80,7 @@ namespace RhinoInside.Revit
         RibbonPanel ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
 
         Sample1.CreateUI(ribbonPanel);
+        Sample4.CreateUI(ribbonPanel);
       }
 
       // Add an Idling event handler to notify Rhino when the process is idle
@@ -218,9 +220,9 @@ namespace RhinoInside.Revit
         documentActions.Enqueue(action);
     }
 
-    #endregion
+#endregion
 
-    #region Public Methods
+#region Public Methods
     public static IntPtr MainWindowHandle { get; private set; }
     public static UIControlledApplication ApplicationUI { get; private set; }
 
@@ -230,9 +232,9 @@ namespace RhinoInside.Revit
 
     public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? Double.NaN : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Revit.ModelUnitSystem);
     internal static double RhinoModelAbsoluteTolerance => ModelAbsoluteTolerance / RhinoToRevitModelScaleFactor; // in Rhino model units
-    #endregion
+#endregion
 
-    #region Private Methods
+#region Private Methods
     static private BitmapImage LoadImage(string name)
     {
       var bmi = new BitmapImage();
@@ -241,7 +243,7 @@ namespace RhinoInside.Revit
       bmi.EndInit();
       return bmi;
     }
-    #endregion
+#endregion
   }
 
 }
