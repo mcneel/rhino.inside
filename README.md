@@ -20,6 +20,8 @@ This repository contains samples for:
 - [Autodesk](Autodesk)
    - [AutoCAD](Autodesk/AutoCAD)
    - [Revit](Autodesk/Revit)
+- [Bricsys](Bricsys)
+   - [BricsCAD](Bricsys/BricsCAD)
 - [A simple console application](ConsoleApps/HelloWorld)
 
 **If you have any questions, [visit the discussion forum...](https://discourse.mcneel.com/c/serengeti/inside)**
