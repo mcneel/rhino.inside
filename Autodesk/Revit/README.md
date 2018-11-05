@@ -38,7 +38,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 ### Sample4
 ![](doc/Sample4.png)
 
-1. Rhino window will open on top of Revit window.
+1. Rhino window will open on top of Revit window. Minimize it.
 2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 4_.
 3. Open _"Sample4.ghx"_ file.
 4. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
