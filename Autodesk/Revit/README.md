@@ -34,7 +34,7 @@ The project is configured to copy .addon file as well as output files to the fol
 In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ command or just navigate to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\_ and remove the file _RhinoInside.Revit.addon_ and the folder _RhinoInside.Revit_.
 
 ## Using the samples
-* Once you launch Revit it will warn you this addon is not verified, please click on "Load allways" or "Load once".
+* Once you launch Revit it will warn you this addon is not verified, please click on "Load always" or "Load once".
 * Create a new project or open an existing one.
 
 ### Sample4
