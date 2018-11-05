@@ -41,7 +41,7 @@ namespace RhinoInside.Revit
       // Load Grasshopper
       PlugIn.LoadPlugIn(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF));
 
-      var filePath = string.Empty;
+      string filePath;
       using (OpenFileDialog openFileDialog = new OpenFileDialog())
       {
         openFileDialog.Filter = "Grasshopper Binary (*.gh)|*.gh|Grasshopper Xml (*.ghx)|*.ghx";
@@ -60,54 +60,57 @@ namespace RhinoInside.Revit
       if (!archive.ReadFromFile(filePath))
         return Result.Failed;
 
-      var definition = new GH_Document();
-      if (!archive.ExtractObject(definition, "Definition"))
-        return Result.Failed;
-
-      Result result = Result.Succeeded;
       var outputs = new List<KeyValuePair<string, List<GeometryBase>>>();
-      foreach (var obj in definition.Objects)
+      using (var definition = new GH_Document())
       {
-        var param = obj as IGH_Param;
-        if (param == null)
-          continue;
+        if (!archive.ExtractObject(definition, "Definition"))
+          return Result.Failed;
 
-        if (param.Sources.Count == 0 || param.Recipients.Count != 0)
-          continue;
+        foreach (var obj in definition.Objects)
+        {
+          var param = obj as IGH_Param;
+          if (param == null)
+            continue;
 
-        try
-        {
-          param.CollectData();
-          param.ComputeData();
-        }
-        catch (Exception e)
-        {
-          Debug.Fail(e.Source, e.Message);
-          param.Phase = GH_SolutionPhase.Failed;
-          result = Result.Failed;
-        }
-            
-        var output = new List<GeometryBase>();
-        var volatileData = param.VolatileData;
-        for (int p = 0; p < volatileData.PathCount; ++p)
-        {
-          foreach (var goo in volatileData.get_Branch(p))
+          if (param.Sources.Count == 0 || param.Recipients.Count != 0)
+            continue;
+
+          try
           {
-            switch (goo)
+            param.CollectData();
+            param.ComputeData();
+          }
+          catch (Exception e)
+          {
+            Debug.Fail(e.Source, e.Message);
+            param.Phase = GH_SolutionPhase.Failed;
+          }
+
+          if (param.Phase == GH_SolutionPhase.Failed)
+            return Result.Failed;
+
+          var output = new List<GeometryBase>();
+          var volatileData = param.VolatileData;
+          for (int p = 0; p < volatileData.PathCount; ++p)
+          {
+            foreach (var goo in volatileData.get_Branch(p))
             {
-              case GH_Point point: output.Add(new Rhino.Geometry.Point(point.Value)); break;
-              case GH_Curve curve: output.Add(curve.Value); break;
-              case GH_Brep brep:   output.Add(brep.Value); break;
-              case GH_Mesh mesh:   output.Add(mesh.Value); break;
+              switch (goo)
+              {
+                case GH_Point point: output.Add(new Rhino.Geometry.Point(point.Value)); break;
+                case GH_Curve curve: output.Add(curve.Value); break;
+                case GH_Brep brep:   output.Add(brep.Value); break;
+                case GH_Mesh mesh:   output.Add(mesh.Value); break;
+              }
             }
           }
-        }
 
-        if(output.Count > 0)
-          outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.Name, output));
+          if(output.Count > 0)
+            outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.Name, output));
+        }
       }
 
-      if (result == Result.Succeeded && outputs.Count > 0)
+      if (outputs.Count > 0)
       {
         var uiApp = data.Application;
         var doc = uiApp.ActiveUIDocument.Document;
@@ -135,7 +138,7 @@ namespace RhinoInside.Revit
         }
       }
 
-      return result;
+      return Result.Succeeded;
     }
   }
 }
