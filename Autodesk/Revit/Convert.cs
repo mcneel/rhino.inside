@@ -1,21 +1,12 @@
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-
-using Autodesk;
-using Autodesk.Revit;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
-using Autodesk.Revit.ApplicationServices;
-
 using Rhino;
 using Rhino.Geometry;
 using Rhino.Geometry.Collections;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace RhinoInside.Revit
 {
@@ -110,8 +101,8 @@ namespace RhinoInside.Revit
 
     static internal IEnumerable<Autodesk.Revit.DB.Point> ToHost(this Rhino.Geometry.PointCloud pointCloud)
     {
-      foreach(var p in pointCloud)
-        yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));      
+      foreach (var p in pointCloud)
+        yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));
     }
 
     static internal IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve)
@@ -193,46 +184,46 @@ namespace RhinoInside.Revit
     {
       using (var nurbsSurface = faceSurface.ToNurbsSurface())
       {
-          var degreeU = nurbsSurface.Degree(0);
-          var degreeV = nurbsSurface.Degree(1);
-          var knotsU = nurbsSurface.KnotsU.ToHost();
-          var knotsV = nurbsSurface.KnotsV.ToHost();
-          var controlPoints = nurbsSurface.Points.ToHost();
+        var degreeU = nurbsSurface.Degree(0);
+        var degreeV = nurbsSurface.Degree(1);
+        var knotsU = nurbsSurface.KnotsU.ToHost();
+        var knotsV = nurbsSurface.KnotsV.ToHost();
+        var controlPoints = nurbsSurface.Points.ToHost();
 
-          Debug.Assert(degreeU >= 1);
-          Debug.Assert(degreeV >= 1);
-          Debug.Assert(knotsU.Count >= 2 * (degreeU + 1));
-          Debug.Assert(knotsV.Count >= 2 * (degreeV + 1));
-          Debug.Assert(controlPoints.Count == (knotsU.Count - degreeU - 1) * (knotsV.Count - degreeV - 1));
+        Debug.Assert(degreeU >= 1);
+        Debug.Assert(degreeV >= 1);
+        Debug.Assert(knotsU.Count >= 2 * (degreeU + 1));
+        Debug.Assert(knotsV.Count >= 2 * (degreeV + 1));
+        Debug.Assert(controlPoints.Count == (knotsU.Count - degreeU - 1) * (knotsV.Count - degreeV - 1));
 
-          try
+        try
+        {
+          if (nurbsSurface.IsRational)
           {
-            if (nurbsSurface.IsRational)
+            var weights = new List<double>(controlPoints.Count);
+            foreach (var p in nurbsSurface.Points)
             {
-              var weights = new List<double>(controlPoints.Count);
-              foreach (var p in nurbsSurface.Points)
-              {
-                Debug.Assert(p.Weight > 0.0);
-                weights.Add(p.Weight);
-              }
+              Debug.Assert(p.Weight > 0.0);
+              weights.Add(p.Weight);
+            }
 
-              return BRepBuilderSurfaceGeometry.CreateNURBSSurface
-              (
-                degreeU, degreeV, knotsU, knotsV, controlPoints, weights, false, null
-              );
-            }
-            else
-            {
-              return BRepBuilderSurfaceGeometry.CreateNURBSSurface
-              (
-                degreeU, degreeV, knotsU, knotsV, controlPoints, false, null
-              );
-            }
+            return BRepBuilderSurfaceGeometry.CreateNURBSSurface
+            (
+              degreeU, degreeV, knotsU, knotsV, controlPoints, weights, false, null
+            );
           }
-          catch (Autodesk.Revit.Exceptions.ApplicationException e)
+          else
           {
-            Debug.Fail(e.Source, e.Message);
+            return BRepBuilderSurfaceGeometry.CreateNURBSSurface
+            (
+              degreeU, degreeV, knotsU, knotsV, controlPoints, false, null
+            );
           }
+        }
+        catch (Autodesk.Revit.Exceptions.ApplicationException e)
+        {
+          Debug.Fail(e.Source, e.Message);
+        }
       }
 
       return null;
@@ -363,7 +354,7 @@ namespace RhinoInside.Revit
         var brepMesh = new Rhino.Geometry.Mesh();
         brepMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp));
 
-        foreach(var g in brepMesh.ToHost())
+        foreach (var g in brepMesh.ToHost())
           yield return g;
       }
     }
@@ -427,7 +418,7 @@ namespace RhinoInside.Revit
         switch (geometry)
         {
           case Rhino.Geometry.Point point:
-            point = (Rhino.Geometry.Point) point.DuplicateShallow();
+            point = (Rhino.Geometry.Point)point.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               point.Scale(scaleFactor);
@@ -435,7 +426,7 @@ namespace RhinoInside.Revit
             yield return point.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.PointCloud pointCloud:
-            pointCloud = (Rhino.Geometry.PointCloud) pointCloud.DuplicateShallow();
+            pointCloud = (Rhino.Geometry.PointCloud)pointCloud.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               pointCloud.Scale(scaleFactor);
@@ -443,7 +434,7 @@ namespace RhinoInside.Revit
             yield return pointCloud.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Curve curve:
-            curve = (Rhino.Geometry.Curve) curve.DuplicateShallow();
+            curve = (Rhino.Geometry.Curve)curve.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               curve.Scale(scaleFactor);
@@ -451,7 +442,7 @@ namespace RhinoInside.Revit
             yield return curve.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Brep brep:
-            brep = (Rhino.Geometry.Brep) brep.DuplicateShallow();
+            brep = (Rhino.Geometry.Brep)brep.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               brep.Scale(scaleFactor);
@@ -459,7 +450,7 @@ namespace RhinoInside.Revit
             yield return brep.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Mesh mesh:
-            mesh = (Rhino.Geometry.Mesh) mesh.DuplicateShallow();
+            mesh = (Rhino.Geometry.Mesh)mesh.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               mesh.Scale(scaleFactor);

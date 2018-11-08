@@ -1,16 +1,9 @@
-using System;
-using System.Reflection;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-
 using Rhino.Geometry;
+using System.Linq;
+using System.Reflection;
 
 namespace RhinoInside.Revit
 {
@@ -50,7 +43,7 @@ namespace RhinoInside.Revit
 
           var ds = DirectShape.CreateElement(doc, categoryId);
           ds.Name = "Sphere";
-          foreach(var geometryList in meshes.ToHost().ToList())
+          foreach (var geometryList in meshes.ToHost().ToList())
             ds.AppendShape(geometryList);
 
           trans.Commit();
