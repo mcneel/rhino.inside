@@ -1,4 +1,4 @@
-﻿using Bricscad.ApplicationServices;
+using Bricscad.ApplicationServices;
 using System;
 using System.IO;
 using System.Reflection;

@@ -1,4 +1,4 @@
-﻿using Bricscad.ApplicationServices;
+using Bricscad.ApplicationServices;
 using Teigha.DatabaseServices;
 using Teigha.Geometry;
 using Teigha.Runtime;
