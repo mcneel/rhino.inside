@@ -16,6 +16,7 @@ These instructions will get you a copy of the project up and running on your loc
 ### Prerequisites
 * Git client. ([download](https://git-scm.com/downloads))
 * Visual Studio 2017 ([download](https://visualstudio.microsoft.com/downloads/))
+* .NET Framework 4.7 ([download](https://www.microsoft.com/net/download/visual-studio-sdks))
 * Rhino WIP ([download](https://www.rhino3d.com/download/rhino/wip))
 * Autodesk Revit 2017-2019 ([download](https://www.autodesk.com/products/revit/free-trial))
 
