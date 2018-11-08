@@ -1,32 +1,25 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.IO;
-using System.Reflection;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Windows.Media.Imaging;
-
-using Autodesk;
-using Autodesk.Revit;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Autodesk.Revit.ApplicationServices;
-
 using Rhino;
 using Rhino.Runtime.InProcess;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Windows.Media.Imaging;
 
 namespace RhinoInside.Revit
 {
   [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
   [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]
   [Autodesk.Revit.Attributes.Journaling(Autodesk.Revit.Attributes.JournalingMode.NoCommandData)]
+
+
   public class Revit : IExternalApplication
   {
-#region Revit static constructor
+    #region Revit static constructor
     static Revit()
     {
       ResolveEventHandler OnRhinoCommonResolve = null;
@@ -44,24 +37,29 @@ namespace RhinoInside.Revit
         return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }
-#endregion
+    #endregion
 
-#region IExternalApplication Members
 
-    internal static BitmapImage RhinoLogo       = LoadImage("RhinoInside.Resources.Rhino.png");
+    #region IExternalApplication Members
+
+    internal static BitmapImage RhinoLogo = LoadImage("RhinoInside.Resources.Rhino.png");
+
     internal static BitmapImage GrasshopperLogo = LoadImage("RhinoInside.Resources.Grasshopper.png");
-    
+
     private RhinoCore rhinoCore;
 
     public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
     {
       ApplicationUI = applicationUI;
 
+
+      //this is actually testing the release configuration
 #if REVIT_2019
       MainWindowHandle = ApplicationUI.MainWindowHandle;
 #else
       MainWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
 #endif
+
 
       // Load Rhino
       try
@@ -75,6 +73,7 @@ namespace RhinoInside.Revit
         return Autodesk.Revit.UI.Result.Failed;
       }
 
+
       // Register UI
       {
         RibbonPanel ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
@@ -82,6 +81,7 @@ namespace RhinoInside.Revit
         Sample1.CreateUI(ribbonPanel);
         Sample4.CreateUI(ribbonPanel);
       }
+
 
       // Add an Idling event handler to notify Rhino when the process is idle
       ApplicationUI.Idling += new EventHandler<IdlingEventArgs>(OnIdle);
@@ -124,19 +124,62 @@ namespace RhinoInside.Revit
         return;
 
       // 2. Do all BakeGeometry pending tasks
-      lock (bakeQueue)
+      //lock statement stops other threads from making modifications to the passed object (bakeQueue) until this statement is done
+      lock (bakeRecipeQueue)
       {
-        if (bakeQueue.Count > 0)
+        if (bakeRecipeQueue.Count > 0)
         {
           using (var trans = new Transaction(doc))
           {
             if (trans.Start("BakeGeometry") == TransactionStatus.Started)
             {
-              var genericModelId = new ElementId(BuiltInCategory.OST_GenericModel);
 
-              while (bakeQueue.Count > 0)
+              while (bakeRecipeQueue.Count > 0)
               {
-                var geometryList = bakeQueue.Dequeue();
+                //dequeue returns the first item on the list, and removes that item from that list
+                //var geometryList = bakeQueueGeom.Dequeue(); //OLD - KEEP FOR REFERENCE
+
+                BakeRecipe recipe = bakeRecipeQueue.Dequeue();
+
+                string revitCategoryType = recipe.categoryToBakeInto;
+                ElementId genericModelId;
+                switch (revitCategoryType)
+                {
+                  case "OST_Columns":
+                    genericModelId = new ElementId(BuiltInCategory.OST_Columns);
+                    break;
+                  case "OST_CurtainWallPanels":
+                    genericModelId = new ElementId(BuiltInCategory.OST_CurtainWallPanels);
+                    break;
+                  case "OST_DataDevices":
+                    genericModelId = new ElementId(BuiltInCategory.OST_DataDevices);
+                    break;
+                  case "OST_Furniture":
+                    genericModelId = new ElementId(BuiltInCategory.OST_Furniture);
+                    break;
+                  case "OST_Floors":
+                    genericModelId = new ElementId(BuiltInCategory.OST_Floors);
+                    break;
+                  case "OST_Stairs":
+                    genericModelId = new ElementId(BuiltInCategory.OST_Stairs);
+                    break;
+                  case "OST_Topography":
+                    genericModelId = new ElementId(BuiltInCategory.OST_Topography);
+                    break;
+                  case "OST_Walls":
+                    genericModelId = new ElementId(BuiltInCategory.OST_Walls);
+                    break;
+                  case "OST_Windows":
+                    genericModelId = new ElementId(BuiltInCategory.OST_Windows);
+                    break;
+                  default:
+                    genericModelId = new ElementId(BuiltInCategory.OST_GenericModel);
+                    break;
+                }
+
+
+
+                var geometryList = recipe.geometryToBake;
                 if (geometryList != null)
                 {
                   try
@@ -151,7 +194,7 @@ namespace RhinoInside.Revit
                         case Point p: genericModelList.Add(p); break;
                         case Curve c: genericModelList.Add(c); break;
                         case Solid s: genericModelList.Add(s); break;
-                        case Mesh  m: genericModelList.Add(m); break;
+                        case Mesh m: genericModelList.Add(m); break;
                       }
                     }
 
@@ -161,7 +204,7 @@ namespace RhinoInside.Revit
                       ds.SetShape(genericModelList);
                     }
                   }
-                  catch(Exception e)
+                  catch (Exception e)
                   {
                     Debug.Fail(e.Source, e.Message);
                   }
@@ -203,38 +246,48 @@ namespace RhinoInside.Revit
       }
     }
 
-    private static Queue<IList<GeometryObject>> bakeQueue = new Queue<IList<GeometryObject>>();
-    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
+    #endregion
+    private static Queue<BakeRecipe> bakeRecipeQueue = new Queue<BakeRecipe>();
+
+
+    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, string revitGenericCategory)
     {
-      lock (bakeQueue)
+      lock (bakeRecipeQueue)
       {
         foreach (var list in geometries.ToHost())
-          bakeQueue.Enqueue(list);
+        {
+          BakeRecipe recipe = new BakeRecipe(list, revitGenericCategory);
+          bakeRecipeQueue.Enqueue(recipe);
+        }
       }
     }
 
+
+
     private static Queue<Action<Document>> documentActions = new Queue<Action<Document>>();
+
+
+
     public static void EnqueueAction(Action<Document> action)
     {
       lock (documentActions)
         documentActions.Enqueue(action);
     }
 
-#endregion
 
-#region Public Methods
+
+    #region Public Methods
     public static IntPtr MainWindowHandle { get; private set; }
     public static UIControlledApplication ApplicationUI { get; private set; }
-
-    public const double ModelAbsoluteTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feets
-    public const double ModelAbsolutePlanarTolerance = Revit.ModelAbsoluteTolerance / 10; // in feets
+    public const double ModelAbsoluteTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feet
+    public const double ModelAbsolutePlanarTolerance = Revit.ModelAbsoluteTolerance / 10; // in feet
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
-
     public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? Double.NaN : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Revit.ModelUnitSystem);
     internal static double RhinoModelAbsoluteTolerance => ModelAbsoluteTolerance / RhinoToRevitModelScaleFactor; // in Rhino model units
-#endregion
+    #endregion
 
-#region Private Methods
+
+    #region Private Methods
     static private BitmapImage LoadImage(string name)
     {
       var bmi = new BitmapImage();
@@ -243,7 +296,22 @@ namespace RhinoInside.Revit
       bmi.EndInit();
       return bmi;
     }
-#endregion
+    #endregion
+  }
+
+
+
+  public class BakeRecipe
+  {
+    public IList<GeometryObject> geometryToBake;
+    public string categoryToBakeInto;
+
+    public BakeRecipe(IList<GeometryObject> geometryToBake, string categoryToBakeInto)
+    {
+      this.geometryToBake = geometryToBake;
+      this.categoryToBakeInto = categoryToBakeInto;
+    }
+
   }
 
 }
