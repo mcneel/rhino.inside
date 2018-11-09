@@ -1,12 +1,21 @@
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
+using Autodesk;
+using Autodesk.Revit;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+using Autodesk.Revit.ApplicationServices;
+
 using Rhino;
 using Rhino.Geometry;
 using Rhino.Geometry.Collections;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 
 namespace RhinoInside.Revit
 {
@@ -101,7 +110,7 @@ namespace RhinoInside.Revit
 
     static internal IEnumerable<Autodesk.Revit.DB.Point> ToHost(this Rhino.Geometry.PointCloud pointCloud)
     {
-      foreach (var p in pointCloud)
+      foreach(var p in pointCloud)
         yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));
     }
 
@@ -354,7 +363,7 @@ namespace RhinoInside.Revit
         var brepMesh = new Rhino.Geometry.Mesh();
         brepMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp));
 
-        foreach (var g in brepMesh.ToHost())
+        foreach(var g in brepMesh.ToHost())
           yield return g;
       }
     }
@@ -418,7 +427,7 @@ namespace RhinoInside.Revit
         switch (geometry)
         {
           case Rhino.Geometry.Point point:
-            point = (Rhino.Geometry.Point)point.DuplicateShallow();
+            point = (Rhino.Geometry.Point) point.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               point.Scale(scaleFactor);
@@ -426,7 +435,7 @@ namespace RhinoInside.Revit
             yield return point.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.PointCloud pointCloud:
-            pointCloud = (Rhino.Geometry.PointCloud)pointCloud.DuplicateShallow();
+            pointCloud = (Rhino.Geometry.PointCloud) pointCloud.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               pointCloud.Scale(scaleFactor);
@@ -434,7 +443,7 @@ namespace RhinoInside.Revit
             yield return pointCloud.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Curve curve:
-            curve = (Rhino.Geometry.Curve)curve.DuplicateShallow();
+            curve = (Rhino.Geometry.Curve) curve.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               curve.Scale(scaleFactor);
@@ -442,7 +451,7 @@ namespace RhinoInside.Revit
             yield return curve.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Brep brep:
-            brep = (Rhino.Geometry.Brep)brep.DuplicateShallow();
+            brep = (Rhino.Geometry.Brep) brep.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               brep.Scale(scaleFactor);
@@ -450,7 +459,7 @@ namespace RhinoInside.Revit
             yield return brep.ToHost().Cast<GeometryObject>().ToList();
             break;
           case Rhino.Geometry.Mesh mesh:
-            mesh = (Rhino.Geometry.Mesh)mesh.DuplicateShallow();
+            mesh = (Rhino.Geometry.Mesh) mesh.DuplicateShallow();
 
             if (scaleFactor != 1.0)
               mesh.Scale(scaleFactor);

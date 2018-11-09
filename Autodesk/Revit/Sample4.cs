@@ -1,16 +1,23 @@
+using System;
+using System.Reflection;
+using System.Diagnostics;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using GH_IO.Serialization;
-using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
+
 using Rhino.Geometry;
 using Rhino.PlugIns;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
-using System.Windows.Forms;
+using GH_IO.Serialization;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Parameters;
+using Grasshopper.Kernel.Types;
 
 namespace RhinoInside.Revit
 {
@@ -41,11 +48,11 @@ namespace RhinoInside.Revit
         openFileDialog.FilterIndex = 1;
         openFileDialog.RestoreDirectory = true;
 
-        switch (openFileDialog.ShowDialog())
+        switch(openFileDialog.ShowDialog())
         {
-          case DialogResult.OK: filePath = openFileDialog.FileName; break;
+          case DialogResult.OK:     filePath = openFileDialog.FileName; break;
           case DialogResult.Cancel: return Result.Cancelled;
-          default: return Result.Failed;
+          default:                  return Result.Failed;
         }
       }
 
@@ -92,13 +99,13 @@ namespace RhinoInside.Revit
               {
                 case GH_Point point: output.Add(new Rhino.Geometry.Point(point.Value)); break;
                 case GH_Curve curve: output.Add(curve.Value); break;
-                case GH_Brep brep: output.Add(brep.Value); break;
-                case GH_Mesh mesh: output.Add(mesh.Value); break;
+                case GH_Brep brep:   output.Add(brep.Value); break;
+                case GH_Mesh mesh:   output.Add(mesh.Value); break;
               }
             }
           }
 
-          if (output.Count > 0)
+          if(output.Count > 0)
             outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.Name, output));
         }
       }
