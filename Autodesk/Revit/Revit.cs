@@ -124,41 +124,40 @@ namespace RhinoInside.Revit
         return;
 
       // 2. Do all BakeGeometry pending tasks
-      lock (bakeQueue)
+      lock (bakeRecipeQueue)
       {
-        if (bakeQueue.Count > 0)
+        if (bakeRecipeQueue.Count > 0)
         {
           using (var trans = new Transaction(doc))
           {
             if (trans.Start("BakeGeometry") == TransactionStatus.Started)
             {
-              var genericModelId = new ElementId(BuiltInCategory.OST_GenericModel);
-
-              while (bakeQueue.Count > 0)
+              while (bakeRecipeQueue.Count > 0)
               {
-                var geometryList = bakeQueue.Dequeue();
-                if (geometryList != null)
+                BakeRecipe recipe = bakeRecipeQueue.Dequeue();
+
+                if (recipe.geometryToBake != null && recipe.categoryToBakeInto != BuiltInCategory.INVALID)
                 {
                   try
                   {
-                    var genericModelList = new List<GeometryObject>();
+                    var geometryList = new List<GeometryObject>();
 
                     // DirectShape only accepts those types and no nulls
-                    foreach (var g in geometryList)
+                    foreach (var g in recipe.geometryToBake)
                     {
                       switch (g)
                       {
-                        case Point p: genericModelList.Add(p); break;
-                        case Curve c: genericModelList.Add(c); break;
-                        case Solid s: genericModelList.Add(s); break;
-                        case Mesh  m: genericModelList.Add(m); break;
+                        case Point p: geometryList.Add(p); break;
+                        case Curve c: geometryList.Add(c); break;
+                        case Solid s: geometryList.Add(s); break;
+                        case Mesh  m: geometryList.Add(m); break;
                       }
                     }
 
-                    if (genericModelList.Count > 0)
+                    if (geometryList.Count > 0)
                     {
-                      var ds = DirectShape.CreateElement(doc, genericModelId);
-                      ds.SetShape(genericModelList);
+                      var ds = DirectShape.CreateElement(doc, new ElementId(recipe.categoryToBakeInto));
+                      ds.SetShape(geometryList);
                     }
                   }
                   catch(Exception e)
@@ -202,14 +201,16 @@ namespace RhinoInside.Revit
           args.SetRaiseWithoutDelay();
       }
     }
+#endregion
 
-    private static Queue<IList<GeometryObject>> bakeQueue = new Queue<IList<GeometryObject>>();
-    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
+#region Public Methods
+    private static Queue<BakeRecipe> bakeRecipeQueue = new Queue<BakeRecipe>();
+    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory builtInCategory = BuiltInCategory.OST_GenericModel)
     {
-      lock (bakeQueue)
+      lock (bakeRecipeQueue)
       {
         foreach (var list in geometries.ToHost())
-          bakeQueue.Enqueue(list);
+          bakeRecipeQueue.Enqueue(new BakeRecipe(list, builtInCategory));
       }
     }
 
@@ -220,14 +221,11 @@ namespace RhinoInside.Revit
         documentActions.Enqueue(action);
     }
 
-#endregion
-
-#region Public Methods
     public static IntPtr MainWindowHandle { get; private set; }
     public static UIControlledApplication ApplicationUI { get; private set; }
 
-    public const double ModelAbsoluteTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feets
-    public const double ModelAbsolutePlanarTolerance = Revit.ModelAbsoluteTolerance / 10; // in feets
+    public const double ModelAbsoluteTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feet
+    public const double ModelAbsolutePlanarTolerance = Revit.ModelAbsoluteTolerance / 10; // in feet
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
 
     public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? Double.NaN : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Revit.ModelUnitSystem);
@@ -246,4 +244,15 @@ namespace RhinoInside.Revit
 #endregion
   }
 
+  public class BakeRecipe
+  {
+    public IList<GeometryObject> geometryToBake;
+    public BuiltInCategory categoryToBakeInto;
+
+    public BakeRecipe(IList<GeometryObject> geometryToBake, BuiltInCategory categoryToBakeInto)
+    {
+      this.geometryToBake = geometryToBake;
+      this.categoryToBakeInto = categoryToBakeInto;
+    }
+  }
 }

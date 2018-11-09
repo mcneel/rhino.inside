@@ -67,8 +67,9 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 3. Run _Grasshopper_ command.
 4. Open _"Sample2.ghx"_ file in Grasshopper.
 5. Inside Grasshopper using the _Brep_ param pick the breps you created in step 2.
-6. Inside Grasshopper click on the button _Push to Bake_.
-7. You should have the breps created in step 2 in the Revit model.
+6. The Value List component (looks like a dropdown selector) will allow you to specify which Revit OST Category you want geometry to be "baked" into.
+7. Inside Grasshopper click on the button _Push to Bake_.
+8. You should have the breps created in step 2 in the Revit model, and they should belong to the specified category (Generic is available and is also used as a catch-all fallback).
 
 ### Sample1
 1. Open the ribbon tab called _Add-Ins_.

@@ -111,7 +111,7 @@ namespace RhinoInside.Revit
     static internal IEnumerable<Autodesk.Revit.DB.Point> ToHost(this Rhino.Geometry.PointCloud pointCloud)
     {
       foreach(var p in pointCloud)
-        yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));      
+        yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));
     }
 
     static internal IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve)
@@ -193,46 +193,46 @@ namespace RhinoInside.Revit
     {
       using (var nurbsSurface = faceSurface.ToNurbsSurface())
       {
-          var degreeU = nurbsSurface.Degree(0);
-          var degreeV = nurbsSurface.Degree(1);
-          var knotsU = nurbsSurface.KnotsU.ToHost();
-          var knotsV = nurbsSurface.KnotsV.ToHost();
-          var controlPoints = nurbsSurface.Points.ToHost();
+        var degreeU = nurbsSurface.Degree(0);
+        var degreeV = nurbsSurface.Degree(1);
+        var knotsU = nurbsSurface.KnotsU.ToHost();
+        var knotsV = nurbsSurface.KnotsV.ToHost();
+        var controlPoints = nurbsSurface.Points.ToHost();
 
-          Debug.Assert(degreeU >= 1);
-          Debug.Assert(degreeV >= 1);
-          Debug.Assert(knotsU.Count >= 2 * (degreeU + 1));
-          Debug.Assert(knotsV.Count >= 2 * (degreeV + 1));
-          Debug.Assert(controlPoints.Count == (knotsU.Count - degreeU - 1) * (knotsV.Count - degreeV - 1));
+        Debug.Assert(degreeU >= 1);
+        Debug.Assert(degreeV >= 1);
+        Debug.Assert(knotsU.Count >= 2 * (degreeU + 1));
+        Debug.Assert(knotsV.Count >= 2 * (degreeV + 1));
+        Debug.Assert(controlPoints.Count == (knotsU.Count - degreeU - 1) * (knotsV.Count - degreeV - 1));
 
-          try
+        try
+        {
+          if (nurbsSurface.IsRational)
           {
-            if (nurbsSurface.IsRational)
+            var weights = new List<double>(controlPoints.Count);
+            foreach (var p in nurbsSurface.Points)
             {
-              var weights = new List<double>(controlPoints.Count);
-              foreach (var p in nurbsSurface.Points)
-              {
-                Debug.Assert(p.Weight > 0.0);
-                weights.Add(p.Weight);
-              }
+              Debug.Assert(p.Weight > 0.0);
+              weights.Add(p.Weight);
+            }
 
-              return BRepBuilderSurfaceGeometry.CreateNURBSSurface
-              (
-                degreeU, degreeV, knotsU, knotsV, controlPoints, weights, false, null
-              );
-            }
-            else
-            {
-              return BRepBuilderSurfaceGeometry.CreateNURBSSurface
-              (
-                degreeU, degreeV, knotsU, knotsV, controlPoints, false, null
-              );
-            }
+            return BRepBuilderSurfaceGeometry.CreateNURBSSurface
+            (
+              degreeU, degreeV, knotsU, knotsV, controlPoints, weights, false, null
+            );
           }
-          catch (Autodesk.Revit.Exceptions.ApplicationException e)
+          else
           {
-            Debug.Fail(e.Source, e.Message);
+            return BRepBuilderSurfaceGeometry.CreateNURBSSurface
+            (
+              degreeU, degreeV, knotsU, knotsV, controlPoints, false, null
+            );
           }
+        }
+        catch (Autodesk.Revit.Exceptions.ApplicationException e)
+        {
+          Debug.Fail(e.Source, e.Message);
+        }
       }
 
       return null;
