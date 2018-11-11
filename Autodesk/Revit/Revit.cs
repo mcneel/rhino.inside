@@ -26,7 +26,7 @@ namespace RhinoInside.Revit
   [Autodesk.Revit.Attributes.Journaling(Autodesk.Revit.Attributes.JournalingMode.NoCommandData)]
   public class Revit : IExternalApplication
   {
-#region Revit static constructor
+    #region Revit static constructor
     static Revit()
     {
       ResolveEventHandler OnRhinoCommonResolve = null;
@@ -40,17 +40,17 @@ namespace RhinoInside.Revit
 
         AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
 
-        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+        var rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
         return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }
-#endregion
+    #endregion
 
-#region IExternalApplication Members
+    #region IExternalApplication Members
 
-    internal static BitmapImage RhinoLogo       = LoadImage("RhinoInside.Resources.Rhino.png");
+    internal static BitmapImage RhinoLogo = LoadImage("RhinoInside.Resources.Rhino.png");
     internal static BitmapImage GrasshopperLogo = LoadImage("RhinoInside.Resources.Grasshopper.png");
-    
+
     private RhinoCore rhinoCore;
 
     public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
@@ -77,7 +77,7 @@ namespace RhinoInside.Revit
 
       // Register UI
       {
-        RibbonPanel ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
+        var ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
 
         Sample1.CreateUI(ribbonPanel);
         Sample4.CreateUI(ribbonPanel);
@@ -134,7 +134,7 @@ namespace RhinoInside.Revit
             {
               while (bakeRecipeQueue.Count > 0)
               {
-                BakeRecipe recipe = bakeRecipeQueue.Dequeue();
+                var recipe = bakeRecipeQueue.Dequeue();
 
                 if (recipe.geometryToBake != null && recipe.categoryToBakeInto != BuiltInCategory.INVALID)
                 {
@@ -160,7 +160,7 @@ namespace RhinoInside.Revit
                       ds.SetShape(geometryList);
                     }
                   }
-                  catch(Exception e)
+                  catch (Exception e)
                   {
                     Debug.Fail(e.Source, e.Message);
                   }
@@ -201,9 +201,9 @@ namespace RhinoInside.Revit
           args.SetRaiseWithoutDelay();
       }
     }
-#endregion
+    #endregion
 
-#region Public Methods
+    #region Public Methods
     private static Queue<BakeRecipe> bakeRecipeQueue = new Queue<BakeRecipe>();
     public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory builtInCategory = BuiltInCategory.OST_GenericModel)
     {
@@ -228,11 +228,11 @@ namespace RhinoInside.Revit
     public const double ModelAbsolutePlanarTolerance = Revit.ModelAbsoluteTolerance / 10; // in feet
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
 
-    public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? Double.NaN : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Revit.ModelUnitSystem);
+    public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Revit.ModelUnitSystem);
     internal static double RhinoModelAbsoluteTolerance => ModelAbsoluteTolerance / RhinoToRevitModelScaleFactor; // in Rhino model units
-#endregion
+    #endregion
 
-#region Private Methods
+    #region Private Methods
     static private BitmapImage LoadImage(string name)
     {
       var bmi = new BitmapImage();
@@ -241,7 +241,7 @@ namespace RhinoInside.Revit
       bmi.EndInit();
       return bmi;
     }
-#endregion
+    #endregion
   }
 
   public class BakeRecipe

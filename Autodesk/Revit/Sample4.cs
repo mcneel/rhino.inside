@@ -30,10 +30,18 @@ namespace RhinoInside.Revit
       // Create a push button to trigger a command add it to the ribbon panel.
       var thisAssembly = Assembly.GetExecutingAssembly();
 
-      var buttonData = new PushButtonData("cmdRhinoInsideSample4", "Sample 4", thisAssembly.Location, MethodBase.GetCurrentMethod().DeclaringType.FullName);
-      PushButton pushButton = ribbonPanel.AddItem(buttonData) as PushButton;
-      pushButton.ToolTip = "Eval a Grasshopper definition";
-      pushButton.LargeImage = Revit.GrasshopperLogo;
+      var buttonData = new PushButtonData
+      (
+        "cmdRhinoInsideSample4", "Sample 4",
+        thisAssembly.Location,
+        MethodBase.GetCurrentMethod().DeclaringType.FullName
+      );
+
+      if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
+      {
+        pushButton.ToolTip = "Eval a Grasshopper definition";
+        pushButton.LargeImage = Revit.GrasshopperLogo;
+      }
     }
 
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
@@ -42,13 +50,13 @@ namespace RhinoInside.Revit
       PlugIn.LoadPlugIn(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF));
 
       string filePath;
-      using (OpenFileDialog openFileDialog = new OpenFileDialog())
+      using (var openFileDialog = new OpenFileDialog())
       {
         openFileDialog.Filter = "Grasshopper Binary (*.gh)|*.gh|Grasshopper Xml (*.ghx)|*.ghx";
         openFileDialog.FilterIndex = 1;
         openFileDialog.RestoreDirectory = true;
 
-        switch(openFileDialog.ShowDialog())
+        switch (openFileDialog.ShowDialog())
         {
           case DialogResult.OK:     filePath = openFileDialog.FileName; break;
           case DialogResult.Cancel: return Result.Cancelled;
@@ -68,8 +76,7 @@ namespace RhinoInside.Revit
 
         foreach (var obj in definition.Objects)
         {
-          var param = obj as IGH_Param;
-          if (param == null)
+          if (!(obj is IGH_Param param))
             continue;
 
           if (param.Sources.Count == 0 || param.Recipients.Count != 0)
@@ -105,7 +112,7 @@ namespace RhinoInside.Revit
             }
           }
 
-          if(output.Count > 0)
+          if (output.Count > 0)
             outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.Name, output));
         }
       }

@@ -69,7 +69,7 @@ namespace RhinoInside.Revit
 
     static internal IList<double> ToHost(this NurbsCurveKnotList knotList)
     {
-      int knotListCount = knotList.Count;
+      var knotListCount = knotList.Count;
       if (knotListCount > 0)
       {
         var knots = new List<double>(knotListCount + 2);
@@ -87,7 +87,7 @@ namespace RhinoInside.Revit
 
     static internal IList<double> ToHost(this NurbsSurfaceKnotList knotList)
     {
-      int knotListCount = knotList.Count;
+      var knotListCount = knotList.Count;
       if (knotListCount > 0)
       {
         var knots = new List<double>(knotListCount + 2);
@@ -370,23 +370,23 @@ namespace RhinoInside.Revit
 
     static internal IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.Mesh mesh)
     {
-      List<XYZ> faceVertices = new List<XYZ>(4);
+      var faceVertices = new List<XYZ>(4);
 
-      var builder = new TessellatedShapeBuilder();
-      builder.Target = TessellatedShapeBuilderTarget.AnyGeometry;
-      builder.Fallback = TessellatedShapeBuilderFallback.Mesh;
+      var builder = new TessellatedShapeBuilder()
+      {
+        Target = TessellatedShapeBuilderTarget.AnyGeometry,
+        Fallback = TessellatedShapeBuilderFallback.Mesh
+      };
 
-      Rhino.Geometry.Mesh[] pieces = mesh.DisjointMeshCount > 1 ?
-                                      mesh.SplitDisjointPieces() :
-                                      new Rhino.Geometry.Mesh[] { mesh };
+      var pieces = mesh.DisjointMeshCount > 1 ?
+                   mesh.SplitDisjointPieces() :
+                   new Rhino.Geometry.Mesh[] { mesh };
 
       foreach (var piece in pieces)
       {
         piece.Faces.ConvertNonPlanarQuadsToTriangles(Revit.ModelAbsolutePlanarTolerance, RhinoMath.UnsetValue, 5);
 
-        bool isOriented = false;
-        bool hasBoundary = false;
-        bool isSolid = piece.IsClosed && piece.IsManifold(true, out isOriented, out hasBoundary) && isOriented;
+        var isSolid = piece.IsClosed && piece.IsManifold(true, out var isOriented, out var hasBoundary) && isOriented;
         var vertices = piece.Vertices.ToPoint3dArray();
 
         builder.OpenConnectedFaceSet(isSolid);
@@ -421,7 +421,7 @@ namespace RhinoInside.Revit
 
     static internal IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
-      double scaleFactor = Revit.RhinoToRevitModelScaleFactor;
+      var scaleFactor = Revit.RhinoToRevitModelScaleFactor;
       foreach (var geometry in geometries)
       {
         switch (geometry)
