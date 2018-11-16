@@ -1,4 +1,8 @@
-# Rhino Inside 
+# Rhino Inside
+
+[![Discourse users](https://img.shields.io/discourse/https/discourse.mcneel.com/users.svg)](https://discourse.mcneel.com/c/serengeti/inside)
+
+
 The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.  It may be possible to:
 
 * Starting Rhino and Grasshopper as an add in another product.
