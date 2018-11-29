@@ -117,17 +117,20 @@ namespace RhinoInside.Revit.GH.Components
 
       if (Iteration == DA.Iteration)
       {
+        int begin = Iteration + 1;
+        int end = PreviousElementValues.Count;
+
         // Remove extra elements in PreviousElementValues
-        if (Iteration + 1 < PreviousElementValues.Count)
+        if (begin < end)
         {
-          for (int e = Iteration + 1; e < PreviousElementValues.Count; e++)
+          for (int e = begin; e < end; e++)
           {
             if (doc.GetElement(PreviousElementValues[e]) != null)
               try { doc.Delete(PreviousElementValues[e]); }
               catch (Autodesk.Revit.Exceptions.ApplicationException) { }
           }
 
-          PreviousElementValues.RemoveRange(Iteration + 1, PreviousElementValues.Count); ;
+          PreviousElementValues.RemoveRange(begin, end - begin);
         }
 
         // Notify Grasshopper continue evaluating the definition from this component
