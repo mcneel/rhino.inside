@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
     (
       "Column.ByCurve", "ByCurve",
       "Create a structural Column from a curve",
-      "Revit", "Structure"
+      "Revit", "Column"
     )
     { }
 

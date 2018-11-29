@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
     (
       "Beam.ByCurve", "ByCurve",
       "Create a Beam element from a curve",
-      "Revit", "Structure"
+      "Revit", "Beam"
     )
     { }
 
