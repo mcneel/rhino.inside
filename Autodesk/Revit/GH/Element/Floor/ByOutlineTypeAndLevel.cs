@@ -51,8 +51,7 @@ namespace RhinoInside.Revit.GH.Components
       DA.GetData("Level", ref level);
 
       bool structural = true;
-      if (!DA.GetData("Structural", ref structural))
-        return;
+      DA.GetData("Structural", ref structural);
 
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;

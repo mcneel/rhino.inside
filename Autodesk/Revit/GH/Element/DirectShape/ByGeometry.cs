@@ -44,17 +44,13 @@ namespace RhinoInside.Revit.GH.Components
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       var geometry = new List<Rhino.Geometry.GeometryBase>();
-      if (!DA.GetDataList("Geometry", geometry))
-        return;
+      DA.GetDataList("Geometry", geometry);
 
       Autodesk.Revit.DB.Category category = null;
-      if (!DA.GetData("Category", ref category))
-      {
-        if (Params.Input[1].Sources.Count == 0)
-          category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, BuiltInCategory.OST_GenericModel);
-        else
-          return;
-      }
+      if (!DA.GetData("Category", ref category) && Params.Input[1].Sources.Count == 0)
+        category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, BuiltInCategory.OST_GenericModel);
+      else
+        return;
 
       string name = string.Empty;
       DA.GetData("Name", ref name);
