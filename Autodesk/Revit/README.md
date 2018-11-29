@@ -38,21 +38,30 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 ## Using the samples
 * Once you launch Revit it will warn you this addon is not verified, please click on "Load always" or "Load once".
 * Create a new project or open an existing one.
+* Now in the Add-ins Ribbon tab you have a _Rhinoceros_ section.
+* Be careful about your model units in Rhino
 
-### Sample4
+### Sample 5
+![](doc/Sample5.png)
+
+1. Open the ribbon tab called Add-Ins.
+2. Click on the button you will found on the _Rhinoceros_ panel called _Grasshopper_.
+3. Open the _Revit_ tab in the Grasshopper toolbar.
+3. Enjoy!!
+
+### Sample 4
 ![](doc/Sample4.png)
 
-1. Rhino window will open on top of Revit window. Minimize it.
-2. Open the ribbon tab called Add-Ins.
-3. Click on the button you will found on the _Rhinoceros_ panel called _Sample 4_.
-4. Open _"Sample4.ghx"_ file.
-5. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
-6. You should have a collection of pipes over a 3D Voronoi diagram in Revit.
+1. Open the ribbon tab called Add-Ins.
+2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 4_.
+3. Open _"Sample4.ghx"_ file.
+4. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
+5. You should have a collection of pipes over a 3D Voronoi diagram in Revit.
 
-### Sample3
+### Sample 3
 ![](doc/Sample3.gif)
 
-1. Rhino window will open on top of Revit window.
+1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
 2. Create a surface on Rhino. (It is best if it is site size objects to start.)
 4. Run _Grasshopper_ command.
 5. Open _"Sample3.ghx"_ file in Grasshopper.
@@ -60,10 +69,10 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 7. Inside Grasshopper click on the button _Update Topography surface_.
 8. You should have a Topography surface in Revit.
 
-### Sample2
+### Sample 2
 ![](doc/Sample2.jpg)
 
-1. Rhino window will open on top of Revit window.
+1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
 2. Create some breps in Rhino. (It is best if they are building size objects to start.)
 3. Run _Grasshopper_ command.
 4. Open _"Sample2.ghx"_ file in Grasshopper.
@@ -72,7 +81,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 7. Inside Grasshopper click on the button _Push to Bake_.
 8. You should have the breps created in step 2 in the Revit model, and they should belong to the specified category (Generic is available and is also used as a catch-all fallback).
 
-### Sample1
+### Sample 1
 1. Open the ribbon tab called _Add-Ins_.
 2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 1_.
 3. You should have an sphere in the Revil model.
