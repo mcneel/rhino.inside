@@ -113,7 +113,11 @@ namespace RhinoInside.Revit.GH.Components
         PreviousElementValues[Iteration] = id;
       }
       else
+      {
+        for (int e = 0; e < Iteration; e++)
+          PreviousElementValues.Add(ElementId.InvalidElementId);
         PreviousElementValues.Insert(Iteration, id);
+      }
 
       if (Iteration == DA.Iteration)
       {
@@ -134,9 +138,12 @@ namespace RhinoInside.Revit.GH.Components
         }
 
         // Notify Grasshopper continue evaluating the definition from this component
-        foreach (var param in Params.Output)
-          foreach (var recipient in param.Recipients)
-            recipient.ExpireSolution(true);
+        if (RuntimeMessageLevel < GH_RuntimeMessageLevel.Error)
+        {
+          foreach (var param in Params.Output)
+            foreach (var recipient in param.Recipients)
+              recipient.ExpireSolution(true);
+        }
       }
     }
   }
