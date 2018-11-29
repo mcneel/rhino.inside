@@ -116,6 +116,7 @@
   <ItemGroup>
     <Compile Include="GH\Category\Category.cs" />
     <Compile Include="GH\Document\Categories.cs" />
+    <Compile Include="GH\Element\Beam\ByCurve.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\ID.cs" />
     <Compile Include="ImageBuilder.cs" />

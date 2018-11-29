@@ -41,24 +41,11 @@ namespace RhinoInside.Revit.GH.Components
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       Rhino.Geometry.Curve boundary = null;
-      Rhino.Geometry.Plane boundaryPlane;
-      if
-      (
-        (!DA.GetData("Boundary", ref boundary)) ||
-        !boundary.IsClosed ||
-        !boundary.TryGetPlane(out boundaryPlane) ||
-        boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
-      )
-        return;
+      DA.GetData("Boundary", ref boundary);
 
       Autodesk.Revit.DB.FloorType floorType = null;
-      if (!DA.GetData("FloorType", ref floorType))
-      {
-        if (Params.Input[1].Sources.Count == 0)
-          floorType = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultElementTypeId(ElementTypeGroup.FloorType)) as FloorType;
-        else
-          return;
-      }
+      if (!DA.GetData("FloorType", ref floorType) && Params.Input[1].Sources.Count == 0)
+        floorType = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultElementTypeId(ElementTypeGroup.FloorType)) as FloorType;
 
       Autodesk.Revit.DB.Level level = null;
       DA.GetData("Level", ref level);
@@ -81,18 +68,33 @@ namespace RhinoInside.Revit.GH.Components
       bool structural
     )
     {
-      var curveArray = new CurveArray();
-      foreach(var curve in boundary.ToHost())
-        curveArray.Append(curve);
-
       Floor floor = null;
-      if (floorType.IsFoundationSlab)
+
+      if
+      (
+        boundary == null ||
+        boundary.IsShort(Revit.ShortCurveTolerance) ||
+        !boundary.IsClosed ||
+        !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
+        boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+      )
       {
-        floor = doc.Create.NewFoundationSlab(curveArray, floorType, level, structural, XYZ.BasisZ);
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be an horizontal planar closed curve.", Params.Input[0].Name));
       }
       else
       {
-        floor = doc.Create.NewFloor(curveArray, floorType, level, structural, XYZ.BasisZ);
+        var curveArray = new CurveArray();
+        foreach (var curve in boundary.ToHost())
+          curveArray.Append(curve);
+
+        if (floorType.IsFoundationSlab)
+        {
+          floor = doc.Create.NewFoundationSlab(curveArray, floorType, level, structural, XYZ.BasisZ);
+        }
+        else
+        {
+          floor = doc.Create.NewFloor(curveArray, floorType, level, structural, XYZ.BasisZ);
+        }
       }
 
       ReplaceElement(doc, DA, Iteration, floor);
