@@ -23,19 +23,27 @@ namespace RhinoInside.Revit
       // Create a push button to trigger a command add it to the ribbon panel.
       var thisAssembly = Assembly.GetExecutingAssembly();
 
-      var buttonData = new PushButtonData("cmdRhinoInsideSample1", "Sample 1", thisAssembly.Location, MethodBase.GetCurrentMethod().DeclaringType.FullName);
-      PushButton pushButton = ribbonPanel.AddItem(buttonData) as PushButton;
-      pushButton.ToolTip = "Creates a mesh sphere";
-      pushButton.LargeImage = Revit.RhinoLogo;
+      var buttonData = new PushButtonData
+      (
+        "cmdRhinoInsideSample1", "Sample 1",
+        thisAssembly.Location,
+        MethodBase.GetCurrentMethod().DeclaringType.FullName
+      );
+
+      if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
+      {
+        pushButton.ToolTip = "Creates a mesh sphere";
+        pushButton.LargeImage = ImageBuilder.BuildImage("1");
+      }
     }
 
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       // RhinoCommon code
-      var sphere = new Sphere(Point3d.Origin, 12);
+      var sphere = new Sphere(Point3d.Origin, 12 * Revit.ModelUnits);
       var brep = sphere.ToBrep();
       var mp = MeshingParameters.Default;
-      mp.MinimumEdgeLength = Revit.ModelAbsoluteTolerance;
+      mp.MinimumEdgeLength = Revit.VertexTolerance;
       var meshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, mp);
 
       // Revit code
@@ -50,7 +58,7 @@ namespace RhinoInside.Revit
 
           var ds = DirectShape.CreateElement(doc, categoryId);
           ds.Name = "Sphere";
-          foreach(var geometryList in meshes.ToHost().ToList())
+          foreach (var geometryList in meshes.ToHost().ToList())
             ds.AppendShape(geometryList);
 
           trans.Commit();
