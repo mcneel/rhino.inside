@@ -120,7 +120,7 @@ namespace RhinoInside.Revit.GH.Components
         // Remove extra elements in PreviousElementValues
         if (Iteration + 1 < PreviousElementValues.Count)
         {
-          for (int e = Iteration + 1; e < PreviousElementValues.Count; Iteration++)
+          for (int e = Iteration + 1; e < PreviousElementValues.Count; e++)
           {
             if (doc.GetElement(PreviousElementValues[e]) != null)
               try { doc.Delete(PreviousElementValues[e]); }
