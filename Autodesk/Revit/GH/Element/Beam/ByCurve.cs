@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
     (
       "Beam.ByCurve", "ByCurve",
       "Create a Beam element from a curve",
-      "Revit", "Beam"
+      "Revit", "Structure"
     )
     { }
 
@@ -72,7 +72,7 @@ namespace RhinoInside.Revit.GH.Components
         curve == null ||
         curve.IsShort(Revit.ShortCurveTolerance) ||
         curve.IsClosed ||
-        !curve.IsPlanar(Revit.VertexTolerance) ||
+        !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
         curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
       )
       {
@@ -83,7 +83,10 @@ namespace RhinoInside.Revit.GH.Components
         var axisList = curve.ToHost().ToList();
         Debug.Assert(axisList.Count == 1);
 
-        instance = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
+        if (axisPlane.Normal.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) != 0)
+          instance = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
+        else
+          instance = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Brace);
       }
 
       ReplaceElement(doc, DA, Iteration, instance);

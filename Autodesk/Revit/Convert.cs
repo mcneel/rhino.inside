@@ -44,6 +44,11 @@ namespace RhinoInside.Revit
       return new XYZ(p.X, p.Y, p.Z);
     }
 
+    static public Autodesk.Revit.DB.Line ToHost(this Rhino.Geometry.Line line)
+    {
+      return Autodesk.Revit.DB.Line.CreateBound(line.From.ToHost(), line.To.ToHost());
+    }
+
     static public Autodesk.Revit.DB.Plane ToHost(this Rhino.Geometry.Plane plane)
     {
       return Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin.ToHost(), plane.XAxis.ToHost(), plane.YAxis.ToHost());
