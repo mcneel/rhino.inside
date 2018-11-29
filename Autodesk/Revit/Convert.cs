@@ -21,6 +21,19 @@ namespace RhinoInside.Revit
 {
   public static class Convert
   {
+    #region ToRhino
+    static public Point3d ToRhino(XYZ p)
+    {
+      return new Point3d(p.X, p.Y, p.Z);
+    }
+    #endregion
+
+    #region ToHost
+    static public Color ToHost(this System.Drawing.Color c)
+    {
+      return new Color(c.R, c.G, c.B);
+    }
+
     static public XYZ ToHost(this Point3d p)
     {
       return new XYZ(p.X, p.Y, p.Z);
@@ -29,6 +42,11 @@ namespace RhinoInside.Revit
     static public XYZ ToHost(this Vector3d p)
     {
       return new XYZ(p.X, p.Y, p.Z);
+    }
+
+    static public Autodesk.Revit.DB.Plane ToHost(this Rhino.Geometry.Plane plane)
+    {
+      return Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin.ToHost(), plane.XAxis.ToHost(), plane.YAxis.ToHost());
     }
 
     static public Autodesk.Revit.DB.Transform ToHost(this Rhino.Geometry.Transform transform)
@@ -114,14 +132,35 @@ namespace RhinoInside.Revit
         yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));
     }
 
-    static internal IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve)
+    static internal IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve, double curveTolerance = double.PositiveInfinity)
     {
-      var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.ModelAbsoluteTolerance, Math.PI / 1800.0);
+      var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
       if (simplifiedCurve != null)
         curve = simplifiedCurve;
+        //foreach (var segment in simplifiedCurve.ToHost())
+        //  yield return segment;
 
       switch (curve)
       {
+        case Rhino.Geometry.LineCurve line:
+
+          yield return Autodesk.Revit.DB.Line.CreateBound(line.PointAtStart.ToHost(), line.PointAtEnd.ToHost());
+          break;
+
+        case Rhino.Geometry.PolylineCurve polyline:
+
+          for(int p = 1; p < polyline.PointCount; ++p)
+            yield return Autodesk.Revit.DB.Line.CreateBound(polyline.Point(p-1).ToHost(), polyline.Point(p).ToHost());
+          break;
+
+        case Rhino.Geometry.ArcCurve arc:
+
+          if (arc.IsClosed)
+            yield return Autodesk.Revit.DB.Arc.Create(arc.Arc.Plane.ToHost(), arc.Arc.Radius, 0.0, (2.0 * Math.PI) - 2e-8);
+          else
+            yield return Autodesk.Revit.DB.Arc.Create(arc.Arc.StartPoint.ToHost(), arc.Arc.EndPoint.ToHost(), arc.Arc.MidPoint.ToHost());
+          break;
+
         case Rhino.Geometry.PolyCurve polyCurve:
 
           polyCurve.RemoveNesting();
@@ -134,15 +173,53 @@ namespace RhinoInside.Revit
 
         case Rhino.Geometry.NurbsCurve nurbsCurve:
 
+          if (nurbsCurve.IsLinear(Revit.VertexTolerance))
+          {
+            yield return Autodesk.Revit.DB.Line.CreateBound(nurbsCurve.PointAtStart.ToHost(), nurbsCurve.PointAtEnd.ToHost());
+            yield break;
+          }
+
+          Rhino.Geometry.Polyline polylineSegment;
+          if (nurbsCurve.TryGetPolyline(out polylineSegment))
+          {
+            polylineSegment.ReduceSegments(Math.Min(Revit.ShortCurveTolerance, Math.Abs(curveTolerance)));
+            foreach (var segment in polylineSegment.GetSegments())
+              yield return Autodesk.Revit.DB.Line.CreateBound(segment.From.ToHost(), segment.To.ToHost());
+
+            yield break;
+          }
+
+          Rhino.Geometry.Arc arcSegment;
+          if (nurbsCurve.TryGetArc(out arcSegment, Revit.VertexTolerance))
+          {
+            yield return Autodesk.Revit.DB.Arc.Create(arcSegment.StartPoint.ToHost(), arcSegment.EndPoint.ToHost(), arcSegment.MidPoint.ToHost());
+            yield break;
+
+          }
+
           if (nurbsCurve.IsClosed)
           {
+            Rhino.Geometry.Circle circle;
+            if (nurbsCurve.TryGetCircle(out circle, Revit.VertexTolerance))
+            {
+              yield return Autodesk.Revit.DB.Arc.Create(circle.Plane.ToHost(), circle.Radius, 0.0, 2.0 * (2.0 * Math.PI) - 2e-8);
+              yield break;
+            }
+
+            Rhino.Geometry.Ellipse ellipse;
+            if (nurbsCurve.TryGetEllipse(out ellipse, Revit.VertexTolerance))
+            {
+              yield return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, (2.0 * Math.PI) - 2e-8);
+              yield break;
+            }
+
             foreach (var segment in nurbsCurve.Split(nurbsCurve.Domain.Mid))
               foreach (var c in segment.ToHost())
                 yield return c;
           }
           else
           {
-            nurbsCurve.Knots.RemoveMultipleKnots(1, nurbsCurve.Degree, Revit.ModelAbsoluteTolerance);
+            nurbsCurve.Knots.RemoveMultipleKnots(1, nurbsCurve.Degree, Revit.VertexTolerance);
 
             var degree = nurbsCurve.Degree;
             var knots = nurbsCurve.Knots.ToHost();
@@ -238,7 +315,7 @@ namespace RhinoInside.Revit
       return null;
     }
 
-    static private Rhino.Geometry.Brep SplitClosedFaces(Rhino.Geometry.Brep brep, double tolerance)
+    static private Rhino.Geometry.Brep SplitClosedFaces(Rhino.Geometry.Brep brep)
     {
       Brep brepToSplit = null;
 
@@ -261,7 +338,7 @@ namespace RhinoInside.Revit
             var splitters = new Rhino.Geometry.Curve[splittersLength];
             splittersU?.CopyTo(splitters, 0);
             splittersV?.CopyTo(splitters, splittersULength);
-            brep = face.Split(splitters, tolerance);
+            brep = face.Split(splitters, Revit.ShortCurveTolerance);
 
             if (brep == null || brep.Faces.Count == brepToSplit.Faces.Count)
               return null;
@@ -279,7 +356,7 @@ namespace RhinoInside.Revit
       // MakeValidForV2 converts everything inside brep to NURBS
       if (brep.MakeValidForV2())
       {
-        var splittedBrep = SplitClosedFaces(brep, Revit.ModelAbsoluteTolerance);
+        var splittedBrep = SplitClosedFaces(brep);
         if (splittedBrep != null)
         {
           brep = splittedBrep;
@@ -287,7 +364,7 @@ namespace RhinoInside.Revit
           try
           {
             var builder = new BRepBuilder(brep.IsSolid ? BRepType.Solid : BRepType.OpenShell);
-            //builder.AllowRemovalOfProblematicFaces();
+            builder.AllowRemovalOfProblematicFaces();
             builder.SetAllowShortEdges();
 
             var brepEdges = new List<BRepBuilderGeometryId>[brep.Edges.Count];
@@ -312,7 +389,7 @@ namespace RhinoInside.Revit
                   if (edgeIds == null)
                   {
                     edgeIds = brepEdges[edge.EdgeIndex] = new List<BRepBuilderGeometryId>();
-                    foreach (var e in edge.ToHost())
+                    foreach (var e in edge.ToHost(Revit.VertexTolerance))
                       edgeIds.Add(builder.AddEdge(BRepBuilderEdgeGeometry.Create(e)));
                   }
 
@@ -336,10 +413,11 @@ namespace RhinoInside.Revit
             if (builder.IsResultAvailable())
               solid = builder.GetResult();
           }
-          catch (Autodesk.Revit.Exceptions.ApplicationException /*e*/)
+          catch (Autodesk.Revit.Exceptions.ApplicationException e)
           {
-            // TODO: Fix cases with singularities
+            // TODO: Fix cases with singularities and uncomment this line
             //Debug.Fail(e.Source, e.Message);
+            Debug.WriteLine(e.Message, e.Source);
           }
         }
         else
@@ -356,7 +434,7 @@ namespace RhinoInside.Revit
       {
         // Emergency result as a mesh
         var mp = MeshingParameters.Default;
-        mp.MinimumEdgeLength = Revit.ModelAbsoluteTolerance;
+        mp.MinimumEdgeLength = Revit.VertexTolerance;
         mp.ClosedObjectPostProcess = true;
         mp.JaggedSeams = false;
 
@@ -384,7 +462,7 @@ namespace RhinoInside.Revit
 
       foreach (var piece in pieces)
       {
-        piece.Faces.ConvertNonPlanarQuadsToTriangles(Revit.ModelAbsolutePlanarTolerance, RhinoMath.UnsetValue, 5);
+        piece.Faces.ConvertNonPlanarQuadsToTriangles(Revit.VertexTolerance, RhinoMath.UnsetValue, 5);
 
         var isSolid = piece.IsClosed && piece.IsManifold(true, out var isOriented, out var hasBoundary) && isOriented;
         var vertices = piece.Vertices.ToPoint3dArray();
@@ -421,7 +499,7 @@ namespace RhinoInside.Revit
 
     static internal IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
-      var scaleFactor = Revit.RhinoToRevitModelScaleFactor;
+      var scaleFactor = 1.0 / Revit.ModelUnits;
       foreach (var geometry in geometries)
       {
         switch (geometry)
@@ -464,13 +542,13 @@ namespace RhinoInside.Revit
             if (scaleFactor != 1.0)
               mesh.Scale(scaleFactor);
 
-            // Meshes with edges smaller than AbsoluteRevitTolerance (1/16 inch) are not welcome in Revit
-            while (mesh.CollapseFacesByEdgeLength(false, Revit.ModelAbsoluteTolerance) > 0) ;
+            while (mesh.CollapseFacesByEdgeLength(false, Revit.VertexTolerance) > 0) ;
 
             yield return mesh.ToHost().Cast<GeometryObject>().ToList();
             break;
         }
       }
     }
+    #endregion
   };
 }

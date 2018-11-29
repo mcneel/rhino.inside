@@ -19,6 +19,7 @@ These instructions will get you a copy of the project up and running on your loc
 * .NET Framework 4.7 ([download](https://www.microsoft.com/net/download/visual-studio-sdks))
 * Rhino WIP ([download](https://www.rhino3d.com/download/rhino/wip))
 * Autodesk Revit 2017-2019 ([download](https://www.autodesk.com/products/revit/free-trial))
+* Add this link to your bookmarks ;) ([Revit API docs](http://www.revitapidocs.com))
 
 ### Getting Source & Build
 1. Clone the repository. At the command prompt, enter the following command:

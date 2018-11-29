@@ -74,6 +74,10 @@
     <DefineConstants>REVIT_2017; REVIT_2018; REVIT_2019</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Eto">
+      <HintPath>C:\Program Files\Rhino WIP\System\Eto.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="GH_IO">
       <HintPath>C:\Program Files\Rhino WIP\Plug-ins\Grasshopper\GH_IO.dll</HintPath>
       <Private>False</Private>
@@ -91,6 +95,10 @@
       <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Rhino.UI">
+      <HintPath>C:\Program Files\Rhino WIP\System\Rhino.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="RhinoCommon">
       <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
       <Private>False</Private>
@@ -106,12 +114,26 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GH\Category\Category.cs" />
+    <Compile Include="GH\Document\Categories.cs" />
+    <Compile Include="GH\Element\Topography\ByPoints.cs" />
+    <Compile Include="GH\ID.cs" />
+    <Compile Include="ImageBuilder.cs" />
+    <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
+    <Compile Include="GH\Document\Levels.cs" />
+    <Compile Include="GH\Element\Element.cs" />
+    <Compile Include="GH\Element\FloorType\ByName.cs" />
+    <Compile Include="GH\Element\FloorType\FloorType.cs" />
+    <Compile Include="GH\Element\Floor\ByOutlineTypeAndLevel.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Sample4.cs" />
+    <Compile Include="UI\APIDocsCommand.cs" />
+    <Compile Include="UI\GrasshopperCommand.cs" />
+    <Compile Include="UI\RhinoCommand.cs" />
     <None Include="Properties\RhinoInside.Revit.addin" />
     <None Include="README.md" />
     <Compile Include="Convert.cs" />

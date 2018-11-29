@@ -33,17 +33,17 @@ namespace RhinoInside.Revit
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
         pushButton.ToolTip = "Creates a mesh sphere";
-        pushButton.LargeImage = Revit.RhinoLogo;
+        pushButton.LargeImage = ImageBuilder.BuildImage("1");
       }
     }
 
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       // RhinoCommon code
-      var sphere = new Sphere(Point3d.Origin, 12);
+      var sphere = new Sphere(Point3d.Origin, 12 * Revit.ModelUnits);
       var brep = sphere.ToBrep();
       var mp = MeshingParameters.Default;
-      mp.MinimumEdgeLength = Revit.ModelAbsoluteTolerance;
+      mp.MinimumEdgeLength = Revit.VertexTolerance;
       var meshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, mp);
 
       // Revit code

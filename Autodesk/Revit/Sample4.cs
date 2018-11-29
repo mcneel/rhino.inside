@@ -40,7 +40,7 @@ namespace RhinoInside.Revit
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
         pushButton.ToolTip = "Eval a Grasshopper definition";
-        pushButton.LargeImage = Revit.GrasshopperLogo;
+        pushButton.LargeImage = ImageBuilder.BuildImage("4");
       }
     }
 
