@@ -119,6 +119,7 @@
     <Compile Include="GH\Element\Beam\ByCurve.cs" />
     <Compile Include="GH\Element\Column\ByCurve.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
+    <Compile Include="GH\Element\Wall\ByCurve.cs" />
     <Compile Include="GH\ID.cs" />
     <Compile Include="ImageBuilder.cs" />
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
