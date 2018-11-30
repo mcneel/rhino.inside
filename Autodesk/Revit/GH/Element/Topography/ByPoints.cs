@@ -52,7 +52,16 @@ namespace RhinoInside.Revit.GH.Components
       IList<XYZ> xyz
     )
     {
-      var topography = Autodesk.Revit.DB.Architecture.TopographySurface.Create(doc, xyz);
+      Autodesk.Revit.DB.Architecture.TopographySurface topography = null;
+
+      try
+      {
+        topography = Autodesk.Revit.DB.Architecture.TopographySurface.Create(doc, xyz);
+      }
+      catch (Exception e)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+      }
 
       ReplaceElement(doc, DA, Iteration, topography);
     }

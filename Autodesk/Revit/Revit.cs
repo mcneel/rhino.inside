@@ -207,20 +207,31 @@ namespace RhinoInside.Revit
         {
           if (documentActions.Count > 0)
           {
-            var action = documentActions.Dequeue();
+            using (var trans = new Transaction(ActiveDBDocument))
+            {
+              try
+              {
+                if (trans.Start("RhinoInside") == TransactionStatus.Started)
+                {
+                  while (documentActions.Count > 0)
+                    documentActions.Dequeue().Invoke(ActiveDBDocument);
 
-            try
-            {
-              action.Invoke();
-            }
-            catch (Exception e)
-            {
-              Debug.Fail(e.Source, e.Message);
+                  trans.Commit();
+                }
+              }
+              catch (Exception e)
+              {
+                Debug.Fail(e.Source, e.Message);
+
+                if (trans.HasStarted())
+                  trans.RollBack();
+              }
+              finally
+              {
+                documentActions.Clear();
+              }
             }
           }
-
-          if (documentActions.Count > 0)
-            args.SetRaiseWithoutDelay();
         }
       }
     }
@@ -251,63 +262,11 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Document Actions
-    abstract class DocumentAction
-    {
-      protected readonly Action<Document> action;
-      protected DocumentAction(Action<Document> action)
-      {
-        this.action = action;
-      }
-      public abstract void Invoke();
-    }
-
-    class PersistentAction : DocumentAction
-    {
-      public PersistentAction(Action<Document> action) : base(action) { }
-      public override void Invoke()
-      {
-        using (var trans = new Transaction(ActiveDBDocument))
-        {
-          if (trans.Start(action.GetMethodInfo().Name) == TransactionStatus.Started)
-          {
-            try
-            {
-              action.Invoke(ActiveDBDocument);
-              trans.Commit();
-            }
-            catch (Exception e)
-            {
-              Debug.Fail(e.Source, e.Message);
-              trans.RollBack();
-            }
-          }
-        }
-      }
-    }
-
-    class TransientAction : DocumentAction, ITransientElementMaker
-    {
-      public TransientAction(Action<Document> action) : base(action) { }
-      public override void Invoke()
-      {
-        ActiveDBDocument.MakeTransientElements(this);
-      }
-      public void Execute()
-      {
-        action.Invoke(ActiveDBDocument);
-      }
-    }
-
-    private static Queue<DocumentAction> documentActions = new Queue<DocumentAction>();
+    private static Queue<Action<Document>> documentActions = new Queue<Action<Document>>();
     public static void EnqueueAction(Action<Document> action)
     {
       lock (documentActions)
-        documentActions.Enqueue(new PersistentAction(action));
-    }
-    public static void EnqueueTransientAction(Action<Document> action)
-    {
-      lock (documentActions)
-        documentActions.Enqueue(new TransientAction(action));
+        documentActions.Enqueue(action);
     }
     #endregion
 
