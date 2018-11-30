@@ -69,38 +69,49 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       DirectShape ds = null;
-
-      if (!DirectShape.IsValidCategoryId(category.Id, Revit.ActiveDBDocument))
-        category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, BuiltInCategory.OST_GenericModel);
-
-      if (geometries != null && category != null)
+      try
       {
-        foreach (var geometry in geometries.ToHost())
+        if (geometries != null)
         {
-          var shape = new List<GeometryObject>(geometry.Count);
-
-          // DirectShape only accepts those types and no nulls
-          foreach (var g in geometry)
+          if (category == null || !DirectShape.IsValidCategoryId(category.Id, doc))
           {
-            switch (g)
-            {
-              case Point p: shape.Add(p); break;
-              case Curve c: shape.Add(c); break;
-              case Solid s: shape.Add(s); break;
-              case Mesh m: shape.Add(m); break;
-            }
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' is not valid for DirectShape.", Params.Input[1].Name));
+            category = Autodesk.Revit.DB.Category.GetCategory(doc, BuiltInCategory.OST_GenericModel);
           }
 
-          if (shape.Count > 0)
+          foreach (var geometry in geometries.ToHost())
           {
-            ds = Autodesk.Revit.DB.DirectShape.CreateElement(doc, category.Id);
-            ds.SetShape(shape);
-            ds.Name = name ?? string.Empty;
+            var shape = new List<GeometryObject>(geometry.Count);
+
+            // DirectShape only accepts those types and no nulls
+            foreach (var g in geometry)
+            {
+              switch (g)
+              {
+                case Point p: shape.Add(p); break;
+                case Curve c: shape.Add(c); break;
+                case Solid s: shape.Add(s); break;
+                case Mesh m: shape.Add(m); break;
+              }
+            }
+
+            if (shape.Count > 0)
+            {
+              ds = Autodesk.Revit.DB.DirectShape.CreateElement(doc, category.Id);
+              ds.SetShape(shape);
+              ds.Name = name ?? string.Empty;
+            }
           }
         }
       }
-
-      ReplaceElement(doc, DA, Iteration, ds);
+      catch (Exception e)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+      }
+      finally
+      {
+        ReplaceElement(doc, DA, Iteration, ds);
+      }
     }
   }
 

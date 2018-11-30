@@ -66,30 +66,38 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       Autodesk.Revit.DB.FamilyInstance instance = null;
-
-      if
-      (
-        curve == null ||
-        curve.IsShort(Revit.ShortCurveTolerance) ||
-        curve.IsClosed ||
-        !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-        curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
-      )
+      try
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be a C1 continuous planar non closed curve.", Params.Input[0].Name));
-      }
-      else
-      {
-        var axisList = curve.ToHost().ToList();
-        Debug.Assert(axisList.Count == 1);
-
-        if (axisPlane.Normal.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) != 0)
-          instance = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
+        if
+        (
+          curve == null ||
+          curve.IsShort(Revit.ShortCurveTolerance) ||
+          curve.IsClosed ||
+          !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
+          curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
+        )
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be a C1 continuous planar non closed curve.", Params.Input[0].Name));
+        }
         else
-          instance = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Brace);
-      }
+        {
+          var axisList = curve.ToHost().ToList();
+          Debug.Assert(axisList.Count == 1);
 
-      ReplaceElement(doc, DA, Iteration, instance);
+          if (axisPlane.Normal.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) != 0)
+            instance = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
+          else
+            instance = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Brace);
+        }
+      }
+      catch (Exception e)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+      }
+      finally
+      {
+        ReplaceElement(doc, DA, Iteration, instance);
+      }
     }
   }
 }

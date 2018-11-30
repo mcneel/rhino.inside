@@ -68,35 +68,43 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       Floor floor = null;
-
-      if
-      (
-        boundary == null ||
-        boundary.IsShort(Revit.ShortCurveTolerance) ||
-        !boundary.IsClosed ||
-        !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
-        boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
-      )
+      try
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be an horizontal planar closed curve.", Params.Input[0].Name));
-      }
-      else
-      {
-        var curveArray = new CurveArray();
-        foreach (var curve in boundary.ToHost())
-          curveArray.Append(curve);
-
-        if (floorType.IsFoundationSlab)
+        if
+        (
+          boundary == null ||
+          boundary.IsShort(Revit.ShortCurveTolerance) ||
+          !boundary.IsClosed ||
+          !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
+          boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+        )
         {
-          floor = doc.Create.NewFoundationSlab(curveArray, floorType, level, structural, XYZ.BasisZ);
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be an horizontal planar closed curve.", Params.Input[0].Name));
         }
         else
         {
-          floor = doc.Create.NewFloor(curveArray, floorType, level, structural, XYZ.BasisZ);
+          var curveArray = new CurveArray();
+          foreach (var curve in boundary.ToHost())
+            curveArray.Append(curve);
+
+          if (floorType.IsFoundationSlab)
+          {
+            floor = doc.Create.NewFoundationSlab(curveArray, floorType, level, structural, XYZ.BasisZ);
+          }
+          else
+          {
+            floor = doc.Create.NewFloor(curveArray, floorType, level, structural, XYZ.BasisZ);
+          }
         }
       }
-
-      ReplaceElement(doc, DA, Iteration, floor);
+      catch (Exception e)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+      }
+      finally
+      {
+        ReplaceElement(doc, DA, Iteration, floor);
+      }
     }
   }
 }
