@@ -26,6 +26,8 @@ This repository contains samples for:
    - [Revit](Autodesk/Revit)
 - [Bricsys](Bricsys)
    - [BricsCAD](Bricsys/BricsCAD)
-- [A simple console application](ConsoleApps/HelloWorld)
+- [Console](ConsoleApps)
+   - [A simple console application](ConsoleApps/HelloWorld)
+   - [A simple console application for converting files to .obj](ConsoleApps/Convert)
 
 **If you have any questions, [visit the discussion forum...](https://discourse.mcneel.com/c/serengeti/inside)**
