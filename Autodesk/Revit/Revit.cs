@@ -14,10 +14,12 @@ using Autodesk.Revit;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
-using Autodesk.Revit.ApplicationServices;
 
 using Rhino;
 using Rhino.Runtime.InProcess;
+using Rhino.PlugIns;
+
+using Grasshopper;
 
 namespace RhinoInside.Revit
 {
@@ -26,7 +28,7 @@ namespace RhinoInside.Revit
   [Autodesk.Revit.Attributes.Journaling(Autodesk.Revit.Attributes.JournalingMode.NoCommandData)]
   public class Revit : IExternalApplication
   {
-#region Revit static constructor
+    #region Revit static constructor
     static Revit()
     {
       ResolveEventHandler OnRhinoCommonResolve = null;
@@ -40,17 +42,13 @@ namespace RhinoInside.Revit
 
         AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
 
-        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+        var rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
         return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }
-#endregion
+    #endregion
 
-#region IExternalApplication Members
-
-    internal static BitmapImage RhinoLogo       = LoadImage("RhinoInside.Resources.Rhino.png");
-    internal static BitmapImage GrasshopperLogo = LoadImage("RhinoInside.Resources.Grasshopper.png");
-    
+    #region IExternalApplication Members
     private RhinoCore rhinoCore;
 
     public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
@@ -67,7 +65,7 @@ namespace RhinoInside.Revit
       try
       {
         var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
-        rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Normal, MainWindowHandle);
+        rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Hidden, MainWindowHandle);
       }
       catch (Exception e)
       {
@@ -75,12 +73,17 @@ namespace RhinoInside.Revit
         return Autodesk.Revit.UI.Result.Failed;
       }
 
-      // Register UI
+      // Register UI on Revit
       {
-        RibbonPanel ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
+        var ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
 
+        UI.RhinoCommand.CreateUI(ribbonPanel);
+        UI.GrasshopperCommand.CreateUI(ribbonPanel);
+        ribbonPanel.AddSeparator();
         Sample1.CreateUI(ribbonPanel);
         Sample4.CreateUI(ribbonPanel);
+        ribbonPanel.AddSeparator();
+        UI.APIDocsCommand.CreateUI(ribbonPanel);
       }
 
       // Add an Idling event handler to notify Rhino when the process is idle
@@ -109,6 +112,29 @@ namespace RhinoInside.Revit
       return Autodesk.Revit.UI.Result.Succeeded;
     }
 
+    static bool LoadGrasshopperComponents()
+    {
+      var LoadGHAProc = Instances.ComponentServer.GetType().GetMethod("LoadGHA", BindingFlags.NonPublic | BindingFlags.Instance);
+      if (LoadGHAProc == null)
+        return false;
+
+      var bCoff = Instances.Settings.GetValue("Assemblies:COFF", true);
+      Instances.Settings.SetValue("Assemblies:COFF", false);
+
+      var rc = (bool) LoadGHAProc.Invoke
+      (
+        Instances.ComponentServer,
+        new object[] { new Grasshopper.Kernel.GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
+      );
+
+      Instances.Settings.SetValue("Assemblies:COFF", bCoff);
+
+      if(rc)
+        Grasshopper.Kernel.GH_ComponentServer.UpdateRibbonUI();
+
+      return rc;
+    }
+    static bool LoadedAsGHA = false;
     public void OnIdle(object sender, IdlingEventArgs args)
     {
       // 1. Do Rhino pending OnIdle tasks
@@ -118,92 +144,112 @@ namespace RhinoInside.Revit
         return;
       }
 
+      // Load this assembly as a Grasshopper assembly
+      if (!LoadedAsGHA && PlugIn.GetPlugInInfo(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF)).IsLoaded)
+        LoadedAsGHA = LoadGrasshopperComponents();
+
       // Document dependant tasks need a document
-      var doc = (sender as UIApplication)?.ActiveUIDocument?.Document;
-      if (doc == null)
-        return;
-
-      // 2. Do all BakeGeometry pending tasks
-      lock (bakeRecipeQueue)
+      ActiveUIApplication = (sender as UIApplication);
+      if (ActiveDBDocument != null)
       {
-        if (bakeRecipeQueue.Count > 0)
+        // 2. Do all BakeGeometry pending tasks
+        lock (bakeRecipeQueue)
         {
-          using (var trans = new Transaction(doc))
+          if (bakeRecipeQueue.Count > 0)
           {
-            if (trans.Start("BakeGeometry") == TransactionStatus.Started)
+            using (var trans = new Transaction(ActiveDBDocument))
             {
-              while (bakeRecipeQueue.Count > 0)
+              if (trans.Start("BakeGeometry") == TransactionStatus.Started)
               {
-                BakeRecipe recipe = bakeRecipeQueue.Dequeue();
-
-                if (recipe.geometryToBake != null && recipe.categoryToBakeInto != BuiltInCategory.INVALID)
+                while (bakeRecipeQueue.Count > 0)
                 {
-                  try
-                  {
-                    var geometryList = new List<GeometryObject>();
+                  var recipe = bakeRecipeQueue.Dequeue();
 
-                    // DirectShape only accepts those types and no nulls
-                    foreach (var g in recipe.geometryToBake)
+                  if (recipe.geometryToBake != null && recipe.categoryToBakeInto != BuiltInCategory.INVALID)
+                  {
+                    try
                     {
-                      switch (g)
+                      var geometryList = new List<GeometryObject>();
+
+                      // DirectShape only accepts those types and no nulls
+                      foreach (var g in recipe.geometryToBake)
                       {
-                        case Point p: geometryList.Add(p); break;
-                        case Curve c: geometryList.Add(c); break;
-                        case Solid s: geometryList.Add(s); break;
-                        case Mesh  m: geometryList.Add(m); break;
+                        switch (g)
+                        {
+                          case Point p: geometryList.Add(p); break;
+                          case Curve c: geometryList.Add(c); break;
+                          case Solid s: geometryList.Add(s); break;
+                          case Mesh m: geometryList.Add(m); break;
+                        }
+                      }
+
+                      if (geometryList.Count > 0)
+                      {
+                        var ds = DirectShape.CreateElement(ActiveDBDocument, new ElementId(recipe.categoryToBakeInto));
+                        ds.SetShape(geometryList);
                       }
                     }
-
-                    if (geometryList.Count > 0)
+                    catch (Exception e)
                     {
-                      var ds = DirectShape.CreateElement(doc, new ElementId(recipe.categoryToBakeInto));
-                      ds.SetShape(geometryList);
+                      Debug.Fail(e.Source, e.Message);
                     }
-                  }
-                  catch(Exception e)
-                  {
-                    Debug.Fail(e.Source, e.Message);
                   }
                 }
               }
-            }
 
-            trans.Commit();
+              trans.Commit();
+            }
           }
         }
-      }
 
-      // 3. Do all document actions
-      lock (documentActions)
-      {
-        if (documentActions.Count > 0)
+        // 3. Do all document actions
+        lock (documentActions)
         {
-          using (var trans = new Transaction(doc))
+          if (documentActions.Count > 0)
           {
-            var action = documentActions.Peek();
-            if (trans.Start(action.GetMethodInfo().Name) == TransactionStatus.Started)
+            using (var trans = new Transaction(ActiveDBDocument))
             {
               try
               {
-                documentActions.Dequeue().Invoke(doc);
-                trans.Commit();
+                if (trans.Start("RhinoInside") == TransactionStatus.Started)
+                {
+                  while (documentActions.Count > 0)
+                    documentActions.Dequeue().Invoke(ActiveDBDocument);
+
+                  trans.Commit();
+                }
               }
               catch (Exception e)
               {
                 Debug.Fail(e.Source, e.Message);
-                trans.RollBack();
+
+                if (trans.HasStarted())
+                  trans.RollBack();
+              }
+              finally
+              {
+                documentActions.Clear();
               }
             }
           }
         }
-
-        if (documentActions.Count > 0)
-          args.SetRaiseWithoutDelay();
       }
     }
-#endregion
+    #endregion
 
-#region Public Methods
+    #region Bake Recipe
+    class BakeRecipe
+    {
+      public IList<GeometryObject> geometryToBake;
+      public BuiltInCategory categoryToBakeInto;
+
+      public BakeRecipe(IList<GeometryObject> geometryToBake, BuiltInCategory categoryToBakeInto)
+      {
+        this.geometryToBake = geometryToBake;
+        this.categoryToBakeInto = categoryToBakeInto;
+      }
+    }
+
     private static Queue<BakeRecipe> bakeRecipeQueue = new Queue<BakeRecipe>();
     public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory builtInCategory = BuiltInCategory.OST_GenericModel)
     {
@@ -213,46 +259,32 @@ namespace RhinoInside.Revit
           bakeRecipeQueue.Enqueue(new BakeRecipe(list, builtInCategory));
       }
     }
+    #endregion
 
+    #region Document Actions
     private static Queue<Action<Document>> documentActions = new Queue<Action<Document>>();
     public static void EnqueueAction(Action<Document> action)
     {
       lock (documentActions)
         documentActions.Enqueue(action);
     }
+    #endregion
 
+    #region Public Properties
     public static IntPtr MainWindowHandle { get; private set; }
-    public static UIControlledApplication ApplicationUI { get; private set; }
+    public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI { get; private set; }
+    public static Autodesk.Revit.UI.UIApplication ActiveUIApplication { get; private set; }
+    public static Autodesk.Revit.ApplicationServices.Application Services => ActiveUIApplication?.Application;
 
-    public const double ModelAbsoluteTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feet
-    public const double ModelAbsolutePlanarTolerance = Revit.ModelAbsoluteTolerance / 10; // in feet
+    public static Autodesk.Revit.UI.UIDocument ActiveUIDocument => ActiveUIApplication?.ActiveUIDocument;
+    public static Autodesk.Revit.DB.Document   ActiveDBDocument => ActiveUIDocument?.Document;
+
+    private const double AbsoluteTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feet
+    public static double AngleTolerance => Services != null ? Services.AngleTolerance : Math.PI / 180.0; // in rad
+    public static double ShortCurveTolerance => Services != null ? Services.ShortCurveTolerance : AbsoluteTolerance / 2.0;
+    public static double VertexTolerance => Services != null ? Services.VertexTolerance : AbsoluteTolerance / 10.0;
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
-
-    public static double RhinoToRevitModelScaleFactor => RhinoDoc.ActiveDoc == null ? Double.NaN : RhinoMath.UnitScale(RhinoDoc.ActiveDoc.ModelUnitSystem, Revit.ModelUnitSystem);
-    internal static double RhinoModelAbsoluteTolerance => ModelAbsoluteTolerance / RhinoToRevitModelScaleFactor; // in Rhino model units
-#endregion
-
-#region Private Methods
-    static private BitmapImage LoadImage(string name)
-    {
-      var bmi = new BitmapImage();
-      bmi.BeginInit();
-      bmi.StreamSource = Assembly.GetExecutingAssembly().GetManifestResourceStream(name);
-      bmi.EndInit();
-      return bmi;
-    }
-#endregion
-  }
-
-  public class BakeRecipe
-  {
-    public IList<GeometryObject> geometryToBake;
-    public BuiltInCategory categoryToBakeInto;
-
-    public BakeRecipe(IList<GeometryObject> geometryToBake, BuiltInCategory categoryToBakeInto)
-    {
-      this.geometryToBake = geometryToBake;
-      this.categoryToBakeInto = categoryToBakeInto;
-    }
+    public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
+    #endregion
   }
 }
