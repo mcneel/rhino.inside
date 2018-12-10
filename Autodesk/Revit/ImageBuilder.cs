@@ -28,7 +28,7 @@ namespace RhinoInside
       }
     }
 
-    public static BitmapImage ToBitmapImage(this Bitmap bitmap)
+    public static BitmapImage ToBitmapImage(this Bitmap bitmap, int PixelWidth = 0, int PixelHeight = 0)
     {
       using (var memory = new MemoryStream())
       {
@@ -39,6 +39,8 @@ namespace RhinoInside
         bitmapImage.BeginInit();
         bitmapImage.StreamSource = memory;
         bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+        bitmapImage.DecodePixelWidth = PixelWidth;
+        bitmapImage.DecodePixelHeight = PixelHeight;
         bitmapImage.EndInit();
         bitmapImage.Freeze();
 
@@ -64,13 +66,26 @@ namespace RhinoInside
       };
 
       g.FillEllipse(Brushes.Black, new Rectangle(1, 1, width - 1, height - 1));
-      g.DrawString(tag, new System.Drawing.Font("Calibri", (width - 1) / (float) tag.Length, GraphicsUnit.Pixel), Brushes.White, rect, format);
+      float emSize = ((float) width - ((float) tag.Length * 4.0f));
+
+      if (width == 24)
+      {
+        switch (tag.Length)
+        {
+          case 1: emSize = 20.0f; break;
+          case 2: emSize = 15.0f; break;
+          case 3: emSize = 11.0f; break;
+          case 4: emSize = 8.0f; break;
+        }
+      }
+
+      g.DrawString(tag, new System.Drawing.Font("Calibri", emSize, GraphicsUnit.Pixel), Brushes.White, rect, format);
       return bitmap;
     }
 
     static public System.Windows.Media.ImageSource BuildImage(string tag)
     {
-      return BuildIcon(tag, 32, 32).ToBitmapImage();
+      return BuildIcon(tag, 64, 64).ToBitmapImage(32, 32);
     }
   }
 }

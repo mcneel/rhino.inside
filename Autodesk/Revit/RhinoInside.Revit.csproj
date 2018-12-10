@@ -117,6 +117,7 @@
     <Compile Include="GH\Category\Category.cs" />
     <Compile Include="GH\Document\Categories.cs" />
     <Compile Include="GH\Element\Beam\ByCurve.cs" />
+    <Compile Include="GH\Element\ElementType.cs" />
     <Compile Include="GH\Element\Column\ByCurve.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
@@ -125,8 +126,6 @@
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Document\Levels.cs" />
     <Compile Include="GH\Element\Element.cs" />
-    <Compile Include="GH\Element\FloorType\ByName.cs" />
-    <Compile Include="GH\Element\FloorType\FloorType.cs" />
     <Compile Include="GH\Element\Floor\ByOutlineTypeAndLevel.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>

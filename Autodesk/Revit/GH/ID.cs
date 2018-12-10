@@ -14,8 +14,8 @@ namespace RhinoInside.Revit.GH.Types
 {
   public class ID : GH_Goo<ElementId>
   {
-    public override string TypeName => "Revit Element";
-    public override string TypeDescription => "Represents a Revit Element";
+    public override string TypeName => "Revit Model Object";
+    public override string TypeDescription => "Represents a Revit model object";
     public override bool IsValid => Value != ElementId.InvalidElementId;
 
     public string UniqueID { get; protected set; }
@@ -24,7 +24,6 @@ namespace RhinoInside.Revit.GH.Types
     public ID() { Value = ElementId.InvalidElementId; UniqueID = string.Empty; }
     public ID(string uniqueId) { Value = ElementId.InvalidElementId; UniqueID = uniqueId; }
     public ID(int id) { Value = new ElementId(id); UniqueID = string.Empty; }
-    public ID(Autodesk.Revit.DB.Element element) { Value = element.Id; UniqueID = string.Empty; }
     public static implicit operator ElementId(ID self) { return self.Value; }
 
     public override sealed IGH_Goo Duplicate()
@@ -58,6 +57,9 @@ namespace RhinoInside.Revit.GH.Types
 
     public override sealed string ToString()
     {
+      if (Value == ElementId.InvalidElementId)
+        return "Null " + TypeName;
+
       string typeName = TypeName;
       if (Revit.ActiveDBDocument != null)
       {
@@ -69,8 +71,6 @@ namespace RhinoInside.Revit.GH.Types
       if (IsReferencedObject)
         return "Referenced " + typeName;
 
-      if (Value == ElementId.InvalidElementId)
-        return "Null " + typeName;
 #if DEBUG
       return string.Format("{0} (#{1})", typeName, Value.IntegerValue);
 #else

@@ -22,9 +22,85 @@ namespace RhinoInside.Revit
   public static class Convert
   {
     #region ToRhino
-    static public Point3d ToRhino(XYZ p)
+    static public Point3d ToRhino(this XYZ p)
     {
       return new Point3d(p.X, p.Y, p.Z);
+    }
+
+    static IEnumerable<Point3d> ToRhino(this IEnumerable<XYZ> points)
+    {
+      foreach (var p in points)
+        yield return p.ToRhino();
+    }
+
+    static Rhino.Geometry.Mesh ToRhino(this Autodesk.Revit.DB.Mesh mesh)
+    {
+      var result  = new Rhino.Geometry.Mesh();
+
+      result.Vertices.AddVertices(mesh.Vertices.ToRhino());
+
+      for (int t = 0; t < mesh.NumTriangles; ++t)
+      {
+        var triangle = mesh.get_Triangle(t);
+
+        var meshFace = new MeshFace
+        (
+          (int) triangle.get_Index(0),
+          (int) triangle.get_Index(1),
+          (int) triangle.get_Index(2)
+        );
+
+        result.Faces.AddFace(meshFace);
+      }
+
+      return result;
+    }
+
+    static Rhino.Geometry.Mesh ToRhino(this Autodesk.Revit.DB.Solid solid)
+    {
+      var facesMeshes = new List<Rhino.Geometry.Mesh>(solid.Faces.Size);
+      foreach (var face in solid.Faces)
+      {
+        switch (face)
+        {
+          case Face meshableFace: facesMeshes.Add(meshableFace.Triangulate().ToRhino()); break;
+        }
+      }
+
+      if (facesMeshes.Count > 0)
+      {
+        var mesh = new Rhino.Geometry.Mesh();
+
+        mesh.Append(facesMeshes);
+        mesh.Vertices.Align(Revit.VertexTolerance);
+
+        return mesh;
+      }
+
+      return null;
+    }
+
+    static internal IEnumerable<Rhino.Geometry.GeometryBase> ToRhino(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries)
+    {
+      var scaleFactor = Revit.ModelUnits;
+      foreach (var geometry in geometries)
+      {
+        switch (geometry)
+        {
+          case Autodesk.Revit.DB.GeometryInstance instance:
+            foreach (var g in instance.GetInstanceGeometry().ToRhino())
+              yield return g;
+            break;
+          case Autodesk.Revit.DB.Solid solid:
+            var mesh = solid.ToRhino();
+
+            if (scaleFactor != 1.0)
+              mesh?.Scale(scaleFactor);
+
+            yield return mesh;
+            break;
+        }
+      }
     }
     #endregion
 

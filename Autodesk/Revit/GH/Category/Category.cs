@@ -13,12 +13,12 @@ namespace RhinoInside.Revit.GH.Types
   public class Category : ID
   {
     public override string TypeName => "Revit Category";
-    public override string TypeDescription => "Represents a Revit Category";
+    public override string TypeDescription => "Represents a Revit category";
 
     public Category() : base() { }
     public Category(string uniqueId) : base(uniqueId) { }
     public Category(ElementId elementId) : base(elementId.IntegerValue) { }
-    public Category(Autodesk.Revit.DB.Element element) : base(element != null ? element.Id.IntegerValue : ElementId.InvalidElementId.IntegerValue) { }
+    public Category(Autodesk.Revit.DB.Category category) : base(category != null ? category.Id.IntegerValue : ElementId.InvalidElementId.IntegerValue) { }
     public static explicit operator Autodesk.Revit.DB.Category(Category self)
     {
       return Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, self);
