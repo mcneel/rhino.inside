@@ -304,6 +304,38 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
+  public class ElementLocation : ElementGetter
+  {
+    public override Guid ComponentGuid => new Guid("8E129C01-602B-4A3D-8DFD-F1B590F024AD");
+    static readonly string PropertyName = "Location";
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("L");
+
+    public ElementLocation() : base(PropertyName) { }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddGeometryParameter("Location", "L", ObjectType.Name + " parameter names", GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Element element = null;
+      if (!DA.GetData(ObjectType.Name, ref element))
+        return;
+
+      var location = element.Location;
+      switch (element.Location)
+      {
+        case Autodesk.Revit.DB.LocationPoint pointLocation:
+          DA.SetData("Location", pointLocation.Point.ToRhino());
+          break;
+        case Autodesk.Revit.DB.LocationCurve curveLocation:
+          DA.SetData("Location", curveLocation.Curve.ToRhino());
+          break;
+      }
+    }
+  }
+
   public class ElementGeometry : ElementGetter
   {
     public override Guid ComponentGuid => new Guid("B7E6A82F-684F-4045-A634-A4AA9F7427A8");
