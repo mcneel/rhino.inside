@@ -68,6 +68,12 @@ namespace RhinoInside.Revit.GH.Components
       Autodesk.Revit.DB.FamilyInstance instance = null;
       try
       {
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+        {
+          curve?.Scale(scaleFactor);
+        }
+
         if
         (
           curve == null ||

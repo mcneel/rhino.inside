@@ -85,6 +85,12 @@ namespace RhinoInside.Revit.GH.Components
       Autodesk.Revit.DB.FamilyInstance instance = null;
       try
       {
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+        {
+          line = line.Scale(scaleFactor);
+        }
+
         if (line.Length < Revit.ShortCurveTolerance)
         {
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is too short.", Params.Input[0].Name));

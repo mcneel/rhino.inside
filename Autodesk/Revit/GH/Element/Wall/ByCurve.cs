@@ -101,7 +101,12 @@ namespace RhinoInside.Revit.GH.Components
       Autodesk.Revit.DB.Wall wall = null;
       try
       {
-        height /= Revit.ModelUnits;
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+        {
+          height *= scaleFactor;
+          curve?.Scale(scaleFactor);
+        }
 
         if
         (

@@ -21,6 +21,17 @@ namespace RhinoInside.Revit
 {
   public static class Convert
   {
+    #region Scale
+    static internal Point3d Scale(this Point3d p, double factor)
+    {
+      return new Point3d(p.X * factor, p.Y * factor, p.Z * factor);
+    }
+    static internal Rhino.Geometry.Line Scale(this Rhino.Geometry.Line l, double factor)
+    {
+      return new Rhino.Geometry.Line(l.From.Scale(factor), l.To.Scale(factor));
+    }
+    #endregion
+
     #region ToRhino
     static public Point3d ToRhino(this XYZ p)
     {
@@ -33,27 +44,28 @@ namespace RhinoInside.Revit
         yield return p.ToRhino();
     }
 
-    static Rhino.Geometry.Mesh ToRhino(this Autodesk.Revit.DB.Mesh mesh)
+    static internal Rhino.Geometry.Curve ToRhino(this Autodesk.Revit.DB.Curve curve)
     {
-      var result  = new Rhino.Geometry.Mesh();
-
-      result.Vertices.AddVertices(mesh.Vertices.ToRhino());
-
-      for (int t = 0; t < mesh.NumTriangles; ++t)
+      switch (curve)
       {
-        var triangle = mesh.get_Triangle(t);
+        case Autodesk.Revit.DB.Line line:
+          return line.IsBound ? new Rhino.Geometry.LineCurve(line.GetEndPoint(0).ToRhino(), line.GetEndPoint(1).ToRhino()) : null;
 
-        var meshFace = new MeshFace
-        (
-          (int) triangle.get_Index(0),
-          (int) triangle.get_Index(1),
-          (int) triangle.get_Index(2)
-        );
-
-        result.Faces.AddFace(meshFace);
+        case Autodesk.Revit.DB.Arc arc:
+          var plane = new Rhino.Geometry.Plane(arc.Center.ToRhino(), new Vector3d(arc.XDirection.ToRhino()), new Vector3d(arc.YDirection.ToRhino()));
+          var c = new Rhino.Geometry.Circle(plane, arc.Radius);
+          if (arc.IsBound)
+          {
+            var a = new Rhino.Geometry.Arc(c, new Interval(arc.GetEndParameter(0), arc.GetEndParameter(1)));
+            return new Rhino.Geometry.ArcCurve(a);
+          }
+          else
+          {
+            return new Rhino.Geometry.ArcCurve(c);
+          }
       }
 
-      return result;
+      return null;
     }
 
     static Rhino.Geometry.Mesh ToRhino(this Autodesk.Revit.DB.Solid solid)
@@ -80,6 +92,29 @@ namespace RhinoInside.Revit
       return null;
     }
 
+    static Rhino.Geometry.Mesh ToRhino(this Autodesk.Revit.DB.Mesh mesh)
+    {
+      var result = new Rhino.Geometry.Mesh();
+
+      result.Vertices.AddVertices(mesh.Vertices.ToRhino());
+
+      for (int t = 0; t < mesh.NumTriangles; ++t)
+      {
+        var triangle = mesh.get_Triangle(t);
+
+        var meshFace = new MeshFace
+        (
+          (int) triangle.get_Index(0),
+          (int) triangle.get_Index(1),
+          (int) triangle.get_Index(2)
+        );
+
+        result.Faces.AddFace(meshFace);
+      }
+
+      return result;
+    }
+
     static internal IEnumerable<Rhino.Geometry.GeometryBase> ToRhino(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries)
     {
       var scaleFactor = Revit.ModelUnits;
@@ -98,6 +133,14 @@ namespace RhinoInside.Revit
               mesh?.Scale(scaleFactor);
 
             yield return mesh;
+            break;
+          case Autodesk.Revit.DB.Curve curve:
+            var c = curve.ToRhino();
+
+            if (scaleFactor != 1.0)
+              c?.Scale(scaleFactor);
+
+            yield return c;
             break;
         }
       }
@@ -218,8 +261,6 @@ namespace RhinoInside.Revit
       var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
       if (simplifiedCurve != null)
         curve = simplifiedCurve;
-        //foreach (var segment in simplifiedCurve.ToHost())
-        //  yield return segment;
 
       switch (curve)
       {
