@@ -18,7 +18,7 @@ namespace RhinoInside.Revit.GH.Types
   public class Element : ID
   {
     public override string TypeName => "Revit Element";
-    public override string TypeDescription => "Represents a Revit Element";
+    public override string TypeDescription => "Represents a Revit element";
 
     public Element() : base() { }
     public Element(string uniqueId) : base(uniqueId) {}
@@ -301,6 +301,35 @@ namespace RhinoInside.Revit.GH.Components
 
       DA.SetDataList("Names", paramNames);
       DA.SetDataList("Values", paramValues);
+    }
+  }
+
+  public class ElementGeometry : ElementGetter
+  {
+    public override Guid ComponentGuid => new Guid("B7E6A82F-684F-4045-A634-A4AA9F7427A8");
+    static readonly string PropertyName = "Geometry";
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("G");
+
+    public ElementGeometry() : base(PropertyName) { }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddGeometryParameter("Geometry", "G", ObjectType.Name + " parameter names", GH_ParamAccess.list);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Element element = null;
+      if (!DA.GetData(ObjectType.Name, ref element))
+        return;
+
+      var options = new Options { ComputeReferences = true };
+
+      using (var geometry = element.get_Geometry(options))
+      {
+        var list = geometry.ToRhino().Where(x => x != null).ToList();
+        DA.SetDataList("Geometry", list);
+      }
     }
   }
 }
