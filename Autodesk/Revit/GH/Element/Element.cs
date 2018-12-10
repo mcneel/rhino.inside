@@ -323,14 +323,25 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData(ObjectType.Name, ref element))
         return;
 
-      var location = element.Location;
+      var scaleFactor = Revit.ModelUnits;
+
       switch (element.Location)
       {
         case Autodesk.Revit.DB.LocationPoint pointLocation:
-          DA.SetData("Location", pointLocation.Point.ToRhino());
+          var p = pointLocation.Point.ToRhino();
+
+          if (scaleFactor != 1.0)
+            p.Scale(scaleFactor);
+
+          DA.SetData("Location", p);
           break;
         case Autodesk.Revit.DB.LocationCurve curveLocation:
-          DA.SetData("Location", curveLocation.Curve.ToRhino());
+          var c = curveLocation.Curve.ToRhino();
+
+          if (scaleFactor != 1.0)
+            c.Scale(scaleFactor);
+
+          DA.SetData("Location", c);
           break;
       }
     }

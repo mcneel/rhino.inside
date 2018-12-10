@@ -43,20 +43,27 @@ namespace RhinoInside.Revit.GH.Components
 
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, points.ToHost()));
+      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, points));
     }
 
     void CommitInstance
     (
       Document doc, IGH_DataAccess DA, int Iteration,
-      IList<XYZ> xyz
+      IList<Rhino.Geometry.Point3d> points
     )
     {
       Autodesk.Revit.DB.Architecture.TopographySurface topography = null;
 
       try
       {
-        topography = Autodesk.Revit.DB.Architecture.TopographySurface.Create(doc, xyz);
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+        {
+          for(int p = 0; p < points.Count; ++p)
+            points[p] = points[p].Scale(scaleFactor);
+        }
+
+        topography = Autodesk.Revit.DB.Architecture.TopographySurface.Create(doc, points.ToHost());
       }
       catch (Exception e)
       {

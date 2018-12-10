@@ -21,6 +21,17 @@ namespace RhinoInside.Revit
 {
   public static class Convert
   {
+    #region Scale
+    static internal Point3d Scale(this Point3d p, double factor)
+    {
+      return new Point3d(p.X * factor, p.Y * factor, p.Z * factor);
+    }
+    static internal Rhino.Geometry.Line Scale(this Rhino.Geometry.Line l, double factor)
+    {
+      return new Rhino.Geometry.Line(l.From.Scale(factor), l.To.Scale(factor));
+    }
+    #endregion
+
     #region ToRhino
     static public Point3d ToRhino(this XYZ p)
     {
@@ -122,6 +133,14 @@ namespace RhinoInside.Revit
               mesh?.Scale(scaleFactor);
 
             yield return mesh;
+            break;
+          case Autodesk.Revit.DB.Curve curve:
+            var c = curve.ToRhino();
+
+            if (scaleFactor != 1.0)
+              c?.Scale(scaleFactor);
+
+            yield return c;
             break;
         }
       }

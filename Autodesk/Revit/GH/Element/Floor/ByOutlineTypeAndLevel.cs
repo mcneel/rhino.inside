@@ -70,6 +70,12 @@ namespace RhinoInside.Revit.GH.Components
       Floor floor = null;
       try
       {
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+        {
+          boundary?.Scale(scaleFactor);
+        }
+
         if
         (
           boundary == null ||
