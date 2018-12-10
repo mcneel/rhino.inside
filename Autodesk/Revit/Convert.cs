@@ -38,19 +38,19 @@ namespace RhinoInside.Revit
       switch (curve)
       {
         case Autodesk.Revit.DB.Line line:
-          return line.IsBound ? new Rhino.Geometry.LineCurve(line.Origin.ToRhino(), line.Direction.ToRhino()) : null;
+          return line.IsBound ? new Rhino.Geometry.LineCurve(line.GetEndPoint(0).ToRhino(), line.GetEndPoint(1).ToRhino()) : null;
 
         case Autodesk.Revit.DB.Arc arc:
-          var plane = new Rhino.Geometry.Plane(arc.Center.ToRhino(), arc.XDirection.ToRhino(), arc.YDirection.ToRhino());
+          var plane = new Rhino.Geometry.Plane(arc.Center.ToRhino(), new Vector3d(arc.XDirection.ToRhino()), new Vector3d(arc.YDirection.ToRhino()));
           var c = new Rhino.Geometry.Circle(plane, arc.Radius);
-          if (arc.IsCyclic)
-          {
-            return new Rhino.Geometry.ArcCurve(c);
-          }
-          else
+          if (arc.IsBound)
           {
             var a = new Rhino.Geometry.Arc(c, new Interval(arc.GetEndParameter(0), arc.GetEndParameter(1)));
             return new Rhino.Geometry.ArcCurve(a);
+          }
+          else
+          {
+            return new Rhino.Geometry.ArcCurve(c);
           }
       }
 
