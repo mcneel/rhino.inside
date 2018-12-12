@@ -15,7 +15,7 @@ using System.Windows.Forms;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class Element : ID
+  public class Element : ID, IGH_PreviewData, IGH_PreviewMeshData
   {
     public override string TypeName => "Revit Element";
     public override string TypeDescription => "Represents a Revit element";
@@ -57,12 +57,99 @@ namespace RhinoInside.Revit.GH.Types
 
       return base.CastTo<Q>(ref target);
     }
+
+    public Rhino.Geometry.BoundingBox ClippingBox
+    {
+      get
+      {
+        var element = (Autodesk.Revit.DB.Element) this;
+        if (element != null)
+          return element.get_BoundingBox(null).ToRhino();
+
+        return Rhino.Geometry.BoundingBox.Empty;
+      }
+    }
+
+    void BuildPreviewGeometry()
+    {
+      if ((meshes == null || wires == null) && IsValid)
+      {
+        var element = (Autodesk.Revit.DB.Element) this;
+        if (element != null)
+        {
+          var meshList = new List<Rhino.Geometry.Mesh>();
+          var wireList = new List<Rhino.Geometry.Curve>();
+
+          var options = new Options { ComputeReferences = true };
+          using (var geometry = element.get_Geometry(options))
+          {
+            foreach (var g in geometry.ToRhino().Where(x => x != null))
+            {
+              switch (g)
+              {
+                case Rhino.Geometry.Mesh m: meshList.Add(m); break;
+                case Rhino.Geometry.Curve w: wireList.Add(w); break;
+              }
+            }
+
+            meshes = meshList.ToArray();
+            wires = wireList.ToArray();
+          }
+        }
+      }
+    }
+
+    public void DestroyPreviewMeshes()
+    {
+      if (wires != null)
+      {
+        foreach (var wire in wires)
+          wire.Dispose();
+        wires = null;
+      }
+
+      if (meshes != null)
+      {
+        foreach (var mesh in meshes)
+          mesh.Dispose();
+        meshes = null;
+      }
+    }
+
+    public Rhino.Geometry.Mesh[] GetPreviewMeshes()
+    {
+      BuildPreviewGeometry();
+      return meshes;
+    }
+
+    public Rhino.Geometry.Curve[] GetPreviewWires()
+    {
+      BuildPreviewGeometry();
+      return wires;
+    }
+
+    Rhino.Geometry.Mesh[] meshes;
+    public void DrawViewportMeshes(GH_PreviewMeshArgs args)
+    {
+      foreach(var mesh in GetPreviewMeshes() ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
+        args.Pipeline.DrawMeshShaded(mesh, args.Material);
+    }
+
+    Rhino.Geometry.Curve[] wires;
+    public void DrawViewportWires(GH_PreviewWireArgs args)
+    {
+      foreach (var wire in GetPreviewWires() ?? Enumerable.Empty<Rhino.Geometry.Curve>())
+        args.Pipeline.DrawCurve(wire, args.Color, args.Thickness);
+
+      foreach (var mesh in GetPreviewMeshes() ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
+        args.Pipeline.DrawMeshWires(mesh, args.Color, args.Thickness);
+    }
   }
 }
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Element : GH_Param<Types.Element> //GH_PersistentParam<Types.Element>
+  public class Element : GH_Param<Types.Element> /*GH_PersistentParam<Types.Element>*/, IGH_PreviewObject
   {
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("E");
@@ -195,6 +282,14 @@ namespace RhinoInside.Revit.GH.Parameters
         AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), selection);
       }
     }
+    #endregion
+
+    #region IGH_PreviewObject
+    public bool Hidden { get; set; }
+    public bool IsPreviewCapable => true;
+    public Rhino.Geometry.BoundingBox ClippingBox => Preview_ComputeClippingBox();
+    public void DrawViewportMeshes(IGH_PreviewArgs args) { Preview_DrawMeshes(args); }
+    public void DrawViewportWires(IGH_PreviewArgs args)  { Preview_DrawWires(args);  }
     #endregion
   }
 }

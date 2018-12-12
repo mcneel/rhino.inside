@@ -44,6 +44,45 @@ namespace RhinoInside.Revit
         yield return p.ToRhino();
     }
 
+    static public Rhino.Geometry.BoundingBox ToRhino(this BoundingBoxXYZ bbox)
+    {
+      if (bbox.Enabled)
+      {
+        var box = new Rhino.Geometry.BoundingBox(bbox.Min.ToRhino(), bbox.Max.ToRhino());
+        return bbox.Transform.ToRhino().TransformBoundingBox(box);
+      }
+
+      return Rhino.Geometry.BoundingBox.Empty;
+    }
+
+    static public Rhino.Geometry.Transform ToRhino(this Autodesk.Revit.DB.Transform transform)
+    {
+      var value = new Rhino.Geometry.Transform
+      {
+        M00 = transform.BasisX.X,
+        M10 = transform.BasisX.Y,
+        M20 = transform.BasisX.Z,
+        M30 = 0.0,
+
+        M01 = transform.BasisY.X,
+        M11 = transform.BasisY.Y,
+        M21 = transform.BasisY.Z,
+        M31 = 0.0,
+
+        M02 = transform.BasisZ.X,
+        M12 = transform.BasisZ.Y,
+        M22 = transform.BasisZ.Z,
+        M32 = 0.0,
+
+        M03 = transform.Origin.X,
+        M13 = transform.Origin.Y,
+        M23 = transform.Origin.Z,
+        M33 = 1.0
+      };
+
+      return value;
+    }
+
     static internal Rhino.Geometry.Curve ToRhino(this Autodesk.Revit.DB.Curve curve)
     {
       switch (curve)
@@ -126,13 +165,21 @@ namespace RhinoInside.Revit
             foreach (var g in instance.GetInstanceGeometry().ToRhino())
               yield return g;
             break;
-          case Autodesk.Revit.DB.Solid solid:
-            var mesh = solid.ToRhino();
+          case Autodesk.Revit.DB.Mesh mesh:
+            var m = mesh.ToRhino();
 
             if (scaleFactor != 1.0)
-              mesh?.Scale(scaleFactor);
+              m?.Scale(scaleFactor);
 
-            yield return mesh;
+            yield return m;
+            break;
+          case Autodesk.Revit.DB.Solid solid:
+            var s = solid.ToRhino();
+
+            if (scaleFactor != 1.0)
+              s?.Scale(scaleFactor);
+
+            yield return s;
             break;
           case Autodesk.Revit.DB.Curve curve:
             var c = curve.ToRhino();
