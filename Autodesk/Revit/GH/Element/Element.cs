@@ -64,7 +64,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         var element = (Autodesk.Revit.DB.Element) this;
         if (element != null)
-          return element.get_BoundingBox(null).ToRhino();
+          return element.get_BoundingBox(null).ToRhino().Scale(Revit.ModelUnits);
 
         return Rhino.Geometry.BoundingBox.Empty;
       }

@@ -26,6 +26,10 @@ namespace RhinoInside.Revit
     {
       return new Point3d(p.X * factor, p.Y * factor, p.Z * factor);
     }
+    static internal BoundingBox Scale(this BoundingBox bbox, double factor)
+    {
+      return new BoundingBox(bbox.Min.Scale(factor), bbox.Max.Scale(factor));
+    }
     static internal Rhino.Geometry.Line Scale(this Rhino.Geometry.Line l, double factor)
     {
       return new Rhino.Geometry.Line(l.From.Scale(factor), l.To.Scale(factor));
@@ -46,7 +50,7 @@ namespace RhinoInside.Revit
 
     static public Rhino.Geometry.BoundingBox ToRhino(this BoundingBoxXYZ bbox)
     {
-      if (bbox.Enabled)
+      if (bbox?.Enabled ?? false)
       {
         var box = new Rhino.Geometry.BoundingBox(bbox.Min.ToRhino(), bbox.Max.ToRhino());
         return bbox.Transform.ToRhino().TransformBoundingBox(box);
@@ -499,8 +503,8 @@ namespace RhinoInside.Revit
           var splittersU = face.IsClosed(0) ? face.TrimAwareIsoCurve(1, face.Domain(0).Mid) : null;
           var splittersV = face.IsClosed(1) ? face.TrimAwareIsoCurve(0, face.Domain(1).Mid) : null;
 
-          var splittersULength = (splittersU?.Length).GetValueOrDefault();
-          var splittersVLength = (splittersV?.Length).GetValueOrDefault();
+          var splittersULength = splittersU?.Length ?? 0;
+          var splittersVLength = splittersV?.Length ?? 0;
           var splittersLength = splittersULength + splittersVLength;
           if (splittersLength > 0)
           {
