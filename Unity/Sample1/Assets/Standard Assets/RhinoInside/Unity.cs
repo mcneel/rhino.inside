@@ -5,31 +5,40 @@ using System.IO;
 using UnityEngine;
 using UnityEditor;
 
+using Rhino;
 using Rhino.Runtime.InProcess;
 
 namespace RhinoInside.Unity
 {
   [InitializeOnLoad]
-  public class Unity
+  static class Startup
   {
-    static string RhinoSystemDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-    internal static bool IsLoaded
-    {
-      get { return Environment.GetEnvironmentVariable("RHINO_SYSTEM_DIR") != null; }
-      set { Environment.SetEnvironmentVariable("RHINO_SYSTEM_DIR", value ? RhinoSystemDir : null); }
-    }
+    static string RhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+    static bool isLoaded = Environment.GetEnvironmentVariable("PATH").Contains(RhinoSystemDir);
 
-    static Unity()
+    static Startup()
     {
-      if (!IsLoaded)
+      if (!isLoaded)
       {
         var PATH = Environment.GetEnvironmentVariable("PATH");
         Environment.SetEnvironmentVariable("PATH", PATH + RhinoSystemDir + ";");
         GC.SuppressFinalize(new RhinoCore(new string[] { "/scheme=Unity", "/nosplash" }, WindowStyle.Minimized));
 
-        IsLoaded = true;
+        isLoaded = true;
       }
     }
+  }
+
+  public class Unity
+  {
+    #region Public Properties
+    public static IntPtr MainWindowHandle => System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;
+    public static UnityEngine.SceneManagement.Scene ActiveScene => UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+
+    private const double AbsoluteTolerance = UnityEngine.Vector3.kEpsilon;
+    public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Meters; // Always meter
+    public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 m. in Rhino units
+    #endregion
 
     static readonly Rhino.Geometry.Transform ToRhinoModel = Rhino.Geometry.Transform.ChangeBasis
     (
