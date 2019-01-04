@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using Autodesk;
 using Autodesk.Revit;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 
@@ -20,6 +21,7 @@ using Rhino.Runtime.InProcess;
 using Rhino.PlugIns;
 
 using Grasshopper;
+using Grasshopper.Kernel;
 
 namespace RhinoInside.Revit
 {
@@ -86,16 +88,18 @@ namespace RhinoInside.Revit
         UI.APIDocsCommand.CreateUI(ribbonPanel);
       }
 
-      // Add an Idling event handler to notify Rhino when the process is idle
-      ApplicationUI.Idling += new EventHandler<IdlingEventArgs>(OnIdle);
+      // Register some events
+      ApplicationUI.Idling += OnIdle;
+      ApplicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
 
       return Autodesk.Revit.UI.Result.Succeeded;
     }
 
     public Autodesk.Revit.UI.Result OnShutdown(UIControlledApplication applicationUI)
     {
-      // Remove the Idling event handler
-      ApplicationUI.Idling -= new EventHandler<IdlingEventArgs>(OnIdle);
+      // Unregister some events
+      ApplicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
+      ApplicationUI.Idling -= OnIdle;
 
       // Unload Rhino
       try
@@ -112,6 +116,7 @@ namespace RhinoInside.Revit
       return Autodesk.Revit.UI.Result.Succeeded;
     }
 
+    public static bool Committing = false;
     static bool LoadGrasshopperComponents()
     {
       var LoadGHAProc = Instances.ComponentServer.GetType().GetMethod("LoadGHA", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -216,7 +221,15 @@ namespace RhinoInside.Revit
                   while (documentActions.Count > 0)
                     documentActions.Dequeue().Invoke(ActiveDBDocument);
 
+                  Committing = true;
                   trans.Commit();
+                  Committing = false;
+
+                  foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+                  {
+                    if (definition.Enabled)
+                      definition.NewSolution(false);
+                  }
                 }
               }
               catch (Exception e)
@@ -235,6 +248,52 @@ namespace RhinoInside.Revit
         }
       }
     }
+    private void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
+    {
+      if (Committing)
+        return;
+
+      if (!ActiveDBDocument.Equals(e.GetDocument()))
+        return;
+
+      foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+      {
+        foreach (var obj in definition.Objects)
+        {
+          if (obj is RhinoInside.Revit.GH.Parameters.Element element)
+          {
+            if (element.SourceCount > 0)
+              continue;
+
+            if (element.Phase == GH_SolutionPhase.Blank)
+              continue;
+
+            element.ExpireSolution(false);
+          }
+          else if (obj is GH_Component component)
+          {
+            foreach (var param in component.Params.Output)
+            {
+              if (param is RhinoInside.Revit.GH.Parameters.Element outElement)
+              {
+                foreach (var goo in param.VolatileData.AllData(true))
+                {
+                  if (goo is IGH_PreviewMeshData previewMeshData)
+                    previewMeshData.DestroyPreviewMeshes();
+                }
+
+                foreach (var r in param.Recipients)
+                  r.ExpireSolution(false);
+              }
+            }
+          }
+        }
+
+        if (definition.Enabled)
+          definition.NewSolution(false);
+      }
+    }
+
     #endregion
 
     #region Bake Recipe
