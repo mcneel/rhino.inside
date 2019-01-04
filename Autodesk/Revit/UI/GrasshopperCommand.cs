@@ -16,7 +16,7 @@ namespace RhinoInside.Revit.UI
   [Regeneration(RegenerationOption.Manual)]
   class GrasshopperCommand : IExternalCommand
   {
-    static Guid GrasshopperGuid = new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF);
+    static readonly Guid GrasshopperGuid = new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF);
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
       if (!PlugIn.PlugInExists(GrasshopperGuid, out bool loaded, out bool loadProtected))

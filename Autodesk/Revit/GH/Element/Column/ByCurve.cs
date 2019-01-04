@@ -82,26 +82,29 @@ namespace RhinoInside.Revit.GH.Components
       Autodesk.Revit.DB.Level level
     )
     {
-      Autodesk.Revit.DB.FamilyInstance instance = null;
+      var element = PreviousElement(doc, Iteration);
       try
       {
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
+        if (element?.Pinned ?? true)
         {
-          line = line.Scale(scaleFactor);
-        }
+          var scaleFactor = 1.0 / Revit.ModelUnits;
+          if (scaleFactor != 1.0)
+          {
+            line = line.Scale(scaleFactor);
+          }
 
-        if (line.Length < Revit.ShortCurveTolerance)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is too short.", Params.Input[0].Name));
-        }
-        else if (level == null)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is mandatory.", Params.Input[2].Name));
-        }
-        else
-        {
-          instance = doc.Create.NewFamilyInstance(line.ToHost(), familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Column);
+          if (line.Length < Revit.ShortCurveTolerance)
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is too short.", Params.Input[0].Name));
+          }
+          else if (level == null)
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is mandatory.", Params.Input[2].Name));
+          }
+          else
+          {
+            element = doc.Create.NewFamilyInstance(line.ToHost(), familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Column);
+          }
         }
       }
       catch (Exception e)
@@ -110,7 +113,7 @@ namespace RhinoInside.Revit.GH.Components
       }
       finally
       {
-        ReplaceElement(doc, DA, Iteration, instance);
+        ReplaceElement(doc, DA, Iteration, element);
       }
     }
   }

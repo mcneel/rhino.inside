@@ -67,39 +67,42 @@ namespace RhinoInside.Revit.GH.Components
       bool structural
     )
     {
-      Floor floor = null;
+      var element = PreviousElement(doc, Iteration);
       try
       {
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
+        if (element?.Pinned ?? true)
         {
-          boundary?.Scale(scaleFactor);
-        }
-
-        if
-        (
-          boundary == null ||
-          boundary.IsShort(Revit.ShortCurveTolerance) ||
-          !boundary.IsClosed ||
-          !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
-          boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
-        )
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be an horizontal planar closed curve.", Params.Input[0].Name));
-        }
-        else
-        {
-          var curveArray = new CurveArray();
-          foreach (var curve in boundary.ToHost())
-            curveArray.Append(curve);
-
-          if (floorType.IsFoundationSlab)
+          var scaleFactor = 1.0 / Revit.ModelUnits;
+          if (scaleFactor != 1.0)
           {
-            floor = doc.Create.NewFoundationSlab(curveArray, floorType, level, structural, XYZ.BasisZ);
+            boundary?.Scale(scaleFactor);
+          }
+
+          if
+          (
+            boundary == null ||
+            boundary.IsShort(Revit.ShortCurveTolerance) ||
+            !boundary.IsClosed ||
+            !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
+            boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+          )
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be an horizontal planar closed curve.", Params.Input[0].Name));
           }
           else
           {
-            floor = doc.Create.NewFloor(curveArray, floorType, level, structural, XYZ.BasisZ);
+            var curveArray = new CurveArray();
+            foreach (var curve in boundary.ToHost())
+              curveArray.Append(curve);
+
+            if (floorType.IsFoundationSlab)
+            {
+              element = doc.Create.NewFoundationSlab(curveArray, floorType, level, structural, XYZ.BasisZ);
+            }
+            else
+            {
+              element = doc.Create.NewFloor(curveArray, floorType, level, structural, XYZ.BasisZ);
+            }
           }
         }
       }
@@ -109,7 +112,7 @@ namespace RhinoInside.Revit.GH.Components
       }
       finally
       {
-        ReplaceElement(doc, DA, Iteration, floor);
+        ReplaceElement(doc, DA, Iteration, element);
       }
     }
   }

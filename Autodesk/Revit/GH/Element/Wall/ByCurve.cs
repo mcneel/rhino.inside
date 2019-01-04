@@ -98,41 +98,44 @@ namespace RhinoInside.Revit.GH.Components
       double height
     )
     {
-      Autodesk.Revit.DB.Wall wall = null;
+      var element = PreviousElement(doc, Iteration);
       try
       {
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
+        if (element?.Pinned ?? true)
         {
-          height *= scaleFactor;
-          curve?.Scale(scaleFactor);
-        }
+          var scaleFactor = 1.0 / Revit.ModelUnits;
+          if (scaleFactor != 1.0)
+          {
+            height *= scaleFactor;
+            curve?.Scale(scaleFactor);
+          }
 
-        if
-        (
-          curve == null ||
-          curve.IsShort(Revit.ShortCurveTolerance) ||
-          !(curve.IsArc(Revit.VertexTolerance) || curve.IsLinear(Revit.VertexTolerance)) ||
-          !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-          axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
-        )
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be a horizontal line or arc curve.", Params.Input[0].Name));
-        }
-        else if (level == null)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' no suitable level is been found.", Params.Input[3].Name));
-        }
-        else if (height < Revit.VertexTolerance)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is too small.", Params.Input[5].Name));
-        }
-        else
-        {
-          var axisList = curve.ToHost().ToList();
-          Debug.Assert(axisList.Count == 1);
+          if
+          (
+            curve == null ||
+            curve.IsShort(Revit.ShortCurveTolerance) ||
+            !(curve.IsArc(Revit.VertexTolerance) || curve.IsLinear(Revit.VertexTolerance)) ||
+            !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
+            axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+          )
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be a horizontal line or arc curve.", Params.Input[0].Name));
+          }
+          else if (level == null)
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' no suitable level is been found.", Params.Input[3].Name));
+          }
+          else if (height < Revit.VertexTolerance)
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is too small.", Params.Input[5].Name));
+          }
+          else
+          {
+            var axisList = curve.ToHost().ToList();
+            Debug.Assert(axisList.Count == 1);
 
-          wall = Autodesk.Revit.DB.Wall.Create(doc, axisList[0], wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural);
+            element = Autodesk.Revit.DB.Wall.Create(doc, axisList[0], wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural);
+          }
         }
       }
       catch (Exception e)
@@ -141,7 +144,7 @@ namespace RhinoInside.Revit.GH.Components
       }
       finally
       {
-        ReplaceElement(doc, DA, Iteration, wall);
+        ReplaceElement(doc, DA, Iteration, element);
       }
     }
   }

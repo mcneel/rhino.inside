@@ -99,7 +99,37 @@ namespace RhinoInside.Revit.GH.Components
     protected GH_TransactionalComponent(string name, string nickname, string description, string category, string subCategory)
     : base(name, nickname, description, category, subCategory) { }
 
+    public override Rhino.Geometry.BoundingBox ClippingBox
+    {
+      get
+      {
+        var clippingBox = Rhino.Geometry.BoundingBox.Empty;
+
+        foreach (var param in Params)
+        {
+          if (param.SourceCount > 0)
+            continue;
+
+          if (param is IGH_PreviewObject previewObject)
+          {
+            if (!previewObject.Hidden && previewObject.IsPreviewCapable)
+              clippingBox.Union(previewObject.ClippingBox);
+          }
+        }
+
+        return clippingBox;
+      }
+    }
+
     List<ElementId> PreviousElementValues = new List<ElementId>();
+    protected Element PreviousElement(Document doc, int Iteration)
+    {
+      if (Iteration < PreviousElementValues.Count)
+        return doc.GetElement(PreviousElementValues[Iteration]);
+
+      return null;
+    }
+
     protected void ReplaceElement(Document doc, IGH_DataAccess DA, int Iteration, Element element)
     {
       DA.SetData(0, element, Iteration);
@@ -108,15 +138,22 @@ namespace RhinoInside.Revit.GH.Components
       // Update PreviousElementValues
       if (Iteration < PreviousElementValues.Count)
       {
-        if (doc.GetElement(PreviousElementValues[Iteration]) != null)
-          doc.Delete(PreviousElementValues[Iteration]);
-        PreviousElementValues[Iteration] = id;
+        if (id != PreviousElementValues[Iteration])
+        {
+          if (doc.GetElement(PreviousElementValues[Iteration]) != null)
+            doc.Delete(PreviousElementValues[Iteration]);
+
+          PreviousElementValues[Iteration] = id;
+          if(null != element) element.Pinned = true;
+        }
       }
       else
       {
-        for (int e = 0; e < Iteration; e++)
+        for (int e = PreviousElementValues.Count; e <= Iteration; e++)
           PreviousElementValues.Add(ElementId.InvalidElementId);
-        PreviousElementValues.Insert(Iteration, id);
+
+        PreviousElementValues[Iteration] = id;
+        if (null != element) element.Pinned = true;
       }
 
       if (Iteration == DA.Iteration)
@@ -141,8 +178,10 @@ namespace RhinoInside.Revit.GH.Components
         if (RuntimeMessageLevel < GH_RuntimeMessageLevel.Error)
         {
           foreach (var param in Params.Output)
+          {
             foreach (var recipient in param.Recipients)
-              recipient.ExpireSolution(true);
+              recipient.ExpireSolution(false);
+          }
         }
       }
     }
