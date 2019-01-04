@@ -279,14 +279,19 @@ namespace RhinoInside.Revit.GH.Parameters
       if (selection != null && selection.Count > 0)
       {
         ClearData();
-        AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), selection);
+
+        var volatileList = new List<IGH_Goo>(selection.Count);
+        foreach (var element in selection)
+          volatileList.Add(element.Duplicate());
+
+        AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), volatileList);
       }
     }
     #endregion
 
     #region IGH_PreviewObject
     public bool Hidden { get; set; }
-    public bool IsPreviewCapable => true;
+    public bool IsPreviewCapable => !VolatileData.IsEmpty;
     public Rhino.Geometry.BoundingBox ClippingBox => Preview_ComputeClippingBox();
     public void DrawViewportMeshes(IGH_PreviewArgs args) { Preview_DrawMeshes(args); }
     public void DrawViewportWires(IGH_PreviewArgs args)  { Preview_DrawWires(args);  }
