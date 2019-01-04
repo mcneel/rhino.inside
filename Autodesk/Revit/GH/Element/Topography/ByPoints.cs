@@ -8,6 +8,7 @@ using System.Diagnostics;
 using Grasshopper.Kernel;
 
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 
 namespace RhinoInside.Revit.GH.Components
 {
@@ -52,25 +53,29 @@ namespace RhinoInside.Revit.GH.Components
       IList<Rhino.Geometry.Point3d> points
     )
     {
-      Autodesk.Revit.DB.Architecture.TopographySurface topography = null;
-
+      var element = PreviousElement(doc, Iteration);
       try
       {
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
+        if (element?.Pinned ?? true)
         {
-          for(int p = 0; p < points.Count; ++p)
-            points[p] = points[p].Scale(scaleFactor);
-        }
+          var scaleFactor = 1.0 / Revit.ModelUnits;
+          if (scaleFactor != 1.0)
+          {
+            for (int p = 0; p < points.Count; ++p)
+              points[p] = points[p].Scale(scaleFactor);
+          }
 
-        topography = Autodesk.Revit.DB.Architecture.TopographySurface.Create(doc, points.ToHost());
+          element = TopographySurface.Create(doc, points.ToHost());
+        }
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
       }
-
-      ReplaceElement(doc, DA, Iteration, topography);
+      finally
+      {
+        ReplaceElement(doc, DA, Iteration, element);
+      }
     }
   }
 }
