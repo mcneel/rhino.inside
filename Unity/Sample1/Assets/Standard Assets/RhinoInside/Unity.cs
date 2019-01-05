@@ -21,7 +21,7 @@ namespace RhinoInside.Unity
       if (!isLoaded)
       {
         var PATH = Environment.GetEnvironmentVariable("PATH");
-        Environment.SetEnvironmentVariable("PATH", PATH + RhinoSystemDir + ";");
+        Environment.SetEnvironmentVariable("PATH", PATH + ";" + RhinoSystemDir);
         GC.SuppressFinalize(new RhinoCore(new string[] { "/scheme=Unity", "/nosplash" }, WindowStyle.Minimized));
 
         isLoaded = true;
