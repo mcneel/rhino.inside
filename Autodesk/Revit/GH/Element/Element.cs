@@ -351,7 +351,8 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddTextParameter(PropertyName, PropertyName.Substring(0, 1), ObjectType.Name + " " + PropertyName.ToLower(), GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Category(), PropertyName, PropertyName.Substring(0, 1), ObjectType.Name + " " + PropertyName.ToLower(), GH_ParamAccess.item);
+
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -360,7 +361,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData(ObjectType.Name, ref element))
         return;
 
-      DA.SetData(PropertyName, element?.Category.Name);
+      DA.SetData(PropertyName, element?.Category);
     }
   }
 
