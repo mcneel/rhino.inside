@@ -17,30 +17,25 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeName => "Revit Model Object";
     public override string TypeDescription => "Represents a Revit model object";
     public override bool IsValid => Value != ElementId.InvalidElementId;
-
-    public string UniqueID { get; protected set; }
-    public bool IsReferencedObject => UniqueID != string.Empty;
-
-    public ID() { Value = ElementId.InvalidElementId; UniqueID = string.Empty; }
-    public ID(string uniqueId) { Value = ElementId.InvalidElementId; UniqueID = uniqueId; }
-    public ID(int id) { Value = new ElementId(id); UniqueID = string.Empty; }
+    public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
+    protected virtual Type ScriptVariableType => typeof(Autodesk.Revit.DB.ElementId);
     public static implicit operator ElementId(ID self) { return self.Value; }
 
-    public override sealed IGH_Goo Duplicate()
-    {
-      if (System.Activator.CreateInstance(GetType()) is ID dup)
-      {
-        dup.Value = Value;
-        dup.UniqueID = UniqueID;
-        return dup;
-      }
+    public string UniqueID { get; protected set; }
+    public bool IsReferencedObject => IsValid; // All objects are referenced to Revit model if are valid
 
-      return null;
-    }
+    public ID() { Value = ElementId.InvalidElementId; UniqueID = string.Empty; }
+    protected ID(ElementId id, string uniqueId = null) { Value = id; UniqueID = uniqueId ?? string.Empty; }
 
     public override bool CastFrom(object source)
     {
-      if (source is Autodesk.Revit.DB.ElementId id)
+      if (source is GH_Integer integer)
+      {
+        Value = new ElementId(integer.Value);
+        UniqueID = string.Empty;
+        return true;
+      }
+      if (source is ElementId id)
       {
         Value = id;
         UniqueID = string.Empty;
@@ -52,6 +47,22 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Integer)))
+      {
+        target = (Q) (object) new GH_Integer(Value.IntegerValue);
+        return true;
+      }
+      if (typeof(Q).IsAssignableFrom(typeof(GH_String)))
+      {
+        target = (Q) (object) new GH_String(UniqueID);
+        return true;
+      }
+      if (target is ElementId)
+      {
+        target = (Q) (object) Value;
+        return true;
+      }
+
       return base.CastTo<Q>(ref target);
     }
 
@@ -65,11 +76,21 @@ namespace RhinoInside.Revit.GH.Types
       {
         var element = Revit.ActiveDBDocument.GetElement(Value);
         if (element != null)
+        {
           typeName = "Revit " + element.GetType().Name;
+          typeName = typeName + " \"" + element.Name + "\"";
+        }
+        else
+        {
+          var category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, Value);
+          if (category != null)
+            typeName = typeName + " \"" + category.Name + "\"";
+        }
       }
 
-      if (IsReferencedObject)
-        return "Referenced " + typeName;
+      // All elements are referenced
+      //if (IsReferencedObject)
+      //  return "Referenced " + typeName;
 
 #if DEBUG
       return string.Format("{0} (#{1})", typeName, Value.IntegerValue);
@@ -121,6 +142,61 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
+    static protected void ReplaceElement(Document doc, List<ElementId> list, int index, Element element)
+    {
+      var id = element?.Id ?? ElementId.InvalidElementId;
+
+      if (index < list.Count)
+      {
+        if (id != list[index])
+        {
+          if (doc.GetElement(list[index]) != null)
+            doc.Delete(list[index]);
+
+          list[index] = id;
+          if (element != null) element.Pinned = true;
+        }
+      }
+      else
+      {
+        for (int e = list.Count; e <= index; e++)
+          list.Add(ElementId.InvalidElementId);
+
+        list[index] = id;
+        if (null != element) element.Pinned = true;
+      }
+    }
+
+    static protected void TrimExcess<T>(List<T> list, int begin = 0)
+    {
+      int end = list.Count;
+      if (begin < end)
+      {
+        list.RemoveRange(begin, end - begin);
+        list.TrimExcess();
+      }
+    }
+
+    static protected void TrimExcess(Document doc, List<ElementId> list, int begin = 0)
+    {
+      foreach(var id in list.Skip(begin))
+      {
+        if (doc.GetElement(id) != null)
+        {
+          try { doc.Delete(id); }
+          catch (Autodesk.Revit.Exceptions.ApplicationException) { }
+        }
+      }
+
+      TrimExcess(list, begin);
+    }
+  }
+
+  public abstract class GH_TransactionalComponentItem : GH_TransactionalComponent
+  {
+    protected GH_TransactionalComponentItem(string name, string nickname, string description, string category, string subCategory)
+    : base(name, nickname, description, category, subCategory) { }
+
     List<ElementId> PreviousElementValues = new List<ElementId>();
     protected Element PreviousElement(Document doc, int Iteration)
     {
@@ -133,46 +209,67 @@ namespace RhinoInside.Revit.GH.Components
     protected void ReplaceElement(Document doc, IGH_DataAccess DA, int Iteration, Element element)
     {
       DA.SetData(0, element, Iteration);
-      var id = element?.Id ?? ElementId.InvalidElementId;
+      ReplaceElement(doc, PreviousElementValues, Iteration, element);
 
-      // Update PreviousElementValues
-      if (Iteration < PreviousElementValues.Count)
+      if (Iteration == DA.Iteration)
       {
-        if (id != PreviousElementValues[Iteration])
-        {
-          if (doc.GetElement(PreviousElementValues[Iteration]) != null)
-            doc.Delete(PreviousElementValues[Iteration]);
+        TrimExcess(doc, PreviousElementValues, Iteration + 1);
 
-          PreviousElementValues[Iteration] = id;
-          if(null != element) element.Pinned = true;
+        // Notify Grasshopper continue evaluating the definition from this component
+        if (RuntimeMessageLevel < GH_RuntimeMessageLevel.Error)
+        {
+          foreach (var param in Params.Output)
+          {
+            foreach (var recipient in param.Recipients)
+              recipient.ExpireSolution(false);
+          }
         }
       }
-      else
+    }
+  }
+
+  public abstract class GH_TransactionalComponentList : GH_TransactionalComponent
+  {
+    protected GH_TransactionalComponentList(string name, string nickname, string description, string category, string subCategory)
+    : base(name, nickname, description, category, subCategory) { }
+
+    List<List<ElementId>> PreviousElementValues = new List<List<ElementId>>();
+    protected IEnumerable<Element> PreviousElements(Document doc, int Iteration)
+    {
+      if (Iteration < PreviousElementValues.Count)
+      {
+        foreach (var id in PreviousElementValues[Iteration])
+          yield return doc.GetElement(id);
+      }
+    }
+
+    protected void ReplaceElements(Document doc, IGH_DataAccess DA, int Iteration, IEnumerable<Element> elements)
+    {
+      DA.SetDataList(0, elements, Iteration);
+
+      // Update PreviousElementValues
       {
         for (int e = PreviousElementValues.Count; e <= Iteration; e++)
-          PreviousElementValues.Add(ElementId.InvalidElementId);
+          PreviousElementValues.Add(null);
 
-        PreviousElementValues[Iteration] = id;
-        if (null != element) element.Pinned = true;
+        var previousElementValues = PreviousElementValues[Iteration];
+        if (previousElementValues == null)
+          previousElementValues = PreviousElementValues[Iteration] = new List<ElementId>();
+
+        int index = 0;
+        foreach (var element in elements)
+          ReplaceElement(doc, previousElementValues, index++, element);
+
+        // Remove extra elements in PreviousElementValues
+        TrimExcess(doc, previousElementValues, index);
       }
 
       if (Iteration == DA.Iteration)
       {
-        int begin = Iteration + 1;
-        int end = PreviousElementValues.Count;
+        foreach (var list in PreviousElementValues.Skip(Iteration + 1))
+          TrimExcess(doc, list);
 
-        // Remove extra elements in PreviousElementValues
-        if (begin < end)
-        {
-          for (int e = begin; e < end; e++)
-          {
-            if (doc.GetElement(PreviousElementValues[e]) != null)
-              try { doc.Delete(PreviousElementValues[e]); }
-              catch (Autodesk.Revit.Exceptions.ApplicationException) { }
-          }
-
-          PreviousElementValues.RemoveRange(begin, end - begin);
-        }
+        TrimExcess(PreviousElementValues, Iteration + 1);
 
         // Notify Grasshopper continue evaluating the definition from this component
         if (RuntimeMessageLevel < GH_RuntimeMessageLevel.Error)

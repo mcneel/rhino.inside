@@ -14,7 +14,7 @@ using Grasshopper.Kernel.Special;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DirectShapeByGeometry : GH_TransactionalComponent
+  public class DirectShapeByGeometry : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("0bfbda45-49cc-4ac6-8d6d-ecd2cfed062a");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -24,7 +24,7 @@ namespace RhinoInside.Revit.GH.Components
     (
       "DirectShape.ByGeometry", "ByGeometry",
       "Create a DirectShape element from geometry",
-      "Revit", "DirectShapes"
+      "Revit", "Model"
     )
     { }
 
@@ -40,28 +40,41 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.Element(), "DirectShape", "DS", "New DirectShape", GH_ParamAccess.item);
     }
 
-    List<ElementId> elementId = new List<ElementId>();
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var geometry = new List<Rhino.Geometry.GeometryBase>();
+      var geometry = new List<IGH_GeometricGoo>();
       DA.GetDataList("Geometry", geometry);
 
       Autodesk.Revit.DB.Category category = null;
       if (!DA.GetData("Category", ref category) && Params.Input[1].Sources.Count == 0)
         category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, BuiltInCategory.OST_GenericModel);
 
-      string name = string.Empty;
-      DA.GetData("Name", ref name);
+      string name = null;
+      if (!DA.GetData("Name", ref name) && geometry.Count == 1 && geometry[0].IsReferencedGeometry)
+        name = Rhino.RhinoDoc.ActiveDoc.Objects.FindId(geometry[0].ReferenceID)?.Name;
 
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;
       Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, geometry, category, name));
     }
 
+    Rhino.Geometry.GeometryBase AsGeometryBase(IGH_GeometricGoo obj)
+    {
+      var scriptVariable = obj.ScriptVariable();
+      switch (scriptVariable)
+      {
+        case Rhino.Geometry.Point3d g0: return new Rhino.Geometry.Point(g0);
+        case Rhino.Geometry.Line    g1: return new Rhino.Geometry.LineCurve(g1);
+        case Rhino.Geometry.Plane   g2: return new Rhino.Geometry.PlaneSurface(g2, new Rhino.Geometry.Interval(0.0, g2.XAxis.Length), new Rhino.Geometry.Interval(0.0, g2.YAxis.Length));
+      }
+
+      return scriptVariable as Rhino.Geometry.GeometryBase;
+    }
+
     void CommitInstance
     (
       Document doc, IGH_DataAccess DA, int Iteration,
-      IEnumerable<Rhino.Geometry.GeometryBase> geometries,
+      IEnumerable<IGH_GeometricGoo> geometries,
       Autodesk.Revit.DB.Category category,
       string name
     )
@@ -79,10 +92,10 @@ namespace RhinoInside.Revit.GH.Components
               category = Autodesk.Revit.DB.Category.GetCategory(doc, BuiltInCategory.OST_GenericModel);
             }
 
-            foreach (var geometry in geometries.ToHost())
-            {
-              var shape = new List<GeometryObject>(geometry.Count);
+            var shape = new List<GeometryObject>();
 
+            foreach (var geometry in geometries.Select((x) => AsGeometryBase(x)).ToHost())
+            {
               // DirectShape only accepts those types and no nulls
               foreach (var g in geometry)
               {
@@ -94,14 +107,14 @@ namespace RhinoInside.Revit.GH.Components
                   case Mesh m: shape.Add(m); break;
                 }
               }
+            }
 
-              if (shape.Count > 0)
-              {
-                var ds = Autodesk.Revit.DB.DirectShape.CreateElement(doc, category.Id);
-                ds.SetShape(shape);
-                ds.Name = name ?? string.Empty;
-                element = ds;
-              }
+            if (shape.Count > 0)
+            {
+              var ds = Autodesk.Revit.DB.DirectShape.CreateElement(doc, category.Id);
+              ds.SetShape(shape);
+              ds.Name = name ?? string.Empty;
+              element = ds;
             }
           }
         }
@@ -120,13 +133,13 @@ namespace RhinoInside.Revit.GH.Components
   public class DirectShapeCategories : GH_ValueList
   {
     public override Guid ComponentGuid => new Guid("7BAFE137-332B-481A-BE22-09E8BD4C86FC");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("DSC");
 
     public DirectShapeCategories()
     {
       Category = "Revit";
-      SubCategory = "DirectShapes";
+      SubCategory = "Model";
       Name = "DirectShape.Categories";
       NickName = "Categories";
       Description = "Provide a picker of a valid DirectShape category";
@@ -135,25 +148,28 @@ namespace RhinoInside.Revit.GH.Components
 
       var categories = new List<Category>();
 
-      foreach (var item in Revit.ActiveDBDocument.Settings.Categories)
+      if (Revit.ActiveDBDocument != null)
       {
-        if (item is Category category)
+        foreach (var item in Revit.ActiveDBDocument.Settings.Categories)
         {
-          if (!DirectShape.IsValidCategoryId(category.Id, Revit.ActiveDBDocument))
-            continue;
+          if (item is Category category)
+          {
+            if (!DirectShape.IsValidCategoryId(category.Id, Revit.ActiveDBDocument))
+              continue;
 
-          categories.Add(category);
+            categories.Add(category);
+          }
         }
-      }
 
-      categories = categories.OrderBy(c => c.Name).ToList();
+        categories = categories.OrderBy(c => c.Name).ToList();
 
-      var genericModel = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, BuiltInCategory.OST_GenericModel);
-      foreach (var category in categories)
-      {
-        ListItems.Add(new GH_ValueListItem(category.Name, category.Id.IntegerValue.ToString()));
-        if (category.Id.IntegerValue == (int) BuiltInCategory.OST_GenericModel)
-          SelectItem(ListItems.Count - 1);
+        var genericModel = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, BuiltInCategory.OST_GenericModel);
+        foreach (var category in categories)
+        {
+          ListItems.Add(new GH_ValueListItem(category.Name, category.Id.IntegerValue.ToString()));
+          if (category.Id.IntegerValue == (int) BuiltInCategory.OST_GenericModel)
+            SelectItem(ListItems.Count - 1);
+        }
       }
     }
   }

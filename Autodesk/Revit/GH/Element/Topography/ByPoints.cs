@@ -12,7 +12,7 @@ using Autodesk.Revit.DB.Architecture;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class TopographyByPoints : GH_TransactionalComponent
+  public class TopographyByPoints : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("E8D8D05A-8703-4F75-B106-12B40EC9DF7B");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -22,7 +22,7 @@ namespace RhinoInside.Revit.GH.Components
     (
       "Topography.ByPoints", "ByPoints",
       "Create a Topography surface from points",
-      "Revit", "Topography"
+      "Revit", "Model Site"
     )
     { }
 

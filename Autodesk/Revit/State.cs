@@ -1,0 +1,57 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace RhinoInside
+{
+  public class State<T> : IDisposable where T : State<T>, new()
+  {
+    [ThreadStatic] static readonly T root = new T();
+    [ThreadStatic] static T current;
+    T previous = current;
+
+    protected State() { current = (T) this; }
+
+    void IDisposable.Dispose()
+    {
+      if (previous == null)
+        return; // Already disposed or root
+
+      if (current == this) current = previous;
+      else
+      {
+        // If this state is still in the stack is safe to pop it
+        var state = this;
+        do
+        {
+          if (state == root) { current = previous; break; }
+
+          state = state.previous;
+        } while (state != null);
+      }
+
+      previous = null;
+    }
+
+    public static T Peek => current;
+
+    public static T Push()
+    {
+      var top = (T) current.MemberwiseClone();
+      top.previous = current;
+      return current = top;
+    }
+
+    public static void Pop()
+    {
+      ((IDisposable) current).Dispose();
+    }
+
+    protected void Pull()
+    {
+      ((IDisposable) this).Dispose();
+    }
+  }
+}

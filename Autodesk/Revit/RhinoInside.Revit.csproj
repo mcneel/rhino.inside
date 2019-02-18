@@ -116,9 +116,14 @@
   <ItemGroup>
     <Compile Include="GH\Category\Category.cs" />
     <Compile Include="GH\Document\Categories.cs" />
+    <Compile Include="GH\Document\Elements.cs" />
+    <Compile Include="GH\Document\ElementTypes.cs" />
+    <Compile Include="GH\ElementType\ElementType.cs" />
     <Compile Include="GH\Element\Beam\ByCurve.cs" />
-    <Compile Include="GH\Element\ElementType.cs" />
+    <Compile Include="GH\Element\CurveElement\ByCurve.cs" />
     <Compile Include="GH\Element\Column\ByCurve.cs" />
+    <Compile Include="GH\Element\Floor\ByOutline.cs" />
+    <Compile Include="GH\Element\SketchPlane\ByPlane.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
     <Compile Include="GH\ID.cs" />
@@ -126,13 +131,13 @@
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Document\Levels.cs" />
     <Compile Include="GH\Element\Element.cs" />
-    <Compile Include="GH\Element\Floor\ByOutlineTypeAndLevel.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Sample4.cs" />
+    <Compile Include="State.cs" />
     <Compile Include="UI\APIDocsCommand.cs" />
     <Compile Include="UI\GrasshopperCommand.cs" />
     <Compile Include="UI\RhinoCommand.cs" />
@@ -142,6 +147,7 @@
     <Compile Include="Revit.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sample1.cs" />
+    <Compile Include="Revit.FailuresPreprocessor.cs" />
     <None Include="Sample2.ghx">
       <SubType>Designer</SubType>
     </None>

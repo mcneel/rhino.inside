@@ -7,7 +7,6 @@ using System.Diagnostics;
 
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using GH_IO.Serialization;
 
 using RhinoInside.Revit;
 using Autodesk.Revit.DB;
@@ -19,131 +18,635 @@ namespace RhinoInside.Revit.GH.Types
   {
     public override string TypeName => "Revit Element";
     public override string TypeDescription => "Represents a Revit element";
+    override public object ScriptVariable() => (Autodesk.Revit.DB.Element) this;
+    protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Element);
+    public static explicit operator Autodesk.Revit.DB.Element(Element self) => Revit.ActiveDBDocument?.GetElement(self);
 
-    public Element() : base() { }
-    public Element(string uniqueId) : base(uniqueId) {}
-    public Element(ElementId elementId) : base(elementId.IntegerValue) {}
-    public Element(Autodesk.Revit.DB.Element element) : base(element != null ? element.Id.IntegerValue : ElementId.InvalidElementId.IntegerValue) {}
-    public static explicit operator Autodesk.Revit.DB.Element(Element self)
+    static public Element Make(Autodesk.Revit.DB.Element element)
     {
-      return Revit.ActiveDBDocument.GetElement(self);
+      if (element == null)
+        return null;
+
+      if (element is Autodesk.Revit.DB.ElementType elementType)
+        return new ElementType(elementType);
+
+      if (element is Autodesk.Revit.DB.SketchPlane sketchPlane)
+        return new SketchPlane(sketchPlane);
+
+      return new Element(element);
     }
 
-    public override bool CastFrom(object source)
+    static public Element Make(ElementId Id) => Make(Revit.ActiveDBDocument.GetElement(Id));
+    static public Element Make(string uniqueId) => Make(Revit.ActiveDBDocument.GetElement(uniqueId));
+
+    public Element() : base() { }
+    protected Element(Autodesk.Revit.DB.Element element) : base(element.Id, element.UniqueId) { }
+
+    public override sealed bool CastFrom(object source)
     {
-      if (source is Autodesk.Revit.DB.Element element)
+      Autodesk.Revit.DB.Element element = null;
+      if (source is IGH_Goo goo)
+        source = goo.ScriptVariable();
+
+      switch (source)
+      {
+        case Autodesk.Revit.DB.Element e:    element = e; break;
+        case Autodesk.Revit.DB.ElementId id: element = Revit.ActiveDBDocument.GetElement(id); break;
+        case int integer:                    element = Revit.ActiveDBDocument.GetElement(new ElementId(integer)); break;
+        case string uniqueId:                element = Revit.ActiveDBDocument.GetElement(uniqueId); break;
+      }
+      if (ScriptVariableType.IsInstanceOfType(element))
       {
         Value = element.Id;
-        UniqueID = string.Empty;
+        UniqueID = element.UniqueId;
         return true;
       }
 
-      return base.CastFrom(source);
+      return false;
     }
 
     public override bool CastTo<Q>(ref Q target)
     {
-      if (typeof(Q).IsSubclassOf(typeof(Autodesk.Revit.DB.Element)))
+      var element = (Autodesk.Revit.DB.Element) this;
+      if (element == null)
+        return false;
+
+      if (typeof(Q).IsSubclassOf(ScriptVariableType))
       {
-        target = (Q) (object) (Autodesk.Revit.DB.Element) this;
+        target = (Q) (object) element;
         return true;
       }
 
-      if (typeof(Q).IsAssignableFrom(typeof(Autodesk.Revit.DB.Element)))
+      if (typeof(Q).IsAssignableFrom(ScriptVariableType))
       {
-        target = (Q) (object) (Autodesk.Revit.DB.Element) this;
+        target = (Q) (object) element;
+        return true;
+      }
+
+      if (element.Category?.HasMaterialQuantities ?? false)
+      {
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
+        {
+          var options = new Options { ComputeReferences = true };
+          using (var geometry = element.get_Geometry(options))
+          {
+            if (geometry != null)
+            {
+              var mesh = new Rhino.Geometry.Mesh();
+              mesh.Append(geometry.GetPreviewMeshes().Where(x => x != null));
+              mesh.Normals.ComputeNormals();
+              if (mesh.Faces.Count > 0)
+              {
+                target = (Q) (object) new GH_Mesh(mesh);
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
+      {
+        var axis = Axis;
+        if (axis == null)
+          return false;
+
+        target = (Q) (object) new GH_Curve(axis);
+        return true;
+      }
+
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Plane)))
+      {
+        var plane = Plane;
+        if (!plane.IsValid || !plane.Origin.IsValid)
+          return false;
+
+        target = (Q) (object) new GH_Plane(plane);
+        return true;
+      }
+
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
+      {
+        var location = Location;
+        if (!location.IsValid)
+          return false;
+
+        target = (Q) (object) new GH_Point(location);
+        return true;
+      }
+
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Vector)))
+      {
+        var normal = ZAxis;
+        if (!normal.IsValid)
+          return false;
+
+        target = (Q) (object) new GH_Vector(normal);
+        return true;
+      }
+
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Transform)))
+      {
+        var plane = Plane;
+        if (!plane.IsValid || !plane.Origin.IsValid)
+          return false;
+
+        target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.ChangeBasis(Rhino.Geometry.Plane.WorldXY, plane));
+        return true;
+      }
+
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Box)))
+      {
+        var box = Box;
+        if (!box.IsValid)
+          return false;
+
+        target = (Q) (object) new GH_Box(box);
         return true;
       }
 
       return base.CastTo<Q>(ref target);
     }
 
-    public Rhino.Geometry.BoundingBox ClippingBox
+    #region Preview
+    public static void BuildPreview
+    (
+      Autodesk.Revit.DB.Element element, Rhino.Geometry.MeshingParameters meshingParameters, ViewDetailLevel DetailLevel,
+      out Rhino.Display.DisplayMaterial[] materials, out Rhino.Geometry.Mesh[] meshes, out Rhino.Geometry.Curve[] wires
+    )
     {
-      get
+      var options = new Options { ComputeReferences = true, DetailLevel = DetailLevel };
+      using (var geometry = element?.get_Geometry(options))
       {
-        var element = (Autodesk.Revit.DB.Element) this;
-        if (element != null)
-          return element.get_BoundingBox(null).ToRhino().Scale(Revit.ModelUnits);
-
-        return Rhino.Geometry.BoundingBox.Empty;
-      }
-    }
-
-    void BuildPreviewGeometry()
-    {
-      if ((meshes == null || wires == null) && IsValid)
-      {
-        var element = (Autodesk.Revit.DB.Element) this;
-        if (element != null)
+        if (geometry == null)
         {
-          var meshList = new List<Rhino.Geometry.Mesh>();
-          var wireList = new List<Rhino.Geometry.Curve>();
+          materials = null;
+          meshes = null;
+          wires = null;
+        }
+        else
+        {
+          var categoryMaterial = element.Category.Material.ToRhino(null);
+          var elementMaterial = geometry.MaterialElement.ToRhino(categoryMaterial);
 
-          var options = new Options { ComputeReferences = true };
-          using (var geometry = element.get_Geometry(options))
+          using (var ga = Convert.GraphicAttributes.Push())
           {
-            foreach (var g in geometry.ToRhino().Where(x => x != null))
-            {
-              switch (g)
-              {
-                case Rhino.Geometry.Mesh m: meshList.Add(m); break;
-                case Rhino.Geometry.Curve w: wireList.Add(w); break;
-              }
-            }
+            ga.MeshingParameters = meshingParameters;
 
-            meshes = meshList.ToArray();
-            wires = wireList.ToArray();
+            meshes = geometry.GetPreviewMeshes().Where(x => x != null).ToArray();
+            wires = geometry.GetPreviewWires().Where(x => x != null).ToArray();
+            materials = geometry.GetPreviewMaterials(elementMaterial).Where(x => x != null).ToArray();
+
+            foreach (var mesh in meshes)
+              mesh.Normals.ComputeNormals();
           }
         }
       }
     }
 
-    public void DestroyPreviewMeshes()
+    class Preview : IDisposable
     {
-      if (wires != null)
+      readonly ElementId elementId;
+      readonly Rhino.Geometry.BoundingBox clippingBox;
+      public readonly Rhino.Geometry.MeshingParameters MeshingParameters = Convert.GraphicAttributes.Peek.MeshingParameters;
+      public Rhino.Display.DisplayMaterial[] materials;
+      public Rhino.Geometry.Mesh[] meshes;
+      public Rhino.Geometry.Curve[] wires;
+
+      static List<Preview> previewsQueue;
+
+      void Build(Document document)
       {
-        foreach (var wire in wires)
+        if ((meshes == null && wires == null && materials == null))
+        {
+          var element = document.GetElement(elementId);
+          if (element == null)
+            return;
+
+          BuildPreview(element, MeshingParameters, ViewDetailLevel.Undefined, out materials, out meshes, out wires);
+        }
+      }
+
+      static void BuildPreviews(Document document, bool cancelled)
+      {
+        var previews = previewsQueue;
+        previewsQueue = null;
+
+        if (cancelled)
+          return;
+
+        // Sort in reverse order depending on how 'big' is the element on screen.
+        // The bigger the more at the end on the list.
+        previews.Sort((x, y) => (x.clippingBox.Diagonal.Length < y.clippingBox.Diagonal.Length) ? -1 : +1);
+        BuildPreviews(document, cancelled, previews);
+      }
+
+      static void BuildPreviews(Document document, bool cancelled, List<Preview> previews)
+      {
+        if (cancelled)
+          return;
+
+        var stopWatch = new Stopwatch();
+
+        int count = 0;
+        while ((count = previews.Count) > 0)
+        {
+          // Draw the biggest elements first.
+          // The biggest element ia at the end of previews List, this way no realloc occurs when removing it
+
+          int last = count - 1;
+          var preview = previews[last];
+          previews.RemoveAt(last);
+
+          stopWatch.Start();
+          preview.Build(document);
+          stopWatch.Stop();
+
+          // If building those previews take use more than 200 ms we return to Revit, to keep it 'interactive'.
+          if (stopWatch.ElapsedMilliseconds > 200)
+            break;
+        }
+
+        // RhinoDoc.ActiveDoc.Views.Redraw is synchronous :(
+        // better use RhinoView.Redraw that just invalidate the view, the OS will update it when possible
+        foreach (var view in Rhino.RhinoDoc.ActiveDoc.Views)
+          view.Redraw();
+
+        // If there are pending previews to generate enqueue BuildPreviews again
+        if (previews.Count > 0)
+          Revit.EnqueueReadAction((doc, cancel) => BuildPreviews(doc, cancel, previews));
+      }
+
+      public Preview(Element element)
+      {
+        elementId = element;
+        clippingBox = element.ClippingBox;
+      }
+
+      public static Preview OrderNew(Element element)
+      {
+        if (!element.IsValid)
+          return null;
+
+        if (previewsQueue == null)
+        {
+          previewsQueue = new List<Preview>();
+          Revit.EnqueueReadAction((doc, cancel) => BuildPreviews(doc, cancel));
+        }
+
+        var preview = new Preview(element);
+        previewsQueue.Add(preview);
+        return preview;
+      }
+
+      void IDisposable.Dispose()
+      {
+        foreach (var mesh in meshes ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
+          mesh.Dispose();
+        meshes = null;
+
+        foreach (var wire in wires ?? Enumerable.Empty<Rhino.Geometry.Curve>())
           wire.Dispose();
         wires = null;
       }
+    }
 
-      if (meshes != null)
+    Preview geometryPreview;
+    Preview GeometryPreview
+    {
+      get { return geometryPreview ?? (geometryPreview = Preview.OrderNew(this)); }
+      set { if (geometryPreview != value) { ((IDisposable)geometryPreview)?.Dispose(); geometryPreview = value; } }
+    }
+
+    public Rhino.Display.DisplayMaterial[] TryGetPreviewMaterials()
+    {
+      return GeometryPreview.materials;
+    }
+
+    public Rhino.Geometry.Mesh[] TryGetPreviewMeshes()
+    {
+      if (geometryPreview != null)
       {
-        foreach (var mesh in meshes)
-          mesh.Dispose();
-        meshes = null;
+        var newMeshingParameters = Convert.GraphicAttributes.Peek.MeshingParameters;
+        if (newMeshingParameters != null)
+        {
+          var currentMeshingParameters = geometryPreview.MeshingParameters;
+          if (currentMeshingParameters != newMeshingParameters)
+          {
+            if (currentMeshingParameters == null || currentMeshingParameters.RelativeTolerance != newMeshingParameters.RelativeTolerance)
+              GeometryPreview = null;
+          }
+        }
+      }
+
+      return GeometryPreview.meshes;
+    }
+
+    public Rhino.Geometry.Curve[] TryGetPreviewWires()
+    {
+      return GeometryPreview.wires;
+    }
+    #endregion
+
+    #region IGH_PreviewData
+    Rhino.Geometry.BoundingBox clippingBox = Rhino.Geometry.BoundingBox.Empty;
+    public Rhino.Geometry.BoundingBox ClippingBox
+    {
+      get
+      {
+        if (!clippingBox.IsValid)
+        {
+          var element = (Autodesk.Revit.DB.Element) this;
+          if (element != null)
+            clippingBox = element.get_BoundingBox(null).ToRhino().Scale(Revit.ModelUnits);
+        }
+
+        return clippingBox;
       }
     }
 
-    public Rhino.Geometry.Mesh[] GetPreviewMeshes()
+    void IGH_PreviewData.DrawViewportMeshes(GH_PreviewMeshArgs args)
     {
-      BuildPreviewGeometry();
-      return meshes;
+      if (!IsValid)
+        return;
+
+      using (var ga = Convert.GraphicAttributes.Push())
+      {
+        ga.MeshingParameters = args.MeshingParameters;
+
+        var meshes = TryGetPreviewMeshes();
+        if (meshes == null)
+          return;
+
+        var material = args.Material;
+        var element = Revit.ActiveDBDocument?.GetElement(this);
+        if (element == null)
+        {
+          const int factor = 3;
+
+          // Erased element
+          material = new Rhino.Display.DisplayMaterial(material);
+          material.Diffuse = System.Drawing.Color.FromArgb(20, 20, 20);
+          material.Emission = System.Drawing.Color.FromArgb(material.Emission.R / factor, material.Emission.G / factor, material.Emission.B / factor);
+          material.Shine = 0.0;
+        }
+        else if (!element.Pinned)
+        {
+          if (args.Pipeline.DisplayPipelineAttributes.ShadingEnabled)
+          {
+            // Unpinned element
+            if (args.Pipeline.DisplayPipelineAttributes.UseAssignedObjectMaterial)
+            {
+              var materials = TryGetPreviewMaterials();
+
+              for (int m = 0; m < meshes.Length; ++m)
+                args.Pipeline.DrawMeshShaded(meshes[m], materials[m]);
+
+              return;
+            }
+            else
+            {
+              material = new Rhino.Display.DisplayMaterial(material);
+              material.Diffuse = element.Category.LineColor.ToRhino();
+              if (material.Diffuse == System.Drawing.Color.Black)
+                material.Diffuse = System.Drawing.Color.White;
+              material.Transparency = 0.0;
+            }
+          }
+        }
+
+        foreach (var mesh in meshes)
+          args.Pipeline.DrawMeshShaded(mesh, material);
+      }
     }
 
-    public Rhino.Geometry.Curve[] GetPreviewWires()
+    void IGH_PreviewData.DrawViewportWires(GH_PreviewWireArgs args)
     {
-      BuildPreviewGeometry();
-      return wires;
+      if (!IsValid)
+        return;
+
+      if (!args.Pipeline.DisplayPipelineAttributes.ShowSurfaceEdges)
+        return;
+
+      int thickness = 1; //args.Thickness;
+      const int factor = 3;
+
+      var color = args.Color;
+      var element = Revit.ActiveDBDocument?.GetElement(this);
+      if (element == null)
+      {
+        // Erased element
+        color = System.Drawing.Color.FromArgb(args.Color.R / factor, args.Color.G / factor, args.Color.B / factor);
+      }
+      else if (!element.Pinned)
+      {
+        // Unpinned element
+        if (args.Thickness <= 1 && args.Pipeline.DisplayPipelineAttributes.UseAssignedObjectMaterial)
+          color = System.Drawing.Color.Black;
+      }
+
+      var wires = TryGetPreviewWires();
+      if (wires != null && wires.Length > 0)
+      {
+        foreach (var wire in wires)
+          args.Pipeline.DrawCurve(wire, color, thickness);
+      }
+      else
+      {
+        var meshes = TryGetPreviewMeshes();
+        if (meshes != null)
+        {
+          // Grasshopper does not show mesh wires.
+          //foreach (var mesh in meshes)
+          //  args.Pipeline.DrawMeshWires(mesh, color, thickness);
+        }
+        else
+        {
+          foreach (var edge in ClippingBox.GetEdges() ?? Enumerable.Empty<Rhino.Geometry.Line>())
+            args.Pipeline.DrawPatternedLine(edge.From, edge.To, System.Drawing.Color.Black /*color*/, 0x00001111, thickness);
+        }
+      }
+    }
+    #endregion
+
+    #region IGH_PreviewMeshData
+    void IGH_PreviewMeshData.DestroyPreviewMeshes()
+    {
+      GeometryPreview = null;
+      clippingBox = Rhino.Geometry.BoundingBox.Empty;
     }
 
-    Rhino.Geometry.Mesh[] meshes;
-    public void DrawViewportMeshes(GH_PreviewMeshArgs args)
+    Rhino.Geometry.Mesh[] IGH_PreviewMeshData.GetPreviewMeshes()
     {
-      foreach(var mesh in GetPreviewMeshes() ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
-        args.Pipeline.DrawMeshShaded(mesh, args.Material);
+      return TryGetPreviewMeshes();
+    }
+    #endregion
+
+    #region Location
+    public Rhino.Geometry.Box Box
+    {
+      get
+      {
+        var b = Rhino.Geometry.Box.Empty;
+
+        var element = (Autodesk.Revit.DB.Element) this;
+        if (element != null)
+        {
+          var bbox = element.get_BoundingBox(null);
+          b = new Rhino.Geometry.Box(new Rhino.Geometry.BoundingBox(bbox.Min.ToRhino(), bbox.Max.ToRhino()));
+          if (!b.Transform(Rhino.Geometry.Transform.Scale(Rhino.Geometry.Point3d.Origin, Revit.ModelUnits) * bbox.Transform.ToRhino()))
+            b = new Rhino.Geometry.Box(ClippingBox);
+        }
+
+        return b;
+      }
     }
 
-    Rhino.Geometry.Curve[] wires;
-    public void DrawViewportWires(GH_PreviewWireArgs args)
+    public virtual Rhino.Geometry.Point3d Location
     {
-      foreach (var wire in GetPreviewWires() ?? Enumerable.Empty<Rhino.Geometry.Curve>())
-        args.Pipeline.DrawCurve(wire, args.Color, args.Thickness);
+      get
+      {
+        var p = new Rhino.Geometry.Point3d(double.NaN, double.NaN, double.NaN);
 
-      foreach (var mesh in GetPreviewMeshes() ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
-        args.Pipeline.DrawMeshWires(mesh, args.Color, args.Thickness);
+        var element = (Autodesk.Revit.DB.Element) this;
+        if (element != null)
+        {
+          if (element is Autodesk.Revit.DB.Instance instance)
+            p = instance.GetTransform().Origin.ToRhino();
+          else switch (element.Location)
+          {
+            case Autodesk.Revit.DB.LocationPoint pointLocation: p = pointLocation.Point.ToRhino(); break;
+            case Autodesk.Revit.DB.LocationCurve curveLocation: p = curveLocation.Curve.GetEndPoint(0).ToRhino(); break;
+            default:
+                var bbox = element.get_BoundingBox(null);
+                if(bbox != null)
+                  p = bbox.Min.ToRhino(); break;
+          }
+
+          if (p.IsValid)
+          {
+            var scaleFactor = Revit.ModelUnits;
+            if (scaleFactor != 1.0)
+              p = p.Scale(scaleFactor);
+
+            return p;
+          }
+        }
+
+        return p;
+      }
     }
+
+    public virtual Rhino.Geometry.Vector3d XAxis
+    {
+      get
+      {
+        var x = Rhino.Geometry.Vector3d.Zero;
+
+        var element = (Autodesk.Revit.DB.Element) this;
+        if (element != null)
+        {
+          if (element is Autodesk.Revit.DB.Instance instance)
+            x = (Rhino.Geometry.Vector3d) instance.GetTransform().BasisX.ToRhino();
+          else if (element.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
+          {
+            var c = curveLocation.Curve.ToRhino();
+            x = c.TangentAt(c.Domain.Min);
+          }
+
+          if (x.IsZero || !x.Unitize())
+            x = Rhino.Geometry.Vector3d.XAxis;
+        }
+
+        return x;
+      }
+    }
+
+    public virtual Rhino.Geometry.Vector3d YAxis
+    {
+      get
+      {
+        var y = Rhino.Geometry.Vector3d.Zero;
+
+        var element = (Autodesk.Revit.DB.Element) this;
+        if (element != null)
+        {
+          if (element is Autodesk.Revit.DB.Instance instance)
+            y = (Rhino.Geometry.Vector3d) instance.GetTransform().BasisY.ToRhino();
+          else if (element.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
+          {
+            var c = curveLocation.Curve.ToRhino();
+            y = c.CurvatureAt(c.Domain.Min);
+          }
+
+          if (y.IsZero || !y.Unitize())
+          {
+            var axis = XAxis;
+            if (new Rhino.Geometry.Vector3d(axis.X, axis.Y, 0.0).IsZero)
+              y = new Rhino.Geometry.Vector3d(axis.Z, 0.0, -axis.X);
+            else
+              y = new Rhino.Geometry.Vector3d(-axis.Y, axis.X, 0.0);
+          }
+
+          if (y.IsZero || !y.Unitize())
+            y = Rhino.Geometry.Vector3d.YAxis;
+        }
+
+        return y;
+      }
+    }
+
+    public virtual Rhino.Geometry.Vector3d ZAxis
+    {
+      get
+      {
+        var v = Rhino.Geometry.Vector3d.Zero;
+
+        var element = (Autodesk.Revit.DB.Element) this;
+        if (element != null)
+        {
+          if (element is Autodesk.Revit.DB.Instance instance)
+            v = (Rhino.Geometry.Vector3d) instance.GetTransform().BasisZ.ToRhino();
+          else if (element.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
+          {
+            var c = curveLocation.Curve.ToRhino();
+            v = Rhino.Geometry.Vector3d.CrossProduct(c.TangentAt(c.Domain.Min), c.CurvatureAt(c.Domain.Min));
+          }
+
+          if (v.IsZero || !v.Unitize())
+            v = Rhino.Geometry.Vector3d.CrossProduct(XAxis, YAxis);
+
+          if (v.IsZero || !v.Unitize())
+            v = Rhino.Geometry.Vector3d.ZAxis;
+        }
+
+        return v;
+      }
+    }
+
+    public virtual Rhino.Geometry.Plane Plane => new Rhino.Geometry.Plane(Location, XAxis, YAxis);
+
+    public Rhino.Geometry.Curve Axis
+    {
+      get
+      {
+        var element = (Autodesk.Revit.DB.Element) this;
+        Rhino.Geometry.Curve c = null;
+
+        if(element?.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
+          c = curveLocation.Curve.ToRhino();
+
+        if (c != null)
+        {
+          var scaleFactor = Revit.ModelUnits;
+          if (scaleFactor != 1.0)
+            c.Scale(scaleFactor);
+        }
+
+        return c;
+      }
+    }
+    #endregion
   }
 }
 
@@ -180,7 +683,7 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
         if (reference != null)
-          element = new Types.Element(reference.ElementId);
+          element = Types.Element.Make(reference.ElementId);
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException)
       {
@@ -199,7 +702,7 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         elements = new List<Types.Element>();
         foreach (var elementId in selection)
-          elements.Add(new Types.Element(elementId));
+          elements.Add(Types.Element.Make(elementId));
       }
       else
       {
@@ -210,7 +713,7 @@ namespace RhinoInside.Revit.GH.Parameters
           {
             elements = new List<Types.Element>();
             foreach (var reference in references)
-              elements.Add(new Types.Element(reference.ElementId));
+              elements.Add(Types.Element.Make(reference.ElementId));
           }
         }
         catch (Autodesk.Revit.Exceptions.OperationCanceledException)
@@ -318,50 +821,36 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementName : ElementGetter
+  public class ElementDecompose : GH_Component
   {
-    public override Guid ComponentGuid => new Guid("287A772F-6700-4A67-9E93-CD8B0A60F773");
-    static readonly string PropertyName = "Name";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("ABC");
+    public override Guid ComponentGuid => new Guid("D3917D58-7183-4B3F-9D22-03F0FE93B956");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("E{");
 
-    public ElementName() : base(PropertyName) { }
+    public ElementDecompose()
+    : base("Element.Decompose", "Element.Decompose", "Decompose an elemenet", "Revit", "Element")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to decompose", GH_ParamAccess.item);
+    }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddTextParameter(PropertyName, PropertyName.Substring(0, 1), ObjectType.Name + " " + PropertyName.ToLower(), GH_ParamAccess.item);
+      manager.AddTextParameter("Name", "N", "Element name", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Category(), "Category", "C", "Element category", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.ElementType(), "Type", "C", "Element type", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       Autodesk.Revit.DB.Element element = null;
-      if (!DA.GetData(ObjectType.Name, ref element))
+      if (!DA.GetData("Element", ref element))
         return;
 
-      DA.SetData(PropertyName, element?.Name);
-    }
-  }
-
-  public class ElementCategory : ElementGetter
-  {
-    public override Guid ComponentGuid => new Guid("B7BA88B6-672E-4E26-BEEB-ABC069EF6D74");
-    static readonly string PropertyName = "Category";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("<>");
-
-    public ElementCategory() : base(PropertyName) { }
-
-    protected override void RegisterOutputParams(GH_OutputParamManager manager)
-    {
-      manager.AddParameter(new Parameters.Category(), PropertyName, PropertyName.Substring(0, 1), ObjectType.Name + " " + PropertyName.ToLower(), GH_ParamAccess.item);
-
-    }
-
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      Autodesk.Revit.DB.Element element = null;
-      if (!DA.GetData(ObjectType.Name, ref element))
-        return;
-
-      DA.SetData(PropertyName, element?.Category);
+      DA.SetData("Name", element?.Name);
+      DA.SetData("Category", element?.Category);
+      DA.SetData("Type", Revit.ActiveDBDocument.GetElement(element?.GetTypeId()));
     }
   }
 
@@ -385,66 +874,24 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData(ObjectType.Name, ref element))
         return;
 
-      List<string> paramNames = null;
-      List<string> paramValues = null;
-
-      if (element != null)
+      if (element == null)
       {
-        paramNames  = new List<string>(element.Parameters.Size);
-        paramValues = new List<string>(element.Parameters.Size);
+        DA.SetDataList("Names", null);
+        DA.SetDataList("Values", null);
+        return;
+      }
 
-        foreach (var param in element.Parameters.Cast<Parameter>())
-        {
-          paramNames.Add(param.Definition.Name);
-          paramValues.Add(param.AsValueString());
-        }
+      var paramNames = new List<string>(element.Parameters.Size);
+      var paramValues = new List<string>(element.Parameters.Size);
+
+      foreach (var param in element.Parameters.OfType<Parameter>())
+      {
+        paramNames.Add(param.Definition.Name);
+        paramValues.Add(param.AsValueString());
       }
 
       DA.SetDataList("Names", paramNames);
       DA.SetDataList("Values", paramValues);
-    }
-  }
-
-  public class ElementLocation : ElementGetter
-  {
-    public override Guid ComponentGuid => new Guid("8E129C01-602B-4A3D-8DFD-F1B590F024AD");
-    static readonly string PropertyName = "Location";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("L");
-
-    public ElementLocation() : base(PropertyName) { }
-
-    protected override void RegisterOutputParams(GH_OutputParamManager manager)
-    {
-      manager.AddGeometryParameter("Location", "L", ObjectType.Name + " parameter names", GH_ParamAccess.item);
-    }
-
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      Autodesk.Revit.DB.Element element = null;
-      if (!DA.GetData(ObjectType.Name, ref element))
-        return;
-
-      var scaleFactor = Revit.ModelUnits;
-
-      switch (element.Location)
-      {
-        case Autodesk.Revit.DB.LocationPoint pointLocation:
-          var p = pointLocation.Point.ToRhino();
-
-          if (scaleFactor != 1.0)
-            p.Scale(scaleFactor);
-
-          DA.SetData("Location", p);
-          break;
-        case Autodesk.Revit.DB.LocationCurve curveLocation:
-          var c = curveLocation.Curve.ToRhino();
-
-          if (scaleFactor != 1.0)
-            c.Scale(scaleFactor);
-
-          DA.SetData("Location", c);
-          break;
-      }
     }
   }
 
@@ -458,7 +905,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddGeometryParameter("Geometry", "G", ObjectType.Name + " parameter names", GH_ParamAccess.list);
+      manager.AddGeometryParameter(PropertyName, PropertyName.Substring(0, 1), ObjectType.Name + " parameter names", GH_ParamAccess.list);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -469,11 +916,71 @@ namespace RhinoInside.Revit.GH.Components
 
       var options = new Options { ComputeReferences = true };
 
-      using (var geometry = element.get_Geometry(options))
+      using (var geometry = element?.get_Geometry(options))
       {
-        var list = geometry.ToRhino().Where(x => x != null).ToList();
-        DA.SetDataList("Geometry", list);
+        var list = geometry?.ToRhino().Where(x => x != null).ToList();
+        DA.SetDataList(PropertyName, list);
       }
+    }
+  }
+
+  public class ElementGetPreview : ElementGetter
+  {
+    public override Guid ComponentGuid => new Guid("A95C7B73-6F70-46CA-85FC-A4402A3B6971");
+    static readonly string PropertyName = "Preview";
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P");
+
+    public ElementGetPreview() : base(PropertyName) { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      base.RegisterInputParams(manager);
+      manager[manager.AddIntegerParameter("DetailLevel", "LOD", ObjectType.Name + " LOD [1, 3]", GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddNumberParameter("Quality", "Q", ObjectType.Name + " meshes quality [0.0, 1.0]", GH_ParamAccess.item)].Optional = true;
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddMeshParameter("Geometry", "G", ObjectType.Name + " meshes", GH_ParamAccess.list);
+      manager.AddParameter(new Grasshopper.Kernel.Parameters.Param_OGLShader(), "Materials", "M", ObjectType.Name + " materials", GH_ParamAccess.list);
+      manager.AddCurveParameter("Wires", "W", ObjectType.Name + " wires", GH_ParamAccess.list);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Types.Element element = null;
+      if (!DA.GetData(ObjectType.Name, ref element))
+        return;
+
+      var detailLevel = ViewDetailLevel.Undefined;
+      int detailLevelValue = (int) detailLevel;
+      if (DA.GetData(1, ref detailLevelValue))
+      {
+        if ((int) ViewDetailLevel.Coarse > detailLevelValue || detailLevelValue > (int) ViewDetailLevel.Fine)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' range is [1, 3].", Params.Input[1].Name));
+          return;
+        }
+
+        detailLevel = (ViewDetailLevel) detailLevelValue;
+      }
+
+      double RelativeTolerance = double.NaN;
+      if (DA.GetData(2, ref RelativeTolerance))
+      {
+        if(0.0 > RelativeTolerance || RelativeTolerance > 1.0)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' range is [0.0, 1.0].", Params.Input[2].Name));
+          return;
+        }
+      }
+
+      var meshingParameters = !double.IsNaN(RelativeTolerance) ? new Rhino.Geometry.MeshingParameters(RelativeTolerance, Revit.VertexTolerance) : null;
+      Types.Element.BuildPreview((Autodesk.Revit.DB.Element) element, meshingParameters, detailLevel, out var materials, out var meshes, out var wires);
+
+      DA.SetDataList(0, meshes?.Select((x) => new GH_Mesh(x)));
+      DA.SetDataList(1, materials?.Select((x) => new GH_Material(x)));
+      DA.SetDataList(2, wires?.Select((x) => new GH_Curve(x)));
     }
   }
 }

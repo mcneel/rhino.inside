@@ -28,7 +28,7 @@ namespace RhinoInside.Revit
   [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
   [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]
   [Autodesk.Revit.Attributes.Journaling(Autodesk.Revit.Attributes.JournalingMode.NoCommandData)]
-  public class Revit : IExternalApplication
+  public partial class Revit : IExternalApplication
   {
     #region Revit static constructor
     static Revit()
@@ -134,13 +134,14 @@ namespace RhinoInside.Revit
 
       Instances.Settings.SetValue("Assemblies:COFF", bCoff);
 
-      if(rc)
+      if (rc)
         Grasshopper.Kernel.GH_ComponentServer.UpdateRibbonUI();
 
       return rc;
     }
+
     static bool LoadedAsGHA = false;
-    public void OnIdle(object sender, IdlingEventArgs args)
+    void OnIdle(object sender, IdlingEventArgs args)
     {
       // 1. Do Rhino pending OnIdle tasks
       if (rhinoCore.OnIdle())
@@ -157,97 +158,19 @@ namespace RhinoInside.Revit
       ActiveUIApplication = (sender as UIApplication);
       if (ActiveDBDocument != null)
       {
-        // 2. Do all BakeGeometry pending tasks
-        lock (bakeRecipeQueue)
+        // 1. Do all document read actions
+        if (ProcessReadActions())
         {
-          if (bakeRecipeQueue.Count > 0)
-          {
-            using (var trans = new Transaction(ActiveDBDocument))
-            {
-              if (trans.Start("BakeGeometry") == TransactionStatus.Started)
-              {
-                while (bakeRecipeQueue.Count > 0)
-                {
-                  var recipe = bakeRecipeQueue.Dequeue();
-
-                  if (recipe.geometryToBake != null && recipe.categoryToBakeInto != BuiltInCategory.INVALID)
-                  {
-                    try
-                    {
-                      var geometryList = new List<GeometryObject>();
-
-                      // DirectShape only accepts those types and no nulls
-                      foreach (var g in recipe.geometryToBake)
-                      {
-                        switch (g)
-                        {
-                          case Point p: geometryList.Add(p); break;
-                          case Curve c: geometryList.Add(c); break;
-                          case Solid s: geometryList.Add(s); break;
-                          case Mesh m: geometryList.Add(m); break;
-                        }
-                      }
-
-                      if (geometryList.Count > 0)
-                      {
-                        var ds = DirectShape.CreateElement(ActiveDBDocument, new ElementId(recipe.categoryToBakeInto));
-                        ds.SetShape(geometryList);
-                      }
-                    }
-                    catch (Exception e)
-                    {
-                      Debug.Fail(e.Source, e.Message);
-                    }
-                  }
-                }
-              }
-
-              trans.Commit();
-            }
-          }
+          args.SetRaiseWithoutDelay();
+          return;
         }
 
-        // 3. Do all document actions
-        lock (documentActions)
-        {
-          if (documentActions.Count > 0)
-          {
-            using (var trans = new Transaction(ActiveDBDocument))
-            {
-              try
-              {
-                if (trans.Start("RhinoInside") == TransactionStatus.Started)
-                {
-                  while (documentActions.Count > 0)
-                    documentActions.Dequeue().Invoke(ActiveDBDocument);
-
-                  Committing = true;
-                  trans.Commit();
-                  Committing = false;
-
-                  foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
-                  {
-                    if (definition.Enabled)
-                      definition.NewSolution(false);
-                  }
-                }
-              }
-              catch (Exception e)
-              {
-                Debug.Fail(e.Source, e.Message);
-
-                if (trans.HasStarted())
-                  trans.RollBack();
-              }
-              finally
-              {
-                documentActions.Clear();
-              }
-            }
-          }
-        }
+        // 2. Do all document write actions
+        if (!ActiveDBDocument.IsReadOnly)
+          ProcessWriteActions();
       }
     }
+
     private void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
     {
       if (Committing)
@@ -255,6 +178,10 @@ namespace RhinoInside.Revit
 
       if (!ActiveDBDocument.Equals(e.GetDocument()))
         return;
+
+      ProcessReadActions(true);
+
+      var materialsChanged = e.GetModifiedElementIds().Select((x) => ActiveDBDocument.GetElement(x)).OfType<Material>().Any();
 
       foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
       {
@@ -272,14 +199,19 @@ namespace RhinoInside.Revit
           }
           else if (obj is GH_Component component)
           {
-            foreach (var param in component.Params.Output)
+            if (component is GH.Components.DocumentElements)
+              component.ExpireSolution(false);
+            else foreach (var param in component.Params.Output)
             {
               if (param is RhinoInside.Revit.GH.Parameters.Element outElement)
               {
-                foreach (var goo in param.VolatileData.AllData(true))
+                if (materialsChanged)
                 {
-                  if (goo is IGH_PreviewMeshData previewMeshData)
-                    previewMeshData.DestroyPreviewMeshes();
+                  foreach (var goo in param.VolatileData.AllData(true))
+                  {
+                    if (goo is IGH_PreviewMeshData previewMeshData)
+                      previewMeshData.DestroyPreviewMeshes();
+                  }
                 }
 
                 foreach (var r in param.Recipients)
@@ -293,39 +225,175 @@ namespace RhinoInside.Revit
           definition.NewSolution(false);
       }
     }
-
     #endregion
 
     #region Bake Recipe
-    class BakeRecipe
+    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory categoryToBakeInto = BuiltInCategory.OST_GenericModel)
     {
-      public IList<GeometryObject> geometryToBake;
-      public BuiltInCategory categoryToBakeInto;
+      if (categoryToBakeInto == BuiltInCategory.INVALID)
+        return;
 
-      public BakeRecipe(IList<GeometryObject> geometryToBake, BuiltInCategory categoryToBakeInto)
-      {
-        this.geometryToBake = geometryToBake;
-        this.categoryToBakeInto = categoryToBakeInto;
-      }
+      EnqueueAction
+      (
+        (doc) =>
+        {
+          foreach (var geometryToBake in geometries.ToHost())
+          {
+            if (geometryToBake == null)
+              continue;
+
+            BakeGeometry(doc, geometryToBake, categoryToBakeInto);
+          }
+        }
+      );
     }
 
-    private static Queue<BakeRecipe> bakeRecipeQueue = new Queue<BakeRecipe>();
-    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory builtInCategory = BuiltInCategory.OST_GenericModel)
+    static partial void TraceGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries);
+#if DEBUG
+    static partial void TraceGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
-      lock (bakeRecipeQueue)
+      EnqueueAction
+      (
+        (doc) =>
+        {
+          using (var attributes = Convert.GraphicAttributes.Push())
+          {
+            using (var collector = new FilteredElementCollector(ActiveDBDocument))
+            {
+              var materials = collector.OfClass(typeof(Material)).Cast<Material>();
+              attributes.MaterialId = (materials.Where((x) => x.Name == "Debug").FirstOrDefault()?.Id) ?? ElementId.InvalidElementId;
+            }
+
+            foreach (var geometryToBake in geometries.ToHost())
+            {
+              if (geometryToBake == null)
+                continue;
+
+              BakeGeometry(doc, geometryToBake, BuiltInCategory.OST_GenericModel);
+            }
+          }
+        }
+      );
+    }
+#endif
+
+    static void BakeGeometry(Document doc, IEnumerable<GeometryObject> geometryToBake, BuiltInCategory categoryToBakeInto)
+    {
+      try
       {
-        foreach (var list in geometries.ToHost())
-          bakeRecipeQueue.Enqueue(new BakeRecipe(list, builtInCategory));
+        var geometryList = new List<GeometryObject>();
+
+        // DirectShape only accepts those types and no nulls
+        foreach (var g in geometryToBake)
+        {
+          switch (g)
+          {
+            case Point p: geometryList.Add(p); break;
+            case Curve c: geometryList.Add(c); break;
+            case Solid s: geometryList.Add(s); break;
+            case Mesh m: geometryList.Add(m); break;
+          }
+        }
+
+        if (geometryList.Count > 0)
+        {
+          var category = new ElementId(categoryToBakeInto);
+          if (!DirectShape.IsValidCategoryId(category, doc))
+            category = new ElementId(BuiltInCategory.OST_GenericModel);
+
+          var ds = DirectShape.CreateElement(doc, category);
+          ds.SetShape(geometryList);
+        }
+      }
+      catch (Exception e)
+      {
+        Debug.Fail(e.Source, e.Message);
       }
     }
     #endregion
 
     #region Document Actions
-    private static Queue<Action<Document>> documentActions = new Queue<Action<Document>>();
+    private static Queue<Action<Document>> docWriteActions = new Queue<Action<Document>>();
     public static void EnqueueAction(Action<Document> action)
     {
-      lock (documentActions)
-        documentActions.Enqueue(action);
+      lock (docWriteActions)
+        docWriteActions.Enqueue(action);
+    }
+
+    void ProcessWriteActions()
+    {
+      lock (docWriteActions)
+      {
+        if (docWriteActions.Count > 0)
+        {
+          using (var trans = new Transaction(ActiveDBDocument))
+          {
+            try
+            {
+              if (trans.Start("RhinoInside") == TransactionStatus.Started)
+              {
+                while (docWriteActions.Count > 0)
+                  docWriteActions.Dequeue().Invoke(ActiveDBDocument);
+
+                Committing = true;
+                var options = trans.GetFailureHandlingOptions();
+                trans.Commit(options.SetDelayedMiniWarnings(true).SetForcedModalHandling(false).SetFailuresPreprocessor(new FailuresPreprocessor()));
+                Committing = false;
+
+                foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+                {
+                  if (definition.Enabled)
+                    definition.NewSolution(false);
+                }
+              }
+            }
+            catch (Exception e)
+            {
+              Debug.Fail(e.Source, e.Message);
+
+              if (trans.HasStarted())
+                trans.RollBack();
+            }
+            finally
+            {
+              docWriteActions.Clear();
+            }
+          }
+        }
+      }
+    }
+
+    private static Queue<Action<Document, bool>> docReadActions = new Queue<Action<Document, bool>>();
+    public static void EnqueueReadAction(Action<Document, bool> action)
+    {
+      lock (docReadActions)
+        docReadActions.Enqueue(action);
+    }
+
+    bool ProcessReadActions(bool cancel = false)
+    {
+      lock (docReadActions)
+      {
+        if (docReadActions.Count > 0)
+        {
+          var stopWatch = new Stopwatch();
+
+          while (docReadActions.Count > 0)
+          {
+            // We will do as much work as possible in 150 ms on each OnIdle event
+            if (!cancel && stopWatch.ElapsedMilliseconds > 150)
+              return true; // there is pending work to do
+
+            stopWatch.Start();
+            try { docReadActions.Dequeue().Invoke(ActiveDBDocument, cancel); }
+            catch (Exception e) { Debug.Fail(e.Source, e.Message); }
+            stopWatch.Stop();
+          }
+        }
+      }
+
+      // there is no more work to do
+      return false;
     }
     #endregion
 
