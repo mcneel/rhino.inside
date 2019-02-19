@@ -19,7 +19,7 @@ import Rhino
 pts = System.Collections.List[Rhino.Geometry.Point3d]()
 pts.Add(Rhino.Geometry.Point3d(0.0,0.0,0.0))
 pts.Add(Rhino.Geometry.Point3d(1.0,0.0,0.0))
-pts.Add(RHino.Geometry.Point3d(1.5,2.0,0.0))
+pts.Add(Rhino.Geometry.Point3d(1.5,2.0,0.0))
 
 crv = Rhino.Geometry.Curve.CreateInterpolatedCurve(pts,3)
 print (crv.GetLength())
