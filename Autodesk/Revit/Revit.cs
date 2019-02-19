@@ -629,7 +629,7 @@ namespace RhinoInside.Revit
           vertexFormat = new VertexFormat(vertexFormatBits);
           effectInstance = new EffectInstance(vertexFormatBits);
           effectInstance.SetTransparency((255 - color.A) / 255.0);
-          effectInstance.SetDiffuseColor(new Color(color.R, color.G, color.B));
+          effectInstance.SetEmissiveColor(new Color(color.R, color.G, color.B));
 
           mesh = null;
         }
@@ -762,7 +762,38 @@ namespace RhinoInside.Revit
     private void Document_SolutionEnd(object sender, GH_SolutionEventArgs e)
     {
       Clear();
-      Revit.ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
+      Revit.ActiveUIApplication.ActiveUIDocument?.RefreshActiveView();
+    }
+
+    void Param_DrawMeshes(IGH_Param param, System.Drawing.Color color)
+    {
+      if (param.VolatileDataCount > 0)
+      {
+        foreach (var value in param.VolatileData.AllData(true))
+        {
+          //if (value is IGH_PreviewMeshData meshData)
+          //{
+          //  var meshes = meshData.GetPreviewMeshes();
+          //  if (meshes != null)
+          //  {
+          //    foreach (var mesh in meshes ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
+          //      DrawShadedMesh(mesh, color);
+
+          //    return;
+          //  }
+          //}
+
+          if (value is Grasshopper.Kernel.Types.IGH_Goo goo)
+          {
+            switch (goo.ScriptVariable())
+            {
+              case Rhino.Geometry.Mesh mesh: DrawShadedMesh(mesh, color); break;
+              case Rhino.Geometry.Brep brep: foreach(var m in Rhino.Geometry.Mesh.CreateFromBrep(brep)) DrawShadedMesh(m, color); break;
+            }
+          }
+
+        }
+      }
     }
 
     public override Outline GetBoundingBox(Autodesk.Revit.DB.View dBView)
@@ -783,20 +814,16 @@ namespace RhinoInside.Revit
               primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, component.ClippingBox);
 
               foreach (var param in component.Params.Output)
-              {
-                if (param.VolatileDataCount < 1)
-                  continue;
-
-                foreach (var value in param.VolatileData.AllData(true))
-                {
-                  if (value is IGH_PreviewMeshData meshData)
-                  {
-                    foreach (var mesh in meshData.GetPreviewMeshes() ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
-                      DrawShadedMesh(mesh, selected ? previewColourSelected : previewColour);
-                  }
-                }
-              }
+                Param_DrawMeshes(param, selected ? previewColourSelected : previewColour);
               // TODO : Use dBView.CropBox to check if the object is visible
+            }
+          }
+          else if(obj is IGH_Param param)
+          {
+            if (param is IGH_PreviewObject previewObject)
+            {
+              if(previewObject.IsPreviewCapable && !previewObject.Hidden)
+                Param_DrawMeshes(param, param.Attributes.Selected ? previewColourSelected : previewColour);
             }
           }
         }
@@ -809,6 +836,8 @@ namespace RhinoInside.Revit
     {
       try
       {
+        GetBoundingBox(dBView);
+
         foreach (var primitive in primitives)
           primitive.Draw();
       }
