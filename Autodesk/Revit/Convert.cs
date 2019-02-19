@@ -545,7 +545,17 @@ namespace RhinoInside.Revit
       return new Color(c.R, c.G, c.B);
     }
 
+    static public XYZ ToHost(this Point3f p)
+    {
+      return new XYZ(p.X, p.Y, p.Z);
+    }
+
     static public XYZ ToHost(this Point3d p)
+    {
+      return new XYZ(p.X, p.Y, p.Z);
+    }
+
+    static public XYZ ToHost(this Vector3f p)
     {
       return new XYZ(p.X, p.Y, p.Z);
     }
