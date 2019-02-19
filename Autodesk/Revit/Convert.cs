@@ -72,12 +72,10 @@ namespace RhinoInside.Revit
       return System.Drawing.Color.FromArgb((int) c.Red, (int) c.Green, (int) c.Blue);
     }
 
-    static internal Rhino.Display.DisplayMaterial ToRhino(this Autodesk.Revit.DB.Material material, Rhino.Display.DisplayMaterial defaultMaterial)
+    static readonly Rhino.Display.DisplayMaterial defaultMaterial = new Rhino.Display.DisplayMaterial(System.Drawing.Color.WhiteSmoke);
+    static internal Rhino.Display.DisplayMaterial ToRhino(this Autodesk.Revit.DB.Material material, Rhino.Display.DisplayMaterial parentMaterial)
     {
-      if (material == null && defaultMaterial != null)
-        return defaultMaterial;
-
-      return material == null ? new Rhino.Display.DisplayMaterial(System.Drawing.Color.WhiteSmoke) :
+      return (material == null) ? parentMaterial ?? defaultMaterial :
         new Rhino.Display.DisplayMaterial()
         {
           Diffuse = material.Color.ToRhino(),
