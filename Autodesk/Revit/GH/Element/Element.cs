@@ -186,7 +186,7 @@ namespace RhinoInside.Revit.GH.Types
         }
         else
         {
-          var categoryMaterial = element.Category.Material.ToRhino(null);
+          var categoryMaterial = element.Category?.Material.ToRhino(null);
           var elementMaterial = geometry.MaterialElement.ToRhino(categoryMaterial);
 
           using (var ga = Convert.GraphicAttributes.Push())
@@ -407,7 +407,7 @@ namespace RhinoInside.Revit.GH.Types
             else
             {
               material = new Rhino.Display.DisplayMaterial(material);
-              material.Diffuse = element.Category.LineColor.ToRhino();
+              material.Diffuse = element.Category != null ? element.Category.LineColor.ToRhino() : System.Drawing.Color.White;
               if (material.Diffuse == System.Drawing.Color.Black)
                 material.Diffuse = System.Drawing.Color.White;
               material.Transparency = 0.0;
