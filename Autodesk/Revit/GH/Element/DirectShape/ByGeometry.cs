@@ -50,7 +50,7 @@ namespace RhinoInside.Revit.GH.Components
         category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, BuiltInCategory.OST_GenericModel);
 
       string name = null;
-      if (!DA.GetData("Name", ref name) && geometry.Count == 1 && geometry[0].IsReferencedGeometry)
+      if (!DA.GetData("Name", ref name) && geometry.Count == 1 && (geometry[0]?.IsReferencedGeometry ?? false))
         name = Rhino.RhinoDoc.ActiveDoc.Objects.FindId(geometry[0].ReferenceID)?.Name;
 
       DA.DisableGapLogic();
