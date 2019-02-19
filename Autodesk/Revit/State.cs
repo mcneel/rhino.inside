@@ -8,11 +8,16 @@ namespace RhinoInside
 {
   public class State<T> : IDisposable where T : State<T>, new()
   {
-    [ThreadStatic] static readonly T root = new T();
+    [ThreadStatic] static T root;
     [ThreadStatic] static T current;
     T previous = current;
 
-    protected State() { current = (T) this; }
+    protected State()
+    {
+      current = (T) this;
+      if (root == null)
+        root = (T) this;
+    }
 
     void IDisposable.Dispose()
     {
@@ -35,11 +40,11 @@ namespace RhinoInside
       previous = null;
     }
 
-    public static T Peek => current;
+    public static T Peek => current ?? new T();
 
     public static T Push()
     {
-      var top = (T) current.MemberwiseClone();
+      var top = (T) Peek.MemberwiseClone();
       top.previous = current;
       return current = top;
     }
