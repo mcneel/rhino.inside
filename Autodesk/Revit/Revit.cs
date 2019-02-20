@@ -58,7 +58,7 @@ namespace RhinoInside.Revit
     //DocumentPreviewServer documentPreviewServer;
     GrasshopperPreviewServer grasshopperPreviewServer;
 
-    public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
+    public Result OnStartup(UIControlledApplication applicationUI)
     {
       ApplicationUI = applicationUI;
 
@@ -77,8 +77,11 @@ namespace RhinoInside.Revit
       catch (Exception e)
       {
         Debug.Fail(e.Source, e.Message);
-        return Autodesk.Revit.UI.Result.Failed;
+        return Result.Failed;
       }
+
+      // Reset document units
+      UI.RhinoCommand.ResetDocumentUnits(Rhino.RhinoDoc.ActiveDoc);
 
       // Register UI on Revit
       {
@@ -104,10 +107,10 @@ namespace RhinoInside.Revit
       grasshopperPreviewServer = new GrasshopperPreviewServer();
       grasshopperPreviewServer.Register();
 
-      return Autodesk.Revit.UI.Result.Succeeded;
+      return Result.Succeeded;
     }
 
-    public Autodesk.Revit.UI.Result OnShutdown(UIControlledApplication applicationUI)
+    public Result OnShutdown(UIControlledApplication applicationUI)
     {
       // Unregister as a DirectContext3DServer
       grasshopperPreviewServer?.Unregister();
@@ -128,11 +131,11 @@ namespace RhinoInside.Revit
       catch (Exception e)
       {
         Debug.Fail(e.Source, e.Message);
-        return Autodesk.Revit.UI.Result.Failed;
+        return Result.Failed;
       }
 
       ApplicationUI = null;
-      return Autodesk.Revit.UI.Result.Succeeded;
+      return Result.Succeeded;
     }
 
     public static bool Committing = false;
@@ -148,13 +151,13 @@ namespace RhinoInside.Revit
       var rc = (bool) LoadGHAProc.Invoke
       (
         Instances.ComponentServer,
-        new object[] { new Grasshopper.Kernel.GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
+        new object[] { new GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
       );
 
       Instances.Settings.SetValue("Assemblies:COFF", bCoff);
 
       if (rc)
-        Grasshopper.Kernel.GH_ComponentServer.UpdateRibbonUI();
+        GH_ComponentServer.UpdateRibbonUI();
 
       return rc;
     }
@@ -195,18 +198,19 @@ namespace RhinoInside.Revit
       if (Committing)
         return;
 
-      if (!ActiveDBDocument.Equals(e.GetDocument()))
+      var document = e.GetDocument();
+      if (!document.Equals(ActiveDBDocument))
         return;
 
       ProcessReadActions(true);
 
-      var materialsChanged = e.GetModifiedElementIds().Select((x) => ActiveDBDocument.GetElement(x)).OfType<Material>().Any();
+      var materialsChanged = e.GetModifiedElementIds().Select((x) => document.GetElement(x)).OfType<Material>().Any();
 
       foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
       {
         foreach (var obj in definition.Objects)
         {
-          if (obj is RhinoInside.Revit.GH.Parameters.Element element)
+          if (obj is GH.Parameters.Element element)
           {
             if (element.SourceCount > 0)
               continue;
@@ -219,10 +223,12 @@ namespace RhinoInside.Revit
           else if (obj is GH_Component component)
           {
             if (component is GH.Components.DocumentElements)
+            {
               component.ExpireSolution(false);
+            }
             else foreach (var param in component.Params.Output)
             {
-              if (param is RhinoInside.Revit.GH.Parameters.Element outElement)
+              if (param is GH.Parameters.Element outElement)
               {
                 if (materialsChanged)
                 {
