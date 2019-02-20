@@ -55,7 +55,7 @@ namespace RhinoInside.Revit
 
     #region IExternalApplication Members
     RhinoCore rhinoCore;
-    DocumentPreviewServer documentPreviewServer;
+    //DocumentPreviewServer documentPreviewServer;
     GrasshopperPreviewServer grasshopperPreviewServer;
 
     public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
@@ -98,8 +98,8 @@ namespace RhinoInside.Revit
       ApplicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
 
       // Register as a DirectContext3DServer
-      documentPreviewServer = new DocumentPreviewServer();
-      documentPreviewServer.Register();
+      //documentPreviewServer = new DocumentPreviewServer();
+      //documentPreviewServer.Register();
 
       grasshopperPreviewServer = new GrasshopperPreviewServer();
       grasshopperPreviewServer.Register();
@@ -113,8 +113,8 @@ namespace RhinoInside.Revit
       grasshopperPreviewServer?.Unregister();
       grasshopperPreviewServer = null;
 
-      documentPreviewServer?.Unregister();
-      documentPreviewServer = null;
+      //documentPreviewServer?.Unregister();
+      //documentPreviewServer = null;
 
       // Unregister some events
       ApplicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
@@ -448,7 +448,7 @@ namespace RhinoInside.Revit
     string IDirectContext3DServer.GetApplicationId() => string.Empty;
     string IDirectContext3DServer.GetSourceId() => string.Empty;
     bool IDirectContext3DServer.UsesHandles() => false;
-    bool IDirectContext3DServer.UseInTransparentPass(Autodesk.Revit.DB.View dBView) => true;
+    public virtual bool UseInTransparentPass(Autodesk.Revit.DB.View dBView) => false;
     public abstract bool CanExecute(Autodesk.Revit.DB.View dBView);
     public abstract Outline GetBoundingBox(Autodesk.Revit.DB.View dBView);
     public abstract void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle);
@@ -564,7 +564,34 @@ namespace RhinoInside.Revit
       return null;
     }
 
-    protected static IndexBuffer ToIndexBuffer(Rhino.Geometry.Mesh mesh, out int triangleCount)
+    protected static IndexBuffer ToLinesBuffer(Rhino.Geometry.Mesh mesh, out int linesCount)
+    {
+      linesCount = (mesh.Faces.Count * 3) + mesh.Faces.QuadCount;
+      if (linesCount > 0)
+      {
+        var ib = new IndexBuffer(linesCount * 2);
+
+        ib.Map(linesCount * 2);
+        using (var istream = ib.GetIndexStreamLine())
+        {
+          foreach (var face in mesh.Faces)
+          {
+            istream.AddLine(new IndexLine(face.A, face.B));
+            istream.AddLine(new IndexLine(face.B, face.C));
+            istream.AddLine(new IndexLine(face.C, face.D));
+            if (face.IsQuad)
+              istream.AddLine(new IndexLine(face.D, face.A));
+          }
+        }
+
+        ib.Unmap();
+        return ib;
+      }
+
+      return null;
+    }
+
+    protected static IndexBuffer ToTrianglesBuffer(Rhino.Geometry.Mesh mesh, out int triangleCount)
     {
       triangleCount = mesh.Faces.Count + mesh.Faces.QuadCount;
       if (triangleCount > 0)
@@ -616,16 +643,15 @@ namespace RhinoInside.Revit
         vertexBuffer?.Dispose(); vertexBuffer = null; vertexCount = 0;
       }
 
-      public void Draw()
+      public void Draw(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
       {
-        if (!DrawContext.IsTransparentPass())
-          return;
+        // TODO : Use dBView.CropBox to check if the object is visible
 
         if (vertexBuffer == null)
         {
           vertexBuffer = ToVertexBuffer(mesh, out vertexFormatBits);
           vertexCount = mesh.Vertices.Count;
-          triangleBuffer = ToIndexBuffer(mesh, out triangleCount);
+          triangleBuffer = ToTrianglesBuffer(mesh, out triangleCount);
           vertexFormat = new VertexFormat(vertexFormatBits);
           effectInstance = new EffectInstance(vertexFormatBits);
           effectInstance.SetTransparency((255 - color.A) / 255.0);
@@ -636,7 +662,7 @@ namespace RhinoInside.Revit
 
         DrawContext.FlushBuffer
         (
-          vertexBuffer, vertexCount * 3,
+          vertexBuffer, vertexCount,
           triangleBuffer, triangleCount * 3,
           vertexFormat,
           effectInstance,
@@ -675,22 +701,38 @@ namespace RhinoInside.Revit
           {
             using (var vb = ToVertexBuffer(m, out var vertexFormatBits))
             {
-              using (var ib = ToIndexBuffer(m, out var triangleCount))
+              using (var vf = new VertexFormat(vertexFormatBits))
+              using (var ei = new EffectInstance(vertexFormatBits))
               {
-                using (var ei = new EffectInstance(vertexFormatBits))
+                if (displayStyle >= DisplayStyle.Shading)
                 {
-                  ei.SetTransparency(0.5);
-                  ei.SetDiffuseColor(drawColor.ToHost());
+                  using (var ib = ToTrianglesBuffer(m, out var triangleCount))
+                  {
+                    ei.SetDiffuseColor(drawColor.ToHost());
 
-                  DrawContext.FlushBuffer
-                  (
-                    vb, m.Vertices.Count * 3,
-                    ib, triangleCount * 3,
-                    new VertexFormat(vertexFormatBits),
-                    ei,
-                    PrimitiveType.TriangleList,
-                    0, triangleCount
-                  );
+                    DrawContext.FlushBuffer
+                    (
+                      vb, m.Vertices.Count,
+                      ib, triangleCount * 3,
+                      vf, ei,
+                      PrimitiveType.TriangleList,
+                      0, triangleCount
+                    );
+                  }
+                }
+                else
+                {
+                  using (var ib = ToLinesBuffer(m, out var linesCount))
+                  {
+                    DrawContext.FlushBuffer
+                    (
+                      vb, m.Vertices.Count,
+                      ib, linesCount * 2,
+                      vf, ei,
+                      PrimitiveType.LineList,
+                      0, linesCount
+                    );
+                  }
                 }
               }
             }
@@ -707,7 +749,7 @@ namespace RhinoInside.Revit
 
   public class GrasshopperPreviewServer : DirectContext3DServer
   {
-    GH_Canvas ActiveCanvas = null;
+    GH_Document activeDefinition = null;
     List<Primitive> primitives = new List<Primitive>();
     Rhino.Geometry.BoundingBox primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
 
@@ -734,7 +776,6 @@ namespace RhinoInside.Revit
     public void DrawShadedMesh(Rhino.Geometry.Mesh mesh, System.Drawing.Color color)
     {
       primitives.Add(new Primitive(mesh, color));
-      //primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, mesh.GetBoundingBox(false));
     }
 
     #region IExternalServer
@@ -742,21 +783,24 @@ namespace RhinoInside.Revit
     #endregion
 
     #region IDirectContext3DServer
+    public override bool UseInTransparentPass(Autodesk.Revit.DB.View dBView) => true;
+
     public override bool CanExecute(Autodesk.Revit.DB.View dBView)
     {
-      if (Grasshopper.Instances.ActiveCanvas != ActiveCanvas)
+      var definition = Grasshopper.Instances.ActiveCanvas?.Document;
+      if (definition != activeDefinition)
       {
-        if(ActiveCanvas?.Document != null)
-          ActiveCanvas.Document.SolutionEnd -= Document_SolutionEnd;
+        if(activeDefinition != null)
+          activeDefinition.SolutionEnd -= Document_SolutionEnd;
 
         Clear();
-        ActiveCanvas = Grasshopper.Instances.ActiveCanvas;
+        activeDefinition = definition;
 
-        if (ActiveCanvas?.Document != null)
-          ActiveCanvas.Document.SolutionEnd += Document_SolutionEnd;
+        if (activeDefinition != null)
+          activeDefinition.SolutionEnd += Document_SolutionEnd;
       }
 
-      return ActiveCanvas != null;
+      return activeDefinition != null;
     }
 
     private void Document_SolutionEnd(object sender, GH_SolutionEventArgs e)
@@ -783,63 +827,83 @@ namespace RhinoInside.Revit
           //  }
           //}
 
-          if (value is Grasshopper.Kernel.Types.IGH_Goo goo)
+          // First check for IGH_PreviewData to discard no graphic elements like strings, doubles, vectors...
+          if (value is IGH_PreviewData)
           {
-            switch (goo.ScriptVariable())
+            switch (value.ScriptVariable())
             {
               case Rhino.Geometry.Mesh mesh: DrawShadedMesh(mesh, color); break;
-              case Rhino.Geometry.Brep brep: foreach(var m in Rhino.Geometry.Mesh.CreateFromBrep(brep)) DrawShadedMesh(m, color); break;
+              case Rhino.Geometry.Brep brep:
+                foreach (var m in Rhino.Geometry.Mesh.CreateFromBrep(brep, Rhino.Geometry.MeshingParameters.Default))
+                  DrawShadedMesh(m, color);
+                break;
             }
           }
-
         }
       }
     }
 
-    public override Outline GetBoundingBox(Autodesk.Revit.DB.View dBView)
+    Rhino.Geometry.BoundingBox BuildScene(Autodesk.Revit.DB.View dBView)
     {
       if (!primitivesBoundingBox.IsValid)
       {
-        var previewColour = ActiveCanvas.Document.PreviewColour;
-        var previewColourSelected = ActiveCanvas.Document.PreviewColourSelected;
+        var previewColour = activeDefinition.PreviewColour;
+        var previewColourSelected = activeDefinition.PreviewColourSelected;
 
-        foreach (var obj in ActiveCanvas.Document.Objects)
+        foreach (var obj in activeDefinition.Objects)
         {
+          bool selected = obj.Attributes.Selected;
+
           if (obj is IGH_Component component)
           {
-            bool selected = component.Attributes.Selected;
-
             if (component.IsPreviewCapable && !component.Locked && !component.Hidden)
             {
               primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, component.ClippingBox);
 
               foreach (var param in component.Params.Output)
                 Param_DrawMeshes(param, selected ? previewColourSelected : previewColour);
-              // TODO : Use dBView.CropBox to check if the object is visible
             }
           }
           else if(obj is IGH_Param param)
           {
-            if (param is IGH_PreviewObject previewObject)
+            if (!param.Locked)
             {
-              if(previewObject.IsPreviewCapable && !previewObject.Hidden)
-                Param_DrawMeshes(param, param.Attributes.Selected ? previewColourSelected : previewColour);
+              if (param is IGH_PreviewObject previewObject)
+              {
+                primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, previewObject.ClippingBox);
+
+                if (previewObject.IsPreviewCapable && !previewObject.Hidden)
+                  Param_DrawMeshes(param, selected ? previewColourSelected : previewColour);
+              }
             }
           }
         }
       }
 
+      return primitivesBoundingBox;
+    }
+
+    public override Outline GetBoundingBox(Autodesk.Revit.DB.View dBView)
+    {
+      BuildScene(dBView);
       return new Outline(primitivesBoundingBox.Min.ToHost(), primitivesBoundingBox.Max.ToHost());
     }
 
     public override void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
     {
+      if (!DrawContext.IsTransparentPass())
+        return;
+
       try
       {
-        GetBoundingBox(dBView);
+        BuildScene(dBView);
+
+        var f = RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(Revit.ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem);
+
+        DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
 
         foreach (var primitive in primitives)
-          primitive.Draw();
+          primitive.Draw(dBView, displayStyle);
       }
       catch (Exception e)
       {

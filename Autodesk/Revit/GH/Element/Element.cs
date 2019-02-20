@@ -732,21 +732,15 @@ namespace RhinoInside.Revit.GH.Parameters
       var selection = Revit.ActiveUIDocument.Selection.GetElementIds();
       if (selection?.Count > 0)
       {
-        elements = new List<Types.Element>();
-        foreach (var elementId in selection)
-          elements.Add(Types.Element.Make(elementId));
+        elements = selection.Select((x) => Types.Element.Make(x)).ToList();
       }
       else
       {
         try
         {
           var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element);
-          if (references?.Count > 0)
-          {
-            elements = new List<Types.Element>();
-            foreach (var reference in references)
-              elements.Add(Types.Element.Make(reference.ElementId));
-          }
+          if (references != null)
+            elements = references.Select((x) => Types.Element.Make(x.ElementId)).ToList();
         }
         catch (Autodesk.Revit.Exceptions.OperationCanceledException)
         {
