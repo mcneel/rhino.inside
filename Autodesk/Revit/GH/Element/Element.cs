@@ -661,18 +661,50 @@ namespace RhinoInside.Revit.GH.Parameters
 
     #region UI methods
     bool mainWindowVisible = false;
+    bool mainWindowEnabled = false;
     protected /*override*/ void PrepareForPrompt()
     {
-      Grasshopper.Instances.DocumentEditor.FadeOut();
-      mainWindowVisible = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
-      Rhino.UI.RhinoEtoApp.MainWindow.Visible = false;
+      var mainWindowExtents = Revit.ActiveUIApplication.MainWindowExtents;
+      var mainWindowRectangle = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
+      mainWindowRectangle.Inflate(-64, -64);
+
+      // Grasshopper Window
+      {
+        Grasshopper.Instances.DocumentEditor.Enabled = false;
+        if (Grasshopper.Instances.DocumentEditor.DesktopBounds.IntersectsWith(mainWindowRectangle))
+          Grasshopper.Instances.DocumentEditor.Hide();
+      }
+
+      // Rhino Window
+      {
+        var rhinoWindowBounds = Rhino.UI.RhinoEtoApp.MainWindow.Bounds;
+        var rhinoWindowRectangle = new System.Drawing.Rectangle(rhinoWindowBounds.Left, rhinoWindowBounds.Top, rhinoWindowBounds.Width, rhinoWindowBounds.Height);
+
+        mainWindowEnabled = Rhino.UI.RhinoEtoApp.MainWindow.Enabled;
+        mainWindowVisible = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
+        Rhino.UI.RhinoEtoApp.MainWindow.Enabled = false;
+        if (rhinoWindowRectangle.IntersectsWith(mainWindowRectangle))
+          Rhino.UI.RhinoEtoApp.MainWindow.Visible = false;
+      }
     }
 
     protected /*override*/ void RecoverFromPrompt()
     {
-      Rhino.UI.RhinoEtoApp.MainWindow.Visible = mainWindowVisible;
-      mainWindowVisible = false;
-      Grasshopper.Instances.DocumentEditor.FadeIn();
+      // Rhino Window
+      {
+        Rhino.UI.RhinoEtoApp.MainWindow.Visible = mainWindowVisible;
+        Rhino.UI.RhinoEtoApp.MainWindow.Enabled = mainWindowEnabled;
+        mainWindowVisible = false;
+        mainWindowEnabled = false;
+      }
+
+      // Grasshopper Window
+      {
+        Grasshopper.Instances.DocumentEditor.Show();
+        Grasshopper.Instances.DocumentEditor.Enabled = true;
+      }
+
+      Revit.ActiveUIApplication.ActiveUIDocument?.RefreshActiveView();
     }
 
     protected /*override*/ GH_GetterResult Prompt_Singular(out Types.Element element)
@@ -731,14 +763,15 @@ namespace RhinoInside.Revit.GH.Parameters
         PrepareForPrompt();
 
         if (Prompt_Singular(out var element) == GH_GetterResult.success)
+        {
           selection = new List<Types.Element>() { element };
+          ExpireSolution(true);
+        }
       }
       finally
       {
         RecoverFromPrompt();
       }
-
-      ExpireSolution(true);
     }
 
     private void Menu_PromptPlural(object sender, EventArgs e)
@@ -748,13 +781,15 @@ namespace RhinoInside.Revit.GH.Parameters
         PrepareForPrompt();
 
         if (Prompt_Plural(out var elements) == GH_GetterResult.success)
+        {
           selection = elements;
+          ExpireSolution(true);
+        }
       }
       finally
       {
         RecoverFromPrompt();
       }
-      ExpireSolution(true);
     }
 
     private void Menu_ClearValues(object sender, EventArgs e)
@@ -783,21 +818,17 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         ClearData();
 
-        var volatileList = new List<IGH_Goo>(selection.Count);
-        foreach (var element in selection)
-          volatileList.Add(element.Duplicate());
-
-        AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), volatileList);
+        AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), selection.Select((x) => x.Duplicate()).ToList());
       }
     }
     #endregion
 
     #region IGH_PreviewObject
-    public bool Hidden { get; set; }
-    public bool IsPreviewCapable => !VolatileData.IsEmpty;
-    public Rhino.Geometry.BoundingBox ClippingBox => Preview_ComputeClippingBox();
-    public void DrawViewportMeshes(IGH_PreviewArgs args) { Preview_DrawMeshes(args); }
-    public void DrawViewportWires(IGH_PreviewArgs args)  { Preview_DrawWires(args);  }
+    bool IGH_PreviewObject.Hidden { get; set; }
+    bool IGH_PreviewObject.IsPreviewCapable => !VolatileData.IsEmpty;
+    Rhino.Geometry.BoundingBox IGH_PreviewObject.ClippingBox        => Preview_ComputeClippingBox();
+    void IGH_PreviewObject.DrawViewportMeshes(IGH_PreviewArgs args) => Preview_DrawMeshes(args);
+    void IGH_PreviewObject.DrawViewportWires(IGH_PreviewArgs args)  => Preview_DrawWires(args);
     #endregion
   }
 }
