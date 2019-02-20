@@ -69,19 +69,7 @@ namespace RhinoInside.Revit.GH.Components
 
       double height = 0.0;
       if (!DA.GetData("Height", ref height))
-      {
-        switch (Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem)
-        {
-          case Rhino.UnitSystem.None:
-          case Rhino.UnitSystem.Inches:
-          case Rhino.UnitSystem.Feet:
-            height = 10.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Feet, Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem);
-            break;
-          default:
-            height = 3.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Meters, Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem);
-            break;
-        }
-      }
+        height = LiteralLengthValue(3.0);
 
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;

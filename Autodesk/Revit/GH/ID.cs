@@ -190,6 +190,19 @@ namespace RhinoInside.Revit.GH.Components
 
       TrimExcess(list, begin);
     }
+    protected static double LiteralLengthValue(double meters)
+    {
+      switch (Rhino.RhinoDoc.ActiveDoc?.ModelUnitSystem)
+      {
+        case Rhino.UnitSystem.None:
+        case Rhino.UnitSystem.Inches:
+        case Rhino.UnitSystem.Feet:
+          return Math.Round(meters * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Meters, Rhino.UnitSystem.Feet))
+                 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Feet, Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem);
+        default:
+          return meters * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Meters, Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem);
+      }
+    }
   }
 
   public abstract class GH_TransactionalComponentItem : GH_TransactionalComponent
