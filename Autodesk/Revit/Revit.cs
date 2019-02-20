@@ -437,8 +437,8 @@ namespace RhinoInside.Revit
   public abstract class DirectContext3DServer : IDirectContext3DServer
   {
     #region IExternalServer
-    string IExternalServer.GetDescription() => "Display Rhino geometry";
-    string IExternalServer.GetName() => "RhinoInside";
+    public abstract string GetDescription();
+    public abstract string GetName();
     string IExternalServer.GetVendorId() => "RMA";
     ExternalServiceId IExternalServer.GetServiceId() => ExternalServices.BuiltInExternalServices.DirectContext3DService;
     public abstract Guid GetServerId();
@@ -664,8 +664,7 @@ namespace RhinoInside.Revit
         (
           vertexBuffer, vertexCount,
           triangleBuffer, triangleCount * 3,
-          vertexFormat,
-          effectInstance,
+          vertexFormat, effectInstance,
           PrimitiveType.TriangleList,
           0, triangleCount
         );
@@ -677,6 +676,8 @@ namespace RhinoInside.Revit
   class DocumentPreviewServer : DirectContext3DServer
   {
     #region IExternalServer
+    public override string GetName() => Rhino.RhinoApp.Name;
+    public override string GetDescription() => Rhino.RhinoApp.Name + " document previews server";
     public override Guid GetServerId() => Rhino.RhinoApp.CurrentRhinoId;
     #endregion
 
@@ -693,10 +694,12 @@ namespace RhinoInside.Revit
     {
       try
       {
-        var doc = RhinoDoc.ActiveDoc;
-        foreach (var o in doc.Objects)
+        DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
+
+        var activeDoc = RhinoDoc.ActiveDoc;
+        foreach (var o in activeDoc.Objects)
         {
-          var drawColor = o.Attributes.DrawColor(doc);
+          var drawColor = o.Attributes.DrawColor(activeDoc);
           foreach (var m in o.GetMeshes(Rhino.Geometry.MeshType.Render))
           {
             using (var vb = ToVertexBuffer(m, out var vertexFormatBits))
@@ -779,6 +782,8 @@ namespace RhinoInside.Revit
     }
 
     #region IExternalServer
+    public override string GetName() => "Grasshopper";
+    public override string GetDescription() => "Grasshopper previews server";
     public override Guid GetServerId() => Grasshopper.Instances.GrasshopperPluginId;
     #endregion
 
@@ -809,7 +814,7 @@ namespace RhinoInside.Revit
       Revit.ActiveUIApplication.ActiveUIDocument?.RefreshActiveView();
     }
 
-    void Param_DrawMeshes(IGH_Param param, System.Drawing.Color color)
+    void DrawParam(IGH_Param param, System.Drawing.Color color)
     {
       if (param.VolatileDataCount > 0)
       {
@@ -843,7 +848,7 @@ namespace RhinoInside.Revit
       }
     }
 
-    Rhino.Geometry.BoundingBox BuildScene(Autodesk.Revit.DB.View dBView)
+    Rhino.Geometry.BoundingBox DrawScene(Autodesk.Revit.DB.View dBView)
     {
       if (!primitivesBoundingBox.IsValid)
       {
@@ -861,7 +866,7 @@ namespace RhinoInside.Revit
               primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, component.ClippingBox);
 
               foreach (var param in component.Params.Output)
-                Param_DrawMeshes(param, selected ? previewColourSelected : previewColour);
+                DrawParam(param, selected ? previewColourSelected : previewColour);
             }
           }
           else if(obj is IGH_Param param)
@@ -873,7 +878,7 @@ namespace RhinoInside.Revit
                 primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, previewObject.ClippingBox);
 
                 if (previewObject.IsPreviewCapable && !previewObject.Hidden)
-                  Param_DrawMeshes(param, selected ? previewColourSelected : previewColour);
+                  DrawParam(param, selected ? previewColourSelected : previewColour);
               }
             }
           }
@@ -885,7 +890,7 @@ namespace RhinoInside.Revit
 
     public override Outline GetBoundingBox(Autodesk.Revit.DB.View dBView)
     {
-      BuildScene(dBView);
+      DrawScene(dBView);
       return new Outline(primitivesBoundingBox.Min.ToHost(), primitivesBoundingBox.Max.ToHost());
     }
 
@@ -896,9 +901,7 @@ namespace RhinoInside.Revit
 
       try
       {
-        BuildScene(dBView);
-
-        var f = RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(Revit.ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem);
+        DrawScene(dBView);
 
         DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
 
