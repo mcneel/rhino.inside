@@ -1,26 +1,28 @@
-import os, clr, sys
+import os
+import clr
+import sys
+import struct
 
 # Adding to sys.path will make pythonnet find the
 # appropriate DLLs to load
 __path_to_rhino = os.path.join(os.environ["ProgramFiles"], "Rhino WIP", "System")
 sys.path.append(__path_to_rhino)
 
-# we shouldn't need this shim, but David Leon was seeing
-# problems loading directly through RhinoCommon's RhinoCore
-# class. We'll use the shim for now, and over time we can
-# switch over to just constructing a RhinoCore class instance
-__path_to_dll = os.path.join(os.path.dirname(os.path.abspath(__file__)), "RhinoInsidePythonShim.dll")  
-clr.AddReference(__path_to_dll)
-
-import RhinoInsidePythonShim
-RhinoInsidePythonShim.RhinoLib.Init()
-RhinoInsidePythonShim.RhinoLib.Launch()
-
-clr.AddReference("RhinoCommon")
-
 # create and hold onto an instance of RhinoCore to properly
 # launch Rhino.Inside of python
-import Rhino
+__rhino_core = None
 
-# uncomment when we get RhinoCore working
-#rhinocore = Rhino.Runtime.InProcess.RhinoCore()
+
+def load():
+    """call load to actually load Rhino into the current process"""
+    if os.name != 'nt':
+        raise Exception('rhinoinside only works on Windows')
+    bitness = 8 * struct.calcsize("P")
+    if bitness != 64:
+        raise Exception('rhinoinside only works in a 64 bit process')
+
+    global __rhino_core
+    if __rhino_core is None:
+        clr.AddReference("RhinoCommon")
+        import Rhino
+        __rhino_core = Rhino.Runtime.InProcess.RhinoCore()

@@ -6,17 +6,18 @@ Embed Rhino in CPython
 ## Requirements:
 - Rhino 7
 - Windows
-- 64 bit version of CPython (2.7+ or 3.3+ should work)
+- 64 bit version of CPython (2.7, 3.3, 3.4, 3.5, 3.6)
 
 ## How to use
 ```
 import rhinoinside
+rhinoinside.load()
 import System
 import Rhino
 
 # for now, you need to explicitly use floating point
 # numbers in Point3d constructor
-pts = System.Collections.List[Rhino.Geometry.Point3d]()
+pts = System.Collections.Generic.List[Rhino.Geometry.Point3d]()
 pts.Add(Rhino.Geometry.Point3d(0.0,0.0,0.0))
 pts.Add(Rhino.Geometry.Point3d(1.0,0.0,0.0))
 pts.Add(Rhino.Geometry.Point3d(1.5,2.0,0.0))
