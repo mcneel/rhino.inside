@@ -146,6 +146,11 @@ namespace RhinoInside.Revit
       base.Unregister();
       objectPreviews.Remove(rhinoObject.Id);
 
+      ClearPrimitives();
+    }
+
+    void ClearPrimitives()
+    {
       foreach (var buffer in primitives ?? Enumerable.Empty<Primitive>())
         ((IDisposable) buffer).Dispose();
 
@@ -178,7 +183,12 @@ namespace RhinoInside.Revit
         service.SetActiveServers(activeServerIds);
 
         foreach (var preview in objectPreviews)
+        {
           service.RemoveServer(preview.Key);
+          preview.Value.ClearPrimitives();
+        }
+
+        objectPreviews = null;
       }
 
       Revit.RefreshActiveView();
@@ -249,11 +259,10 @@ namespace RhinoInside.Revit
 
         if (DrawContext.IsTransparentPass())
         {
+          glossiness = 0.5;
           transparency = 0.2;
-          if (displayStyle == DisplayStyle.FlatColors)
-            emissive = rhinoObject.Attributes.DrawColor(ActiveDocument);
-          else
-            emissive = Rhino.ApplicationSettings.AppearanceSettings.LockedObjectColor;
+          specular = System.Drawing.Color.White;
+          emissive = Rhino.ApplicationSettings.AppearanceSettings.LockedObjectColor;
 
           if (emissive == System.Drawing.Color.Black)
             emissive = System.Drawing.Color.Gray;
@@ -318,16 +327,15 @@ namespace RhinoInside.Revit
       protected IndexBuffer linesBuffer;
       protected int linesCount = -1;
 
-      protected static int ToLinesBuffer(Rhino.Geometry.Mesh mesh, out VertexBuffer vb, out IndexBuffer ib)
+      protected static int ToWiresBuffer(Polyline[] wires, out VertexBuffer vb, out IndexBuffer ib)
       {
         int linesCount = 0;
         vb = null;
         ib = null;
 
-        var edges = mesh.GetNakedEdges();
-        if (edges?.Length > 0)
+        if (wires?.Length > 0)
         {
-          foreach (var polyline in edges)
+          foreach (var polyline in wires)
             linesCount += polyline.SegmentCount;
 
           vb = new VertexBuffer(linesCount * 2 * VertexPosition.GetSizeInFloats());
@@ -340,7 +348,7 @@ namespace RhinoInside.Revit
           using (var vstream = vb.GetVertexStreamPosition())
           using (var istream = ib.GetIndexStreamLine())
           {
-            foreach (var polyline in edges)
+            foreach (var polyline in wires)
             {
               int segmentCount = polyline.SegmentCount;
               for (int s = 0; s < segmentCount; ++s)
@@ -367,17 +375,10 @@ namespace RhinoInside.Revit
         linesVertexBuffer?.Dispose();
         linesBuffer?.Dispose();
 
-        // TODO::
-        //if(rhinoObject.Geometry is Rhino.Geometry.Brep brep)
-        //{
-        //  foreach (var face in brep.Faces)
-        //    face.TrimAwareIsoCurve();
-        //}
-
-        linesCount = ToLinesBuffer(mesh, out linesVertexBuffer, out linesBuffer);
-
-        if (linesCount == 0)
+        if (rhinoObject.Geometry.ObjectType == Rhino.DocObjects.ObjectType.Mesh)
           linesBuffer = ToWireframeBuffer(mesh, out linesCount);
+        else
+          linesCount = ToWiresBuffer(mesh.GetNakedEdges(), out linesVertexBuffer, out linesBuffer);
       }
 
       public override void Draw(DisplayStyle displayStyle)
