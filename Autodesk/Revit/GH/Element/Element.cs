@@ -704,7 +704,7 @@ namespace RhinoInside.Revit.GH.Parameters
         Grasshopper.Instances.DocumentEditor.Enabled = true;
       }
 
-      Revit.ActiveUIApplication.ActiveUIDocument?.RefreshActiveView();
+      Revit.RefreshActiveView();
     }
 
     protected /*override*/ GH_GetterResult Prompt_Singular(out Types.Element element)

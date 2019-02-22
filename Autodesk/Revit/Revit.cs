@@ -24,7 +24,6 @@ using Rhino.PlugIns;
 
 using Grasshopper;
 using Grasshopper.Kernel;
-using Grasshopper.GUI.Canvas;
 
 namespace RhinoInside.Revit
 {
@@ -55,8 +54,7 @@ namespace RhinoInside.Revit
 
     #region IExternalApplication Members
     RhinoCore rhinoCore;
-    //DocumentPreviewServer documentPreviewServer;
-    GrasshopperPreviewServer grasshopperPreviewServer;
+    GH.PreviewServer grasshopperPreviewServer;
 
     public Result OnStartup(UIControlledApplication applicationUI)
     {
@@ -92,6 +90,7 @@ namespace RhinoInside.Revit
         ribbonPanel.AddSeparator();
         Sample1.CreateUI(ribbonPanel);
         Sample4.CreateUI(ribbonPanel);
+        Sample6.CreateUI(ribbonPanel);
         ribbonPanel.AddSeparator();
         UI.APIDocsCommand.CreateUI(ribbonPanel);
       }
@@ -100,11 +99,8 @@ namespace RhinoInside.Revit
       ApplicationUI.Idling += OnIdle;
       ApplicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
 
-      // Register as a DirectContext3DServer
-      //documentPreviewServer = new DocumentPreviewServer();
-      //documentPreviewServer.Register();
-
-      grasshopperPreviewServer = new GrasshopperPreviewServer();
+      // Register GrasshopperPreviewServer
+      grasshopperPreviewServer = new GH.PreviewServer();
       grasshopperPreviewServer.Register();
 
       return Result.Succeeded;
@@ -112,12 +108,9 @@ namespace RhinoInside.Revit
 
     public Result OnShutdown(UIControlledApplication applicationUI)
     {
-      // Unregister as a DirectContext3DServer
+      // Unregister GrasshopperPreviewServer
       grasshopperPreviewServer?.Unregister();
       grasshopperPreviewServer = null;
-
-      //documentPreviewServer?.Unregister();
-      //documentPreviewServer = null;
 
       // Unregister some events
       ApplicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
@@ -137,6 +130,9 @@ namespace RhinoInside.Revit
       ApplicationUI = null;
       return Result.Succeeded;
     }
+
+    static bool pendingRefreshActiveView = false;
+    public static void RefreshActiveView() { pendingRefreshActiveView = true; }
 
     public static bool Committing = false;
     static bool LoadGrasshopperComponents()
@@ -190,6 +186,13 @@ namespace RhinoInside.Revit
         // 2. Do all document write actions
         if (!ActiveDBDocument.IsReadOnly)
           ProcessWriteActions();
+
+        // 3. Refresh Active View if necesary
+        if (pendingRefreshActiveView)
+        {
+          pendingRefreshActiveView = false;
+          ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
+        }
       }
     }
 
@@ -484,15 +487,15 @@ namespace RhinoInside.Revit
       }
     }
 
-    protected static VertexBuffer ToVertexBuffer(Rhino.Geometry.Mesh mesh, out VertexFormatBits vertexFormatBits)
+    protected static VertexBuffer ToVertexBuffer(Rhino.Geometry.Mesh mesh, out VertexFormatBits vertexFormatBits, System.Drawing.Color color = default(System.Drawing.Color))
     {
       int verticesCount = mesh.Vertices.Count;
       int normalCount = mesh.Normals.Count;
-      int colorsCount = mesh.VertexColors.Count;
+      int colorsCount = color.IsEmpty ? mesh.VertexColors.Count : verticesCount;
       bool hasVertices = verticesCount > 0;
       bool hasNormals = normalCount == verticesCount;
       bool hasColors = colorsCount == verticesCount;
-      int floatCount = verticesCount + (hasNormals ? normalCount : 0) + (hasColors ? normalCount : 0);
+      int floatCount = verticesCount + (hasNormals ? normalCount : 0) + (hasColors ? colorsCount : 0);
 
       if (hasVertices)
       {
@@ -510,7 +513,7 @@ namespace RhinoInside.Revit
             {
               for (int v = 0; v < verticesCount; ++v)
               {
-                var c = colors[v];
+                var c = !color.IsEmpty ? color : colors[v];
                 stream.AddVertex(new VertexPositionNormalColored(vertices[v].ToHost(), normals[v].ToHost(), new ColorWithTransparency(c.R, c.G, c.B, 255u - c.A)));
               }
             }
@@ -543,7 +546,7 @@ namespace RhinoInside.Revit
             {
               for (int v = 0; v < verticesCount; ++v)
               {
-                var c = colors[v];
+                var c = !color.IsEmpty ? color : colors[v];
                 stream.AddVertex(new VertexPositionColored(vertices[v].ToHost(), new ColorWithTransparency(c.R, c.G, c.B, 255u - c.A)));
               }
             }
@@ -570,7 +573,7 @@ namespace RhinoInside.Revit
       return null;
     }
 
-    protected static IndexBuffer ToLinesBuffer(Rhino.Geometry.Mesh mesh, out int linesCount)
+    protected static IndexBuffer ToWireframeBuffer(Rhino.Geometry.Mesh mesh, out int linesCount)
     {
       linesCount = (mesh.Faces.Count * 3) + mesh.Faces.QuadCount;
       if (linesCount > 0)
@@ -625,298 +628,59 @@ namespace RhinoInside.Revit
     #region Primitive
     protected class Primitive : IDisposable
     {
-      VertexFormatBits vertexFormatBits;
-      VertexBuffer vertexBuffer;
-      int vertexCount;
-      IndexBuffer triangleBuffer;
-      int triangleCount;
-      VertexFormat vertexFormat;
-      EffectInstance effectInstance;
-      Rhino.Geometry.Mesh mesh;
-      System.Drawing.Color color;
+      protected VertexFormatBits vertexFormatBits;
+      protected int vertexCount;
+      protected VertexBuffer vertexBuffer;
+      protected VertexFormat vertexFormat;
 
-      public Primitive(Rhino.Geometry.Mesh m, System.Drawing.Color c)
-      {
-        mesh = m;
-        color = c;
-      }
+      protected IndexBuffer triangleBuffer;
+      protected int triangleCount;
+
+      protected EffectInstance effectInstance;
+      protected Rhino.Geometry.Mesh mesh;
+      public Rhino.Geometry.BoundingBox ClippingBox => mesh.GetBoundingBox(false);
+
+      public Primitive(Rhino.Geometry.Mesh m) { mesh = m; }
 
       void IDisposable.Dispose()
       {
         effectInstance?.Dispose(); effectInstance = null;
+
         vertexFormat?.Dispose(); vertexFormat = null;
-        triangleBuffer?.Dispose(); triangleBuffer = null; triangleCount = 0;
         vertexBuffer?.Dispose(); vertexBuffer = null; vertexCount = 0;
+        triangleBuffer?.Dispose(); triangleBuffer = null; triangleCount = 0;
       }
 
-      public void Draw(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
+      public virtual EffectInstance EffectInstance(DisplayStyle displayStyle)
       {
-        // TODO : Use dBView.CropBox to check if the object is visible
-
-        if (vertexBuffer == null)
-        {
-          vertexBuffer = ToVertexBuffer(mesh, out vertexFormatBits);
-          vertexCount = mesh.Vertices.Count;
-          triangleBuffer = ToTrianglesBuffer(mesh, out triangleCount);
-          vertexFormat = new VertexFormat(vertexFormatBits);
+        if (effectInstance == null)
           effectInstance = new EffectInstance(vertexFormatBits);
-          effectInstance.SetTransparency((255 - color.A) / 255.0);
-          effectInstance.SetEmissiveColor(new Color(color.R, color.G, color.B));
 
-          mesh = null;
-        }
+        return effectInstance;
+      }
+
+      public virtual void Regen()
+      {
+        vertexBuffer?.Dispose();
+        vertexBuffer = ToVertexBuffer(mesh, out vertexFormatBits);
+        vertexFormat = new VertexFormat(vertexFormatBits);
+
+        triangleBuffer = ToTrianglesBuffer(mesh, out triangleCount);
+      }
+
+      public virtual void Draw(DisplayStyle displayStyle)
+      {
+        if (vertexBuffer == null)
+          Regen();
 
         DrawContext.FlushBuffer
         (
           vertexBuffer, vertexCount,
           triangleBuffer, triangleCount * 3,
-          vertexFormat, effectInstance,
+          vertexFormat, EffectInstance(displayStyle),
           PrimitiveType.TriangleList,
           0, triangleCount
         );
-      }
-    }
-    #endregion
-  }
-
-  class DocumentPreviewServer : DirectContext3DServer
-  {
-    #region IExternalServer
-    public override string GetName() => Rhino.RhinoApp.Name;
-    public override string GetDescription() => Rhino.RhinoApp.Name + " document previews server";
-    public override Guid GetServerId() => Rhino.RhinoApp.CurrentRhinoId;
-    #endregion
-
-    #region IDirectContext3DServer
-    public override bool CanExecute(Autodesk.Revit.DB.View dBView) => RhinoDoc.ActiveDoc != null;
-
-    public override Outline GetBoundingBox(Autodesk.Revit.DB.View dBView)
-    {
-      var bbox = RhinoDoc.ActiveDoc.Objects.BoundingBox;
-      return new Outline(bbox.Min.ToHost(), bbox.Max.ToHost());
-    }
-
-    public override void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
-    {
-      try
-      {
-        DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
-
-        var activeDoc = RhinoDoc.ActiveDoc;
-        foreach (var o in activeDoc.Objects)
-        {
-          var drawColor = o.Attributes.DrawColor(activeDoc);
-          foreach (var m in o.GetMeshes(Rhino.Geometry.MeshType.Render))
-          {
-            using (var vb = ToVertexBuffer(m, out var vertexFormatBits))
-            {
-              using (var vf = new VertexFormat(vertexFormatBits))
-              using (var ei = new EffectInstance(vertexFormatBits))
-              {
-                if (displayStyle >= DisplayStyle.Shading)
-                {
-                  using (var ib = ToTrianglesBuffer(m, out var triangleCount))
-                  {
-                    ei.SetDiffuseColor(drawColor.ToHost());
-
-                    DrawContext.FlushBuffer
-                    (
-                      vb, m.Vertices.Count,
-                      ib, triangleCount * 3,
-                      vf, ei,
-                      PrimitiveType.TriangleList,
-                      0, triangleCount
-                    );
-                  }
-                }
-                else
-                {
-                  using (var ib = ToLinesBuffer(m, out var linesCount))
-                  {
-                    DrawContext.FlushBuffer
-                    (
-                      vb, m.Vertices.Count,
-                      ib, linesCount * 2,
-                      vf, ei,
-                      PrimitiveType.LineList,
-                      0, linesCount
-                    );
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-      catch (Exception e)
-      {
-        Debug.Fail(e.Source, e.Message);
-      }
-    }
-    #endregion
-  }
-
-  public class GrasshopperPreviewServer : DirectContext3DServer
-  {
-    GH_Document activeDefinition = null;
-    List<Primitive> primitives = new List<Primitive>();
-    Rhino.Geometry.BoundingBox primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
-
-    public override void Register()
-    {
-      base.Register();
-    }
-
-    public override void Unregister()
-    {
-      Clear();
-      base.Unregister();
-    }
-
-    public void Clear()
-    {
-      foreach (var buffer in primitives)
-        ((IDisposable) buffer).Dispose();
-      primitives.Clear();
-
-      primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
-    }
-
-    public void DrawShadedMesh(Rhino.Geometry.Mesh mesh, System.Drawing.Color color)
-    {
-      primitives.Add(new Primitive(mesh, color));
-    }
-
-    #region IExternalServer
-    public override string GetName() => "Grasshopper";
-    public override string GetDescription() => "Grasshopper previews server";
-    public override Guid GetServerId() => Grasshopper.Instances.GrasshopperPluginId;
-    #endregion
-
-    #region IDirectContext3DServer
-    public override bool UseInTransparentPass(Autodesk.Revit.DB.View dBView) => true;
-
-    public override bool CanExecute(Autodesk.Revit.DB.View dBView)
-    {
-      var definition = Grasshopper.Instances.ActiveCanvas?.Document;
-      if (definition != activeDefinition)
-      {
-        if(activeDefinition != null)
-          activeDefinition.SolutionEnd -= Document_SolutionEnd;
-
-        Clear();
-        activeDefinition = definition;
-
-        if (activeDefinition != null)
-          activeDefinition.SolutionEnd += Document_SolutionEnd;
-      }
-
-      return activeDefinition != null;
-    }
-
-    private void Document_SolutionEnd(object sender, GH_SolutionEventArgs e)
-    {
-      Clear();
-      Revit.ActiveUIApplication.ActiveUIDocument?.RefreshActiveView();
-    }
-
-    void DrawParam(IGH_Param param, System.Drawing.Color color)
-    {
-      if (param.VolatileDataCount > 0)
-      {
-        foreach (var value in param.VolatileData.AllData(true))
-        {
-          //if (value is IGH_PreviewMeshData meshData)
-          //{
-          //  var meshes = meshData.GetPreviewMeshes();
-          //  if (meshes != null)
-          //  {
-          //    foreach (var mesh in meshes ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
-          //      DrawShadedMesh(mesh, color);
-
-          //    return;
-          //  }
-          //}
-
-          // First check for IGH_PreviewData to discard no graphic elements like strings, doubles, vectors...
-          if (value is IGH_PreviewData)
-          {
-            switch (value.ScriptVariable())
-            {
-              case Rhino.Geometry.Mesh mesh: DrawShadedMesh(mesh, color); break;
-              case Rhino.Geometry.Brep brep:
-                foreach (var m in Rhino.Geometry.Mesh.CreateFromBrep(brep, Rhino.Geometry.MeshingParameters.Default))
-                  DrawShadedMesh(m, color);
-                break;
-            }
-          }
-        }
-      }
-    }
-
-    Rhino.Geometry.BoundingBox DrawScene(Autodesk.Revit.DB.View dBView)
-    {
-      if (!primitivesBoundingBox.IsValid)
-      {
-        var previewColour = activeDefinition.PreviewColour;
-        var previewColourSelected = activeDefinition.PreviewColourSelected;
-
-        foreach (var obj in activeDefinition.Objects)
-        {
-          bool selected = obj.Attributes.Selected;
-
-          if (obj is IGH_Component component)
-          {
-            if (component.IsPreviewCapable && !component.Locked && !component.Hidden)
-            {
-              primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, component.ClippingBox);
-
-              foreach (var param in component.Params.Output)
-                DrawParam(param, selected ? previewColourSelected : previewColour);
-            }
-          }
-          else if(obj is IGH_Param param)
-          {
-            if (!param.Locked)
-            {
-              if (param is IGH_PreviewObject previewObject)
-              {
-                primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, previewObject.ClippingBox);
-
-                if (previewObject.IsPreviewCapable && !previewObject.Hidden)
-                  DrawParam(param, selected ? previewColourSelected : previewColour);
-              }
-            }
-          }
-        }
-      }
-
-      return primitivesBoundingBox;
-    }
-
-    public override Outline GetBoundingBox(Autodesk.Revit.DB.View dBView)
-    {
-      DrawScene(dBView);
-      return new Outline(primitivesBoundingBox.Min.ToHost(), primitivesBoundingBox.Max.ToHost());
-    }
-
-    public override void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
-    {
-      if (!DrawContext.IsTransparentPass())
-        return;
-
-      try
-      {
-        DrawScene(dBView);
-
-        DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
-
-        foreach (var primitive in primitives)
-          primitive.Draw(dBView, displayStyle);
-      }
-      catch (Exception e)
-      {
-        Debug.Fail(e.Source, e.Message);
       }
     }
     #endregion
