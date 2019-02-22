@@ -36,6 +36,7 @@ namespace RhinoInside.Revit.UI
       {
         pushButton.ToolTip = "Toggle Grasshopper  window visibility";
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png");
+        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://www.grasshopper3d.com/"));
         pushButton.Enabled = !loadProtected;
       }
     }

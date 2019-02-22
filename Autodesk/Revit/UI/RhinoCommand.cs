@@ -32,11 +32,14 @@ namespace RhinoInside.Revit.UI
       {
         pushButton.ToolTip = "Toggle Rhino window visibility";
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Rhino.png");
+        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md"));
       }
     }
 
     public static void ResetDocumentUnits(Rhino.RhinoDoc rhinoDoc, Document revitDoc = null)
     {
+      bool docModified = rhinoDoc.Modified;
+
       if (revitDoc == null)
       {
         rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.None;
@@ -116,7 +119,7 @@ namespace RhinoInside.Revit.UI
         }
       }
 
-      rhinoDoc.Modified = false;
+      rhinoDoc.Modified = docModified;
     }
 
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
