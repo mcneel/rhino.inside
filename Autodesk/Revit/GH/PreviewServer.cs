@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Linq;
 
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.DirectContext3D;
@@ -49,19 +50,62 @@ namespace RhinoInside.Revit.GH
     public override bool CanExecute(View dBView)
     {
       var definition = Instances.ActiveCanvas?.Document;
+
+      if ((definition?.PreviewMode ?? GH_PreviewMode.Disabled) == GH_PreviewMode.Disabled)
+        return false;
+
       if (definition != activeDefinition)
       {
         if (activeDefinition != null)
-          activeDefinition.SolutionEnd -= Document_SolutionEnd;
+        {
+          activeDefinition.SolutionEnd                    -= Document_SolutionEnd;
+          activeDefinition.SettingsChanged                -= Document_SettingsChanged;
+          GH_Document.DefaultSelectedPreviewColourChanged -= Document_DefaultPreviewColourChanged;
+          GH_Document.DefaultPreviewColourChanged         -= Document_DefaultPreviewColourChanged;
+        }
 
         Clear();
         activeDefinition = definition;
 
         if (activeDefinition != null)
-          activeDefinition.SolutionEnd += Document_SolutionEnd;
+        {
+          GH_Document.DefaultPreviewColourChanged         += Document_DefaultPreviewColourChanged;
+          GH_Document.DefaultSelectedPreviewColourChanged += Document_DefaultPreviewColourChanged;
+          activeDefinition.SettingsChanged                += Document_SettingsChanged;
+          activeDefinition.SolutionEnd                    += Document_SolutionEnd;
+        }
       }
 
       return activeDefinition != null;
+    }
+
+    static List<IGH_DocumentObject> lastSelection = new List<IGH_DocumentObject>();
+    public static bool PreviewChanged()
+    {
+      if (Instances.ActiveCanvas?.Document != activeDefinition)
+        return true;
+
+      if (activeDefinition != null)
+      {
+        var newSelection = activeDefinition.SelectedObjects();
+        if (lastSelection.Count != newSelection.Count || lastSelection.Except(newSelection).Any())
+        {
+          lastSelection = newSelection;
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    static void Document_DefaultPreviewColourChanged(System.Drawing.Color colour) { Revit.RefreshActiveView(); }
+
+    void Document_SettingsChanged(object sender, GH_DocSettingsEventArgs e)
+    {
+      if (e.Kind == GH_DocumentSettings.Properties)
+        Clear();
+
+      Revit.RefreshActiveView();
     }
 
     void Document_SolutionEnd(object sender, GH_SolutionEventArgs e)
@@ -85,6 +129,14 @@ namespace RhinoInside.Revit.GH
 
         return ei;
       }
+
+      public override void Draw(DisplayStyle displayStyle)
+      {
+        if (activeDefinition.PreviewFilter == GH_PreviewFilter.Selected && !attributes.Selected)
+          return;
+
+        base.Draw(displayStyle);
+      }
     }
 
     void DrawParam(IGH_Param param, IGH_Attributes attributes)
@@ -103,7 +155,7 @@ namespace RhinoInside.Revit.GH
               {
                 var previewMesh = new Rhino.Geometry.Mesh();
                 previewMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters()));
-                previewMesh.Weld(Rhino.RhinoMath.ToRadians(10.0));
+                //previewMesh.Weld(Rhino.RhinoMath.ToRadians(10.0));
 
                 primitives.Add(new ParamPrimitive(attributes, previewMesh));
               }

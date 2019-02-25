@@ -188,7 +188,7 @@ namespace RhinoInside.Revit
           ProcessWriteActions();
 
         // 3. Refresh Active View if necesary
-        if (pendingRefreshActiveView)
+        if (pendingRefreshActiveView || GH.PreviewServer.PreviewChanged())
         {
           pendingRefreshActiveView = false;
           ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
