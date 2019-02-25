@@ -663,7 +663,7 @@ namespace RhinoInside.Revit
       return null;
     }
 
-    protected static int ToWiresBuffer(Rhino.Geometry.Polyline[] wires, out VertexBuffer vb, out IndexBuffer ib)
+    protected static int ToLinesBuffer(Rhino.Geometry.Polyline[] wires, out VertexBuffer vb, out IndexBuffer ib)
     {
       int linesCount = 0;
       vb = null;
@@ -704,6 +704,40 @@ namespace RhinoInside.Revit
       return linesCount;
     }
 
+    protected static int ToPointsBuffer(Rhino.Geometry.Point[] points, out VertexBuffer vb, out IndexBuffer ib)
+    {
+      int pointsCount = 0;
+      vb = null;
+      ib = null;
+
+      if (points?.Length > 0)
+      {
+        pointsCount = points.Length;
+
+        vb = new VertexBuffer(pointsCount * VertexPosition.GetSizeInFloats());
+        vb.Map(pointsCount * VertexPosition.GetSizeInFloats());
+
+        ib = new IndexBuffer(pointsCount);
+        ib.Map(pointsCount);
+
+        int vi = 0;
+        using (var vstream = vb.GetVertexStreamPosition())
+        using (var istream = ib.GetIndexStreamPoint())
+        {
+          foreach (var point in points)
+          {
+            vstream.AddVertex(new VertexPosition(point.Location.ToHost()));
+            istream.AddPoint(new IndexPoint(vi++));
+          }
+        }
+
+        vb.Unmap();
+        ib.Unmap();
+      }
+
+      return pointsCount;
+    }
+
     #region Primitive
     protected class Primitive : IDisposable
     {
@@ -719,10 +753,12 @@ namespace RhinoInside.Revit
       protected IndexBuffer linesBuffer;
 
       protected EffectInstance effectInstance;
-      protected Rhino.Geometry.Mesh mesh;
-      public Rhino.Geometry.BoundingBox ClippingBox => mesh.GetBoundingBox(false);
+      protected Rhino.Geometry.GeometryBase geometry;
+      public Rhino.Geometry.BoundingBox ClippingBox => geometry.GetBoundingBox(false);
 
-      public Primitive(Rhino.Geometry.Mesh m) { mesh = m; }
+      public Primitive(Rhino.Geometry.Point p) { geometry = p; }
+      public Primitive(Rhino.Geometry.Curve c) { geometry = c; }
+      public Primitive(Rhino.Geometry.Mesh  m) { geometry = m; }
 
       void IDisposable.Dispose()
       {
@@ -731,7 +767,7 @@ namespace RhinoInside.Revit
         triangleBuffer?.Dispose(); triangleBuffer = null; triangleCount = 0;
         vertexFormat?.Dispose();   vertexFormat = null;
         vertexBuffer?.Dispose();   vertexBuffer = null; vertexCount = 0;
-        mesh?.Dispose();           mesh = null;
+        geometry?.Dispose();           geometry = null;
       }
 
       public virtual EffectInstance EffectInstance(DisplayStyle displayStyle)
@@ -744,25 +780,42 @@ namespace RhinoInside.Revit
 
       public virtual void Regen()
       {
-        vertexBuffer?.Dispose();
-        vertexBuffer = ToVertexBuffer(mesh, out vertexFormatBits);
+        if (geometry is Rhino.Geometry.Mesh mesh)
+        {
+          vertexBuffer?.Dispose();
+          vertexBuffer = ToVertexBuffer(mesh, out vertexFormatBits);
+          vertexCount = mesh.Vertices.Count;
+
+          triangleBuffer?.Dispose();
+          triangleBuffer = ToTrianglesBuffer(mesh, out triangleCount);
+
+          linesBuffer?.Dispose();
+          linesBuffer = ToEdgeBuffer(mesh, out linesCount);
+        }
+        else if (geometry is Rhino.Geometry.Curve curve)
+        {
+          var polyline = curve.ToPolyline(Revit.VertexTolerance * 10.0, Revit.AngleTolerance, Revit.ShortCurveTolerance, 0.0);
+          linesCount = ToLinesBuffer(new Rhino.Geometry.Polyline[] { polyline.ToPolyline() }, out vertexBuffer, out linesBuffer);
+          vertexFormatBits = VertexFormatBits.Position;
+          vertexCount = linesCount * 2;
+        }
+        else if (geometry is Rhino.Geometry.Point point)
+        {
+          linesCount = -ToPointsBuffer(new Rhino.Geometry.Point[] { point }, out vertexBuffer, out linesBuffer);
+          vertexFormatBits = VertexFormatBits.Position;
+          vertexCount = -linesCount;
+        }
 
         vertexFormat?.Dispose();
         vertexFormat = new VertexFormat(vertexFormatBits);
 
-        triangleBuffer?.Dispose();
-        triangleBuffer = ToTrianglesBuffer(mesh, out triangleCount);
-
-        linesBuffer?.Dispose();
-        linesBuffer = ToEdgeBuffer(mesh, out linesCount);
-
         effectInstance?.Dispose();
-        mesh?.Dispose(); mesh = null;
+        geometry?.Dispose(); geometry = null;
       }
 
       public virtual void Draw(DisplayStyle displayStyle)
       {
-        if (mesh != null)
+        if (geometry != null)
           Regen();
 
         var ei = EffectInstance(displayStyle);
@@ -785,20 +838,38 @@ namespace RhinoInside.Revit
           );
         }
 
-        if (wires && linesCount > 0)
+        if (wires && linesCount != 0)
         {
           ei.SetTransparency(0.0);
-          ei.SetDiffuseColor(System.Drawing.Color.Black.ToHost());
-          ei.SetEmissiveColor(System.Drawing.Color.Black.ToHost());
 
-          DrawContext.FlushBuffer
-          (
-            vertexBuffer, vertexCount * 2,
-            linesBuffer, linesCount * 2,
-            vertexFormat, ei,
-            PrimitiveType.LineList,
-            0, linesCount
-          );
+          if (triangleBuffer != null)
+          {
+            ei.SetDiffuseColor(System.Drawing.Color.Black.ToHost());
+            ei.SetEmissiveColor(System.Drawing.Color.Black.ToHost());
+          }
+
+          if (linesCount > 0)
+          {
+            DrawContext.FlushBuffer
+            (
+              vertexBuffer, vertexCount,
+              linesBuffer, linesCount * 2,
+              vertexFormat, ei,
+              PrimitiveType.LineList,
+              0, linesCount
+            );
+          }
+          else
+          {
+            DrawContext.FlushBuffer
+            (
+              vertexBuffer, vertexCount,
+              linesBuffer, Math.Abs(linesCount),
+              vertexFormat, ei,
+              PrimitiveType.PointList,
+              0, Math.Abs(linesCount)
+            );
+          }
         }
 
       }
