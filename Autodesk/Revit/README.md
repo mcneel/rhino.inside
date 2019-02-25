@@ -41,6 +41,14 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 * Now in the Add-ins Ribbon tab you have a _Rhinoceros_ section.
 * Be careful about your model units in Rhino
 
+### Sample 6
+![](doc/Sample6.gif)
+
+1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
+2. Create some geometry in Rhino.
+3. Click on the button you will found on the _Rhinoceros_ panel called _Sample 6_.
+4. You should have a preview of Rhino geometry into the Revit view.
+
 ### Sample 5
 ![](doc/Sample5.png)
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Types;
 
 namespace RhinoInside.Revit.GH.Types
@@ -14,51 +15,55 @@ namespace RhinoInside.Revit.GH.Types
   {
     public override string TypeName => "Revit Category";
     public override string TypeDescription => "Represents a Revit category";
+    override public object ScriptVariable() => (Autodesk.Revit.DB.Category) this;
+    protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Category);
+    public static explicit operator Autodesk.Revit.DB.Category(Category self) => Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, self);
 
     public Category() : base() { }
-    public Category(string uniqueId) : base(uniqueId) { }
-    public Category(ElementId elementId) : base(elementId.IntegerValue) { }
-    public Category(Autodesk.Revit.DB.Category category) : base(category != null ? category.Id.IntegerValue : ElementId.InvalidElementId.IntegerValue) { }
-    public static explicit operator Autodesk.Revit.DB.Category(Category self)
-    {
-      return Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, self);
-    }
 
-    public override bool CastFrom(object source)
+    public override sealed bool CastFrom(object source)
     {
-      if (source is Autodesk.Revit.DB.Category category)
+      Autodesk.Revit.DB.Category category = null;
+      switch (source)
+      {
+        case Autodesk.Revit.DB.Category c:   category = c; break;
+        case Autodesk.Revit.DB.ElementId id: category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, id); break;
+        case GH_Integer integer:             category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, new ElementId(integer.Value)); break;
+        case GH_String uniqueId:
+          try
+          {
+            var id = new ElementId((BuiltInCategory) Enum.Parse(typeof(BuiltInCategory), uniqueId.Value, false));
+            category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, id);
+          }
+          catch (ArgumentException) { }
+          break;
+      }
+
+      if (category != null)
       {
         Value = category.Id;
-        UniqueID = string.Empty;
-        return true;
-      }
-      if (source is GH_Integer builtInCategoryId)
-      {
-        Value = new ElementId(builtInCategoryId.Value);
-        UniqueID = string.Empty;
-        return true;
-      }
-      if (source is string builtInCategory)
-      {
-        Value = new ElementId((BuiltInCategory) Enum.Parse(typeof(BuiltInCategory), builtInCategory, false));
-        UniqueID = string.Empty;
+        UniqueID = Enum.GetName(typeof(BuiltInCategory), Value.IntegerValue) ?? string.Empty;
         return true;
       }
 
-      return base.CastFrom(source);
+      return false;
     }
 
     public override bool CastTo<Q>(ref Q target)
     {
+      var category = (Autodesk.Revit.DB.Category) this;
+      if (category == null)
+        return false;
+
       if (typeof(Q).IsSubclassOf(typeof(Autodesk.Revit.DB.Category)))
       {
-        target = (Q) (object) (Autodesk.Revit.DB.Category) this;
+        target = (Q) (object) category;
         return true;
       }
 
       if (typeof(Q).IsAssignableFrom(typeof(Autodesk.Revit.DB.Category)))
       {
-        target = (Q) (object) (Autodesk.Revit.DB.Category) this;
+        target = (Q) (object) category;
         return true;
       }
 
@@ -80,43 +85,59 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public abstract class CategoryGetter : GH_Component
+  public class CategoryTypes : GH_ValueList
   {
-    public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected static readonly Type ObjectType = typeof(Types.Category);
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon(ObjectType.Name.Substring(0, 1));
+    public override Guid ComponentGuid => new Guid("5FFB1339-8521-44A1-9075-2984637725E9");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("CT");
 
-    protected CategoryGetter(string propertyName)
-      : base(ObjectType.Name + "." + propertyName, propertyName, "Get the " + propertyName + " of the specified " + ObjectType.Name, "Revit", ObjectType.Name)
+    public CategoryTypes()
     {
-    }
+      Category = "Revit";
+      SubCategory = "Category";
+      Name = "CategoryTypes";
+      NickName = "CategoryTypes";
+      Description = "Provide a picker of a CategoryType";
 
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddParameter(new Parameters.Category(), ObjectType.Name, ObjectType.Name.Substring(0, 1), ObjectType.Name + " to query", GH_ParamAccess.item);
+      ListItems.Clear();
+      ListItems.Add(new GH_ValueListItem("Model",      ((int) Autodesk.Revit.DB.CategoryType.Model).ToString()));
+      ListItems.Add(new GH_ValueListItem("Annotation", ((int) Autodesk.Revit.DB.CategoryType.Annotation).ToString()));
+      ListItems.Add(new GH_ValueListItem("Analytical", ((int) Autodesk.Revit.DB.CategoryType.AnalyticalModel).ToString()));
     }
   }
 
-  public class CategoryName : CategoryGetter
+  public class CategoryDecompose : GH_Component
   {
     public override Guid ComponentGuid => new Guid("D794361E-DE8C-4D0A-BC77-52293F27D3AA");
-    static readonly string PropertyName = "Name";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("ABC");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("C{");
 
-    public CategoryName() : base(PropertyName) { }
+    public CategoryDecompose()
+    : base("Category.Decompose", "Category.Decompose", "Decompose a category", "Revit", "Category")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Category(), "Category", "C", "Category to query", GH_ParamAccess.item);
+    }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddTextParameter(PropertyName, PropertyName.Substring(0, 1), ObjectType.Name + " " + PropertyName.ToLower(), GH_ParamAccess.item);
+      manager.AddTextParameter("Name", "N", "Category name", GH_ParamAccess.item);
+      manager.AddColourParameter("LineColor", "LC", "Category line color", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Element(), "Material", "M", "Category material", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       Autodesk.Revit.DB.Category category = null;
-      if (!DA.GetData(ObjectType.Name, ref category))
+      if (!DA.GetData("Category", ref category))
         return;
 
-      DA.SetData(PropertyName, category?.Name);
+      DA.SetData("Name", category?.Name);
+      DA.SetData("LineColor", category?.LineColor.ToRhino());
+      DA.SetData("Material", category?.Material);
+      DA.SetData("Parent", category?.Parent);
     }
   }
 }

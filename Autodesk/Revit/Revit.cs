@@ -15,6 +15,8 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
+using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.ExternalService;
 
 using Rhino;
 using Rhino.Runtime.InProcess;
@@ -28,7 +30,7 @@ namespace RhinoInside.Revit
   [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
   [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]
   [Autodesk.Revit.Attributes.Journaling(Autodesk.Revit.Attributes.JournalingMode.NoCommandData)]
-  public class Revit : IExternalApplication
+  public partial class Revit : IExternalApplication
   {
     #region Revit static constructor
     static Revit()
@@ -51,9 +53,10 @@ namespace RhinoInside.Revit
     #endregion
 
     #region IExternalApplication Members
-    private RhinoCore rhinoCore;
+    RhinoCore rhinoCore;
+    GH.PreviewServer grasshopperPreviewServer;
 
-    public Autodesk.Revit.UI.Result OnStartup(UIControlledApplication applicationUI)
+    public Result OnStartup(UIControlledApplication applicationUI)
     {
       ApplicationUI = applicationUI;
 
@@ -72,8 +75,11 @@ namespace RhinoInside.Revit
       catch (Exception e)
       {
         Debug.Fail(e.Source, e.Message);
-        return Autodesk.Revit.UI.Result.Failed;
+        return Result.Failed;
       }
+
+      // Reset document units
+      UI.RhinoCommand.ResetDocumentUnits(Rhino.RhinoDoc.ActiveDoc);
 
       // Register UI on Revit
       {
@@ -84,6 +90,7 @@ namespace RhinoInside.Revit
         ribbonPanel.AddSeparator();
         Sample1.CreateUI(ribbonPanel);
         Sample4.CreateUI(ribbonPanel);
+        Sample6.CreateUI(ribbonPanel);
         ribbonPanel.AddSeparator();
         UI.APIDocsCommand.CreateUI(ribbonPanel);
       }
@@ -92,11 +99,19 @@ namespace RhinoInside.Revit
       ApplicationUI.Idling += OnIdle;
       ApplicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
 
-      return Autodesk.Revit.UI.Result.Succeeded;
+      // Register GrasshopperPreviewServer
+      grasshopperPreviewServer = new GH.PreviewServer();
+      grasshopperPreviewServer.Register();
+
+      return Result.Succeeded;
     }
 
-    public Autodesk.Revit.UI.Result OnShutdown(UIControlledApplication applicationUI)
+    public Result OnShutdown(UIControlledApplication applicationUI)
     {
+      // Unregister GrasshopperPreviewServer
+      grasshopperPreviewServer?.Unregister();
+      grasshopperPreviewServer = null;
+
       // Unregister some events
       ApplicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
       ApplicationUI.Idling -= OnIdle;
@@ -109,12 +124,15 @@ namespace RhinoInside.Revit
       catch (Exception e)
       {
         Debug.Fail(e.Source, e.Message);
-        return Autodesk.Revit.UI.Result.Failed;
+        return Result.Failed;
       }
 
       ApplicationUI = null;
-      return Autodesk.Revit.UI.Result.Succeeded;
+      return Result.Succeeded;
     }
+
+    static bool pendingRefreshActiveView = false;
+    public static void RefreshActiveView() { pendingRefreshActiveView = true; }
 
     public static bool Committing = false;
     static bool LoadGrasshopperComponents()
@@ -129,18 +147,19 @@ namespace RhinoInside.Revit
       var rc = (bool) LoadGHAProc.Invoke
       (
         Instances.ComponentServer,
-        new object[] { new Grasshopper.Kernel.GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
+        new object[] { new GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
       );
 
       Instances.Settings.SetValue("Assemblies:COFF", bCoff);
 
-      if(rc)
-        Grasshopper.Kernel.GH_ComponentServer.UpdateRibbonUI();
+      if (rc)
+        GH_ComponentServer.UpdateRibbonUI();
 
       return rc;
     }
+
     static bool LoadedAsGHA = false;
-    public void OnIdle(object sender, IdlingEventArgs args)
+    void OnIdle(object sender, IdlingEventArgs args)
     {
       // 1. Do Rhino pending OnIdle tasks
       if (rhinoCore.OnIdle())
@@ -157,110 +176,44 @@ namespace RhinoInside.Revit
       ActiveUIApplication = (sender as UIApplication);
       if (ActiveDBDocument != null)
       {
-        // 2. Do all BakeGeometry pending tasks
-        lock (bakeRecipeQueue)
+        // 1. Do all document read actions
+        if (ProcessReadActions())
         {
-          if (bakeRecipeQueue.Count > 0)
-          {
-            using (var trans = new Transaction(ActiveDBDocument))
-            {
-              if (trans.Start("BakeGeometry") == TransactionStatus.Started)
-              {
-                while (bakeRecipeQueue.Count > 0)
-                {
-                  var recipe = bakeRecipeQueue.Dequeue();
-
-                  if (recipe.geometryToBake != null && recipe.categoryToBakeInto != BuiltInCategory.INVALID)
-                  {
-                    try
-                    {
-                      var geometryList = new List<GeometryObject>();
-
-                      // DirectShape only accepts those types and no nulls
-                      foreach (var g in recipe.geometryToBake)
-                      {
-                        switch (g)
-                        {
-                          case Point p: geometryList.Add(p); break;
-                          case Curve c: geometryList.Add(c); break;
-                          case Solid s: geometryList.Add(s); break;
-                          case Mesh m: geometryList.Add(m); break;
-                        }
-                      }
-
-                      if (geometryList.Count > 0)
-                      {
-                        var ds = DirectShape.CreateElement(ActiveDBDocument, new ElementId(recipe.categoryToBakeInto));
-                        ds.SetShape(geometryList);
-                      }
-                    }
-                    catch (Exception e)
-                    {
-                      Debug.Fail(e.Source, e.Message);
-                    }
-                  }
-                }
-              }
-
-              trans.Commit();
-            }
-          }
+          args.SetRaiseWithoutDelay();
+          return;
         }
 
-        // 3. Do all document actions
-        lock (documentActions)
+        // 2. Do all document write actions
+        if (!ActiveDBDocument.IsReadOnly)
+          ProcessWriteActions();
+
+        // 3. Refresh Active View if necesary
+        if (pendingRefreshActiveView || GH.PreviewServer.PreviewChanged())
         {
-          if (documentActions.Count > 0)
-          {
-            using (var trans = new Transaction(ActiveDBDocument))
-            {
-              try
-              {
-                if (trans.Start("RhinoInside") == TransactionStatus.Started)
-                {
-                  while (documentActions.Count > 0)
-                    documentActions.Dequeue().Invoke(ActiveDBDocument);
-
-                  Committing = true;
-                  trans.Commit();
-                  Committing = false;
-
-                  foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
-                  {
-                    if (definition.Enabled)
-                      definition.NewSolution(false);
-                  }
-                }
-              }
-              catch (Exception e)
-              {
-                Debug.Fail(e.Source, e.Message);
-
-                if (trans.HasStarted())
-                  trans.RollBack();
-              }
-              finally
-              {
-                documentActions.Clear();
-              }
-            }
-          }
+          pendingRefreshActiveView = false;
+          ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
         }
       }
     }
+
     private void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
     {
       if (Committing)
         return;
 
-      if (!ActiveDBDocument.Equals(e.GetDocument()))
+      var document = e.GetDocument();
+      if (!document.Equals(ActiveDBDocument))
         return;
+
+      ProcessReadActions(true);
+
+      var materialsChanged = e.GetModifiedElementIds().Select((x) => document.GetElement(x)).OfType<Material>().Any();
 
       foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
       {
         foreach (var obj in definition.Objects)
         {
-          if (obj is RhinoInside.Revit.GH.Parameters.Element element)
+          if (obj is GH.Parameters.Element element)
           {
             if (element.SourceCount > 0)
               continue;
@@ -272,14 +225,21 @@ namespace RhinoInside.Revit
           }
           else if (obj is GH_Component component)
           {
-            foreach (var param in component.Params.Output)
+            if (component is GH.Components.DocumentElements)
             {
-              if (param is RhinoInside.Revit.GH.Parameters.Element outElement)
+              component.ExpireSolution(false);
+            }
+            else foreach (var param in component.Params.Output)
+            {
+              if (param is GH.Parameters.Element outElement)
               {
-                foreach (var goo in param.VolatileData.AllData(true))
+                if (materialsChanged)
                 {
-                  if (goo is IGH_PreviewMeshData previewMeshData)
-                    previewMeshData.DestroyPreviewMeshes();
+                  foreach (var goo in param.VolatileData.AllData(true))
+                  {
+                    if (goo is IGH_PreviewMeshData previewMeshData)
+                      previewMeshData.DestroyPreviewMeshes();
+                  }
                 }
 
                 foreach (var r in param.Recipients)
@@ -293,39 +253,175 @@ namespace RhinoInside.Revit
           definition.NewSolution(false);
       }
     }
-
     #endregion
 
     #region Bake Recipe
-    class BakeRecipe
+    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory categoryToBakeInto = BuiltInCategory.OST_GenericModel)
     {
-      public IList<GeometryObject> geometryToBake;
-      public BuiltInCategory categoryToBakeInto;
+      if (categoryToBakeInto == BuiltInCategory.INVALID)
+        return;
 
-      public BakeRecipe(IList<GeometryObject> geometryToBake, BuiltInCategory categoryToBakeInto)
-      {
-        this.geometryToBake = geometryToBake;
-        this.categoryToBakeInto = categoryToBakeInto;
-      }
+      EnqueueAction
+      (
+        (doc) =>
+        {
+          foreach (var geometryToBake in geometries.ToHost())
+          {
+            if (geometryToBake == null)
+              continue;
+
+            BakeGeometry(doc, geometryToBake, categoryToBakeInto);
+          }
+        }
+      );
     }
 
-    private static Queue<BakeRecipe> bakeRecipeQueue = new Queue<BakeRecipe>();
-    public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory builtInCategory = BuiltInCategory.OST_GenericModel)
+    static partial void TraceGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries);
+#if DEBUG
+    static partial void TraceGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
-      lock (bakeRecipeQueue)
+      EnqueueAction
+      (
+        (doc) =>
+        {
+          using (var attributes = Convert.GraphicAttributes.Push())
+          {
+            using (var collector = new FilteredElementCollector(ActiveDBDocument))
+            {
+              var materials = collector.OfClass(typeof(Material)).Cast<Material>();
+              attributes.MaterialId = (materials.Where((x) => x.Name == "Debug").FirstOrDefault()?.Id) ?? ElementId.InvalidElementId;
+            }
+
+            foreach (var geometryToBake in geometries.ToHost())
+            {
+              if (geometryToBake == null)
+                continue;
+
+              BakeGeometry(doc, geometryToBake, BuiltInCategory.OST_GenericModel);
+            }
+          }
+        }
+      );
+    }
+#endif
+
+    static void BakeGeometry(Document doc, IEnumerable<GeometryObject> geometryToBake, BuiltInCategory categoryToBakeInto)
+    {
+      try
       {
-        foreach (var list in geometries.ToHost())
-          bakeRecipeQueue.Enqueue(new BakeRecipe(list, builtInCategory));
+        var geometryList = new List<GeometryObject>();
+
+        // DirectShape only accepts those types and no nulls
+        foreach (var g in geometryToBake)
+        {
+          switch (g)
+          {
+            case Point p: geometryList.Add(p); break;
+            case Curve c: geometryList.Add(c); break;
+            case Solid s: geometryList.Add(s); break;
+            case Mesh m: geometryList.Add(m); break;
+          }
+        }
+
+        if (geometryList.Count > 0)
+        {
+          var category = new ElementId(categoryToBakeInto);
+          if (!DirectShape.IsValidCategoryId(category, doc))
+            category = new ElementId(BuiltInCategory.OST_GenericModel);
+
+          var ds = DirectShape.CreateElement(doc, category);
+          ds.SetShape(geometryList);
+        }
+      }
+      catch (Exception e)
+      {
+        Debug.Fail(e.Source, e.Message);
       }
     }
     #endregion
 
     #region Document Actions
-    private static Queue<Action<Document>> documentActions = new Queue<Action<Document>>();
+    private static Queue<Action<Document>> docWriteActions = new Queue<Action<Document>>();
     public static void EnqueueAction(Action<Document> action)
     {
-      lock (documentActions)
-        documentActions.Enqueue(action);
+      lock (docWriteActions)
+        docWriteActions.Enqueue(action);
+    }
+
+    void ProcessWriteActions()
+    {
+      lock (docWriteActions)
+      {
+        if (docWriteActions.Count > 0)
+        {
+          using (var trans = new Transaction(ActiveDBDocument))
+          {
+            try
+            {
+              if (trans.Start("RhinoInside") == TransactionStatus.Started)
+              {
+                while (docWriteActions.Count > 0)
+                  docWriteActions.Dequeue().Invoke(ActiveDBDocument);
+
+                Committing = true;
+                var options = trans.GetFailureHandlingOptions();
+                trans.Commit(options.SetDelayedMiniWarnings(true).SetForcedModalHandling(false).SetFailuresPreprocessor(new FailuresPreprocessor()));
+                Committing = false;
+
+                foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+                {
+                  if (definition.Enabled)
+                    definition.NewSolution(false);
+                }
+              }
+            }
+            catch (Exception e)
+            {
+              Debug.Fail(e.Source, e.Message);
+
+              if (trans.HasStarted())
+                trans.RollBack();
+            }
+            finally
+            {
+              docWriteActions.Clear();
+            }
+          }
+        }
+      }
+    }
+
+    private static Queue<Action<Document, bool>> docReadActions = new Queue<Action<Document, bool>>();
+    public static void EnqueueReadAction(Action<Document, bool> action)
+    {
+      lock (docReadActions)
+        docReadActions.Enqueue(action);
+    }
+
+    bool ProcessReadActions(bool cancel = false)
+    {
+      lock (docReadActions)
+      {
+        if (docReadActions.Count > 0)
+        {
+          var stopWatch = new Stopwatch();
+
+          while (docReadActions.Count > 0)
+          {
+            // We will do as much work as possible in 150 ms on each OnIdle event
+            if (!cancel && stopWatch.ElapsedMilliseconds > 150)
+              return true; // there is pending work to do
+
+            stopWatch.Start();
+            try { docReadActions.Dequeue().Invoke(ActiveDBDocument, cancel); }
+            catch (Exception e) { Debug.Fail(e.Source, e.Message); }
+            stopWatch.Stop();
+          }
+        }
+      }
+
+      // there is no more work to do
+      return false;
     }
     #endregion
 
@@ -344,6 +440,369 @@ namespace RhinoInside.Revit
     public static double VertexTolerance => Services != null ? Services.VertexTolerance : AbsoluteTolerance / 10.0;
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
     public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
+    #endregion
+  }
+
+  public abstract class DirectContext3DServer : IDirectContext3DServer
+  {
+    #region IExternalServer
+    public abstract string GetDescription();
+    public abstract string GetName();
+    string IExternalServer.GetVendorId() => "RMA";
+    ExternalServiceId IExternalServer.GetServiceId() => ExternalServices.BuiltInExternalServices.DirectContext3DService;
+    public abstract Guid GetServerId();
+    #endregion
+
+    #region IDirectContext3DServer
+    string IDirectContext3DServer.GetApplicationId() => string.Empty;
+    string IDirectContext3DServer.GetSourceId() => string.Empty;
+    bool IDirectContext3DServer.UsesHandles() => false;
+    public virtual bool UseInTransparentPass(Autodesk.Revit.DB.View dBView) => false;
+    public abstract bool CanExecute(Autodesk.Revit.DB.View dBView);
+    public abstract Outline GetBoundingBox(Autodesk.Revit.DB.View dBView);
+    public abstract void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle);
+    #endregion
+
+    virtual public void Register()
+    {
+      using (var service = ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService) as MultiServerService)
+      {
+        service.AddServer(this);
+
+        var activeServerIds = service.GetActiveServerIds();
+        activeServerIds.Add(GetServerId());
+        service.SetActiveServers(activeServerIds);
+      }
+    }
+
+    virtual public void Unregister()
+    {
+      using (var service = ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService) as MultiServerService)
+      {
+        var activeServerIds = service.GetActiveServerIds();
+        activeServerIds.Remove(GetServerId());
+        service.SetActiveServers(activeServerIds);
+
+        service.RemoveServer(GetServerId());
+      }
+    }
+
+    protected static VertexBuffer ToVertexBuffer(Rhino.Geometry.Mesh mesh, out VertexFormatBits vertexFormatBits, System.Drawing.Color color = default(System.Drawing.Color))
+    {
+      int verticesCount = mesh.Vertices.Count;
+      int normalCount = mesh.Normals.Count;
+      int colorsCount = color.IsEmpty ? mesh.VertexColors.Count : verticesCount;
+      bool hasVertices = verticesCount > 0;
+      bool hasNormals = normalCount == verticesCount;
+      bool hasColors = colorsCount == verticesCount;
+      int floatCount = verticesCount + (hasNormals ? normalCount : 0) + (hasColors ? colorsCount : 0);
+
+      if (hasVertices)
+      {
+        var vertices = mesh.Vertices;
+        if (hasNormals)
+        {
+          var normals = mesh.Normals;
+          if (hasColors)
+          {
+            vertexFormatBits = VertexFormatBits.PositionNormalColored;
+            var colors = mesh.VertexColors;
+            var vb = new VertexBuffer(verticesCount * VertexPositionNormalColored.GetSizeInFloats());
+            vb.Map(verticesCount * VertexPositionNormalColored.GetSizeInFloats());
+            using (var stream = vb.GetVertexStreamPositionNormalColored())
+            {
+              for (int v = 0; v < verticesCount; ++v)
+              {
+                var c = !color.IsEmpty ? color : colors[v];
+                stream.AddVertex(new VertexPositionNormalColored(vertices[v].ToHost(), normals[v].ToHost(), new ColorWithTransparency(c.R, c.G, c.B, 255u - c.A)));
+              }
+            }
+            vb.Unmap();
+            return vb;
+          }
+          else
+          {
+            vertexFormatBits = VertexFormatBits.PositionNormal;
+            var vb = new VertexBuffer(verticesCount * VertexPositionNormal.GetSizeInFloats());
+            vb.Map(verticesCount * VertexPositionNormal.GetSizeInFloats());
+            using (var stream = vb.GetVertexStreamPositionNormal())
+            {
+              for (int v = 0; v < verticesCount; ++v)
+                stream.AddVertex(new VertexPositionNormal(vertices[v].ToHost(), normals[v].ToHost()));
+            }
+            vb.Unmap();
+            return vb;
+          }
+        }
+        else
+        {
+          if (hasColors)
+          {
+            vertexFormatBits = VertexFormatBits.PositionColored;
+            var colors = mesh.VertexColors;
+            var vb = new VertexBuffer(verticesCount * VertexPositionColored.GetSizeInFloats());
+            vb.Map(verticesCount * VertexPositionColored.GetSizeInFloats());
+            using (var stream = vb.GetVertexStreamPositionColored())
+            {
+              for (int v = 0; v < verticesCount; ++v)
+              {
+                var c = !color.IsEmpty ? color : colors[v];
+                stream.AddVertex(new VertexPositionColored(vertices[v].ToHost(), new ColorWithTransparency(c.R, c.G, c.B, 255u - c.A)));
+              }
+            }
+            vb.Unmap();
+            return vb;
+          }
+          else
+          {
+            vertexFormatBits = VertexFormatBits.Position;
+            var vb = new VertexBuffer(verticesCount * VertexPosition.GetSizeInFloats());
+            vb.Map(verticesCount * VertexPosition.GetSizeInFloats());
+            using (var stream = vb.GetVertexStreamPosition())
+            {
+              for (int v = 0; v < verticesCount; ++v)
+                stream.AddVertex(new VertexPosition(vertices[v].ToHost()));
+            }
+            vb.Unmap();
+            return vb;
+          }
+        }
+      }
+
+      vertexFormatBits = 0;
+      return null;
+    }
+
+    protected static IndexBuffer ToTrianglesBuffer(Rhino.Geometry.Mesh mesh, out int triangleCount)
+    {
+      triangleCount = mesh.Faces.Count + mesh.Faces.QuadCount;
+      if (triangleCount > 0)
+      {
+        var ib = new IndexBuffer(triangleCount * 3);
+
+        ib.Map(triangleCount * 3);
+        using (var istream = ib.GetIndexStreamTriangle())
+        {
+          foreach (var face in mesh.Faces)
+          {
+            istream.AddTriangle(new IndexTriangle(face.A, face.B, face.C));
+            if (face.IsQuad)
+              istream.AddTriangle(new IndexTriangle(face.C, face.D, face.A));
+          }
+        }
+
+        ib.Unmap();
+        return ib;
+      }
+
+      return null;
+    }
+
+    protected static IndexBuffer ToWireframeBuffer(Rhino.Geometry.Mesh mesh, out int linesCount)
+    {
+      linesCount = (mesh.Faces.Count * 3) + mesh.Faces.QuadCount;
+      if (linesCount > 0)
+      {
+        var ib = new IndexBuffer(linesCount * 2);
+
+        ib.Map(linesCount * 2);
+        using (var istream = ib.GetIndexStreamLine())
+        {
+          foreach (var face in mesh.Faces)
+          {
+            istream.AddLine(new IndexLine(face.A, face.B));
+            istream.AddLine(new IndexLine(face.B, face.C));
+            istream.AddLine(new IndexLine(face.C, face.D));
+            if (face.IsQuad)
+              istream.AddLine(new IndexLine(face.D, face.A));
+          }
+        }
+
+        ib.Unmap();
+        return ib;
+      }
+
+      return null;
+    }
+
+    protected static IndexBuffer ToEdgeBuffer(Rhino.Geometry.Mesh mesh, out int linesCount)
+    {
+      var vertices = mesh.TopologyVertices;
+      var edgeIndices = new List<IndexPair>();
+      {
+        var edges = mesh.TopologyEdges;
+        var edgeCount = edges.Count;
+        for (int e = 0; e < edgeCount; ++e)
+        {
+          if (edges.IsEdgeUnwelded(e) || edges.GetConnectedFaces(e).Length < 2)
+            edgeIndices.Add(edges.GetTopologyVertices(e));
+        }
+      }
+
+      linesCount = edgeIndices.Count;
+      if (linesCount > 0)
+      {
+        var ib = new IndexBuffer(linesCount * 2);
+
+        ib.Map(linesCount * 2);
+        using (var istream = ib.GetIndexStreamLine())
+        {
+          foreach (var edge in edgeIndices)
+          {
+            var vi = vertices.MeshVertexIndices(edge.I);
+            var vj = vertices.MeshVertexIndices(edge.J);
+
+            istream.AddLine(new IndexLine(vi[0], vj[0]));
+          }
+        }
+        ib.Unmap();
+
+        return ib;
+      }
+
+      return null;
+    }
+
+    protected static int ToWiresBuffer(Rhino.Geometry.Polyline[] wires, out VertexBuffer vb, out IndexBuffer ib)
+    {
+      int linesCount = 0;
+      vb = null;
+      ib = null;
+
+      if (wires?.Length > 0)
+      {
+        foreach (var polyline in wires)
+          linesCount += polyline.SegmentCount;
+
+        vb = new VertexBuffer(linesCount * 2 * VertexPosition.GetSizeInFloats());
+        vb.Map(linesCount * 2 * VertexPosition.GetSizeInFloats());
+
+        ib = new IndexBuffer(linesCount * 2);
+        ib.Map(linesCount * 2);
+
+        int vi = 0;
+        using (var vstream = vb.GetVertexStreamPosition())
+        using (var istream = ib.GetIndexStreamLine())
+        {
+          foreach (var polyline in wires)
+          {
+            int segmentCount = polyline.SegmentCount;
+            for (int s = 0; s < segmentCount; ++s)
+            {
+              var line = polyline.SegmentAt(s);
+              vstream.AddVertex(new VertexPosition(line.From.ToHost()));
+              vstream.AddVertex(new VertexPosition(line.To.ToHost()));
+              istream.AddLine(new IndexLine(vi++, vi++));
+            }
+          }
+        }
+
+        vb.Unmap();
+        ib.Unmap();
+      }
+
+      return linesCount;
+    }
+
+    #region Primitive
+    protected class Primitive : IDisposable
+    {
+      protected VertexFormatBits vertexFormatBits;
+      protected int vertexCount;
+      protected VertexBuffer vertexBuffer;
+      protected VertexFormat vertexFormat;
+
+      protected int triangleCount;
+      protected IndexBuffer triangleBuffer;
+
+      protected int linesCount;
+      protected IndexBuffer linesBuffer;
+
+      protected EffectInstance effectInstance;
+      protected Rhino.Geometry.Mesh mesh;
+      public Rhino.Geometry.BoundingBox ClippingBox => mesh.GetBoundingBox(false);
+
+      public Primitive(Rhino.Geometry.Mesh m) { mesh = m; }
+
+      void IDisposable.Dispose()
+      {
+        effectInstance?.Dispose(); effectInstance = null;
+        linesBuffer?.Dispose();    linesBuffer = null; linesCount = 0;
+        triangleBuffer?.Dispose(); triangleBuffer = null; triangleCount = 0;
+        vertexFormat?.Dispose();   vertexFormat = null;
+        vertexBuffer?.Dispose();   vertexBuffer = null; vertexCount = 0;
+        mesh?.Dispose();           mesh = null;
+      }
+
+      public virtual EffectInstance EffectInstance(DisplayStyle displayStyle)
+      {
+        if (effectInstance == null)
+          effectInstance = new EffectInstance(vertexFormatBits);
+
+        return effectInstance;
+      }
+
+      public virtual void Regen()
+      {
+        vertexBuffer?.Dispose();
+        vertexBuffer = ToVertexBuffer(mesh, out vertexFormatBits);
+
+        vertexFormat?.Dispose();
+        vertexFormat = new VertexFormat(vertexFormatBits);
+
+        triangleBuffer?.Dispose();
+        triangleBuffer = ToTrianglesBuffer(mesh, out triangleCount);
+
+        linesBuffer?.Dispose();
+        linesBuffer = ToEdgeBuffer(mesh, out linesCount);
+
+        effectInstance?.Dispose();
+        mesh?.Dispose(); mesh = null;
+      }
+
+      public virtual void Draw(DisplayStyle displayStyle)
+      {
+        if (mesh != null)
+          Regen();
+
+        var ei = EffectInstance(displayStyle);
+
+        bool wires = displayStyle == DisplayStyle.Wireframe ||
+                     displayStyle == DisplayStyle.HLR ||
+                     displayStyle == DisplayStyle.ShadingWithEdges ||
+                     displayStyle == DisplayStyle.FlatColors ||
+                     displayStyle == DisplayStyle.RealisticWithEdges;
+
+        if (triangleCount > 0)
+        {
+          DrawContext.FlushBuffer
+          (
+            vertexBuffer, vertexCount,
+            triangleBuffer, triangleCount * 3,
+            vertexFormat, ei,
+            PrimitiveType.TriangleList,
+            0, triangleCount
+          );
+        }
+
+        if (wires && linesCount > 0)
+        {
+          ei.SetTransparency(0.0);
+          ei.SetDiffuseColor(System.Drawing.Color.Black.ToHost());
+          ei.SetEmissiveColor(System.Drawing.Color.Black.ToHost());
+
+          DrawContext.FlushBuffer
+          (
+            vertexBuffer, vertexCount * 2,
+            linesBuffer, linesCount * 2,
+            vertexFormat, ei,
+            PrimitiveType.LineList,
+            0, linesCount
+          );
+        }
+
+      }
+    }
     #endregion
   }
 }

@@ -36,14 +36,20 @@ namespace RhinoInside.Revit.UI
       {
         pushButton.ToolTip = "Toggle Grasshopper  window visibility";
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png");
+        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://www.grasshopper3d.com/"));
         pushButton.Enabled = !loadProtected;
       }
     }
 
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      if(!PlugIn.LoadPlugIn(GrasshopperGuid))
+      if (!PlugIn.LoadPlugIn(GrasshopperGuid))
         return Result.Failed;
+
+      // Reset document units
+      var MainWindow = Rhino.UI.RhinoEtoApp.MainWindow;
+      if (!MainWindow.Visible)
+        UI.RhinoCommand.ResetDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
 
       return Rhino.RhinoApp.RunScript("!_-Grasshopper _W _T ENTER", false) ? Result.Succeeded : Result.Failed;
     }

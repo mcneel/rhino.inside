@@ -11,7 +11,7 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class ColumnByCurve : GH_TransactionalComponent
+  public class ColumnByCurve : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("47B560AC-1E1D-4576-9F17-BCCF612974D8");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -21,14 +21,14 @@ namespace RhinoInside.Revit.GH.Components
     (
       "Column.ByCurve", "ByCurve",
       "Create a structural Column from a curve",
-      "Revit", "Column"
+      "Revit", "Build"
     )
     { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddLineParameter("Axis", "A", string.Empty, GH_ParamAccess.item);
-      manager[manager.AddParameter(new Parameters.Element(), "FamilyType", "F", string.Empty, GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "T", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
     }
 
@@ -39,7 +39,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Rhino.Geometry.Line axis = Rhino.Geometry.Line.Unset;
+      var axis = Rhino.Geometry.Line.Unset;
       if (DA.GetData("Axis", ref axis))
       {
         if (axis.FromZ > axis.ToZ)
@@ -47,7 +47,7 @@ namespace RhinoInside.Revit.GH.Components
       }
 
       FamilySymbol familySymbol = null;
-      if (!DA.GetData("FamilyType", ref familySymbol) && Params.Input[1].Sources.Count == 0)
+      if (!DA.GetData("Type", ref familySymbol) && Params.Input[1].Sources.Count == 0)
         familySymbol = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultFamilyTypeId(new ElementId(BuiltInCategory.OST_StructuralColumns))) as FamilySymbol;
 
       if (!familySymbol.IsActive)

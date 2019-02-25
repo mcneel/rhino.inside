@@ -11,7 +11,7 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class BeamByCurve : GH_TransactionalComponent
+  public class BeamByCurve : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("26411AA6-8187-49DF-A908-A292A07918F1");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -21,14 +21,14 @@ namespace RhinoInside.Revit.GH.Components
     (
       "Beam.ByCurve", "ByCurve",
       "Create a Beam element from a curve",
-      "Revit", "Beam"
+      "Revit", "Build"
     )
     { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddCurveParameter("Axis", "A", string.Empty, GH_ParamAccess.item);
-      manager[manager.AddParameter(new Parameters.Element(), "FamilyType", "F", string.Empty, GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "T", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
     }
 
@@ -43,8 +43,15 @@ namespace RhinoInside.Revit.GH.Components
       DA.GetData("Axis", ref axis);
 
       FamilySymbol familySymbol = null;
-      if (!DA.GetData("FamilyType", ref familySymbol) && Params.Input[1].Sources.Count == 0)
+      if (!DA.GetData("Type", ref familySymbol) && Params.Input[1].Sources.Count == 0)
         familySymbol = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultFamilyTypeId(new ElementId(BuiltInCategory.OST_StructuralFraming))) as FamilySymbol;
+
+      if (familySymbol == null)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' There is no default structural framing family loaded.", Params.Input[1].Name));
+        DA.AbortComponentSolution();
+        return;
+      }
 
       if (!familySymbol.IsActive)
         familySymbol.Activate();

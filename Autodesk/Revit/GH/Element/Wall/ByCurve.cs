@@ -11,7 +11,7 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class WallByCurve : GH_TransactionalComponent
+  public class WallByCurve : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("37A8C46F-CB5B-49FD-A483-B03D1FE14A22");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -21,14 +21,14 @@ namespace RhinoInside.Revit.GH.Components
     (
       "Wall.ByCurve", "ByCurve",
       "Create a Wall element from a curve",
-      "Revit", "Wall"
+      "Revit", "Build"
     )
     { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddCurveParameter("Axis", "A", string.Empty, GH_ParamAccess.item);
-      manager[manager.AddParameter(new Parameters.Element(), "FamilyType", "F", string.Empty, GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "T", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager.AddBooleanParameter("Structural", "S", string.Empty, GH_ParamAccess.item, true);
       manager[manager.AddNumberParameter("Height", "H", string.Empty, GH_ParamAccess.item)].Optional = true;
@@ -45,7 +45,7 @@ namespace RhinoInside.Revit.GH.Components
       DA.GetData("Axis", ref axis);
 
       WallType wallType = null;
-      if (!DA.GetData("FamilyType", ref wallType) && Params.Input[1].Sources.Count == 0)
+      if (!DA.GetData("Type", ref wallType) && Params.Input[1].Sources.Count == 0)
         wallType = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultElementTypeId(ElementTypeGroup.WallType)) as WallType;
 
       Autodesk.Revit.DB.Level level = null;
@@ -69,19 +69,7 @@ namespace RhinoInside.Revit.GH.Components
 
       double height = 0.0;
       if (!DA.GetData("Height", ref height))
-      {
-        switch (Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem)
-        {
-          case Rhino.UnitSystem.None:
-          case Rhino.UnitSystem.Inches:
-          case Rhino.UnitSystem.Feet:
-            height = 10.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Feet, Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem);
-            break;
-          default:
-            height = 3.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Meters, Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem);
-            break;
-        }
-      }
+        height = LiteralLengthValue(3.0);
 
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;

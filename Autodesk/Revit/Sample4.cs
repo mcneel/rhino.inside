@@ -41,6 +41,7 @@ namespace RhinoInside.Revit
       {
         pushButton.ToolTip = "Eval a Grasshopper definition";
         pushButton.LargeImage = ImageBuilder.BuildImage("4");
+        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
       }
     }
 

@@ -16,7 +16,8 @@ namespace RhinoInside.Revit.GH.Components
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{C}");
 
-    public DocumentCategories() : base("Document.Categories", "Categories",
+    public DocumentCategories() : base(
+      "Document.Categories", "Categories",
       "Get active document categories list",
       "Revit", "Document")
     {
@@ -24,6 +25,8 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
+      manager.AddIntegerParameter("Type", "T", "Category type", GH_ParamAccess.item, (int) Autodesk.Revit.DB.CategoryType.Model);
+      manager[manager.AddBooleanParameter("HasMaterialQuantities", "M", "Has Material Quantities", GH_ParamAccess.item, true)].Optional = true;
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -33,17 +36,27 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
+      var categoryType = Autodesk.Revit.DB.CategoryType.Invalid;
+      {
+        var categoryValue = (int) categoryType;
+        DA.GetData("Type", ref categoryValue);
+        categoryType = (Autodesk.Revit.DB.CategoryType) categoryValue;
+      }
+
+      bool HasMaterialQuantities = false;
+      bool nofilter = (!DA.GetData("HasMaterialQuantities", ref HasMaterialQuantities) && Params.Input[1].Sources.Count == 0);
+
       var list = new List<Category>();
 
-      foreach (var item in Revit.ActiveDBDocument.Settings.Categories)
+      foreach (var category in Revit.ActiveDBDocument.Settings.Categories.Cast<Category>())
       {
-        if (item is Category category)
-        {
-          if (!DirectShape.IsValidCategoryId(category.Id, Revit.ActiveDBDocument))
-            continue;
+        if (categoryType != Autodesk.Revit.DB.CategoryType.Invalid && category.CategoryType != categoryType)
+          continue;
 
-          list.Add(category);
-        }
+        if (!nofilter && HasMaterialQuantities != category.HasMaterialQuantities)
+          continue;
+
+        list.Add(category);
       }
 
       DA.SetDataList("Categories", list);

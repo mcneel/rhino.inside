@@ -18,7 +18,8 @@ namespace RhinoInside.Revit.GH.Components
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{L}");
 
-    public DocumentLevels() : base("Document.Levels", "Levels",
+    public DocumentLevels() : base(
+      "Document.Levels", "Levels",
       "Get active document levels list",
       "Revit", "Document")
     {
@@ -35,12 +36,12 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var levels = new List<Types.Element>();
+      var levels = new List<Level>();
 
       using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
       {
         foreach (var level in collector.OfClass(typeof(Level)).ToElements().Cast<Level>())
-          levels.Add(new Types.Element(level));
+          levels.Add(level);
       }
 
       DA.SetDataList("Levels", levels);

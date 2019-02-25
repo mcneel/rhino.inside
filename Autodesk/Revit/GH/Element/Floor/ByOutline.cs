@@ -11,24 +11,24 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class FloorByOutlineTypeAndLevel : GH_TransactionalComponent
+  public class FloorByOutline : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("DC8DAF4F-CC93-43E2-A871-3A01A920A722");
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("F");
 
-    public FloorByOutlineTypeAndLevel() : base
+    public FloorByOutline() : base
     (
-      "Floor.ByOutlineTypeAndLevel", "ByOutlineTypeAndLevel",
+      "Floor.ByOutline", "ByOutline",
       "Create a Floor element from curves",
-      "Revit", "Floor"
+      "Revit", "Build"
     )
     { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddCurveParameter("Boundary", "B", string.Empty, GH_ParamAccess.item);
-      manager[manager.AddParameter(new Parameters.Element(), "FloorType", "FT", string.Empty, GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "FT", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager.AddBooleanParameter("Structural", "S", string.Empty, GH_ParamAccess.item, true);
     }
@@ -44,7 +44,7 @@ namespace RhinoInside.Revit.GH.Components
       DA.GetData("Boundary", ref boundary);
 
       Autodesk.Revit.DB.FloorType floorType = null;
-      if (!DA.GetData("FloorType", ref floorType) && Params.Input[1].Sources.Count == 0)
+      if (!DA.GetData("Type", ref floorType) && Params.Input[1].Sources.Count == 0)
         floorType = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultElementTypeId(ElementTypeGroup.FloorType)) as FloorType;
 
       Autodesk.Revit.DB.Level level = null;
