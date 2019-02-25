@@ -44,9 +44,9 @@ namespace RhinoInside.Revit.GH
     #endregion
 
     #region IDirectContext3DServer
-    public override bool UseInTransparentPass(Autodesk.Revit.DB.View dBView) => true;
+    public override bool UseInTransparentPass(View dBView) => true;
 
-    public override bool CanExecute(Autodesk.Revit.DB.View dBView)
+    public override bool CanExecute(View dBView)
     {
       var definition = Instances.ActiveCanvas?.Document;
       if (definition != activeDefinition)
@@ -98,18 +98,23 @@ namespace RhinoInside.Revit.GH
           {
             switch (value.ScriptVariable())
             {
-              case Rhino.Geometry.Mesh mesh: primitives.Add(new ParamPrimitive(attributes, mesh)); break;
+              case Rhino.Geometry.Mesh mesh: primitives.Add(new ParamPrimitive(attributes, mesh.DuplicateMesh())); break;
               case Rhino.Geometry.Brep brep:
-                foreach (var m in Rhino.Geometry.Mesh.CreateFromBrep(brep, Rhino.Geometry.MeshingParameters.Default))
-                  primitives.Add(new ParamPrimitive(attributes, m));
-                break;
+              {
+                var previewMesh = new Rhino.Geometry.Mesh();
+                previewMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters()));
+                previewMesh.Weld(Rhino.RhinoMath.ToRadians(10.0));
+
+                primitives.Add(new ParamPrimitive(attributes, previewMesh));
+              }
+              break;
             }
           }
         }
       }
     }
 
-    Rhino.Geometry.BoundingBox DrawScene(Autodesk.Revit.DB.View dBView)
+    Rhino.Geometry.BoundingBox DrawScene(View dBView)
     {
       if (!primitivesBoundingBox.IsValid)
       {
@@ -149,13 +154,13 @@ namespace RhinoInside.Revit.GH
       return primitivesBoundingBox;
     }
 
-    public override Outline GetBoundingBox(Autodesk.Revit.DB.View dBView)
+    public override Outline GetBoundingBox(View dBView)
     {
-      var bbox = DrawScene(dBView).Scale(1.0 / Revit.ModelUnits);
+      var bbox = activeDefinition.PreviewBoundingBox.Scale(1.0 / Revit.ModelUnits);
       return new Outline(bbox.Min.ToHost(), bbox.Max.ToHost());
     }
 
-    public override void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
+    public override void RenderScene(View dBView, DisplayStyle displayStyle)
     {
       if (!DrawContext.IsTransparentPass())
         return;

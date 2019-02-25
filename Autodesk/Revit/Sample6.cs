@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Color = System.Drawing.Color;
 
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
@@ -62,7 +63,6 @@ namespace RhinoInside.Revit
       RhinoDoc.MaterialTableEvent += RhinoDoc_MaterialTableEvent;
     }
 
-
     static void RhinoDoc_CloseDocument(object sender, DocumentEventArgs e)
     {
       if (e.Document == ActiveDocument)
@@ -86,7 +86,8 @@ namespace RhinoInside.Revit
         Revit.RefreshActiveView();
       }
     }
-    private static void RhinoDoc_UndeleteRhinoObject(object sender, Rhino.DocObjects.RhinoObjectEventArgs e)
+
+    static void RhinoDoc_UndeleteRhinoObject(object sender, Rhino.DocObjects.RhinoObjectEventArgs e)
     {
       if (e.TheObject.Document == ActiveDocument && e.TheObject.IsMeshable(MeshType.Render))
       {
@@ -119,9 +120,8 @@ namespace RhinoInside.Revit
         if(document != value)
         {
           if (document != null) Stop();
-          if (value != null)    Start();
-
           document = value;
+          if (value != null)    Start();
         }
       }
     }
@@ -161,14 +161,19 @@ namespace RhinoInside.Revit
     {
       objectPreviews = new Dictionary<Guid, ObjectPreviewServer>();
 
-      Revit.EnqueueReadAction
-      (
-        (doc, canceled) =>
+      using (var service = ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService) as MultiServerService)
+      {
+        var activeServerIds = service.GetActiveServerIds();
+        foreach (var o in ActiveDocument.Objects)
         {
-          foreach (var o in RhinoDoc.ActiveDoc.Objects)
-            new ObjectPreviewServer(o).Register();
+          var preview = new ObjectPreviewServer(o);
+          var serverId = preview.GetServerId();
+          objectPreviews.Add(serverId, preview);
+          service.AddServer(preview);
+          activeServerIds.Add(serverId);
         }
-      );
+        service.SetActiveServers(activeServerIds);
+      }
 
       Revit.RefreshActiveView();
     }
@@ -187,9 +192,9 @@ namespace RhinoInside.Revit
           service.RemoveServer(preview.Key);
           preview.Value.ClearPrimitives();
         }
-
-        objectPreviews = null;
       }
+
+      objectPreviews = null;
 
       Revit.RefreshActiveView();
     }
@@ -201,8 +206,7 @@ namespace RhinoInside.Revit
     #endregion
 
     #region IDirectContext3DServer
-
-    public override bool UseInTransparentPass(Autodesk.Revit.DB.View dBView) => !
+    public override bool UseInTransparentPass(View dBView) => !
     (
       dBView.DisplayStyle == DisplayStyle.Realistic ||
       dBView.DisplayStyle == DisplayStyle.Shading ||
@@ -211,7 +215,7 @@ namespace RhinoInside.Revit
     );
 
     bool collected = false;
-    public override bool CanExecute(Autodesk.Revit.DB.View dBView)
+    public override bool CanExecute(View dBView)
     {
       if (collected)
         return false;
@@ -233,7 +237,7 @@ namespace RhinoInside.Revit
       return true;
     }
 
-    public override Outline GetBoundingBox(Autodesk.Revit.DB.View dBView)
+    public override Outline GetBoundingBox(View dBView)
     {
       var bbox = rhinoObject.Geometry.GetBoundingBox(false);
       bbox = bbox.Scale(1.0 / Revit.ModelUnits);
@@ -249,55 +253,62 @@ namespace RhinoInside.Revit
       {
         var ei = base.EffectInstance(displayStyle);
 
-        var ambient = System.Drawing.Color.Black;
-        var color = System.Drawing.Color.Black;
-        var diffuse = System.Drawing.Color.Black;
-        var emissive = System.Drawing.Color.Black;
-        var glossiness = 1.0;
-        var specular = System.Drawing.Color.Black;
+        bool hlr = displayStyle == DisplayStyle.HLR;
+        bool flatColors = displayStyle == DisplayStyle.FlatColors || displayStyle <= DisplayStyle.HLR;
+        bool useMaterials = displayStyle > DisplayStyle.HLR && displayStyle != DisplayStyle.FlatColors;
+        bool useTextures = displayStyle > DisplayStyle.Rendering && displayStyle != DisplayStyle.FlatColors;
+
+        var ambient      = Color.Black;
+        var color        = Color.Black;
+        var diffuse      = Color.Black;
+        var emissive     = Color.Black;
+        var glossiness   = 1.0;
+        var specular     = Color.Black;
         var transparency = 0.0;
 
         if (DrawContext.IsTransparentPass())
         {
-          glossiness = 0.5;
-          transparency = 0.2;
-          specular = System.Drawing.Color.White;
-          emissive = Rhino.ApplicationSettings.AppearanceSettings.LockedObjectColor;
-
-          if (emissive == System.Drawing.Color.Black)
-            emissive = System.Drawing.Color.Gray;
+          transparency = displayStyle == DisplayStyle.Wireframe ? 0.8 : 0.5;
+          var previewColor = Color.Silver;
+          if (flatColors) emissive = previewColor;
+          else
+          {
+            diffuse = previewColor;
+            ambient = Color.FromArgb(diffuse.R / 2, diffuse.G / 2, diffuse.B / 2);
+            if (useTextures)
+            {
+              glossiness = 0.5;
+              specular = Color.White;
+            }
+          }
         }
         else
         {
-          bool hlr = displayStyle == DisplayStyle.HLR;
-          bool flatColors = displayStyle == DisplayStyle.FlatColors || displayStyle == DisplayStyle.HLR;
-          bool realistic = displayStyle == DisplayStyle.Realistic || displayStyle == DisplayStyle.RealisticWithEdges;
-
           var drawColor = rhinoObject.IsLocked ?
           Rhino.ApplicationSettings.AppearanceSettings.LockedObjectColor :
           hlr ?
-          System.Drawing.Color.White :
-          realistic ?
+          Color.White :
+          useMaterials ?
           Rhino.DocObjects.Material.DefaultMaterial.DiffuseColor :
           rhinoObject.Attributes.DrawColor(ActiveDocument);
 
-          if (drawColor == System.Drawing.Color.Black)
-            drawColor = System.Drawing.Color.Gray;
+          if (drawColor == Color.Black)
+            drawColor = Color.Gray;
 
           if (displayStyle >= DisplayStyle.HLR)
           {
             if (flatColors) emissive = drawColor;
             else
             {
-              var material = ActiveDocument.Materials[rhinoObject.Attributes.MaterialIndex];
-              ambient = System.Drawing.Color.FromArgb(material.DiffuseColor.R / 2, material.DiffuseColor.G / 2, material.DiffuseColor.B / 2);
+              var material = rhinoObject.GetMaterial(true);
+              ambient = Color.FromArgb(material.DiffuseColor.R / 2, material.DiffuseColor.G / 2, material.DiffuseColor.B / 2);
               diffuse = material.DiffuseColor;
               emissive = material.EmissionColor;
               if (material.Shine != 0.0)
               {
                 double s = material.Shine / Rhino.DocObjects.Material.MaxShine;
                 double _s = 1.0 - s;
-                specular = System.Drawing.Color.FromArgb
+                specular = Color.FromArgb
                 (
                   material.SpecularColor.A,
                   (int) (material.SpecularColor.R * s + material.DiffuseColor.R * _s),
@@ -322,114 +333,11 @@ namespace RhinoInside.Revit
 
         return ei;
       }
-
-      protected VertexBuffer linesVertexBuffer;
-      protected IndexBuffer linesBuffer;
-      protected int linesCount = -1;
-
-      protected static int ToWiresBuffer(Polyline[] wires, out VertexBuffer vb, out IndexBuffer ib)
-      {
-        int linesCount = 0;
-        vb = null;
-        ib = null;
-
-        if (wires?.Length > 0)
-        {
-          foreach (var polyline in wires)
-            linesCount += polyline.SegmentCount;
-
-          vb = new VertexBuffer(linesCount * 2 * VertexPosition.GetSizeInFloats());
-          vb.Map(linesCount * 2 * VertexPosition.GetSizeInFloats());
-
-          ib = new IndexBuffer(linesCount * 2);
-          ib.Map(linesCount * 2);
-
-          int vi = 0;
-          using (var vstream = vb.GetVertexStreamPosition())
-          using (var istream = ib.GetIndexStreamLine())
-          {
-            foreach (var polyline in wires)
-            {
-              int segmentCount = polyline.SegmentCount;
-              for (int s = 0; s < segmentCount; ++s)
-              {
-                var line = polyline.SegmentAt(s);
-                vstream.AddVertex(new VertexPosition(line.From.ToHost()));
-                vstream.AddVertex(new VertexPosition(line.To.ToHost()));
-                istream.AddLine(new IndexLine(vi++, vi++));
-              }
-            }
-          }
-
-          vb.Unmap();
-          ib.Unmap();
-        }
-
-        return linesCount;
-      }
-
-      public override void Regen()
-      {
-        base.Regen();
-
-        linesVertexBuffer?.Dispose();
-        linesBuffer?.Dispose();
-
-        if (rhinoObject.Geometry.ObjectType == Rhino.DocObjects.ObjectType.Mesh)
-          linesBuffer = ToWireframeBuffer(mesh, out linesCount);
-        else
-          linesCount = ToWiresBuffer(mesh.GetNakedEdges(), out linesVertexBuffer, out linesBuffer);
-      }
-
-      public override void Draw(DisplayStyle displayStyle)
-      {
-        if (DrawContext.IsTransparentPass())
-        {
-          if (linesCount < 0)
-            Regen();
-
-          bool noWires = displayStyle == DisplayStyle.Realistic || displayStyle == DisplayStyle.Shading || displayStyle == DisplayStyle.Rendering || displayStyle == DisplayStyle.Raytrace;
-          if (!noWires && linesCount > 0)
-          {
-            using (var ei = new EffectInstance(VertexFormatBits.Position))
-            {
-              if (linesVertexBuffer != null)
-              {
-                using (var vf = new VertexFormat(VertexFormatBits.Position))
-                {
-                  DrawContext.FlushBuffer
-                  (
-                    linesVertexBuffer, linesCount * 2,
-                    linesBuffer, linesCount * 2,
-                    vf, ei,
-                    PrimitiveType.LineList,
-                    0, linesCount
-                  );
-                }
-              }
-              else
-              {
-                DrawContext.FlushBuffer
-                (
-                  vertexBuffer, vertexCount * 2,
-                  linesBuffer, linesCount * 2,
-                  vertexFormat, ei,
-                  PrimitiveType.LineList,
-                  0, linesCount
-                );
-              }
-            }
-          }
-        }
-
-        if (DrawContext.IsTransparentPass() || displayStyle >= DisplayStyle.HLR)
-          base.Draw(displayStyle);
-      }
     }
 
     Primitive[] primitives;
 
-    public override void RenderScene(Autodesk.Revit.DB.View dBView, DisplayStyle displayStyle)
+    public override void RenderScene(View dBView, DisplayStyle displayStyle)
     {
       if (UseInTransparentPass(dBView) && !DrawContext.IsTransparentPass())
         return;
@@ -438,12 +346,16 @@ namespace RhinoInside.Revit
       {
         if (primitives == null)
         {
-          var renderMeshes = rhinoObject.GetMeshes(Rhino.Geometry.MeshType.Render);
-          if(renderMeshes != null)
+          var meshingParameters = rhinoObject.GetRenderMeshParameters();
+          if(rhinoObject.MeshCount(MeshType.Render, meshingParameters) == 0)
+            rhinoObject.CreateMeshes(MeshType.Render, meshingParameters, false);
+
+          var renderMeshes = rhinoObject.GetMeshes(MeshType.Render);
+          if(renderMeshes?.Length > 0)
           {
-            primitives = new Primitive[renderMeshes.Length];
-            for (int m = 0; m < primitives.Length; ++m)
-              primitives[m] = new ObjectPrimitive(rhinoObject, renderMeshes[m]);
+            var previewMesh = new Rhino.Geometry.Mesh();
+            previewMesh.Append(renderMeshes);
+            primitives = new Primitive[] { new ObjectPrimitive(rhinoObject, previewMesh) };
           }
         }
 
@@ -462,5 +374,4 @@ namespace RhinoInside.Revit
     }
     #endregion
   }
-
 }
