@@ -45,19 +45,19 @@ namespace RhinoInside.Revit.GH
     #endregion
 
     #region IDirectContext3DServer
-    public override bool UseInTransparentPass(View dBView) => true;
+    public override bool UseInTransparentPass(View dBView) => ((activeDefinition?.PreviewMode ?? GH_PreviewMode.Disabled) == GH_PreviewMode.Shaded);
 
     public override bool CanExecute(View dBView)
     {
-      var definition = Instances.ActiveCanvas?.Document;
-
-      if ((definition?.PreviewMode ?? GH_PreviewMode.Disabled) == GH_PreviewMode.Disabled)
-        return false;
+      var editor = Instances.DocumentEditor;
+      var canvas = Instances.ActiveCanvas;
+      var definition = canvas?.Document;
 
       if (definition != activeDefinition)
       {
         if (activeDefinition != null)
         {
+          if (editor != null) editor.VisibleChanged       -= Editor_VisibleChanged;
           activeDefinition.SolutionEnd                    -= Document_SolutionEnd;
           activeDefinition.SettingsChanged                -= Document_SettingsChanged;
           GH_Document.DefaultSelectedPreviewColourChanged -= Document_DefaultPreviewColourChanged;
@@ -73,10 +73,14 @@ namespace RhinoInside.Revit.GH
           GH_Document.DefaultSelectedPreviewColourChanged += Document_DefaultPreviewColourChanged;
           activeDefinition.SettingsChanged                += Document_SettingsChanged;
           activeDefinition.SolutionEnd                    += Document_SolutionEnd;
+          if (editor != null) editor.VisibleChanged       += Editor_VisibleChanged;
         }
       }
 
-      return activeDefinition != null;
+      return
+      activeDefinition != null &&
+      ((definition?.PreviewMode ?? GH_PreviewMode.Disabled) != GH_PreviewMode.Disabled) &&
+      (editor?.Visible ?? false);
     }
 
     static List<IGH_DocumentObject> lastSelection = new List<IGH_DocumentObject>();
@@ -114,18 +118,26 @@ namespace RhinoInside.Revit.GH
       Revit.RefreshActiveView();
     }
 
+    static void Editor_VisibleChanged(object sender, EventArgs e) => Revit.RefreshActiveView();
+
     protected class ParamPrimitive : Primitive
     {
       readonly IGH_Attributes attributes;
+      public ParamPrimitive(IGH_Attributes a, Rhino.Geometry.Point p) : base(p) { attributes = a; }
+      public ParamPrimitive(IGH_Attributes a, Rhino.Geometry.Curve c) : base(c) { attributes = a; }
       public ParamPrimitive(IGH_Attributes a, Rhino.Geometry.Mesh m) : base(m) { attributes = a; }
 
-      public override EffectInstance EffectInstance(DisplayStyle displayStyle)
+      public override EffectInstance EffectInstance(DisplayStyle displayStyle, bool IsShadingPass)
       {
-        var ei = base.EffectInstance(displayStyle);
-
+        var ei = base.EffectInstance(displayStyle, IsShadingPass);
         var color = attributes.Selected ? activeDefinition.PreviewColourSelected : activeDefinition.PreviewColour;
-        ei.SetTransparency((255 - color.A) / 255.0);
-        ei.SetEmissiveColor(new Color(color.R, color.G, color.B));
+
+        if (IsShadingPass)
+        {
+          ei.SetTransparency((255 - color.A) / 255.0);
+          ei.SetEmissiveColor(new Color(color.R, color.G, color.B));
+        }
+        else ei.SetColor(new Color(color.R, color.G, color.B));
 
         return ei;
       }
@@ -150,7 +162,13 @@ namespace RhinoInside.Revit.GH
           {
             switch (value.ScriptVariable())
             {
-              case Rhino.Geometry.Mesh mesh: primitives.Add(new ParamPrimitive(attributes, mesh.DuplicateMesh())); break;
+              case Rhino.Geometry.Point3d point:    primitives.Add(new ParamPrimitive(attributes, new Rhino.Geometry.Point(point))); break;
+              case Rhino.Geometry.Line line:        primitives.Add(new ParamPrimitive(attributes, new Rhino.Geometry.LineCurve(line))); break;
+              case Rhino.Geometry.Arc arc:          primitives.Add(new ParamPrimitive(attributes, new Rhino.Geometry.ArcCurve(arc))); break;
+              case Rhino.Geometry.Circle circle:    primitives.Add(new ParamPrimitive(attributes, new Rhino.Geometry.ArcCurve(circle))); break;
+              case Rhino.Geometry.Ellipse ellipse:  primitives.Add(new ParamPrimitive(attributes, ellipse.ToNurbsCurve())); break;
+              case Rhino.Geometry.Curve curve:      primitives.Add(new ParamPrimitive(attributes, curve)); break;
+              case Rhino.Geometry.Mesh mesh:        primitives.Add(new ParamPrimitive(attributes, mesh)); break;
               case Rhino.Geometry.Brep brep:
               {
                 var previewMesh = new Rhino.Geometry.Mesh();
@@ -214,29 +232,23 @@ namespace RhinoInside.Revit.GH
 
     public override void RenderScene(View dBView, DisplayStyle displayStyle)
     {
-      if (!DrawContext.IsTransparentPass())
-        return;
-
       try
       {
         DrawScene(dBView);
 
         DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
 
-        if (dBView.CropBoxActive)
-        {
-          var CropBox = new Rhino.Geometry.BoundingBox(dBView.CropBox.Min.ToRhino(), dBView.CropBox.Max.ToRhino());
+        var CropBox = new Rhino.Geometry.BoundingBox(dBView.CropBox.Min.ToRhino(), dBView.CropBox.Max.ToRhino()).Scale(Revit.ModelUnits);
 
-          foreach (var primitive in primitives)
-          {
-            if (Rhino.Geometry.BoundingBox.Intersection(CropBox, primitive.ClippingBox.Scale(1.0 / Revit.ModelUnits)).IsValid)
-              primitive.Draw(displayStyle);
-          }
-        }
-        else
+        foreach (var primitive in primitives)
         {
-          foreach (var primitive in primitives)
-            primitive.Draw(displayStyle);
+          if (DrawContext.IsInterrupted())
+            break;
+
+          if (dBView.CropBoxActive && !Rhino.Geometry.BoundingBox.Intersection(CropBox, primitive.ClippingBox).IsValid)
+            continue;
+
+          primitive.Draw(displayStyle);
         }
       }
       catch (Exception e)
