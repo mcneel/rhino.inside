@@ -188,11 +188,20 @@ namespace RhinoInside.Revit
           ProcessWriteActions();
 
         // 3. Refresh Active View if necesary
-        if (pendingRefreshActiveView || GH.PreviewServer.PreviewChanged())
+        bool regenComplete = DirectContext3DServer.RegenComplete();
+        if (pendingRefreshActiveView || !regenComplete || GH.PreviewServer.PreviewChanged())
         {
           pendingRefreshActiveView = false;
+
+          var RefreshTime = new Stopwatch();
+          RefreshTime.Start();
           ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
+          RefreshTime.Stop();
+          DirectContext3DServer.RegenThreshold = Math.Min(RefreshTime.ElapsedMilliseconds, 200);
         }
+
+        if (!regenComplete)
+          args.SetRaiseWithoutDelay();
       }
     }
 
@@ -994,38 +1003,48 @@ namespace RhinoInside.Revit
         return effectInstance;
       }
 
-      public virtual void Regen()
+      public virtual bool Regen()
       {
-        if (geometry is Rhino.Geometry.Mesh mesh)
+        if (geometry != null)
         {
-          vertexBuffer = ToVertexBuffer(mesh, part, out vertexFormatBits);
-          vertexCount = part.VertexCount;
+          if (!BeginRegen())
+            return false;
 
-          triangleBuffer = ToTrianglesBuffer(mesh, part, out triangleCount);
-          linesBuffer = ToEdgeBuffer(mesh, part, out linesCount);
-        }
-        else if (geometry is Rhino.Geometry.Curve curve)
-        {
-          using (var polyline = curve.ToPolyline(Revit.VertexTolerance * Revit.ModelUnits, Revit.AngleTolerance, Revit.ShortCurveTolerance * Revit.ModelUnits, 0.0))
-            linesCount = ToPolylineBuffer(polyline.ToPolyline(), out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
-        }
-        else if (geometry is Rhino.Geometry.Point point)
-        {
-          linesCount = -ToPointsBuffer(point, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
-        }
-        else if (geometry is Rhino.Geometry.PointCloud pointCloud)
-        {
-          linesCount = -ToPointsBuffer(pointCloud, part, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+          if (geometry is Rhino.Geometry.Mesh mesh)
+          {
+            vertexBuffer = ToVertexBuffer(mesh, part, out vertexFormatBits);
+            vertexCount = part.VertexCount;
+
+            triangleBuffer = ToTrianglesBuffer(mesh, part, out triangleCount);
+            linesBuffer = ToEdgeBuffer(mesh, part, out linesCount);
+          }
+          else if (geometry is Rhino.Geometry.Curve curve)
+          {
+            using (var polyline = curve.ToPolyline(Revit.VertexTolerance * Revit.ModelUnits, Revit.AngleTolerance, Revit.ShortCurveTolerance * Revit.ModelUnits, 0.0))
+              linesCount = ToPolylineBuffer(polyline.ToPolyline(), out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+          }
+          else if (geometry is Rhino.Geometry.Point point)
+          {
+            linesCount = -ToPointsBuffer(point, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+          }
+          else if (geometry is Rhino.Geometry.PointCloud pointCloud)
+          {
+            linesCount = -ToPointsBuffer(pointCloud, part, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+          }
+
+          vertexFormat = new VertexFormat(vertexFormatBits);
+          geometry = null;
+
+          EndRegen();
         }
 
-        vertexFormat = new VertexFormat(vertexFormatBits);
-        geometry = null;
+        return true;
       }
 
       public virtual void Draw(DisplayStyle displayStyle)
       {
-        if (geometry != null)
-          Regen();
+        if (!Regen())
+          return;
 
         if (DrawContext.IsTransparentPass())
         {
@@ -1098,6 +1117,29 @@ namespace RhinoInside.Revit
           }
         }
       }
+    }
+
+    static Stopwatch RegenTime = new Stopwatch();
+    public static long RegenThreshold = 200;
+
+    static bool BeginRegen()
+    {
+      if (RegenTime.ElapsedMilliseconds > RegenThreshold)
+        return false;
+
+      RegenTime.Start();
+      return true;
+    }
+    static void EndRegen()
+    {
+      RegenTime.Stop();
+    }
+
+    public static bool RegenComplete()
+    {
+      var ms = RegenTime.ElapsedMilliseconds;
+      RegenTime.Reset();
+      return ms == 0;
     }
     #endregion
   }
