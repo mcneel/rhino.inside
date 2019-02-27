@@ -487,15 +487,21 @@ namespace RhinoInside.Revit
       }
     }
 
-    protected static VertexBuffer ToVertexBuffer(Rhino.Geometry.Mesh mesh, out VertexFormatBits vertexFormatBits, System.Drawing.Color color = default(System.Drawing.Color))
+    protected static VertexBuffer ToVertexBuffer
+    (
+      Rhino.Geometry.Mesh mesh,
+      Primitive.Part part,
+      out VertexFormatBits vertexFormatBits,
+      System.Drawing.Color color = default(System.Drawing.Color)
+    )
     {
-      int verticesCount = mesh.Vertices.Count;
-      int normalCount = mesh.Normals.Count;
-      int colorsCount = color.IsEmpty ? mesh.VertexColors.Count : verticesCount;
+      int verticesCount = part.EndVertexIndex - part.StartVertexIndex;
+      int normalCount = mesh.Normals.Count == mesh.Vertices.Count ? verticesCount : 0;
+      int colorsCount = color.IsEmpty ? (mesh.VertexColors.Count == mesh.Vertices.Count ? verticesCount : 0) : verticesCount;
+
       bool hasVertices = verticesCount > 0;
-      bool hasNormals = normalCount == verticesCount;
-      bool hasColors = colorsCount == verticesCount;
-      int floatCount = verticesCount + (hasNormals ? normalCount : 0) + (hasColors ? colorsCount : 0);
+      bool hasNormals  = normalCount > 0;
+      bool hasColors   = colorsCount > 0;
 
       if (hasVertices)
       {
@@ -511,7 +517,7 @@ namespace RhinoInside.Revit
             vb.Map(verticesCount * VertexPositionNormalColored.GetSizeInFloats());
             using (var stream = vb.GetVertexStreamPositionNormalColored())
             {
-              for (int v = 0; v < verticesCount; ++v)
+              for (int v = part.StartVertexIndex; v < part.EndVertexIndex; ++v)
               {
                 var c = !color.IsEmpty ? color : colors[v];
                 stream.AddVertex(new VertexPositionNormalColored(vertices[v].ToHost(), normals[v].ToHost(), new ColorWithTransparency(c.R, c.G, c.B, 255u - c.A)));
@@ -527,7 +533,7 @@ namespace RhinoInside.Revit
             vb.Map(verticesCount * VertexPositionNormal.GetSizeInFloats());
             using (var stream = vb.GetVertexStreamPositionNormal())
             {
-              for (int v = 0; v < verticesCount; ++v)
+              for (int v = part.StartVertexIndex; v < part.EndVertexIndex; ++v)
                 stream.AddVertex(new VertexPositionNormal(vertices[v].ToHost(), normals[v].ToHost()));
             }
             vb.Unmap();
@@ -544,7 +550,7 @@ namespace RhinoInside.Revit
             vb.Map(verticesCount * VertexPositionColored.GetSizeInFloats());
             using (var stream = vb.GetVertexStreamPositionColored())
             {
-              for (int v = 0; v < verticesCount; ++v)
+              for (int v = part.StartVertexIndex; v < part.EndVertexIndex; ++v)
               {
                 var c = !color.IsEmpty ? color : colors[v];
                 stream.AddVertex(new VertexPositionColored(vertices[v].ToHost(), new ColorWithTransparency(c.R, c.G, c.B, 255u - c.A)));
@@ -560,7 +566,7 @@ namespace RhinoInside.Revit
             vb.Map(verticesCount * VertexPosition.GetSizeInFloats());
             using (var stream = vb.GetVertexStreamPosition())
             {
-              for (int v = 0; v < verticesCount; ++v)
+              for (int v = part.StartVertexIndex; v < part.EndVertexIndex; ++v)
                 stream.AddVertex(new VertexPosition(vertices[v].ToHost()));
             }
             vb.Unmap();
@@ -573,21 +579,37 @@ namespace RhinoInside.Revit
       return null;
     }
 
-    protected static IndexBuffer ToTrianglesBuffer(Rhino.Geometry.Mesh mesh, out int triangleCount)
+    protected static IndexBuffer ToTrianglesBuffer
+    (
+      Rhino.Geometry.Mesh mesh, Primitive.Part part,
+      out int triangleCount
+      )
     {
-      triangleCount = mesh.Faces.Count + mesh.Faces.QuadCount;
+      triangleCount = part.FaceCount;
+      {
+        var faces = mesh.Faces;
+        for (int f = part.StartFaceIndex; f < part.EndFaceIndex; ++f)
+        {
+          if (faces[f].IsQuad)
+            triangleCount++;
+        }
+      }
+
       if (triangleCount > 0)
       {
-        var ib = new IndexBuffer(triangleCount * 3);
+        var ib = new IndexBuffer(triangleCount * IndexTriangle.GetSizeInShortInts());
+        ib.Map(triangleCount * IndexTriangle.GetSizeInShortInts());
 
-        ib.Map(triangleCount * 3);
         using (var istream = ib.GetIndexStreamTriangle())
         {
-          foreach (var face in mesh.Faces)
+          var faces = mesh.Faces;
+          for (int f = part.StartFaceIndex; f < part.EndFaceIndex; ++f)
           {
-            istream.AddTriangle(new IndexTriangle(face.A, face.B, face.C));
+            var face = faces[f];
+
+            istream.AddTriangle(new IndexTriangle(face.A - part.StartVertexIndex, face.B - part.StartVertexIndex, face.C - part.StartVertexIndex));
             if (face.IsQuad)
-              istream.AddTriangle(new IndexTriangle(face.C, face.D, face.A));
+              istream.AddTriangle(new IndexTriangle(face.C - part.StartVertexIndex, face.D - part.StartVertexIndex, face.A - part.StartVertexIndex));
           }
         }
 
@@ -603,9 +625,9 @@ namespace RhinoInside.Revit
       linesCount = (mesh.Faces.Count * 3) + mesh.Faces.QuadCount;
       if (linesCount > 0)
       {
-        var ib = new IndexBuffer(linesCount * 2);
+        var ib = new IndexBuffer(linesCount * IndexLine.GetSizeInShortInts());
+        ib.Map(linesCount * IndexLine.GetSizeInShortInts());
 
-        ib.Map(linesCount * 2);
         using (var istream = ib.GetIndexStreamLine())
         {
           foreach (var face in mesh.Faces)
@@ -625,116 +647,273 @@ namespace RhinoInside.Revit
       return null;
     }
 
-    protected static IndexBuffer ToEdgeBuffer(Rhino.Geometry.Mesh mesh, out int linesCount)
+    protected static IndexBuffer ToEdgeBuffer
+    (
+      Rhino.Geometry.Mesh mesh,
+      Primitive.Part part,
+      out int linesCount
+    )
     {
-      var vertices = mesh.TopologyVertices;
-      var edgeIndices = new List<IndexPair>();
+      if (part.FaceCount != mesh.Faces.Count)
       {
-        var edges = mesh.TopologyEdges;
-        var edgeCount = edges.Count;
-        for (int e = 0; e < edgeCount; ++e)
+        linesCount = part.VertexCount;
+        if (linesCount > 0)
         {
-          if (edges.IsEdgeUnwelded(e) || edges.GetConnectedFaces(e).Length < 2)
-            edgeIndices.Add(edges.GetTopologyVertices(e));
+          var ib = new IndexBuffer(linesCount * IndexPoint.GetSizeInShortInts());
+          ib.Map(linesCount * IndexPoint.GetSizeInShortInts());
+          using (var istream = ib.GetIndexStreamPoint())
+          {
+            for (int vi = 0; vi < linesCount; ++vi)
+              istream.AddPoint(new IndexPoint(vi));
+          }
+
+          linesCount = -linesCount;
+          ib.Unmap();
+          return ib;
         }
       }
-
-      linesCount = edgeIndices.Count;
-      if (linesCount > 0)
+      else
       {
-        var ib = new IndexBuffer(linesCount * 2);
-
-        ib.Map(linesCount * 2);
-        using (var istream = ib.GetIndexStreamLine())
+        var vertices = mesh.TopologyVertices;
+        var edgeIndices = new List<IndexPair>();
         {
-          foreach (var edge in edgeIndices)
+          var edges = mesh.TopologyEdges;
+          var edgeCount = edges.Count;
+          for (int e = 0; e < edgeCount; ++e)
           {
-            var vi = vertices.MeshVertexIndices(edge.I);
-            var vj = vertices.MeshVertexIndices(edge.J);
-
-            istream.AddLine(new IndexLine(vi[0], vj[0]));
+            if (edges.IsEdgeUnwelded(e) || edges.GetConnectedFaces(e).Length < 2)
+              edgeIndices.Add(edges.GetTopologyVertices(e));
           }
         }
-        ib.Unmap();
 
-        return ib;
+        linesCount = edgeIndices.Count;
+        if (linesCount > 0)
+        {
+          var ib = new IndexBuffer(linesCount * IndexLine.GetSizeInShortInts());
+          ib.Map(linesCount * IndexLine.GetSizeInShortInts());
+          using (var istream = ib.GetIndexStreamLine())
+          {
+            foreach (var edge in edgeIndices)
+            {
+              var vi = vertices.MeshVertexIndices(edge.I);
+              var vj = vertices.MeshVertexIndices(edge.J);
+
+              istream.AddLine(new IndexLine(vi[0], vj[0]));
+            }
+          }
+          ib.Unmap();
+
+          return ib;
+        }
       }
 
       return null;
     }
 
-    protected static int ToLinesBuffer(Rhino.Geometry.Polyline[] wires, out VertexBuffer vb, out IndexBuffer ib)
+    protected static int ToPolylineBuffer
+    (
+      Rhino.Geometry.Polyline polyline,
+      out VertexFormatBits vertexFormatBits,
+      out VertexBuffer vb, out int vertexCount,
+      out IndexBuffer ib
+    )
     {
       int linesCount = 0;
-      vb = null;
-      ib = null;
 
-      if (wires?.Length > 0)
+      if (polyline.SegmentCount > 0)
       {
-        foreach (var polyline in wires)
-          linesCount += polyline.SegmentCount;
+        linesCount = polyline.SegmentCount;
+        vertexCount = polyline.Count;
 
-        vb = new VertexBuffer(linesCount * 2 * VertexPosition.GetSizeInFloats());
-        vb.Map(linesCount * 2 * VertexPosition.GetSizeInFloats());
-
-        ib = new IndexBuffer(linesCount * 2);
-        ib.Map(linesCount * 2);
-
-        int vi = 0;
+        vertexFormatBits = VertexFormatBits.Position;
+        vb = new VertexBuffer(vertexCount * VertexPosition.GetSizeInFloats());
+        vb.Map(vertexCount * VertexPosition.GetSizeInFloats());
         using (var vstream = vb.GetVertexStreamPosition())
+        {
+          foreach (var v in polyline)
+            vstream.AddVertex(new VertexPosition(v.ToHost()));
+        }
+        vb.Unmap();
+
+        ib = new IndexBuffer(linesCount * IndexLine.GetSizeInShortInts());
+        ib.Map(linesCount * IndexLine.GetSizeInShortInts());
         using (var istream = ib.GetIndexStreamLine())
         {
-          foreach (var polyline in wires)
-          {
-            int segmentCount = polyline.SegmentCount;
-            for (int s = 0; s < segmentCount; ++s)
-            {
-              var line = polyline.SegmentAt(s);
-              vstream.AddVertex(new VertexPosition(line.From.ToHost()));
-              vstream.AddVertex(new VertexPosition(line.To.ToHost()));
-              istream.AddLine(new IndexLine(vi++, vi++));
-            }
-          }
+          for (int vi = 0; vi < linesCount; vi++)
+            istream.AddLine(new IndexLine(vi, vi + 1));
         }
-
-        vb.Unmap();
         ib.Unmap();
+      }
+      else
+      {
+        vertexFormatBits = 0;
+        vb = null; vertexCount = 0;
+        ib = null;
       }
 
       return linesCount;
     }
-
-    protected static int ToPointsBuffer(Rhino.Geometry.Point[] points, out VertexBuffer vb, out IndexBuffer ib)
+    protected static int ToPointsBuffer
+    (
+      Rhino.Geometry.Point point,
+      out VertexFormatBits vertexFormatBits,
+      out VertexBuffer vb, out int vertexCount,
+      out IndexBuffer ib
+    )
     {
       int pointsCount = 0;
-      vb = null;
-      ib = null;
 
-      if (points?.Length > 0)
+      if (point.Location.IsValid)
       {
-        pointsCount = points.Length;
+        pointsCount = 1;
 
+        vertexFormatBits = VertexFormatBits.Position;
         vb = new VertexBuffer(pointsCount * VertexPosition.GetSizeInFloats());
         vb.Map(pointsCount * VertexPosition.GetSizeInFloats());
 
-        ib = new IndexBuffer(pointsCount);
+        ib = new IndexBuffer(pointsCount * IndexPoint.GetSizeInShortInts());
         ib.Map(pointsCount);
 
         int vi = 0;
         using (var vstream = vb.GetVertexStreamPosition())
         using (var istream = ib.GetIndexStreamPoint())
         {
-          foreach (var point in points)
-          {
-            vstream.AddVertex(new VertexPosition(point.Location.ToHost()));
-            istream.AddPoint(new IndexPoint(vi++));
-          }
+          vstream.AddVertex(new VertexPosition(point.Location.ToHost()));
+          istream.AddPoint(new IndexPoint(vi++));
         }
 
         vb.Unmap();
         ib.Unmap();
       }
+      else
+      {
+        vertexFormatBits = 0;
+        vb = null;
+        ib = null;
+      }
 
+      vertexCount = pointsCount;
+      return pointsCount;
+    }
+
+    protected static int ToPointsBuffer
+    (
+      Rhino.Geometry.PointCloud pointCloud,
+      Primitive.Part part,
+      out VertexFormatBits vertexFormatBits,
+      out VertexBuffer vb, out int vertexCount,
+      out IndexBuffer ib
+    )
+    {
+      int pointsCount = part.VertexCount;
+      int normalCount = pointCloud.ContainsNormals ? pointsCount : 0;
+      int colorsCount = pointCloud.ContainsColors  ? pointsCount : 0;
+
+      bool hasPoints  = pointsCount > 0;
+      bool hasNormals = normalCount == pointsCount;
+      bool hasColors  = colorsCount == pointsCount;
+
+      if (hasPoints)
+      {
+        int vi = 0;
+        ib = new IndexBuffer(pointsCount);
+        ib.Map(pointsCount * IndexPoint.GetSizeInShortInts());
+
+        if (hasNormals)
+        {
+          if(hasColors)
+          {
+            vertexFormatBits = VertexFormatBits.PositionNormalColored;
+            vb = new VertexBuffer(pointsCount * VertexPositionNormalColored.GetSizeInFloats());
+            vb.Map(pointsCount * VertexPositionNormalColored.GetSizeInFloats());
+
+            using (var vstream = vb.GetVertexStreamPositionNormalColored())
+            using (var istream = ib.GetIndexStreamPoint())
+            {
+              for(int p = part.StartVertexIndex; p < part.EndVertexIndex; ++p)
+              {
+                var point = pointCloud[p];
+                var c = new ColorWithTransparency(point.Color.R, point.Color.G, point.Color.B, 255u - point.Color.A);
+                vstream.AddVertex(new VertexPositionNormalColored(point.Location.ToHost(), point.Normal.ToHost(), c));
+                istream.AddPoint(new IndexPoint(vi++));
+              }
+            }
+
+            vb.Unmap();
+          }
+          else
+          {
+            vertexFormatBits = VertexFormatBits.PositionNormal;
+            vb = new VertexBuffer(pointsCount * VertexPositionNormal.GetSizeInFloats());
+            vb.Map(pointsCount * VertexPositionNormal.GetSizeInFloats());
+
+            using (var vstream = vb.GetVertexStreamPositionNormal())
+            using (var istream = ib.GetIndexStreamPoint())
+            {
+              for (int p = part.StartVertexIndex; p < part.EndVertexIndex; ++p)
+              {
+                var point = pointCloud[p];
+                vstream.AddVertex(new VertexPositionNormal(point.Location.ToHost(), point.Normal.ToHost()));
+                istream.AddPoint(new IndexPoint(vi++));
+              }
+            }
+
+            vb.Unmap();
+          }
+        }
+        else
+        {
+          if (hasColors)
+          {
+            vertexFormatBits = VertexFormatBits.PositionColored;
+            vb = new VertexBuffer(pointsCount * VertexPositionColored.GetSizeInFloats());
+            vb.Map(pointsCount * VertexPositionColored.GetSizeInFloats());
+
+            using (var vstream = vb.GetVertexStreamPositionColored())
+            using (var istream = ib.GetIndexStreamPoint())
+            {
+              for (int p = part.StartVertexIndex; p < part.EndVertexIndex; ++p)
+              {
+                var point = pointCloud[p];
+                var c = new ColorWithTransparency(point.Color.R, point.Color.G, point.Color.B, 255u - point.Color.A);
+                vstream.AddVertex(new VertexPositionColored(point.Location.ToHost(), c));
+                istream.AddPoint(new IndexPoint(vi++));
+              }
+            }
+
+            vb.Unmap();
+          }
+          else
+          {
+            vertexFormatBits = VertexFormatBits.Position;
+            vb = new VertexBuffer(pointsCount * VertexPosition.GetSizeInFloats());
+            vb.Map(pointsCount * VertexPosition.GetSizeInFloats());
+
+            using (var vstream = vb.GetVertexStreamPosition())
+            using (var istream = ib.GetIndexStreamPoint())
+            {
+              for (int p = part.StartVertexIndex; p < part.EndVertexIndex; ++p)
+              {
+                var point = pointCloud[p];
+                vstream.AddVertex(new VertexPosition(point.Location.ToHost()));
+                istream.AddPoint(new IndexPoint(vi++));
+              }
+            }
+
+            vb.Unmap();
+          }
+        }
+
+        ib.Unmap();
+      }
+      else
+      {
+        vertexFormatBits = 0;
+        vb = null;
+        ib = null;
+      }
+
+      vertexCount = pointsCount;
       return pointsCount;
     }
 
@@ -754,11 +933,49 @@ namespace RhinoInside.Revit
 
       protected EffectInstance effectInstance;
       protected Rhino.Geometry.GeometryBase geometry;
+      public struct Part
+      {
+        public readonly int StartVertexIndex;
+        public readonly int EndVertexIndex;
+        public readonly int StartFaceIndex;
+        public readonly int EndFaceIndex;
+
+        public int VertexCount => EndVertexIndex - StartVertexIndex;
+        public int FaceCount   => EndFaceIndex - StartFaceIndex;
+
+        public Part(int startVertexIndex, int endVertexIndex, int startFaceIndex, int endFaceIndex)
+        {
+          StartVertexIndex = startVertexIndex;
+          EndVertexIndex   = endVertexIndex;
+          StartFaceIndex   = startFaceIndex;
+          EndFaceIndex     = endFaceIndex;
+        }
+
+        public Part(int startVertexIndex, int endVertexIndex) : this(startVertexIndex, endVertexIndex, 0, -1) { }
+
+        public static implicit operator Part(Rhino.Geometry.PointCloud pc)
+        {
+          return new Part(0, pc.Count);
+        }
+        public static implicit operator Part(Rhino.Geometry.Mesh m)
+        {
+          return new Part(0, m.Vertices.Count, 0, m.Faces.Count);
+        }
+        public static implicit operator Part(Rhino.Geometry.MeshPart p)
+        {
+          return new Part(p.StartVertexIndex, p.EndVertexIndex, p.StartFaceIndex, p.EndFaceIndex);
+        }
+      }
+      protected Part part;
+
       public Rhino.Geometry.BoundingBox ClippingBox => geometry.GetBoundingBox(false);
 
-      public Primitive(Rhino.Geometry.Point p) { geometry = p; }
-      public Primitive(Rhino.Geometry.Curve c) { geometry = c; }
-      public Primitive(Rhino.Geometry.Mesh  m) { geometry = m; }
+      public Primitive(Rhino.Geometry.Point p)               { geometry = p; }
+      public Primitive(Rhino.Geometry.PointCloud pc)         { geometry = pc; part = pc; }
+      public Primitive(Rhino.Geometry.PointCloud pc, Part p) { geometry = pc; part = p; }
+      public Primitive(Rhino.Geometry.Curve c)               { geometry = c; }
+      public Primitive(Rhino.Geometry.Mesh m)                { geometry = m; part = m; }
+      public Primitive(Rhino.Geometry.Mesh m, Part p)        { geometry = m; part = p; }
 
       void IDisposable.Dispose()
       {
@@ -767,10 +984,9 @@ namespace RhinoInside.Revit
         triangleBuffer?.Dispose(); triangleBuffer = null; triangleCount = 0;
         vertexFormat?.Dispose();   vertexFormat = null;
         vertexBuffer?.Dispose();   vertexBuffer = null; vertexCount = 0;
-        geometry?.Dispose();           geometry = null;
       }
 
-      public virtual EffectInstance EffectInstance(DisplayStyle displayStyle)
+      public virtual EffectInstance EffectInstance(DisplayStyle displayStyle, bool IsShadingPass)
       {
         if (effectInstance == null)
           effectInstance = new EffectInstance(vertexFormatBits);
@@ -782,35 +998,28 @@ namespace RhinoInside.Revit
       {
         if (geometry is Rhino.Geometry.Mesh mesh)
         {
-          vertexBuffer?.Dispose();
-          vertexBuffer = ToVertexBuffer(mesh, out vertexFormatBits);
-          vertexCount = mesh.Vertices.Count;
+          vertexBuffer = ToVertexBuffer(mesh, part, out vertexFormatBits);
+          vertexCount = part.VertexCount;
 
-          triangleBuffer?.Dispose();
-          triangleBuffer = ToTrianglesBuffer(mesh, out triangleCount);
-
-          linesBuffer?.Dispose();
-          linesBuffer = ToEdgeBuffer(mesh, out linesCount);
+          triangleBuffer = ToTrianglesBuffer(mesh, part, out triangleCount);
+          linesBuffer = ToEdgeBuffer(mesh, part, out linesCount);
         }
         else if (geometry is Rhino.Geometry.Curve curve)
         {
-          var polyline = curve.ToPolyline(Revit.VertexTolerance * 10.0, Revit.AngleTolerance, Revit.ShortCurveTolerance, 0.0);
-          linesCount = ToLinesBuffer(new Rhino.Geometry.Polyline[] { polyline.ToPolyline() }, out vertexBuffer, out linesBuffer);
-          vertexFormatBits = VertexFormatBits.Position;
-          vertexCount = linesCount * 2;
+          using (var polyline = curve.ToPolyline(Revit.VertexTolerance * Revit.ModelUnits, Revit.AngleTolerance, Revit.ShortCurveTolerance * Revit.ModelUnits, 0.0))
+            linesCount = ToPolylineBuffer(polyline.ToPolyline(), out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
         }
         else if (geometry is Rhino.Geometry.Point point)
         {
-          linesCount = -ToPointsBuffer(new Rhino.Geometry.Point[] { point }, out vertexBuffer, out linesBuffer);
-          vertexFormatBits = VertexFormatBits.Position;
-          vertexCount = -linesCount;
+          linesCount = -ToPointsBuffer(point, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+        }
+        else if (geometry is Rhino.Geometry.PointCloud pointCloud)
+        {
+          linesCount = -ToPointsBuffer(pointCloud, part, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
         }
 
-        vertexFormat?.Dispose();
         vertexFormat = new VertexFormat(vertexFormatBits);
-
-        effectInstance?.Dispose();
-        geometry?.Dispose(); geometry = null;
+        geometry = null;
       }
 
       public virtual void Draw(DisplayStyle displayStyle)
@@ -818,60 +1027,76 @@ namespace RhinoInside.Revit
         if (geometry != null)
           Regen();
 
-        var ei = EffectInstance(displayStyle);
-
-        bool wires = displayStyle == DisplayStyle.Wireframe ||
-                     displayStyle == DisplayStyle.HLR ||
-                     displayStyle == DisplayStyle.ShadingWithEdges ||
-                     displayStyle == DisplayStyle.FlatColors ||
-                     displayStyle == DisplayStyle.RealisticWithEdges;
-
-        if (triangleCount > 0)
+        if (DrawContext.IsTransparentPass())
         {
-          DrawContext.FlushBuffer
-          (
-            vertexBuffer, vertexCount,
-            triangleBuffer, triangleCount * 3,
-            vertexFormat, ei,
-            PrimitiveType.TriangleList,
-            0, triangleCount
-          );
-        }
-
-        if (wires && linesCount != 0)
-        {
-          ei.SetTransparency(0.0);
-
-          if (triangleBuffer != null)
+          if (vertexCount > 0)
           {
-            ei.SetDiffuseColor(System.Drawing.Color.Black.ToHost());
-            ei.SetEmissiveColor(System.Drawing.Color.Black.ToHost());
-          }
+            var ei = EffectInstance(displayStyle, true);
 
-          if (linesCount > 0)
-          {
-            DrawContext.FlushBuffer
-            (
-              vertexBuffer, vertexCount,
-              linesBuffer, linesCount * 2,
-              vertexFormat, ei,
-              PrimitiveType.LineList,
-              0, linesCount
-            );
-          }
-          else
-          {
-            DrawContext.FlushBuffer
-            (
-              vertexBuffer, vertexCount,
-              linesBuffer, Math.Abs(linesCount),
-              vertexFormat, ei,
-              PrimitiveType.PointList,
-              0, Math.Abs(linesCount)
-            );
+            if (triangleCount > 0)
+            {
+              DrawContext.FlushBuffer
+              (
+                vertexBuffer, vertexCount,
+                triangleBuffer, triangleCount * 3,
+                vertexFormat, ei,
+                PrimitiveType.TriangleList,
+                0, triangleCount
+              );
+            }
+            else if (linesBuffer != null)
+            {
+              DrawContext.FlushBuffer
+              (
+                vertexBuffer, vertexCount,
+                linesBuffer, vertexCount,
+                vertexFormat, ei,
+                PrimitiveType.PointList,
+                0, vertexCount
+              );
+            }
           }
         }
+        else
+        {
+          if (linesCount != 0)
+          {
+            if (triangleBuffer != null)
+            {
+              bool edges = displayStyle == DisplayStyle.Wireframe ||
+                           displayStyle == DisplayStyle.HLR ||
+                           displayStyle == DisplayStyle.ShadingWithEdges ||
+                           displayStyle == DisplayStyle.FlatColors ||
+                           displayStyle == DisplayStyle.RealisticWithEdges;
 
+              if (!edges)
+                return;
+            }
+
+            if (linesCount > 0)
+            {
+              DrawContext.FlushBuffer
+              (
+                vertexBuffer, vertexCount,
+                linesBuffer, linesCount * 2,
+                vertexFormat, EffectInstance(displayStyle, false),
+                PrimitiveType.LineList,
+                0, linesCount
+              );
+            }
+            else if(triangleCount == 0)
+            {
+              DrawContext.FlushBuffer
+              (
+                vertexBuffer, vertexCount,
+                linesBuffer, vertexCount,
+                vertexFormat, EffectInstance(displayStyle, false),
+                PrimitiveType.PointList,
+                0, vertexCount
+              );
+            }
+          }
+        }
       }
     }
     #endregion
