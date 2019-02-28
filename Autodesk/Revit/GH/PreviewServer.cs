@@ -164,11 +164,13 @@ namespace RhinoInside.Revit.GH
             {
               case Rhino.Geometry.Point3d point:    primitives.Add(new ParamPrimitive(attributes, new Rhino.Geometry.Point(point))); break;
               case Rhino.Geometry.Line line:        primitives.Add(new ParamPrimitive(attributes, new Rhino.Geometry.LineCurve(line))); break;
+              case Rhino.Geometry.Rectangle3d rect: primitives.Add(new ParamPrimitive(attributes, rect.ToNurbsCurve())); break;
               case Rhino.Geometry.Arc arc:          primitives.Add(new ParamPrimitive(attributes, new Rhino.Geometry.ArcCurve(arc))); break;
               case Rhino.Geometry.Circle circle:    primitives.Add(new ParamPrimitive(attributes, new Rhino.Geometry.ArcCurve(circle))); break;
               case Rhino.Geometry.Ellipse ellipse:  primitives.Add(new ParamPrimitive(attributes, ellipse.ToNurbsCurve())); break;
               case Rhino.Geometry.Curve curve:      primitives.Add(new ParamPrimitive(attributes, curve)); break;
               case Rhino.Geometry.Mesh mesh:        primitives.Add(new ParamPrimitive(attributes, mesh)); break;
+              case Rhino.Geometry.Box box:          primitives.Add(new ParamPrimitive(attributes, Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1))); break;
               case Rhino.Geometry.Brep brep:
               {
                 var previewMesh = new Rhino.Geometry.Mesh();
