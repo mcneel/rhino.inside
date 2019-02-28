@@ -114,6 +114,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DirectContext3DServer.cs" />
     <Compile Include="GH\Category\Category.cs" />
     <Compile Include="GH\Document\Categories.cs" />
     <Compile Include="GH\Document\Elements.cs" />
