@@ -496,6 +496,50 @@ namespace RhinoInside.Revit
       }
     }
 
+    public const int VertexThreshold = ushort.MaxValue + 1;
+
+    static IndexBuffer indexPointsBuffer;
+    static IndexBuffer IndexPointsBuffer(int pointsCount)
+    {
+      Debug.Assert(pointsCount <= VertexThreshold);
+
+      if (indexPointsBuffer == null)
+      {
+        indexPointsBuffer = new IndexBuffer(VertexThreshold * IndexPoint.GetSizeInShortInts());
+        indexPointsBuffer.Map(VertexThreshold * IndexPoint.GetSizeInShortInts());
+        using (var istream = indexPointsBuffer.GetIndexStreamPoint())
+        {
+          for (int vi = 0; vi < VertexThreshold; ++vi)
+            istream.AddPoint(new IndexPoint(vi));
+        }
+        indexPointsBuffer.Unmap();
+      }
+
+      Debug.Assert(indexPointsBuffer.IsValid());
+      return indexPointsBuffer;
+    }
+
+    static IndexBuffer indexLinesBuffer;
+    static IndexBuffer IndexLinesBuffer(int pointsCount)
+    {
+      Debug.Assert(pointsCount <= VertexThreshold);
+
+      if (indexLinesBuffer == null)
+      {
+        indexLinesBuffer = new IndexBuffer(VertexThreshold * IndexLine.GetSizeInShortInts());
+        indexLinesBuffer.Map(VertexThreshold * IndexLine.GetSizeInShortInts());
+        using (var istream = indexLinesBuffer.GetIndexStreamLine())
+        {
+          for (int vi = 0; vi < VertexThreshold - 1; ++vi)
+            istream.AddLine(new IndexLine(vi, vi + 1));
+        }
+        indexLinesBuffer.Unmap();
+      }
+
+      Debug.Assert(indexLinesBuffer.IsValid());
+      return indexLinesBuffer;
+    }
+
     protected static VertexBuffer ToVertexBuffer
     (
       Rhino.Geometry.Mesh mesh,
@@ -663,35 +707,47 @@ namespace RhinoInside.Revit
       out int linesCount
     )
     {
-      if (part.FaceCount != mesh.Faces.Count)
+      if (part.VertexCount != mesh.Vertices.Count)
       {
-        linesCount = part.VertexCount;
-        if (linesCount > 0)
+        if (part.VertexCount > 0)
         {
-          var ib = new IndexBuffer(linesCount * IndexPoint.GetSizeInShortInts());
-          ib.Map(linesCount * IndexPoint.GetSizeInShortInts());
-          using (var istream = ib.GetIndexStreamPoint())
-          {
-            for (int vi = 0; vi < linesCount; ++vi)
-              istream.AddPoint(new IndexPoint(vi));
-          }
-
-          linesCount = -linesCount;
-          ib.Unmap();
-          return ib;
+          linesCount = -part.VertexCount;
+          return IndexPointsBuffer(part.VertexCount);
         }
+
+        linesCount = 0;
       }
       else
       {
-        var vertices = mesh.TopologyVertices;
         var edgeIndices = new List<IndexPair>();
+        if (mesh.Ngons.Count > 0)
         {
+          foreach (var ngon in mesh.Ngons)
+          {
+            var boundary = ngon.BoundaryVertexIndexList();
+            if ((boundary?.Length ?? 0) > 1)
+            {
+              for (int b = 0; b < boundary.Length - 1; ++b)
+                edgeIndices.Add(new IndexPair((int) boundary[b], (int) boundary[b + 1]));
+
+              edgeIndices.Add(new IndexPair((int) boundary[boundary.Length - 1], (int) boundary[0]));
+            }
+          }
+        }
+        else
+        {
+          var vertices = mesh.TopologyVertices;
           var edges = mesh.TopologyEdges;
           var edgeCount = edges.Count;
           for (int e = 0; e < edgeCount; ++e)
           {
             if (edges.IsEdgeUnwelded(e) || edges.GetConnectedFaces(e).Length < 2)
-              edgeIndices.Add(edges.GetTopologyVertices(e));
+            {
+              var pair = edges.GetTopologyVertices(e);
+              pair.I = vertices.MeshVertexIndices(pair.I)[0];
+              pair.J = vertices.MeshVertexIndices(pair.J)[0];
+              edgeIndices.Add(pair);
+            }
           }
         }
 
@@ -704,10 +760,9 @@ namespace RhinoInside.Revit
           {
             foreach (var edge in edgeIndices)
             {
-              var vi = vertices.MeshVertexIndices(edge.I);
-              var vj = vertices.MeshVertexIndices(edge.J);
-
-              istream.AddLine(new IndexLine(vi[0], vj[0]));
+              Debug.Assert(0 <= edge.I && edge.I < part.VertexCount);
+              Debug.Assert(0 <= edge.J && edge.J < part.VertexCount);
+              istream.AddLine(new IndexLine(edge.I, edge.J));
             }
           }
           ib.Unmap();
@@ -744,14 +799,7 @@ namespace RhinoInside.Revit
         }
         vb.Unmap();
 
-        ib = new IndexBuffer(linesCount * IndexLine.GetSizeInShortInts());
-        ib.Map(linesCount * IndexLine.GetSizeInShortInts());
-        using (var istream = ib.GetIndexStreamLine())
-        {
-          for (int vi = 0; vi < linesCount; vi++)
-            istream.AddLine(new IndexLine(vi, vi + 1));
-        }
-        ib.Unmap();
+        ib = IndexLinesBuffer(vertexCount);
       }
       else
       {
@@ -762,6 +810,7 @@ namespace RhinoInside.Revit
 
       return linesCount;
     }
+
     protected static int ToPointsBuffer
     (
       Rhino.Geometry.Point point,
@@ -775,33 +824,26 @@ namespace RhinoInside.Revit
       if (point.Location.IsValid)
       {
         pointsCount = 1;
+        vertexCount = 1;
 
         vertexFormatBits = VertexFormatBits.Position;
         vb = new VertexBuffer(pointsCount * VertexPosition.GetSizeInFloats());
         vb.Map(pointsCount * VertexPosition.GetSizeInFloats());
-
-        ib = new IndexBuffer(pointsCount * IndexPoint.GetSizeInShortInts());
-        ib.Map(pointsCount);
-
-        int vi = 0;
         using (var vstream = vb.GetVertexStreamPosition())
-        using (var istream = ib.GetIndexStreamPoint())
         {
           vstream.AddVertex(new VertexPosition(point.Location.ToHost()));
-          istream.AddPoint(new IndexPoint(vi++));
         }
-
         vb.Unmap();
-        ib.Unmap();
+
+        ib = IndexPointsBuffer(pointsCount);
       }
       else
       {
         vertexFormatBits = 0;
-        vb = null;
+        vb = null; vertexCount = 0;
         ib = null;
       }
 
-      vertexCount = pointsCount;
       return pointsCount;
     }
 
@@ -824,10 +866,6 @@ namespace RhinoInside.Revit
 
       if (hasPoints)
       {
-        int vi = 0;
-        ib = new IndexBuffer(pointsCount);
-        ib.Map(pointsCount * IndexPoint.GetSizeInShortInts());
-
         if (hasNormals)
         {
           if(hasColors)
@@ -837,14 +875,12 @@ namespace RhinoInside.Revit
             vb.Map(pointsCount * VertexPositionNormalColored.GetSizeInFloats());
 
             using (var vstream = vb.GetVertexStreamPositionNormalColored())
-            using (var istream = ib.GetIndexStreamPoint())
             {
               for(int p = part.StartVertexIndex; p < part.EndVertexIndex; ++p)
               {
                 var point = pointCloud[p];
                 var c = new ColorWithTransparency(point.Color.R, point.Color.G, point.Color.B, 255u - point.Color.A);
                 vstream.AddVertex(new VertexPositionNormalColored(point.Location.ToHost(), point.Normal.ToHost(), c));
-                istream.AddPoint(new IndexPoint(vi++));
               }
             }
 
@@ -857,13 +893,11 @@ namespace RhinoInside.Revit
             vb.Map(pointsCount * VertexPositionNormal.GetSizeInFloats());
 
             using (var vstream = vb.GetVertexStreamPositionNormal())
-            using (var istream = ib.GetIndexStreamPoint())
             {
               for (int p = part.StartVertexIndex; p < part.EndVertexIndex; ++p)
               {
                 var point = pointCloud[p];
                 vstream.AddVertex(new VertexPositionNormal(point.Location.ToHost(), point.Normal.ToHost()));
-                istream.AddPoint(new IndexPoint(vi++));
               }
             }
 
@@ -879,14 +913,12 @@ namespace RhinoInside.Revit
             vb.Map(pointsCount * VertexPositionColored.GetSizeInFloats());
 
             using (var vstream = vb.GetVertexStreamPositionColored())
-            using (var istream = ib.GetIndexStreamPoint())
             {
               for (int p = part.StartVertexIndex; p < part.EndVertexIndex; ++p)
               {
                 var point = pointCloud[p];
                 var c = new ColorWithTransparency(point.Color.R, point.Color.G, point.Color.B, 255u - point.Color.A);
                 vstream.AddVertex(new VertexPositionColored(point.Location.ToHost(), c));
-                istream.AddPoint(new IndexPoint(vi++));
               }
             }
 
@@ -899,13 +931,11 @@ namespace RhinoInside.Revit
             vb.Map(pointsCount * VertexPosition.GetSizeInFloats());
 
             using (var vstream = vb.GetVertexStreamPosition())
-            using (var istream = ib.GetIndexStreamPoint())
             {
               for (int p = part.StartVertexIndex; p < part.EndVertexIndex; ++p)
               {
                 var point = pointCloud[p];
                 vstream.AddVertex(new VertexPosition(point.Location.ToHost()));
-                istream.AddPoint(new IndexPoint(vi++));
               }
             }
 
@@ -913,7 +943,7 @@ namespace RhinoInside.Revit
           }
         }
 
-        ib.Unmap();
+        ib = IndexPointsBuffer(pointsCount);
       }
       else
       {
@@ -989,6 +1019,7 @@ namespace RhinoInside.Revit
       void IDisposable.Dispose()
       {
         effectInstance?.Dispose(); effectInstance = null;
+        if(linesBuffer != indexLinesBuffer && linesBuffer != indexPointsBuffer)
         linesBuffer?.Dispose();    linesBuffer = null; linesCount = 0;
         triangleBuffer?.Dispose(); triangleBuffer = null; triangleCount = 0;
         vertexFormat?.Dispose();   vertexFormat = null;

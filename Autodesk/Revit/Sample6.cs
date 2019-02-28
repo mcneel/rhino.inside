@@ -372,7 +372,6 @@ namespace RhinoInside.Revit
     }
 
     Primitive[] primitives;
-    const int VertexThreshold = ushort.MaxValue + 1;
 
     void AddPointCloudPreviews(Rhino.Geometry.PointCloud previewCloud)
     {
