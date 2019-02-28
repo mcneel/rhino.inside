@@ -63,9 +63,13 @@ namespace RhinoInside.Revit.GH.Components
       var scriptVariable = obj.ScriptVariable();
       switch (scriptVariable)
       {
-        case Rhino.Geometry.Point3d g0: return new Rhino.Geometry.Point(g0);
-        case Rhino.Geometry.Line    g1: return new Rhino.Geometry.LineCurve(g1);
-        case Rhino.Geometry.Plane   g2: return new Rhino.Geometry.PlaneSurface(g2, new Rhino.Geometry.Interval(0.0, g2.XAxis.Length), new Rhino.Geometry.Interval(0.0, g2.YAxis.Length));
+        case Rhino.Geometry.Point3d point:    return new Rhino.Geometry.Point(point);
+        case Rhino.Geometry.Line line:        return new Rhino.Geometry.LineCurve(line);
+        case Rhino.Geometry.Rectangle3d rect: return rect.ToNurbsCurve();
+        case Rhino.Geometry.Arc arc:          return new Rhino.Geometry.ArcCurve(arc);
+        case Rhino.Geometry.Circle circle:    return new Rhino.Geometry.ArcCurve(circle);
+        case Rhino.Geometry.Ellipse ellipse:  return ellipse.ToNurbsCurve();
+        case Rhino.Geometry.Box box:          return box.ToBrep();
       }
 
       return scriptVariable as Rhino.Geometry.GeometryBase;
