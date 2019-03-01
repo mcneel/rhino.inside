@@ -208,50 +208,64 @@ namespace RhinoInside.Revit
 
       ProcessReadActions(true);
 
-      var materialsChanged = e.GetModifiedElementIds().Select((x) => document.GetElement(x)).OfType<Material>().Any();
+      var added = e.GetAddedElementIds();
+      var deleted = e.GetDeletedElementIds();
+      var modified = e.GetModifiedElementIds();
 
-      foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+      if (added.Count > 0 || deleted.Count > 0 || modified.Count > 0)
       {
-        foreach (var obj in definition.Objects)
+        var materialsChanged = modified.Select((x) => document.GetElement(x)).OfType<Material>().Any();
+
+        foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
         {
-          if (obj is GH.Parameters.Element element)
+          foreach (var obj in definition.Objects)
           {
-            if (element.SourceCount > 0)
-              continue;
-
-            if (element.Phase == GH_SolutionPhase.Blank)
-              continue;
-
-            element.ExpireSolution(false);
-          }
-          else if (obj is GH_Component component)
-          {
-            if (component is GH.Components.DocumentElements)
+            if (obj is IGH_Param param)
             {
-              component.ExpireSolution(false);
-            }
-            else foreach (var param in component.Params.Output)
-            {
-              if (param is GH.Parameters.Element outElement)
+              if (param.SourceCount > 0)
+                continue;
+
+              if (param.Phase == GH_SolutionPhase.Blank)
+                continue;
+
+              if (obj is GH.Parameters.IGH_PersistentGeometryParam persistent)
               {
-                if (materialsChanged)
-                {
-                  foreach (var goo in param.VolatileData.AllData(true))
-                  {
-                    if (goo is IGH_PreviewMeshData previewMeshData)
-                      previewMeshData.DestroyPreviewMeshes();
-                  }
-                }
-
-                foreach (var r in param.Recipients)
-                  r.ExpireSolution(false);
+                if (persistent.NeedsToBeExpired(document, added, deleted, modified))
+                  param.ExpireSolution(false);
               }
             }
-          }
-        }
+            else if (obj is GH_Component component)
+            {
+              if (component is GH.Components.DocumentElements)
+              {
+                component.ExpireSolution(false);
+              }
+              else foreach (var outParam in component.Params.Output)
+                {
+                  if (outParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
+                  {
+                    if (materialsChanged)
+                    {
+                      foreach (var goo in outParam.VolatileData.AllData(true))
+                      {
+                        if (goo is IGH_PreviewMeshData previewMeshData)
+                          previewMeshData.DestroyPreviewMeshes();
+                      }
+                    }
 
-        if (definition.Enabled)
-          definition.NewSolution(false);
+                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
+                    {
+                      foreach (var r in outParam.Recipients)
+                        r.ExpireSolution(false);
+                    }
+                  }
+                }
+            }
+          }
+
+          if (definition.Enabled)
+            definition.NewSolution(false);
+        }
       }
     }
     #endregion

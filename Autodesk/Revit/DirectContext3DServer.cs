@@ -552,15 +552,15 @@ namespace RhinoInside.Revit
 
         public static implicit operator Part(Rhino.Geometry.PointCloud pc)
         {
-          return new Part(0, pc.Count);
+          return new Part(0, pc?.Count ?? -1);
         }
         public static implicit operator Part(Rhino.Geometry.Mesh m)
         {
-          return new Part(0, m.Vertices.Count, 0, m.Faces.Count);
+          return new Part(0, m?.Vertices.Count ?? -1, 0, m?.Faces.Count ?? -1);
         }
         public static implicit operator Part(Rhino.Geometry.MeshPart p)
         {
-          return new Part(p.StartVertexIndex, p.EndVertexIndex, p.StartFaceIndex, p.EndFaceIndex);
+          return new Part(p?.StartVertexIndex ?? 0, p?.EndVertexIndex ?? -1, p?.StartFaceIndex ?? 0, p?.EndFaceIndex ?? -1);
         }
       }
       protected Part part;

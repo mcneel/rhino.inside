@@ -129,6 +129,7 @@
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
     <Compile Include="GH\PreviewServer.cs" />
     <Compile Include="GH\ID.cs" />
+    <Compile Include="GH\GeometryObject\GeometryObject.cs" />
     <Compile Include="ImageBuilder.cs" />
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Document\Levels.cs" />

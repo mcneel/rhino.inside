@@ -14,7 +14,7 @@ using System.Windows.Forms;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class Element : ID, IGH_PreviewData, IGH_PreviewMeshData
+  public class Element : ID, IGH_GeometricGoo, IGH_PreviewData, IGH_PreviewMeshData
   {
     public override string TypeName => "Revit Element";
     public override string TypeDescription => "Represents a Revit element";
@@ -50,10 +50,10 @@ namespace RhinoInside.Revit.GH.Types
 
       switch (source)
       {
-        case Autodesk.Revit.DB.Element e:    element = e; break;
+        case Autodesk.Revit.DB.Element e: element = e; break;
         case Autodesk.Revit.DB.ElementId id: element = Revit.ActiveDBDocument.GetElement(id); break;
-        case int integer:                    element = Revit.ActiveDBDocument.GetElement(new ElementId(integer)); break;
-        case string uniqueId:                element = Revit.ActiveDBDocument.GetElement(uniqueId); break;
+        case int integer: element = Revit.ActiveDBDocument.GetElement(new ElementId(integer)); break;
+        case string uniqueId: element = Revit.ActiveDBDocument.GetElement(uniqueId); break;
       }
       if (ScriptVariableType.IsInstanceOfType(element))
       {
@@ -315,7 +315,7 @@ namespace RhinoInside.Revit.GH.Types
     Preview GeometryPreview
     {
       get { return geometryPreview ?? (geometryPreview = Preview.OrderNew(this)); }
-      set { if (geometryPreview != value) { ((IDisposable)geometryPreview)?.Dispose(); geometryPreview = value; } }
+      set { if (geometryPreview != value) { ((IDisposable) geometryPreview)?.Dispose(); geometryPreview = value; } }
     }
 
     public Rhino.Display.DisplayMaterial[] TryGetPreviewMaterials()
@@ -346,6 +346,31 @@ namespace RhinoInside.Revit.GH.Types
     {
       return GeometryPreview.wires;
     }
+    #endregion
+
+    #region IGH_GeometricGoo
+    public Reference Reference { get { var element = (Autodesk.Revit.DB.Element) this; return element != null ? new Reference(element) : null; } }
+    public bool LoadGeometry() => LoadGeometry(Revit.ActiveDBDocument);
+    public bool LoadGeometry(Rhino.RhinoDoc doc) => LoadGeometry(Revit.ActiveDBDocument);
+    public bool LoadGeometry(Document doc)
+    {
+      Value = ElementId.InvalidElementId;
+
+      try { Value = Revit.ActiveDBDocument.GetElement(UniqueID)?.Id ?? ElementId.InvalidElementId; }
+      catch (ArgumentException) { }
+
+      return IsValid;
+    }
+    public Grasshopper.Kernel.Types.IGH_GeometricGoo DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
+    public void ClearCaches()
+    {
+      if (IsReferencedGeometry)
+        Value = null;
+    }
+    public Rhino.Geometry.BoundingBox Boundingbox => ClippingBox;
+    public Rhino.Geometry.BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform) => ClippingBox;
+    Grasshopper.Kernel.Types.IGH_GeometricGoo Grasshopper.Kernel.Types.IGH_GeometricGoo.Transform(Rhino.Geometry.Transform xform) => null;
+    Grasshopper.Kernel.Types.IGH_GeometricGoo Grasshopper.Kernel.Types.IGH_GeometricGoo.Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
     #endregion
 
     #region IGH_PreviewData
@@ -652,62 +677,14 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Element : GH_Param<Types.Element> /*GH_PersistentParam<Types.Element>*/, IGH_PreviewObject
+  public class Element : GH_PersistentGeometryParam<Types.Element>
   {
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("E");
 
-    public Element() : base("Element", "Element", "Represents a Revit document element.", "Revit", "Element", GH_ParamAccess.item) { }
+    public Element() : base("Element", "Element", "Represents a Revit document element.", "Revit", "Element") { }
 
-    #region UI methods
-    bool mainWindowVisible = false;
-    bool mainWindowEnabled = false;
-    protected /*override*/ void PrepareForPrompt()
-    {
-      var mainWindowExtents = Revit.ActiveUIApplication.MainWindowExtents;
-      var mainWindowRectangle = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
-      mainWindowRectangle.Inflate(-64, -64);
-
-      // Grasshopper Window
-      {
-        Grasshopper.Instances.DocumentEditor.Enabled = false;
-        if (Grasshopper.Instances.DocumentEditor.DesktopBounds.IntersectsWith(mainWindowRectangle))
-          Grasshopper.Instances.DocumentEditor.Hide();
-      }
-
-      // Rhino Window
-      {
-        var rhinoWindowBounds = Rhino.UI.RhinoEtoApp.MainWindow.Bounds;
-        var rhinoWindowRectangle = new System.Drawing.Rectangle(rhinoWindowBounds.Left, rhinoWindowBounds.Top, rhinoWindowBounds.Width, rhinoWindowBounds.Height);
-
-        mainWindowEnabled = Rhino.UI.RhinoEtoApp.MainWindow.Enabled;
-        mainWindowVisible = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
-        Rhino.UI.RhinoEtoApp.MainWindow.Enabled = false;
-        if (rhinoWindowRectangle.IntersectsWith(mainWindowRectangle))
-          Rhino.UI.RhinoEtoApp.MainWindow.Visible = false;
-      }
-    }
-
-    protected /*override*/ void RecoverFromPrompt()
-    {
-      // Rhino Window
-      {
-        Rhino.UI.RhinoEtoApp.MainWindow.Visible = mainWindowVisible;
-        Rhino.UI.RhinoEtoApp.MainWindow.Enabled = mainWindowEnabled;
-        mainWindowVisible = false;
-        mainWindowEnabled = false;
-      }
-
-      // Grasshopper Window
-      {
-        Grasshopper.Instances.DocumentEditor.Show();
-        Grasshopper.Instances.DocumentEditor.Enabled = true;
-      }
-
-      Revit.RefreshActiveView();
-    }
-
-    protected /*override*/ GH_GetterResult Prompt_Singular(out Types.Element element)
+    protected override GH_GetterResult Prompt_Singular(ref Types.Element element)
     {
       element = null;
 
@@ -717,15 +694,12 @@ namespace RhinoInside.Revit.GH.Parameters
         if (reference != null)
           element = Types.Element.Make(reference.ElementId);
       }
-      catch (Autodesk.Revit.Exceptions.OperationCanceledException)
-      {
-        return GH_GetterResult.cancel;
-      }
+      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
 
       return GH_GetterResult.success;
     }
 
-    protected /*override*/ GH_GetterResult Prompt_Plural(out List<Types.Element> elements)
+    protected override GH_GetterResult Prompt_Plural(ref List<Types.Element> elements)
     {
       elements = null;
 
@@ -742,88 +716,10 @@ namespace RhinoInside.Revit.GH.Parameters
           if (references != null)
             elements = references.Select((x) => Types.Element.Make(x.ElementId)).ToList();
         }
-        catch (Autodesk.Revit.Exceptions.OperationCanceledException)
-        {
-          return GH_GetterResult.cancel;
-        }
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
       }
       return GH_GetterResult.success;
     }
-
-    private void Menu_PromptSingular(object sender, EventArgs e)
-    {
-      try
-      {
-        PrepareForPrompt();
-
-        if (Prompt_Singular(out var element) == GH_GetterResult.success)
-        {
-          selection = new List<Types.Element>() { element };
-          ExpireSolution(true);
-        }
-      }
-      finally
-      {
-        RecoverFromPrompt();
-      }
-    }
-
-    private void Menu_PromptPlural(object sender, EventArgs e)
-    {
-      try
-      {
-        PrepareForPrompt();
-
-        if (Prompt_Plural(out var elements) == GH_GetterResult.success)
-        {
-          selection = elements;
-          ExpireSolution(true);
-        }
-      }
-      finally
-      {
-        RecoverFromPrompt();
-      }
-    }
-
-    private void Menu_ClearValues(object sender, EventArgs e)
-    {
-      selection = null;
-      ExpireSolution(true);
-    }
-
-    public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
-    {
-      base.AppendAdditionalMenuItems(menu);
-      if (Kind == GH_ParamKind.output)
-        return;
-
-      Menu_AppendItem(menu, string.Format("Set one {0}", TypeName), Menu_PromptSingular, SourceCount == 0, false);
-      Menu_AppendItem(menu, string.Format("Set Multiple {0}", TypeName), Menu_PromptPlural, SourceCount == 0, false);
-      Menu_AppendSeparator(menu);
-      Menu_AppendItem(menu, "Clear values", Menu_ClearValues, SourceCount == 0, false);
-      Menu_AppendSeparator(menu);
-    }
-
-    List<Types.Element> selection;
-    protected sealed override void CollectVolatileData_Custom()
-    {
-      if (selection != null && selection.Count > 0)
-      {
-        ClearData();
-
-        AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), selection.Select((x) => x.Duplicate()).ToList());
-      }
-    }
-    #endregion
-
-    #region IGH_PreviewObject
-    bool IGH_PreviewObject.Hidden { get; set; }
-    bool IGH_PreviewObject.IsPreviewCapable => !VolatileData.IsEmpty;
-    Rhino.Geometry.BoundingBox IGH_PreviewObject.ClippingBox        => Preview_ComputeClippingBox();
-    void IGH_PreviewObject.DrawViewportMeshes(IGH_PreviewArgs args) => Preview_DrawMeshes(args);
-    void IGH_PreviewObject.DrawViewportWires(IGH_PreviewArgs args)  => Preview_DrawWires(args);
-    #endregion
   }
 }
 
