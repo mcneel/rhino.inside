@@ -50,11 +50,12 @@ namespace RhinoInside.Revit.GH.Types
 
       switch (source)
       {
-        case Autodesk.Revit.DB.Element e: element = e; break;
+        case Autodesk.Revit.DB.Element e:    element = e; break;
         case Autodesk.Revit.DB.ElementId id: element = Revit.ActiveDBDocument.GetElement(id); break;
-        case int integer: element = Revit.ActiveDBDocument.GetElement(new ElementId(integer)); break;
-        case string uniqueId: element = Revit.ActiveDBDocument.GetElement(uniqueId); break;
+        case int integer:                    element = Revit.ActiveDBDocument.GetElement(new ElementId(integer)); break;
+        case string uniqueId:                element = Revit.ActiveDBDocument.GetElement(uniqueId); break;
       }
+
       if (ScriptVariableType.IsInstanceOfType(element))
       {
         Value = element.Id;
@@ -277,7 +278,7 @@ namespace RhinoInside.Revit.GH.Types
           Revit.EnqueueReadAction((doc, cancel) => BuildPreviews(doc, cancel, previews));
       }
 
-      public Preview(Element element)
+      Preview(Element element)
       {
         elementId = element;
         clippingBox = element.ClippingBox;
@@ -679,6 +680,7 @@ namespace RhinoInside.Revit.GH.Parameters
 {
   public class Element : GH_PersistentGeometryParam<Types.Element>
   {
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("E");
 
@@ -856,7 +858,11 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       base.RegisterInputParams(manager);
-      manager[manager.AddIntegerParameter("DetailLevel", "LOD", ObjectType.Name + " LOD [1, 3]", GH_ParamAccess.item)].Optional = true;
+      var detail = manager[manager.AddIntegerParameter("DetailLevel", "LOD", ObjectType.Name + " LOD [1, 3]", GH_ParamAccess.item)] as Grasshopper.Kernel.Parameters.Param_Integer;
+      detail.Optional = true;
+      detail.AddNamedValue("Coarse", 1);
+      detail.AddNamedValue("Medium", 2);
+      detail.AddNamedValue("Fine",   3);
       manager[manager.AddNumberParameter("Quality", "Q", ObjectType.Name + " meshes quality [0.0, 1.0]", GH_ParamAccess.item)].Optional = true;
     }
 
