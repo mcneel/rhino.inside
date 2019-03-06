@@ -53,7 +53,7 @@ namespace RhinoInside.Revit.GH.Types
           Value = item;
         }
       }
-      catch(ArgumentException) { Reference = null; }
+      catch (Autodesk.Revit.Exceptions.ArgumentException) { }
 
       return IsValid;
     }
@@ -129,15 +129,19 @@ namespace RhinoInside.Revit.GH.Types
     {
       Value = null;
 
-      var reference = Autodesk.Revit.DB.Reference.ParseFromStableRepresentation(doc, UniqueID);
-      var element = doc.GetElement(reference);
-      var geometry = element?.GetGeometryObjectFromReference(reference);
-      if (geometry is Autodesk.Revit.DB.Edge edge)
+      try
       {
-        var curve = edge.AsCurve();
-        var points = new XYZ[] { curve.GetEndPoint(0), curve.GetEndPoint(1) };
-        Value = Autodesk.Revit.DB.Point.Create(points[VertexIndex]);
+        var reference = Autodesk.Revit.DB.Reference.ParseFromStableRepresentation(doc, UniqueID);
+        var element = doc.GetElement(reference);
+        var geometry = element?.GetGeometryObjectFromReference(reference);
+        if (geometry is Autodesk.Revit.DB.Edge edge)
+        {
+          var curve = edge.AsCurve();
+          var points = new XYZ[] { curve.GetEndPoint(0), curve.GetEndPoint(1) };
+          Value = Autodesk.Revit.DB.Point.Create(points[VertexIndex]);
+        }
       }
+      catch (Autodesk.Revit.Exceptions.ArgumentException) { }
 
       return IsValid;
     }
