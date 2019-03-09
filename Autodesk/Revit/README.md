@@ -93,3 +93,8 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 1. Open the ribbon tab called _Add-Ins_.
 2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 1_.
 3. You should have an sphere in the Revil model.
+
+
+### quick test01
+1, create branch
+2, pull request
