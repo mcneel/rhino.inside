@@ -388,7 +388,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public Vertex() : base("Vertex", "Vertex", "Represents a Revit vertex.", "Revit", "Geometry") { }
     public override Guid ComponentGuid => new Guid("BC1B160A-DC04-4139-AB7D-1AECBDE7FF88");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("V");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("VTX");
 
     #region UI methods
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Vertex> value)
@@ -444,7 +444,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public Edge() : base("Edge", "Edge", "Represents a Revit edge.", "Revit", "Geometry") { }
     public override Guid ComponentGuid => new Guid("B79FD0FD-63AE-4776-A0A7-6392A3A58B0D");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("E");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("EDGE");
 
     #region UI methods
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Edge> value)
@@ -483,7 +483,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public Face() : base("Face", "Face", "Represents a Revit face.", "Revit", "Geometry") { }
     public override Guid ComponentGuid => new Guid("759700ED-BC79-4986-A6AB-84921A7C9293");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("F");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("FACE");
 
     #region UI methods
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Face> value)
