@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Diagnostics;
 
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Special;
 
 using Autodesk.Revit.DB;
 
@@ -45,6 +46,56 @@ namespace RhinoInside.Revit.GH.Components
       }
 
       DA.SetDataList("Levels", levels);
+    }
+  }
+
+  public class DocumentLevelsPicker : GH_ValueList
+  {
+    public override Guid ComponentGuid => new Guid("BD6A74F3-8C46-4506-87D9-B34BD96747DA");
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("L*");
+
+    public DocumentLevelsPicker()
+    {
+      Category = "Revit";
+      SubCategory = "Input";
+      Name = "Document.LevelsPicker";
+      MutableNickName = false;
+      Description = "Provide a Level picker";
+
+      ListMode = GH_ValueListMode.CheckList;
+    }
+
+    void RefreshList()
+    {
+      var selectedItems = new List<string>();
+      {
+        foreach (var item in ListItems)
+          if (item.Selected)
+            selectedItems.Add(item.Expression);
+      }
+
+      ListItems.Clear();
+
+      if (Revit.ActiveDBDocument != null)
+      {
+        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+        {
+          foreach (var level in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderByDescending((x) => x.Elevation))
+          {
+            var item = new GH_ValueListItem(level.Name, level.Id.IntegerValue.ToString());
+            item.Selected = selectedItems.Contains(item.Expression);
+            ListItems.Add(item);
+          }
+        }
+      }
+    }
+
+    protected override void CollectVolatileData_Custom()
+    {
+      NickName = "Level";
+      RefreshList();
+      base.CollectVolatileData_Custom();
     }
   }
 }

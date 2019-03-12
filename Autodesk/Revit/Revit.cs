@@ -206,10 +206,10 @@ namespace RhinoInside.Revit
       if (!document.Equals(ActiveDBDocument))
         return;
 
-      ProcessReadActions(true);
+      CancelReadActions();
 
-      var added = e.GetAddedElementIds();
-      var deleted = e.GetDeletedElementIds();
+      var added    = e.GetAddedElementIds();
+      var deleted  = e.GetDeletedElementIds();
       var modified = e.GetModifiedElementIds();
 
       if (added.Count > 0 || deleted.Count > 0 || modified.Count > 0)
@@ -234,32 +234,31 @@ namespace RhinoInside.Revit
                   param.ExpireSolution(false);
               }
             }
-            else if (obj is GH_Component component)
+            else if (obj is IGH_Component component)
             {
               if (component is GH.Components.DocumentElements)
               {
                 component.ExpireSolution(false);
               }
               else foreach (var outParam in component.Params.Output)
+              {
+                if (outParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
                 {
-                  if (outParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
+                  if (persistent.NeedsToBeExpired(document, added, deleted, modified))
                   {
-                    if (materialsChanged)
+                    foreach (var r in outParam.Recipients)
+                      r.ExpireSolution(false);
+                  }
+                  else if (materialsChanged)
+                  {
+                    foreach (var goo in outParam.VolatileData.AllData(true))
                     {
-                      foreach (var goo in outParam.VolatileData.AllData(true))
-                      {
-                        if (goo is IGH_PreviewMeshData previewMeshData)
-                          previewMeshData.DestroyPreviewMeshes();
-                      }
-                    }
-
-                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                    {
-                      foreach (var r in outParam.Recipients)
-                        r.ExpireSolution(false);
+                      if (goo is IGH_PreviewMeshData previewMeshData)
+                        previewMeshData.DestroyPreviewMeshes();
                     }
                   }
                 }
+              }
             }
           }
 
@@ -406,14 +405,15 @@ namespace RhinoInside.Revit
       }
     }
 
-    private static Queue<Action<Document, bool>> docReadActions = new Queue<Action<Document, bool>>();
+    static Queue<Action<Document, bool>> docReadActions = new Queue<Action<Document, bool>>();
     public static void EnqueueReadAction(Action<Document, bool> action)
     {
       lock (docReadActions)
         docReadActions.Enqueue(action);
     }
 
-    bool ProcessReadActions(bool cancel = false)
+    public static void CancelReadActions() => ProcessReadActions(true);
+    static bool ProcessReadActions(bool cancel = false)
     {
       lock (docReadActions)
       {
@@ -456,5 +456,80 @@ namespace RhinoInside.Revit
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
     public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
     #endregion
+  }
+
+  public static class Operator
+  {
+    enum CompareMethod
+    {
+      Nothing,
+      Equals,
+      StartsWith, // >
+      EndsWith,   // <
+      Contains,   // ?
+      Wildcard,   // :
+      Regex,      // ;
+    }
+
+    static CompareMethod CompareMethodFromPattern(ref string pattern, ref bool not)
+    {
+      if (string.IsNullOrEmpty(pattern))
+        return CompareMethod.Nothing;
+
+      switch (pattern[0])
+      {
+        case '~': not = !not; pattern = pattern.Substring(1); return CompareMethodFromPattern(ref pattern, ref not);
+        case '>':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.StartsWith;
+        case '<':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.EndsWith;
+        case '?':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Contains;
+        case ':':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Wildcard;
+        case ';':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Regex;
+        default: return CompareMethod.Equals;
+      }
+    }
+
+    static CompareMethod _CompareMethodFromPattern(ref string pattern, ref bool not)
+    {
+      if (string.IsNullOrEmpty(pattern))
+        return CompareMethod.Nothing;
+
+      var method = CompareMethod.Equals;
+      switch (pattern[0])
+      {
+        case '~': not = !not; pattern = pattern.Substring(1); return _CompareMethodFromPattern(ref pattern, ref not);
+        case '>': method = CompareMethod.StartsWith; break;
+        case '<': method = CompareMethod.EndsWith; break;
+        case '?': method = CompareMethod.Contains; break;
+        case ':': method = CompareMethod.Wildcard; break;
+        case ';': method = CompareMethod.Regex; break;
+        default: return CompareMethod.Equals;
+      }
+
+      if (pattern.Length == 1)
+        return CompareMethod.Nothing;
+
+      pattern = pattern.Substring(1);
+      return method;
+    }
+
+    public static bool IsSymbolNameLike(this string source, string pattern)
+    {
+      if (pattern.Length == 0)
+        return false;
+
+      bool not = false;
+      switch (CompareMethodFromPattern(ref pattern, ref not))
+      {
+        case CompareMethod.Nothing:     return not ^ false;
+        case CompareMethod.Equals:      return not ^ string.Equals(source, pattern, StringComparison.OrdinalIgnoreCase);
+        case CompareMethod.StartsWith:  return not ^ source.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
+        case CompareMethod.EndsWith:    return not ^ source.EndsWith(pattern, StringComparison.OrdinalIgnoreCase);
+        case CompareMethod.Contains:    return not ^ (source.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0);
+        case CompareMethod.Wildcard:    return not ^ Microsoft.VisualBasic.CompilerServices.LikeOperator.LikeString(source, pattern, Microsoft.VisualBasic.CompareMethod.Text);
+        case CompareMethod.Regex:       var regex = new System.Text.RegularExpressions.Regex(pattern); return not ^ regex.IsMatch(source);
+      }
+
+      return false;
+    }
   }
 }
