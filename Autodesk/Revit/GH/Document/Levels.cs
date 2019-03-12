@@ -61,7 +61,7 @@ namespace RhinoInside.Revit.GH.Components
       SubCategory = "Input";
       Name = "Document.LevelsPicker";
       MutableNickName = false;
-      Description = "Provide a Level picker";
+      Description = "Provides a Level picker";
 
       ListMode = GH_ValueListMode.CheckList;
     }

@@ -100,7 +100,7 @@ namespace RhinoInside.Revit.GH.Components
       SubCategory = "Category";
       Name = "CategoryTypes";
       NickName = "CategoryTypes";
-      Description = "Provide a picker of a CategoryType";
+      Description = "Provides a picker of a CategoryType";
 
       ListItems.Clear();
       ListItems.Add(new GH_ValueListItem("Model",      ((int) Autodesk.Revit.DB.CategoryType.Model).ToString()));

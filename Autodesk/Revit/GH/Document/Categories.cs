@@ -79,7 +79,7 @@ namespace RhinoInside.Revit.GH.Components
       SubCategory = "Input";
       Name = "Document.CategoriesPicker";
       MutableNickName = false;
-      Description = "Provide a Category picker";
+      Description = "Provides a Category picker";
 
       ListMode = GH_ValueListMode.DropDown;
     }

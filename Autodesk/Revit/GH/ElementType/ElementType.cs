@@ -63,7 +63,7 @@ namespace RhinoInside.Revit.GH.Components
       Category = "Revit";
       SubCategory = "Input";
       Name = "ElementType.ByName";
-      Description = "Provide an Element type picker";
+      Description = "Provides an Element type picker";
 
       ListMode = GH_ValueListMode.DropDown;
       ListItems.Clear();
@@ -72,7 +72,7 @@ namespace RhinoInside.Revit.GH.Components
     public override void AddedToDocument(GH_Document document)
     {
       if(NickName == Name)
-        NickName = "'ElementType name here…";
+        NickName = "'Family name here…";
 
       base.AddedToDocument(document);
     }
@@ -344,6 +344,28 @@ namespace RhinoInside.Revit.GH.Components
     protected override void CollectVolatileData_Custom()
     {
       NickName = NickName.Trim();
+    }
+
+    protected override string HtmlHelp_Source()
+    {
+      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this);
+      nTopic.Title = Name;
+      nTopic.Description =
+      @"<p>This component is a special interface object that allows for quick picking a Revit ElementType object.</p>" +
+      @"<p>Double click on it and use the name input box to enter a family name, alternativelly you can enter a name patter. " +
+      @"If a pattern is used, this param list will be filled up with all the element types that match it.<p>" +
+      @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:<p>" +
+      @"<dl>" +
+      @"<dt><b>></b></dt><dd>Starts with</dd>" +
+      @"<dt><b><</b></dt><dd>Ends with</dd>" +
+      @"<dt><b>?</b></dt><dd>Contains, same as a regular search</dd>" +
+      @"<dt><b>:</b></dt><dd>Wildcards, see Microsoft.VisualBasic " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/like-operator#pattern-options\">LikeOperator</a></dd>" +
+      @"<dt><b>;</b></dt><dd>Regular expresion, see " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference\">here</a> as reference</dd>" +
+      @"</dl>";
+      nTopic.ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside";
+      nTopic.AddRemark(@"You can also connect a list of categories, families or types at left as an input and this component will be filled up with all types that belong to those objects.");
+
+      return nTopic.HtmlFormat();
     }
   }
 }

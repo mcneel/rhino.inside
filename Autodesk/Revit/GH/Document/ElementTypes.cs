@@ -111,7 +111,7 @@ namespace RhinoInside.Revit.GH.Components
       SubCategory = "Input";
       Name = "Document.FamiliesPicker";
       MutableNickName = false;
-      Description = "Provide a Family picker";
+      Description = "Provides a Family picker";
 
       ListMode = GH_ValueListMode.DropDown;
     }
