@@ -24,22 +24,25 @@ namespace RhinoInside.Revit.GH.Types
     public override sealed bool CastFrom(object source)
     {
       Autodesk.Revit.DB.Category category = null;
+      if (source is IGH_Goo goo)
+        source = goo.ScriptVariable();
+
       switch (source)
       {
         case Autodesk.Revit.DB.Category c:   category = c; break;
         case Autodesk.Revit.DB.ElementId id: category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, id); break;
-        case GH_Integer integer:             category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, new ElementId(integer.Value)); break;
-        case GH_String uniqueId:
+        case int integer:                    category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, new ElementId(integer)); break;
+        case string uniqueId:
           try
           {
-            var id = new ElementId((BuiltInCategory) Enum.Parse(typeof(BuiltInCategory), uniqueId.Value, false));
+            var id = new ElementId((BuiltInCategory) Enum.Parse(typeof(BuiltInCategory), uniqueId, false));
             category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, id);
           }
           catch (ArgumentException) { }
           break;
       }
 
-      if (category != null)
+      if (ScriptVariableType.IsInstanceOfType(category))
       {
         Value = category.Id;
         UniqueID = Enum.GetName(typeof(BuiltInCategory), Value.IntegerValue) ?? string.Empty;
