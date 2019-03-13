@@ -30,7 +30,8 @@ namespace RhinoInside.Revit.GH.Components
       type.AddNamedValue("Model", 1);
       type.AddNamedValue("Annotation", 2);
       type.AddNamedValue("Analytical", 4);
-      manager[manager.AddBooleanParameter("HasMaterialQuantities", "M", "Has Material Quantities", GH_ParamAccess.item, true)].Optional = true;
+      manager[manager.AddBooleanParameter("AllowsParameters", "A", "Allows bound parameters", GH_ParamAccess.item, true)].Optional = true;
+      manager[manager.AddBooleanParameter("HasMaterialQuantities", "M", "Has material quantities", GH_ParamAccess.item)].Optional = true;
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -47,8 +48,11 @@ namespace RhinoInside.Revit.GH.Components
         categoryType = (Autodesk.Revit.DB.CategoryType) categoryValue;
       }
 
+      bool AllowsParameters = false;
+      bool nofilterParams = (!DA.GetData("AllowsParameters", ref AllowsParameters) && Params.Input[1].Sources.Count == 0);
+
       bool HasMaterialQuantities = false;
-      bool nofilter = (!DA.GetData("HasMaterialQuantities", ref HasMaterialQuantities) && Params.Input[1].Sources.Count == 0);
+      bool nofilterMaterials = (!DA.GetData("HasMaterialQuantities", ref HasMaterialQuantities) && Params.Input[2].Sources.Count == 0);
 
       var list = new List<Category>();
 
@@ -57,7 +61,10 @@ namespace RhinoInside.Revit.GH.Components
         if (categoryType != Autodesk.Revit.DB.CategoryType.Invalid && category.CategoryType != categoryType)
           continue;
 
-        if (!nofilter && HasMaterialQuantities != category.HasMaterialQuantities)
+        if (!nofilterParams && AllowsParameters != category.AllowsBoundParameters)
+          continue;
+
+        if (!nofilterMaterials && HasMaterialQuantities != category.HasMaterialQuantities)
           continue;
 
         list.Add(category);

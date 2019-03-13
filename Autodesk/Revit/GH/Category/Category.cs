@@ -19,7 +19,18 @@ namespace RhinoInside.Revit.GH.Types
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Category);
     public static explicit operator Autodesk.Revit.DB.Category(Category self) => Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, self);
 
+    static public Category Make(Autodesk.Revit.DB.Category category)
+    {
+      if (category == null)
+        return null;
+
+      return new Category(category);
+    }
+
+    static public Category Make(ElementId Id) => Make(Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, Id));
+
     public Category() : base() { }
+    protected Category(Autodesk.Revit.DB.Category category) : base(category.Id, Enum.GetName(typeof(BuiltInCategory), category.Id.IntegerValue) ?? string.Empty) { }
 
     public override sealed bool CastFrom(object source)
     {
@@ -126,9 +137,11 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddTextParameter("Name", "N", "Category name", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
       manager.AddColourParameter("LineColor", "LC", "Category line color", GH_ParamAccess.item);
       manager.AddParameter(new Parameters.Element(), "Material", "M", "Category material", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
+      manager.AddBooleanParameter("AllowsParameters", "A", "Category allows bound parameters", GH_ParamAccess.item);
+      manager.AddBooleanParameter("HasMaterialQuantities", "M", "Category has material quantities", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -138,9 +151,11 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       DA.SetData("Name", category?.Name);
+      DA.SetData("Parent", category?.Parent);
       DA.SetData("LineColor", category?.LineColor.ToRhino());
       DA.SetData("Material", category?.Material);
-      DA.SetData("Parent", category?.Parent);
+      DA.SetData("AllowsParameters", category?.AllowsBoundParameters);
+      DA.SetData("HasMaterialQuantities", category?.HasMaterialQuantities);
     }
   }
 }

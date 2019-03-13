@@ -21,6 +21,16 @@ namespace RhinoInside.Revit.GH.Types
     protected virtual Type ScriptVariableType => typeof(Autodesk.Revit.DB.ElementId);
     public static implicit operator ElementId(ID self) { return self.Value; }
 
+    static public ID Make(ElementId Id)
+    {
+      if (Id == ElementId.InvalidElementId)
+        return null;
+
+      ID id = Element.Make(Id);
+
+      return id ?? Category.Make(Id);
+    }
+
     #region IGH_PersitentGoo
     public virtual Guid ReferenceID
     {
@@ -91,8 +101,10 @@ namespace RhinoInside.Revit.GH.Types
         var element = Revit.ActiveDBDocument.GetElement(Value);
         if (element != null)
         {
-          typeName = "Revit " + element.GetType().Name;
-          typeName = typeName + " \"" + element.Name + "\"";
+          typeName = "Revit " + element.GetType().Name + " \"";
+          if (element is Autodesk.Revit.DB.ElementType elementType)
+            typeName += elementType.FamilyName + ":";
+          typeName += element.Name + "\"";
         }
         else
         {
@@ -106,11 +118,11 @@ namespace RhinoInside.Revit.GH.Types
       //if (IsReferencedObject)
       //  return "Referenced " + typeName;
 
-#if DEBUG
-      return string.Format("{0} (#{1})", typeName, Value.IntegerValue);
-#else
+//#if DEBUG
+//      return string.Format("{0} (#{1})", typeName, Value.IntegerValue);
+//#else
       return typeName;
-#endif
+//#endif
     }
 
     public override sealed bool Read(GH_IReader reader)

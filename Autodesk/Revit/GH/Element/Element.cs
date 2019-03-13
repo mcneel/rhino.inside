@@ -777,47 +777,6 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementParameters : ElementGetter
-  {
-    public override Guid ComponentGuid => new Guid("44515A6B-84EE-4DBD-8241-17EDBE07C5B6");
-    static readonly string PropertyName = "Parameters";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{");
-
-    public ElementParameters() : base(PropertyName) { }
-
-    protected override void RegisterOutputParams(GH_OutputParamManager manager)
-    {
-      manager.AddTextParameter("Names", "N", ObjectType.Name + " parameter names", GH_ParamAccess.list);
-      manager.AddTextParameter("Values", "V", ObjectType.Name + " parameter values", GH_ParamAccess.list);
-    }
-
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      Autodesk.Revit.DB.Element element = null;
-      if (!DA.GetData(ObjectType.Name, ref element))
-        return;
-
-      if (element == null)
-      {
-        DA.SetDataList("Names", null);
-        DA.SetDataList("Values", null);
-        return;
-      }
-
-      var paramNames = new List<string>(element.Parameters.Size);
-      var paramValues = new List<string>(element.Parameters.Size);
-
-      foreach (var param in element.Parameters.OfType<Parameter>())
-      {
-        paramNames.Add(param.Definition.Name);
-        paramValues.Add(param.AsValueString());
-      }
-
-      DA.SetDataList("Names", paramNames);
-      DA.SetDataList("Values", paramValues);
-    }
-  }
-
   public class ElementGeometry : ElementGetter
   {
     public override Guid ComponentGuid => new Guid("B7E6A82F-684F-4045-A634-A4AA9F7427A8");
@@ -908,6 +867,165 @@ namespace RhinoInside.Revit.GH.Components
       DA.SetDataList(0, meshes?.Select((x) => new GH_Mesh(x)));
       DA.SetDataList(1, materials?.Select((x) => new GH_Material(x)));
       DA.SetDataList(2, wires?.Select((x) => new GH_Curve(x)));
+    }
+  }
+
+  public class ElementParameters : ElementGetter
+  {
+    public override Guid ComponentGuid => new Guid("44515A6B-84EE-4DBD-8241-17EDBE07C5B6");
+    static readonly string PropertyName = "Parameters";
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{");
+
+    public ElementParameters() : base(PropertyName) { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      base.RegisterInputParams(manager);
+      manager[manager.AddBooleanParameter("ReadOnly", "R", "Filter params by its ReadOnly property", GH_ParamAccess.item)].Optional = true;
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddTextParameter("Names", "N", ObjectType.Name + " parameter names", GH_ParamAccess.list);
+      manager.AddTextParameter("Content", "C", ObjectType.Name + " parameter content", GH_ParamAccess.list);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Element element = null;
+      if (!DA.GetData(ObjectType.Name, ref element))
+        return;
+
+      bool readOnly = false;
+      bool noFilterReadOnly = (!DA.GetData("ReadOnly", ref readOnly) && Params.Input[1].Sources.Count == 0);
+
+      if (element == null)
+      {
+        DA.SetDataList("Names", null);
+        DA.SetDataList("Content", null);
+        return;
+      }
+
+      var paramNames = new List<string>(element.Parameters.Size);
+      var paramValues = new List<string>(element.Parameters.Size);
+
+      foreach (var param in element.Parameters.OfType<Parameter>().OrderBy((x) => x.Id.IntegerValue))
+      {
+        if (!noFilterReadOnly && readOnly != param.IsReadOnly)
+          continue;
+
+        paramNames.Add(param.Definition.Name);
+
+        string value = null;
+        if (param.HasValue)
+        {
+          value = param.AsValueString();
+          if (value == null)
+          {
+            switch (param.StorageType)
+            {
+              case StorageType.Integer: value = param.AsInteger().ToString(); break;
+              case StorageType.Double: value = param.AsDouble().ToString(); break;
+              case StorageType.String: value = param.AsString(); break;
+              case StorageType.ElementId:
+                var id = param.AsElementId();
+                var e = Revit.ActiveDBDocument.GetElement(id);
+                value = e?.Name; break;
+              default: value = null; break;
+            }
+          }
+        }
+
+        paramValues.Add(value);
+      }
+
+      DA.SetDataList("Names", paramNames);
+      DA.SetDataList("Content", paramValues);
+    }
+  }
+
+  public class ElementGetParameter : GH_Component
+  {
+    public override Guid ComponentGuid => new Guid("D86050F2-C774-49B1-9973-FB3AB188DC94");
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("GET");
+
+    public ElementGetParameter()
+    : base("Element.GetParameter", "GetParameter", "Get a parameter value of the specified Revit Element", "Revit", "Element")
+    {}
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to query", GH_ParamAccess.item);
+      manager.AddTextParameter("ParamName", "N", "Element parameter to query", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddGenericParameter("Value", "V", "Element parameter value", GH_ParamAccess.item);
+    }
+
+    double ToRhino(double value, UnitType unit)
+    {
+      switch (unit)
+      {
+        case UnitType.UT_Length: return value * (Revit.ModelUnits);
+        case UnitType.UT_Area:   return value * (Revit.ModelUnits * Revit.ModelUnits);
+        case UnitType.UT_Volume: return value * (Revit.ModelUnits * Revit.ModelUnits * Revit.ModelUnits);
+      }
+
+      return value;
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Element element = null;
+      if (!DA.GetData("Element", ref element))
+        return;
+
+      string paramName = null;
+      if (!DA.GetData("ParamName", ref paramName))
+        return;
+
+      Parameter param = null;
+      {
+        try { param = element.ParametersMap.get_Item(paramName); }
+        catch (Autodesk.Revit.Exceptions.ApplicationException) { }
+      }
+
+      {
+        if (param == null)
+        {
+          foreach (var p in element.Parameters.OfType<Parameter>())
+          {
+            if (p.Definition.Name != paramName)
+              continue;
+
+            if (element is ElementType)
+            {
+              param = p;
+              break;
+            }
+
+            continue;
+          }
+        }
+      }
+
+      object value = null;
+      if (param?.HasValue ?? false)
+      {
+        switch (param.StorageType)
+        {
+          case StorageType.Integer:   if (param.Definition.ParameterType == ParameterType.YesNo) value = (param.AsInteger() != 0); else value = param.AsInteger();   break;
+          case StorageType.Double:    value = ToRhino(param.AsDouble(), param.Definition.UnitType);    break;
+          case StorageType.String:    value = param.AsString();    break;
+          case StorageType.ElementId: value = Types.ID.Make(param.AsElementId()); break;
+          default:                    value = null;                break;
+        }
+      }
+
+      DA.SetData("Value", value);
     }
   }
 }
