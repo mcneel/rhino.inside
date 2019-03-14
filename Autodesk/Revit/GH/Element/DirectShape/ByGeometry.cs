@@ -150,25 +150,16 @@ namespace RhinoInside.Revit.GH.Components
 
       ListItems.Clear();
 
-      var categories = new List<Category>();
+      var ActiveDBDocument = Revit.ActiveDBDocument;
+      if (ActiveDBDocument == null)
+        return;
 
-      if (Revit.ActiveDBDocument != null)
+      var genericModel = Autodesk.Revit.DB.Category.GetCategory(ActiveDBDocument, BuiltInCategory.OST_GenericModel);
+
+      var directShapeCategories = ActiveDBDocument.Settings.Categories.Cast<Category>().Where((x) => DirectShape.IsValidCategoryId(x.Id, ActiveDBDocument));
+      foreach (var group in directShapeCategories.GroupBy((x) => x.CategoryType).OrderBy((x) => x.Key))
       {
-        foreach (var item in Revit.ActiveDBDocument.Settings.Categories)
-        {
-          if (item is Category category)
-          {
-            if (!DirectShape.IsValidCategoryId(category.Id, Revit.ActiveDBDocument))
-              continue;
-
-            categories.Add(category);
-          }
-        }
-
-        categories = categories.OrderBy(c => c.Name).ToList();
-
-        var genericModel = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, BuiltInCategory.OST_GenericModel);
-        foreach (var category in categories)
+        foreach (var category in group.OrderBy(x => x.Name))
         {
           ListItems.Add(new GH_ValueListItem(category.Name, category.Id.IntegerValue.ToString()));
           if (category.Id.IntegerValue == (int) BuiltInCategory.OST_GenericModel)
