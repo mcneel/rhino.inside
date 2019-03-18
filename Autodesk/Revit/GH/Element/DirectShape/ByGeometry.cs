@@ -146,7 +146,7 @@ namespace RhinoInside.Revit.GH.Components
       SubCategory = "Model";
       Name = "DirectShape.Categories";
       NickName = "Categories";
-      Description = "Provide a picker of a valid DirectShape category";
+      Description = "Provides a picker of a valid DirectShape category";
 
       ListItems.Clear();
 

@@ -19,27 +19,41 @@ namespace RhinoInside.Revit.GH.Types
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Category);
     public static explicit operator Autodesk.Revit.DB.Category(Category self) => Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, self);
 
+    static public Category Make(Autodesk.Revit.DB.Category category)
+    {
+      if (category == null)
+        return null;
+
+      return new Category(category);
+    }
+
+    static public Category Make(ElementId Id) => Make(Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, Id));
+
     public Category() : base() { }
+    protected Category(Autodesk.Revit.DB.Category category) : base(category.Id, Enum.GetName(typeof(BuiltInCategory), category.Id.IntegerValue) ?? string.Empty) { }
 
     public override sealed bool CastFrom(object source)
     {
       Autodesk.Revit.DB.Category category = null;
+      if (source is IGH_Goo goo)
+        source = goo.ScriptVariable();
+
       switch (source)
       {
         case Autodesk.Revit.DB.Category c:   category = c; break;
         case Autodesk.Revit.DB.ElementId id: category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, id); break;
-        case GH_Integer integer:             category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, new ElementId(integer.Value)); break;
-        case GH_String uniqueId:
+        case int integer:                    category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, new ElementId(integer)); break;
+        case string uniqueId:
           try
           {
-            var id = new ElementId((BuiltInCategory) Enum.Parse(typeof(BuiltInCategory), uniqueId.Value, false));
+            var id = new ElementId((BuiltInCategory) Enum.Parse(typeof(BuiltInCategory), uniqueId, false));
             category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, id);
           }
           catch (ArgumentException) { }
           break;
       }
 
-      if (category != null)
+      if (ScriptVariableType.IsInstanceOfType(category))
       {
         Value = category.Id;
         UniqueID = Enum.GetName(typeof(BuiltInCategory), Value.IntegerValue) ?? string.Empty;
@@ -97,7 +111,7 @@ namespace RhinoInside.Revit.GH.Components
       SubCategory = "Category";
       Name = "CategoryTypes";
       NickName = "CategoryTypes";
-      Description = "Provide a picker of a CategoryType";
+      Description = "Provides a picker of a CategoryType";
 
       ListItems.Clear();
       ListItems.Add(new GH_ValueListItem("Model",      ((int) Autodesk.Revit.DB.CategoryType.Model).ToString()));
@@ -123,9 +137,11 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddTextParameter("Name", "N", "Category name", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
       manager.AddColourParameter("LineColor", "LC", "Category line color", GH_ParamAccess.item);
       manager.AddParameter(new Parameters.Element(), "Material", "M", "Category material", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
+      manager.AddBooleanParameter("AllowsParameters", "A", "Category allows bound parameters", GH_ParamAccess.item);
+      manager.AddBooleanParameter("HasMaterialQuantities", "M", "Category has material quantities", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -135,9 +151,11 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       DA.SetData("Name", category?.Name);
+      DA.SetData("Parent", category?.Parent);
       DA.SetData("LineColor", category?.LineColor.ToRhino());
       DA.SetData("Material", category?.Material);
-      DA.SetData("Parent", category?.Parent);
+      DA.SetData("AllowsParameters", category?.AllowsBoundParameters);
+      DA.SetData("HasMaterialQuantities", category?.HasMaterialQuantities);
     }
   }
 }

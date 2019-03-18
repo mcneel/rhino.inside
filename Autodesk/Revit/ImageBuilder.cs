@@ -56,8 +56,7 @@ namespace RhinoInside
       g.SmoothingMode = SmoothingMode.AntiAlias;
       g.InterpolationMode = InterpolationMode.HighQualityBicubic;
       g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-      float offset = 0.25f * (float) tag.Length;
-      var rect = new RectangleF(0.0f + offset, 1.0f + offset, width, height);
+      var rect = new RectangleF(0.5f, 1.0f, width, height);
 
       var format = new StringFormat()
       {
@@ -65,7 +64,7 @@ namespace RhinoInside
         LineAlignment = StringAlignment.Center
       };
 
-      g.FillEllipse(Brushes.Black, new Rectangle(1, 1, width - 1, height - 1));
+      g.FillEllipse(Brushes.Black, 1.0f, 1.0f, width - 2.0f, height - 2.0f);
       float emSize = ((float) width - ((float) tag.Length * 4.0f));
 
       if (width == 24)
@@ -79,6 +78,8 @@ namespace RhinoInside
         }
       }
 
+      // Avoid using ClearType rendering on icons that the user can zoom in like icons on Grashopper components.
+      g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
       g.DrawString(tag, new System.Drawing.Font("Calibri", emSize, GraphicsUnit.Pixel), Brushes.White, rect, format);
       return bitmap;
     }
