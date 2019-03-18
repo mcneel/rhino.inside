@@ -1,3 +1,4 @@
+#if REVIT_2018
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
@@ -268,3 +269,16 @@ namespace RhinoInside.Revit.GH
     #endregion
   }
 }
+#else
+namespace RhinoInside.Revit.GH
+{
+  public class PreviewServer
+  {
+    public void Register() { }
+
+    public void Unregister() { }
+
+    public static bool PreviewChanged() => false;
+  }
+}
+#endif

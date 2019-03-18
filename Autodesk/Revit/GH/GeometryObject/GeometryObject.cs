@@ -83,8 +83,9 @@ namespace RhinoInside.Revit.GH.Types
             case ElementReferenceType.REFERENCE_TYPE_INSTANCE: typeName += "instance"; break;
             case ElementReferenceType.REFERENCE_TYPE_CUT_EDGE: typeName += "trim"; break;
             case ElementReferenceType.REFERENCE_TYPE_MESH: typeName += "mesh"; break;
+#if REVIT_2018
             case ElementReferenceType.REFERENCE_TYPE_SUBELEMENT: typeName += "subelement"; break;
-
+#endif
           }
 
           typeName += " at Revit " + element.GetType().Name + " \"" + element.Name + "\"";
