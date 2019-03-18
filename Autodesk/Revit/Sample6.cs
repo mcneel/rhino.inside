@@ -10,8 +10,9 @@ using Color = System.Drawing.Color;
 
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.DirectContext3D;
 using Autodesk.Revit.UI;
+#if REVIT_2018
+using Autodesk.Revit.DB.DirectContext3D;
 
 using Rhino;
 using Rhino.Geometry;
@@ -506,3 +507,35 @@ namespace RhinoInside.Revit
     #endregion
   }
 }
+#else
+namespace RhinoInside.Revit
+{
+  [Transaction(TransactionMode.Manual)]
+  [Regeneration(RegenerationOption.Manual)]
+  public class Sample6 : IExternalCommand
+  {
+    public static void CreateUI(RibbonPanel ribbonPanel)
+    {
+      // Create a push button to trigger a command add it to the ribbon panel.
+      var thisAssembly = Assembly.GetExecutingAssembly();
+
+      var buttonData = new PushButtonData
+      (
+        "cmdRhinoInsideSample6", "Sample 6",
+        thisAssembly.Location,
+        MethodBase.GetCurrentMethod().DeclaringType.FullName
+      );
+
+      if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
+      {
+        pushButton.ToolTip = "Toggle Rhino model preview visibility (Revit 2018 or above)";
+        pushButton.LargeImage = ImageBuilder.BuildImage("6");
+        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-6"));
+        pushButton.Enabled = false;
+      }
+    }
+
+    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => Result.Failed;
+  }
+}
+#endif
