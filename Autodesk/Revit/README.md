@@ -50,7 +50,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 4. You should have a preview of Rhino geometry into the Revit view.
 
 ### Sample 5
-![](doc/Sample5.png)
+![](doc/Sample5.gif)
 
 1. Open the ribbon tab called Add-Ins.
 2. Click on the button you will found on the _Rhinoceros_ panel called _Grasshopper_.
