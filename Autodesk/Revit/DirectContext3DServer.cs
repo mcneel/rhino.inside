@@ -1,10 +1,11 @@
+#if REVIT_2018
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 
 using Autodesk.Revit.DB;
-using Autodesk.Revit.DB.DirectContext3D;
 using Autodesk.Revit.DB.ExternalService;
+using Autodesk.Revit.DB.DirectContext3D;
 
 using Rhino;
 
@@ -733,3 +734,13 @@ namespace RhinoInside.Revit
     #endregion
   }
 }
+#else
+namespace RhinoInside.Revit
+{
+  public abstract class DirectContext3DServer
+  {
+    public static bool RegenComplete() => true;
+    public static long RegenThreshold = 200;
+  }
+}
+#endif

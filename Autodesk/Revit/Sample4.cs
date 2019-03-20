@@ -45,6 +45,78 @@ namespace RhinoInside.Revit
       }
     }
 
+    IEnumerable<IGH_Goo> PromptPoint(UIDocument doc, string prompt)
+    {
+      IGH_Goo goo = null;
+      try
+      {
+        var point = doc.Selection.PickPoint(prompt).ToRhino();
+        goo = new GH_Point(point.Scale(Revit.ModelUnits));
+      }
+      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
+
+      yield return goo;
+    }
+
+    IEnumerable<IGH_Goo> PromptEdge(UIDocument doc, string prompt)
+    {
+      IGH_Goo goo = null;
+
+      try
+      {
+        var reference = doc.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Edge, prompt);
+        if (reference != null)
+        {
+          var element = doc.Document.GetElement(reference);
+          var edge = element.GetGeometryObjectFromReference(reference) as Edge;
+          var curve = edge.AsCurve().ToRhino();
+          curve.Scale(Revit.ModelUnits);
+          goo = new GH_Curve(curve);
+        }
+      }
+      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
+
+      yield return goo;
+    }
+
+    IEnumerable<IGH_Goo> PromptSurface(UIDocument doc, string prompt)
+    {
+      try
+      {
+        var reference = doc.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Face, prompt);
+        if (reference != null)
+        {
+          // TODO:
+          //var element = doc.Document.GetElement(reference);
+          //var face = element.GetGeometryObjectFromReference(reference) as Face;
+          //var surface = face.GetSurface().ToRhino();
+          //surface.Scale(Revit.ModelUnits);
+          //goo = new GH_Surface(surface);
+        }
+      }
+      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
+
+      return null;
+    }
+
+    IEnumerable<IGH_Goo> PromptBrep(UIDocument doc, string prompt)
+    {
+      try
+      {
+        var reference = doc.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element, prompt);
+        if (reference != null)
+        {
+          var element = doc.Document.GetElement(reference);
+          var options = new Options { ComputeReferences = true };
+          var geometry = element.get_Geometry(options);
+          return geometry.ToRhino().OfType<Brep>().Select((x) => new GH_Brep(x));
+        }
+      }
+      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
+
+      return null;
+    }
+
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       // Load Grasshopper
@@ -75,49 +147,118 @@ namespace RhinoInside.Revit
         if (!archive.ExtractObject(definition, "Definition"))
           return Result.Failed;
 
+        var inputs = new List<IGH_Param>();
+
+        // Collect input params
         foreach (var obj in definition.Objects)
         {
           if (!(obj is IGH_Param param))
             continue;
 
-          if (param.Sources.Count == 0 || param.Recipients.Count != 0)
+          if (param.Sources.Count != 0 || param.Recipients.Count == 0)
             continue;
 
-          try
-          {
-            param.CollectData();
-            param.ComputeData();
-          }
-          catch (Exception e)
-          {
-            Debug.Fail(e.Source, e.Message);
-            param.Phase = GH_SolutionPhase.Failed;
-          }
+          if (param.VolatileDataCount > 0)
+            continue;
 
-          if (param.Phase == GH_SolutionPhase.Failed)
-            return Result.Failed;
+          inputs.Add(param);
+        }
 
-          var output = new List<GeometryBase>();
-          var volatileData = param.VolatileData;
-          for (int p = 0; p < volatileData.PathCount; ++p)
+        // Prompt for input values
+        var values = new Dictionary<IGH_Param, IEnumerable<IGH_Goo>>();
+        foreach (var input in inputs.OrderBy((x) => x.Attributes.Pivot.Y))
+        {
+          switch (input)
           {
-            foreach (var goo in volatileData.get_Branch(p))
+            case Param_Point point:
+              var points = PromptPoint(data.Application.ActiveUIDocument, input.NickName);
+              if (points == null)
+                return Result.Cancelled;
+              values.Add(input, points);
+              break;
+            case Param_Curve curve:
+              var curves = PromptEdge(data.Application.ActiveUIDocument, input.NickName);
+              if (curves == null)
+                return Result.Cancelled;
+              values.Add(input, curves);
+              break;
+            case Param_Surface surface:
+              var surfaces = PromptSurface(data.Application.ActiveUIDocument, input.NickName);
+              if (surfaces == null)
+                return Result.Cancelled;
+              values.Add(input, surfaces);
+              break;
+            case Param_Brep brep:
+              var breps = PromptBrep(data.Application.ActiveUIDocument, input.NickName);
+              if (breps == null)
+                return Result.Cancelled;
+              values.Add(input, breps);
+              break;
+          }
+        }
+
+        Cursor.Current = Cursors.WaitCursor;
+        try
+        {
+          // Update input volatile data values
+          foreach (var value in values)
+            value.Key.AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), value.Value);
+
+          // Collect output values
+          foreach (var obj in definition.Objects)
+          {
+            if (!(obj is IGH_Param param))
+              continue;
+
+            if (param.Sources.Count == 0 || param.Recipients.Count != 0)
+              continue;
+
+            if (param.Locked)
+              continue;
+
+            try
             {
-              switch (goo)
+              param.CollectData();
+              param.ComputeData();
+            }
+            catch (Exception e)
+            {
+              Debug.Fail(e.Source, e.Message);
+              param.Phase = GH_SolutionPhase.Failed;
+            }
+
+            if (param.Phase == GH_SolutionPhase.Failed)
+              return Result.Failed;
+
+            var output = new List<GeometryBase>();
+            var volatileData = param.VolatileData;
+            if (volatileData.PathCount > 0)
+            {
+              foreach (var value in param.VolatileData.AllData(true).Select(x => x.ScriptVariable()))
               {
-                case GH_Point point: output.Add(new Rhino.Geometry.Point(point.Value)); break;
-                case GH_Curve curve: output.Add(curve.Value); break;
-                case GH_Brep brep:   output.Add(brep.Value); break;
-                case GH_Mesh mesh:   output.Add(mesh.Value); break;
+                switch (value)
+                {
+                  case Rhino.Geometry.Point3d point:          output.Add(new Rhino.Geometry.Point(point)); break;
+                  case Rhino.Geometry.GeometryBase geometry:  output.Add(geometry); break;
+                }
               }
             }
-          }
 
-          if (output.Count > 0)
-            outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.Name, output));
+            if (output.Count > 0)
+              outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.Name, output));
+          }
+        }
+        catch(Exception)
+        {
+          return Result.Failed;
+        }
+        finally
+        {
+          Cursor.Current = Cursors.Default;
         }
       }
 
+      // Bake output geometry
       if (outputs.Count > 0)
       {
         var uiApp = data.Application;
