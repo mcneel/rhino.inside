@@ -30,6 +30,7 @@ namespace RhinoInside.Revit.GH.Components
       type.AddNamedValue("Model", 1);
       type.AddNamedValue("Annotation", 2);
       type.AddNamedValue("Analytical", 4);
+      type.Optional = true;
       manager[manager.AddBooleanParameter("AllowsParameters", "A", "Allows bound parameters", GH_ParamAccess.item, true)].Optional = true;
       manager[manager.AddBooleanParameter("HasMaterialQuantities", "M", "Has material quantities", GH_ParamAccess.item)].Optional = true;
     }
@@ -54,20 +55,22 @@ namespace RhinoInside.Revit.GH.Components
       bool HasMaterialQuantities = false;
       bool nofilterMaterials = (!DA.GetData("HasMaterialQuantities", ref HasMaterialQuantities) && Params.Input[2].Sources.Count == 0);
 
-      var list = new List<Category>();
+      var categories = Revit.ActiveDBDocument.Settings.Categories.Cast<Category>();
 
-      foreach (var category in Revit.ActiveDBDocument.Settings.Categories.Cast<Category>())
+      if(categoryType != Autodesk.Revit.DB.CategoryType.Invalid)
+        categories = categories.Where((x) => x.CategoryType == categoryType);
+
+      if (!nofilterParams)
+        categories = categories.Where((x) => x.AllowsBoundParameters == AllowsParameters);
+
+      if (!nofilterMaterials)
+        categories = categories.Where((x) => x.HasMaterialQuantities == HasMaterialQuantities);
+
+      IEnumerable<Category> list = null;
+      foreach (var group in categories.GroupBy((x) => x.CategoryType).OrderBy((x) => x.Key))
       {
-        if (categoryType != Autodesk.Revit.DB.CategoryType.Invalid && category.CategoryType != categoryType)
-          continue;
-
-        if (!nofilterParams && AllowsParameters != category.AllowsBoundParameters)
-          continue;
-
-        if (!nofilterMaterials && HasMaterialQuantities != category.HasMaterialQuantities)
-          continue;
-
-        list.Add(category);
+        var orderedGroup = group.OrderBy((x) => x.Name);
+        list = list?.Concat(orderedGroup) ?? orderedGroup;
       }
 
       DA.SetDataList("Categories", list);
@@ -104,11 +107,14 @@ namespace RhinoInside.Revit.GH.Components
 
       if (Revit.ActiveDBDocument != null)
       {
-        foreach (var category in Revit.ActiveDBDocument.Settings.Categories.Cast<Category>().OrderBy((x) => x.Name))
+        foreach (var group in Revit.ActiveDBDocument.Settings.Categories.Cast<Category>().GroupBy((x) => x.CategoryType).OrderBy((x) => x.Key))
         {
-          var item = new GH_ValueListItem(category.Name, category.Id.IntegerValue.ToString());
-          item.Selected = selectedItems.Contains(item.Expression);
-          ListItems.Add(item);
+          foreach (var category in group.OrderBy((x) => x.Name))
+          {
+            var item = new GH_ValueListItem(category.Name, category.Id.IntegerValue.ToString());
+            item.Selected = selectedItems.Contains(item.Expression);
+            ListItems.Add(item);
+          }
         }
       }
     }
