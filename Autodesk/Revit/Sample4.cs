@@ -7,10 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Input;
 
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Selection;
 
 using Rhino.Geometry;
 using Rhino.PlugIns;
@@ -18,6 +20,8 @@ using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
+using Cursor = System.Windows.Forms.Cursor;
+using Cursors = System.Windows.Forms.Cursors;
 
 namespace RhinoInside.Revit
 {
@@ -45,15 +49,87 @@ namespace RhinoInside.Revit
       }
     }
 
+    const ObjectSnapTypes DefaultSnapTypes =
+      ObjectSnapTypes.Endpoints |
+      ObjectSnapTypes.Midpoints |
+      ObjectSnapTypes.Nearest |
+      ObjectSnapTypes.WorkPlaneGrid |
+      //ObjectSnapTypes.Intersections |
+      ObjectSnapTypes.Centers |
+      ObjectSnapTypes.Perpendicular |
+      ObjectSnapTypes.Tangents |
+      ObjectSnapTypes.Quadrants |
+      ObjectSnapTypes.Points;
+
+    bool PickPointOnFace(UIDocument doc, string prompt, out XYZ point, ObjectSnapTypes snapSettings = DefaultSnapTypes)
+    {
+      point = null;
+
+      if (doc.ActiveView.ViewType != ViewType.ThreeD)
+      {
+        try { point = doc.Selection.PickPoint(snapSettings, prompt + "Please pick a point on the current work plane"); }
+        catch (OperationCanceledException) { }
+      }
+      else
+      {
+        var reference = doc.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Face, prompt + "Please select a face to define a work plane");
+        if (doc.Document.GetElement(reference.ElementId) is Element element)
+        {
+          if (element.GetGeometryObjectFromReference(reference) is Face face)
+          {
+            if (Keyboard.IsKeyDown(Key.LeftCtrl))
+            {
+              point = face.Evaluate(reference.UVPoint);
+            }
+            else
+            {
+              var plane = Autodesk.Revit.DB.Plane.CreateByNormalAndOrigin(face.ComputeNormal(reference.UVPoint), face.Evaluate(reference.UVPoint));
+
+              using (var transaction = new Transaction(doc.Document))
+              {
+                transaction.Start("PickPointOnFace");
+
+                doc.ActiveView.SketchPlane = SketchPlane.Create(doc.Document, plane);
+                doc.ActiveView.ShowActiveWorkPlane();
+
+                try { point = doc.Selection.PickPoint(snapSettings, prompt + "Please pick a point on the defined work plane"); }
+                catch (OperationCanceledException) { }
+
+                transaction.RollBack();
+              }
+            }
+          }
+        }
+      }
+
+      return null != point;
+    }
+
+    IEnumerable<IGH_Goo> PromptBox(UIDocument doc, string prompt)
+    {
+      IGH_Goo goo = null;
+
+      if
+      (
+        PickPointOnFace(doc, prompt + " : First box corner - ", out var from) &&
+        PickPointOnFace(doc, prompt + " : Second box corner - ", out var to)
+      )
+      {
+        var min = new Point3d(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y), Math.Min(from.Z, to.Z));
+        var max = new Point3d(Math.Max(from.X, to.X), Math.Max(from.Y, to.Y), Math.Max(from.Z, to.Z));
+
+        goo = new GH_Box(new BoundingBox(min.Scale(Revit.ModelUnits), max.Scale(Revit.ModelUnits)));
+      }
+
+      yield return goo;
+    }
+
     IEnumerable<IGH_Goo> PromptPoint(UIDocument doc, string prompt)
     {
       IGH_Goo goo = null;
-      try
-      {
-        var point = doc.Selection.PickPoint(prompt).ToRhino();
-        goo = new GH_Point(point.Scale(Revit.ModelUnits));
-      }
-      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
+
+      if (PickPointOnFace(doc, prompt + " : ", out var point))
+        goo = new GH_Point(point.ToRhino().Scale(Revit.ModelUnits));
 
       yield return goo;
     }
@@ -64,7 +140,7 @@ namespace RhinoInside.Revit
 
       try
       {
-        var reference = doc.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Edge, prompt);
+        var reference = doc.Selection.PickObject(ObjectType.Edge, prompt);
         if (reference != null)
         {
           var element = doc.Document.GetElement(reference);
@@ -83,7 +159,7 @@ namespace RhinoInside.Revit
     {
       try
       {
-        var reference = doc.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Face, prompt);
+        var reference = doc.Selection.PickObject(ObjectType.Face, prompt);
         if (reference != null)
         {
           // TODO:
@@ -103,7 +179,7 @@ namespace RhinoInside.Revit
     {
       try
       {
-        var reference = doc.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element, prompt);
+        var reference = doc.Selection.PickObject(ObjectType.Element, prompt);
         if (reference != null)
         {
           var element = doc.Document.GetElement(reference);
@@ -126,7 +202,7 @@ namespace RhinoInside.Revit
       using (var openFileDialog = new OpenFileDialog())
       {
         openFileDialog.Filter = "Grasshopper Binary (*.gh)|*.gh|Grasshopper Xml (*.ghx)|*.ghx";
-        openFileDialog.FilterIndex = 1;
+        openFileDialog.FilterIndex = 2;
         openFileDialog.RestoreDirectory = true;
 
         switch (openFileDialog.ShowDialog())
@@ -137,6 +213,8 @@ namespace RhinoInside.Revit
         }
       }
 
+      var transactionName = string.Empty;
+
       var archive = new GH_Archive();
       if (!archive.ReadFromFile(filePath))
         return Result.Failed;
@@ -146,6 +224,8 @@ namespace RhinoInside.Revit
       {
         if (!archive.ExtractObject(definition, "Definition"))
           return Result.Failed;
+
+        transactionName = Path.GetFileNameWithoutExtension(definition.Properties.ProjectFileName);
 
         var inputs = new List<IGH_Param>();
 
@@ -161,6 +241,9 @@ namespace RhinoInside.Revit
           if (param.VolatileDataCount > 0)
             continue;
 
+          if (param.Locked)
+            continue;
+
           inputs.Add(param);
         }
 
@@ -170,6 +253,12 @@ namespace RhinoInside.Revit
         {
           switch (input)
           {
+            case Param_Box box:
+              var boxes = PromptBox(data.Application.ActiveUIDocument, input.NickName);
+              if (boxes == null)
+                return Result.Cancelled;
+              values.Add(input, boxes);
+              break;
             case Param_Point point:
               var points = PromptPoint(data.Application.ActiveUIDocument, input.NickName);
               if (points == null)
@@ -264,7 +353,7 @@ namespace RhinoInside.Revit
         var uiApp = data.Application;
         var doc = uiApp.ActiveUIDocument.Document;
 
-        using (var trans = new Transaction(doc))
+        using (var trans = new Transaction(doc, transactionName))
         {
           if (trans.Start(MethodBase.GetCurrentMethod().DeclaringType.Name) == TransactionStatus.Started)
           {
