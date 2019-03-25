@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Input;
 
@@ -20,6 +18,7 @@ using GH_IO.Serialization;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
+
 using Cursor = System.Windows.Forms.Cursor;
 using Cursors = System.Windows.Forms.Cursors;
 
@@ -202,7 +201,11 @@ namespace RhinoInside.Revit
       using (var openFileDialog = new OpenFileDialog())
       {
         openFileDialog.Filter = "Grasshopper Binary (*.gh)|*.gh|Grasshopper Xml (*.ghx)|*.ghx";
+#if DEBUG
         openFileDialog.FilterIndex = 2;
+#else
+        openFileDialog.FilterIndex = 1;
+#endif
         openFileDialog.RestoreDirectory = true;
 
         switch (openFileDialog.ShowDialog())

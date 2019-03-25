@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Drawing;
+using System.Windows.Forms;
 
-using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
 using GH_IO.Serialization;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Types;
+using Grasshopper.Kernel.Special;
+using Grasshopper.GUI;
+using Grasshopper.GUI.Canvas;
 
 using Autodesk.Revit.DB;
 
@@ -34,7 +38,7 @@ namespace RhinoInside.Revit.GH.Types
     #region IGH_PersitentGoo
     public virtual Guid ReferenceID
     {
-      get => Value == null ? Guid.Empty : new Guid(Value.IntegerValue, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+      get => Guid.Empty;
       set => throw new InvalidOperationException();
     }
     public string UniqueID { get; protected set; }
@@ -90,39 +94,12 @@ namespace RhinoInside.Revit.GH.Types
       return base.CastTo<Q>(ref target);
     }
 
-    public override sealed string ToString()
+    public override string ToString()
     {
       if (!IsValid)
         return "Null " + TypeName;
 
-      string typeName = TypeName;
-      if (Revit.ActiveDBDocument != null)
-      {
-        var element = Revit.ActiveDBDocument.GetElement(Value);
-        if (element != null)
-        {
-          typeName = "Revit " + element.GetType().Name + " \"";
-          if (element is Autodesk.Revit.DB.ElementType elementType)
-            typeName += elementType.FamilyName + ":";
-          typeName += element.Name + "\"";
-        }
-        else
-        {
-          var category = Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, Value);
-          if (category != null)
-            typeName = typeName + " \"" + category.Name + "\"";
-        }
-      }
-
-      // All elements are referenced
-      //if (IsReferencedObject)
-      //  return "Referenced " + typeName;
-
-//#if DEBUG
-//      return string.Format("{0} (#{1})", typeName, Value.IntegerValue);
-//#else
-      return typeName;
-//#endif
+      return string.Format("{0} {{1}}", TypeName, Value.IntegerValue);
     }
 
     public override sealed bool Read(GH_IReader reader)
@@ -135,6 +112,146 @@ namespace RhinoInside.Revit.GH.Types
     {
       writer.SetString("UniqueID", UniqueID);
       return true;
+    }
+  }
+}
+
+namespace RhinoInside.Revit.GH.Parameters
+{
+  public abstract class ValueListPicker : GH_ValueList, IGH_InitCodeAware
+  {
+    public override GH_ParamData DataType => GH_ParamData.remote;
+    public override GH_ParamKind Kind => GH_ParamKind.floating;
+
+    void IGH_InitCodeAware.SetInitCode(string code) => NickName = code;
+
+    public ValueListPicker()
+    {
+      Category = "Revit";
+      SubCategory = "Input";
+
+      ObjectChanged += OnObjectChanged;
+
+      ListMode = GH_ValueListMode.DropDown;
+      ListItems.Clear();
+    }
+
+    private void OnObjectChanged(IGH_DocumentObject sender, GH_ObjectChangedEventArgs e)
+    {
+      if (SourceCount == 0)
+      {
+        if (e.Type == GH_ObjectEventType.Sources)
+        {
+          //NickName = string.Empty;
+          MutableNickName = true;
+        }
+
+        if (e.Type == GH_ObjectEventType.NickName)
+          ExpireSolution(true);
+      }
+      else
+      {
+        if (e.Type == GH_ObjectEventType.Sources)
+        {
+          NickName = string.Empty;
+          MutableNickName = false;
+        }
+      }
+    }
+
+    class ValueListAttributes : GH_ValueListAttributes
+    {
+      public override bool HasInputGrip => true;
+      public override bool AllowMessageBalloon => true;
+      public ValueListAttributes(GH_ValueList owner) : base(owner) { }
+      protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
+      {
+        if (channel == GH_CanvasChannel.Wires)
+        {
+          if (Owner.SourceCount > 0)
+            RenderIncomingWires(canvas.Painter, Owner.Sources, Owner.WireDisplay);
+        }
+
+        base.Render(canvas, graphics, channel);
+      }
+      public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
+      {
+        if (Owner.MutableNickName && e.Button == MouseButtons.Left)
+        {
+          var objectMenu = new ContextMenuStrip();
+
+          Owner.AppendMenuItems(objectMenu);
+          if (objectMenu.Items.Count > 0)
+          {
+            sender.ActiveInteraction = null;
+            objectMenu.Show(sender, e.ControlLocation);
+          }
+
+          return GH_ObjectResponse.Handled;
+        }
+
+        return GH_ObjectResponse.Ignore;
+      }
+    }
+
+    public override void CreateAttributes() => m_attributes = new ValueListAttributes(this);
+
+    protected abstract void RefreshList(string FamilyName);
+
+    protected abstract void RefreshList(IEnumerable<IGH_Goo> goos);
+
+    public override void PostProcessData()
+    {
+      base.PostProcessData();
+
+      if (SourceCount == 0)
+        RefreshList(NickName);
+      else
+        RefreshList(VolatileData.AllData(true));
+
+      // Show elements sorted
+      ListItems.Sort((x, y) => string.CompareOrdinal(x.Name, y.Name));
+
+      //base.CollectVolatileData_Custom();
+      m_data.Clear();
+
+      var path = new GH_Path(0);
+      if (SelectedItems.Count == 0)
+        m_data.AppendRange(new IGH_Goo[0], path);
+      else foreach (var item in SelectedItems)
+          m_data.Append(item.Value, path);
+    }
+
+    protected override void CollectVolatileData_FromSources()
+    {
+      base.CollectVolatileData_FromSources();
+
+      NickName = string.Empty;
+    }
+
+    protected override void CollectVolatileData_Custom()
+    {
+      NickName = NickName.Trim();
+    }
+
+    protected override string HtmlHelp_Source()
+    {
+      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this);
+      nTopic.Title = Name;
+      nTopic.Description =
+      @"<p>Double click on it and use the name input box to enter a name, alternativelly you can enter a name patter. " +
+      @"If a pattern is used, this param list will be filled up with all the objects that match it.<p>" +
+      @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:<p>" +
+      @"<dl>" +
+      @"<dt><b>></b></dt><dd>Starts with</dd>" +
+      @"<dt><b><</b></dt><dd>Ends with</dd>" +
+      @"<dt><b>?</b></dt><dd>Contains, same as a regular search</dd>" +
+      @"<dt><b>:</b></dt><dd>Wildcards, see Microsoft.VisualBasic " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/like-operator#pattern-options\">LikeOperator</a></dd>" +
+      @"<dt><b>;</b></dt><dd>Regular expresion, see " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference\">here</a> as reference</dd>" +
+      @"</dl>";
+      nTopic.ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside";
+
+      return nTopic.HtmlFormat();
     }
   }
 }

@@ -1,17 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Drawing;
-using System.Windows.Forms;
 
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Special;
-using Grasshopper.GUI.Canvas;
-using Grasshopper.GUI;
 using Grasshopper.Kernel.Types;
-using Grasshopper.Kernel.Data;
 
 using Autodesk.Revit.DB;
 
@@ -22,13 +15,22 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeName => "Revit ElementType";
     public override string TypeDescription => "Represents a Revit element type";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.ElementType);
-    public static explicit operator Autodesk.Revit.DB.ElementType(ElementType self)
-    {
-      return Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.ElementType;
-    }
+    public static explicit operator Autodesk.Revit.DB.ElementType(ElementType self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.ElementType;
 
     public ElementType() { }
     public ElementType(Autodesk.Revit.DB.ElementType elementType) : base(elementType) { }
+
+    public override string ToString()
+    {
+      if (IsValid)
+      {
+        var elementType = (Autodesk.Revit.DB.ElementType) this;
+        if (elementType != null)
+          return "Revit " + elementType.GetType().Name + " \"" + elementType.FamilyName + ":" + elementType.Name + "\"";
+      }
+
+      return base.ToString();
+    }
   }
 }
 
@@ -42,100 +44,28 @@ namespace RhinoInside.Revit.GH.Parameters
 
     public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Revit", "Element", GH_ParamAccess.item) { }
   }
-}
 
-namespace RhinoInside.Revit.GH.Components
-{
-  public class ElementTypeByName : GH_ValueList, IGH_InitCodeAware
+  public class ElementTypeByName : ValueListPicker
   {
     public override Guid ComponentGuid => new Guid("D3FB53D3-9118-4F11-A32D-AECB30AA418D");
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("T*");
-    public override GH_ParamData DataType => GH_ParamData.remote;
-    public override GH_ParamKind Kind => GH_ParamKind.floating;
-
-    void IGH_InitCodeAware.SetInitCode(string code) => NickName = code;
 
     public ElementTypeByName()
     {
-      ObjectChanged += OnObjectChanged;
-
-      Category = "Revit";
-      SubCategory = "Input";
       Name = "ElementType.ByName";
       Description = "Provides an Element type picker";
-
-      ListMode = GH_ValueListMode.DropDown;
-      ListItems.Clear();
     }
 
     public override void AddedToDocument(GH_Document document)
     {
-      if(NickName == Name)
+      if (NickName == Name)
         NickName = "'Family name here…";
 
       base.AddedToDocument(document);
     }
 
-    private void OnObjectChanged(IGH_DocumentObject sender, GH_ObjectChangedEventArgs e)
-    {
-      if (SourceCount == 0)
-      {
-        if (e.Type == GH_ObjectEventType.Sources)
-        {
-          //NickName = string.Empty;
-          MutableNickName = true;
-        }
-
-        if (e.Type == GH_ObjectEventType.NickName)
-          ExpireSolution(true);
-      }
-      else
-      {
-        if (e.Type == GH_ObjectEventType.Sources)
-        {
-          NickName = string.Empty;
-          MutableNickName = false;
-        }
-      }
-    }
-
-    class ValueListAttributes : GH_ValueListAttributes
-    {
-      public override bool HasInputGrip => true;
-      public override bool AllowMessageBalloon => true;
-      public ValueListAttributes(GH_ValueList owner) : base(owner) { }
-      protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
-      {
-        if (channel == GH_CanvasChannel.Wires)
-        {
-          if (Owner.SourceCount > 0)
-            RenderIncomingWires(canvas.Painter, Owner.Sources, Owner.WireDisplay);
-        }
-
-        base.Render(canvas, graphics, channel);
-      }
-      public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
-      {
-        if (Owner.MutableNickName && e.Button == MouseButtons.Left)
-        {
-          var objectMenu = new ContextMenuStrip();
-
-          Owner.AppendMenuItems(objectMenu);
-          if (objectMenu.Items.Count > 0)
-          {
-            sender.ActiveInteraction = null;
-            objectMenu.Show(sender, e.ControlLocation);
-          }
-
-          return GH_ObjectResponse.Handled;
-        }
-
-        return GH_ObjectResponse.Ignore;
-      }
-    }
-
-    void RefreshList(string FamilyName)
+    protected override void RefreshList(string FamilyName)
     {
       var selectedItems = new List<string>();
       {
@@ -153,7 +83,7 @@ namespace RhinoInside.Revit.GH.Components
         int selectedItemsCount = 0;
         using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
         {
-          foreach (var elementType in collector.WhereElementIsElementType().Cast<ElementType>())
+          foreach (var elementType in collector.WhereElementIsElementType().Cast<Autodesk.Revit.DB.ElementType>())
           {
             if (!elementType.FamilyName.IsSymbolNameLike(FamilyName))
               continue;
@@ -194,7 +124,7 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
-    void RefreshList(IEnumerable<IGH_Goo> goos)
+    protected override void RefreshList(IEnumerable<IGH_Goo> goos)
     {
       var selectedItems = new List<string>();
       {
@@ -216,10 +146,10 @@ namespace RhinoInside.Revit.GH.Components
             var e = new Types.Element();
             if (e.CastFrom(goo))
             {
-              switch ((Element) e)
+              switch ((Autodesk.Revit.DB.Element) e)
               {
-                case Family family:
-                  foreach (var elementType in collector.WhereElementIsElementType().Cast<ElementType>())
+                case Autodesk.Revit.DB.Family family:
+                  foreach (var elementType in collector.WhereElementIsElementType().Cast<Autodesk.Revit.DB.ElementType>())
                   {
                     if (elementType.FamilyName != family.Name)
                       continue;
@@ -231,7 +161,7 @@ namespace RhinoInside.Revit.GH.Components
                     selectedItemsCount += item.Selected ? 1 : 0;
                   }
                   break;
-                case ElementType elementType:
+                case Autodesk.Revit.DB.ElementType elementType:
                 {
                   var item = new GH_ValueListItem(elementType.FamilyName + " : " + elementType.Name, elementType.Id.IntegerValue.ToString());
                   item.Selected = selectedItems.Contains(item.Expression);
@@ -240,9 +170,9 @@ namespace RhinoInside.Revit.GH.Components
                   selectedItemsCount += item.Selected ? 1 : 0;
                 }
                 break;
-                case Element element:
+                case Autodesk.Revit.DB.Element element:
                 {
-                  var type = Revit.ActiveDBDocument.GetElement(element.GetTypeId()) as ElementType;
+                  var type = Revit.ActiveDBDocument.GetElement(element.GetTypeId()) as Autodesk.Revit.DB.ElementType;
                   var item = new GH_ValueListItem(type.FamilyName + " : " + type.Name, type.Id.IntegerValue.ToString());
                   item.Selected = selectedItems.Contains(item.Expression);
                   ListItems.Add(item);
@@ -257,7 +187,7 @@ namespace RhinoInside.Revit.GH.Components
               var c = new Types.Category();
               if (c.CastFrom(goo))
               {
-                var category = (Category) c;
+                var category = (Autodesk.Revit.DB.Category) c;
 
                 if (familiesSet == null) using (var familyCollector = new FilteredElementCollector(Revit.ActiveDBDocument))
                   {
@@ -270,7 +200,7 @@ namespace RhinoInside.Revit.GH.Components
                     );
                   }
 
-                foreach (var elementType in collector.WhereElementIsElementType().Cast<ElementType>())
+                foreach (var elementType in collector.WhereElementIsElementType().Cast<Autodesk.Revit.DB.ElementType>())
                 {
                   if (elementType.Category?.Id != category.Id && !familiesSet.Contains(elementType.FamilyName))
                     continue;
@@ -305,45 +235,6 @@ namespace RhinoInside.Revit.GH.Components
             item.Selected = defaultElementTypeIds.Contains(item.Expression);
         }
       }
-    }
-
-    public override void CreateAttributes()
-    {
-      m_attributes = new ValueListAttributes(this);
-    }
-
-    public override void PostProcessData()
-    {
-      base.PostProcessData();
-
-      if(SourceCount == 0)
-        RefreshList(NickName);
-      else
-        RefreshList(VolatileData.AllData(true));
-
-      // Show elements sorted
-      ListItems.Sort((x, y) => string.CompareOrdinal(x.Name, y.Name));
-
-      //base.CollectVolatileData_Custom();
-      m_data.Clear();
-
-      var path = new GH_Path(0);
-      if(SelectedItems.Count == 0)
-        m_data.AppendRange(new IGH_Goo[0], path);
-      else foreach (var item in SelectedItems)
-        m_data.Append(item.Value, path);
-    }
-
-    protected override void CollectVolatileData_FromSources()
-    {
-      base.CollectVolatileData_FromSources();
-
-      NickName = string.Empty;
-    }
-
-    protected override void CollectVolatileData_Custom()
-    {
-      NickName = NickName.Trim();
     }
 
     protected override string HtmlHelp_Source()

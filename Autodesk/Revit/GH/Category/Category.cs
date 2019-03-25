@@ -17,7 +17,7 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeDescription => "Represents a Revit category";
     override public object ScriptVariable() => (Autodesk.Revit.DB.Category) this;
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Category);
-    public static explicit operator Autodesk.Revit.DB.Category(Category self) => Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, self);
+    public static explicit operator Autodesk.Revit.DB.Category(Category self) => Revit.ActiveDBDocument == null ? null : Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, self);
 
     static public Category Make(Autodesk.Revit.DB.Category category)
     {
@@ -27,7 +27,7 @@ namespace RhinoInside.Revit.GH.Types
       return new Category(category);
     }
 
-    static public Category Make(ElementId Id) => Make(Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, Id));
+    static public new Category Make(ElementId Id) => Make(Autodesk.Revit.DB.Category.GetCategory(Revit.ActiveDBDocument, Id));
 
     public Category() : base() { }
     protected Category(Autodesk.Revit.DB.Category category) : base(category.Id, Enum.GetName(typeof(BuiltInCategory), category.Id.IntegerValue) ?? string.Empty) { }
@@ -82,6 +82,20 @@ namespace RhinoInside.Revit.GH.Types
       }
 
       return base.CastTo<Q>(ref target);
+    }
+
+    public override sealed string ToString()
+    {
+      if (IsValid)
+      {
+        var category = (Autodesk.Revit.DB.Category) this;
+        if (category != null)
+          return "Revit " + category.GetType().Name + " \"" + category.Name + "\"";
+        else if(Enum.IsDefined(typeof(BuiltInCategory), Value.IntegerValue))
+          return "Revit BuiltIn Category \"" + ((BuiltInCategory) Value.IntegerValue).ToString() + "\"";
+      }
+
+      return base.ToString();
     }
   }
 }
