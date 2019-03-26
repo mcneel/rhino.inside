@@ -20,7 +20,7 @@ namespace RhinoInside.Revit.GH.Types
   {
     public override string TypeName => "Revit Model Object";
     public override string TypeDescription => "Represents a Revit model object";
-    public override bool IsValid => Value != ElementId.InvalidElementId;
+    public override bool IsValid => Value != null && Value != ElementId.InvalidElementId;
     public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
     protected virtual Type ScriptVariableType => typeof(Autodesk.Revit.DB.ElementId);
     public static implicit operator ElementId(ID self) { return self.Value; }
@@ -43,7 +43,7 @@ namespace RhinoInside.Revit.GH.Types
     }
     public string UniqueID { get; protected set; }
     public bool IsReferencedGeometry => UniqueID.Length > 0;
-    public bool IsGeometryLoaded => IsValid;
+    public bool IsGeometryLoaded => Value != null;
     public /*abstract*/ bool LoadElement(Document doc) => false;
     #endregion
 
@@ -99,7 +99,7 @@ namespace RhinoInside.Revit.GH.Types
       if (!IsValid)
         return "Null " + TypeName;
 
-      return string.Format("{0} {{1}}", TypeName, Value.IntegerValue);
+      return string.Format("{0} {1}", TypeName, Value.IntegerValue);
     }
 
     public override sealed bool Read(GH_IReader reader)
@@ -258,6 +258,15 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
+  public abstract class GH_Component : Grasshopper.Kernel.GH_Component
+  {
+    protected GH_Component(string name, string nickname, string description, string category, string subCategory)
+    : base(name, nickname, description, category, subCategory) { }
+
+    // Grasshopper default implementation has a bug, it checks inputs instead of outputs
+    public override bool IsBakeCapable => Params?.Output.OfType<IGH_BakeAwareObject>().Where(x => x.IsBakeCapable).Any() ?? false;
+  }
+
   public abstract class GH_TransactionalComponent : GH_Component
   {
     protected GH_TransactionalComponent(string name, string nickname, string description, string category, string subCategory)
