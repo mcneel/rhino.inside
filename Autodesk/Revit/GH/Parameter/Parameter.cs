@@ -50,7 +50,7 @@ namespace RhinoInside.Revit.GH.Types
         case Autodesk.Revit.DB.ElementId id:
           if (Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue))
           {
-            Value = new ElementId(id.IntegerValue);
+            Value = new ElementId(id.IntegerValue.ToBuiltInParameter());
             UniqueID = string.Empty;
             return true;
           }
@@ -58,7 +58,7 @@ namespace RhinoInside.Revit.GH.Types
         case int integer:
           if (Enum.IsDefined(typeof(BuiltInParameter), integer))
           {
-            Value = new ElementId(integer);
+            Value = new ElementId(integer.ToBuiltInParameter());
             UniqueID = string.Empty;
             return true;
           }
@@ -67,6 +67,38 @@ namespace RhinoInside.Revit.GH.Types
 
       return base.CastFrom(source);
     }
+
+    class Proxy : IGH_GooProxy
+    {
+      readonly ParameterElement proxyOwner;
+      public Proxy(ParameterElement owner) { proxyOwner = owner; UserString = FormatInstance(); }
+      public IGH_Goo ProxyOwner => proxyOwner;
+      public bool Valid => proxyOwner.IsValid;
+      public bool IsParsable => true;
+      public string UserString { get; set; }
+      public void Construct() { }
+      public string FormatInstance()
+      {
+        int value = proxyOwner.Value.IntegerValue;
+        if (Enum.IsDefined(typeof(Autodesk.Revit.DB.BuiltInParameter), value))
+          return value.ToBuiltInParameter().ToString();
+
+        return value.ToString();
+      }
+      public bool FromString(string str)
+      {
+        if (Enum.TryParse(str, out Autodesk.Revit.DB.BuiltInParameter builtInParameter))
+        {
+          proxyOwner.Value = new ElementId(builtInParameter);
+          return true;
+        }
+
+        return false;
+      }
+      public string MutateString(string str) => str.Trim();
+    }
+
+    public override IGH_GooProxy EmitProxy() => new Proxy(this);
 
     public override string ToString()
     {
@@ -229,17 +261,97 @@ namespace RhinoInside.Revit.GH.Types
       return "Null " + TypeName;
     }
   }
+
+  public class BuiltInParameterGroup : GH_Goo<Autodesk.Revit.DB.BuiltInParameterGroup>
+  {
+    public override string TypeName => "Revit BuiltInParameterGroup";
+    public override string TypeDescription => "Represents a Revit Parameter group";
+    protected Type ScriptVariableType => typeof(Autodesk.Revit.DB.BuiltInParameterGroup);
+    public override bool IsValid => Enum.IsDefined(typeof(Autodesk.Revit.DB.BuiltInParameterGroup), Value);
+    public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
+
+    public BuiltInParameterGroup() { Value = Autodesk.Revit.DB.BuiltInParameterGroup.INVALID; }
+
+    public override bool CastFrom(object source)
+    {
+      if (source is IGH_Goo goo)
+        source = goo.ScriptVariable();
+
+      switch(source)
+      {
+        case int integer:
+          if (Enum.IsDefined(typeof(Autodesk.Revit.DB.BuiltInParameterGroup), integer))
+          {
+            Value = (Autodesk.Revit.DB.BuiltInParameterGroup) integer;
+            return true;
+          }
+          break;
+        case Autodesk.Revit.DB.BuiltInParameterGroup builtInParameterGroup:
+          Value = builtInParameterGroup;
+          return true;
+      }
+
+      return false;
+    }
+
+    public override bool CastTo<Q>(ref Q target)
+    {
+      if (typeof(Q).IsAssignableFrom(ScriptVariableType))
+      {
+        target = (Q) (object) Value;
+        return true;
+      }
+
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Integer)))
+      {
+        target = (Q) (object) new GH_Integer((int) Value);
+        return true;
+      }
+
+      return base.CastTo<Q>(ref target);
+    }
+
+    class Proxy : IGH_GooProxy
+    {
+      readonly BuiltInParameterGroup proxyOwner;
+      public Proxy(BuiltInParameterGroup owner) { proxyOwner = owner; UserString = FormatInstance(); }
+      public IGH_Goo ProxyOwner => proxyOwner;
+      public bool Valid => proxyOwner.IsValid;
+      public bool IsParsable => true;
+      public string UserString { get; set; }
+      public void Construct() { }
+      public string FormatInstance() => proxyOwner.Value.ToString();
+      public bool FromString(string str)
+      {
+        if (Enum.TryParse(str, out Autodesk.Revit.DB.BuiltInParameterGroup builtInParameterGroup))
+        {
+          proxyOwner.Value = builtInParameterGroup;
+          return true;
+        }
+
+        return false;
+      }
+      public string MutateString(string str) => str.Trim();
+    }
+
+    public override IGH_GooProxy EmitProxy() => new Proxy(this);
+
+    public override string ToString() => LabelUtils.GetLabelFor(Value);
+  }
 }
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class ParameterElement : GH_Param<Types.ParameterElement>
+  public class ParameterElement : GH_PersistentParam<Types.ParameterElement>
   {
     public override Guid ComponentGuid => new Guid("A550F532-8C68-460B-91F3-DA0A5A0D42B5");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P");
 
-    public ParameterElement() : base("ParameterElement", "ParameterElement", "Represents a Revit parameter definition.", "Revit", "Parameter", GH_ParamAccess.item) { }
+    public ParameterElement() : base("ParameterElement", "ParameterElement", "Represents a Revit parameter definition.", "Revit", "Parameter") { }
+
+    protected override GH_GetterResult Prompt_Plural(ref List<Types.ParameterElement> values) => GH_GetterResult.cancel;
+    protected override GH_GetterResult Prompt_Singular(ref Types.ParameterElement value) => GH_GetterResult.cancel;
   }
 
   public class Parameter : GH_Param<Types.Parameter>
@@ -290,26 +402,40 @@ namespace RhinoInside.Revit.GH.Parameters
       { Description = p.Definition.UnitType == UnitType.UT_Number ? "Enumerate" : LabelUtils.GetLabelFor(p.Definition.UnitType); }
     }
   }
+
+  public class BuiltInParameterGroup : GH_PersistentParam<Types.BuiltInParameterGroup>
+  {
+    public override Guid ComponentGuid => new Guid("3D9979B4-65C8-447F-BCEA-3705249DF3B6");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("[P]");
+
+    public BuiltInParameterGroup() : base("BuiltInParameterGroup", "BuiltInParameterGroup", "Represents a Revit parameter group.", "Revit", "Parameter") { }
+
+    protected override GH_GetterResult Prompt_Plural(ref List<Types.BuiltInParameterGroup> values) => GH_GetterResult.cancel;
+    protected override GH_GetterResult Prompt_Singular(ref Types.BuiltInParameterGroup value) => GH_GetterResult.cancel;
+
+  }
+
   public class BuiltInParameterGroups : GH_ValueList
   {
     public override Guid ComponentGuid => new Guid("5D331B12-DA6C-46A7-AA13-F463E42650D1");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("G");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("BPG");
 
     public BuiltInParameterGroups()
     {
       Category = "Revit";
       SubCategory = "Parameter";
-      Name = "BuiltInParameterGroup";
-      NickName = "BuiltInParameterGroup";
+      Name = "BuiltInParameterGroups";
+      NickName = "BuiltInParameterGroups";
       Description = "Provides a picker of a BuiltInParameterGroup";
 
       ListItems.Clear();
 
-      foreach (var builtInParameterGroup in Enum.GetValues(typeof(BuiltInParameterGroup)).Cast<BuiltInParameterGroup>().OrderBy((x) => LabelUtils.GetLabelFor(x)))
+      foreach (var builtInParameterGroup in Enum.GetValues(typeof(Autodesk.Revit.DB.BuiltInParameterGroup)).Cast<Autodesk.Revit.DB.BuiltInParameterGroup>().OrderBy((x) => LabelUtils.GetLabelFor(x)))
       {
         ListItems.Add(new GH_ValueListItem(LabelUtils.GetLabelFor(builtInParameterGroup), ((int) builtInParameterGroup).ToString()));
-        if (builtInParameterGroup == BuiltInParameterGroup.PG_IDENTITY_DATA)
+        if (builtInParameterGroup == Autodesk.Revit.DB.BuiltInParameterGroup.PG_IDENTITY_DATA)
           SelectItem(ListItems.Count - 1);
       }
     }
@@ -411,7 +537,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddIntegerParameter("Group", "G", "Parameter group", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.BuiltInParameterGroup(), "Group", "G", "Parameter group", GH_ParamAccess.item);
       manager.AddIntegerParameter("Type", "T", "Parameter type", GH_ParamAccess.item);
       manager.AddIntegerParameter("Unit", "U", "Unit type", GH_ParamAccess.item);
       manager.AddBooleanParameter("IsReadOnly", "R", "Parameter is Read Only", GH_ParamAccess.item);
@@ -424,7 +550,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Value", ref parameter))
         return;
 
-      DA.SetData("Group", (int) parameter?.Definition.ParameterGroup);
+      DA.SetData("Group", parameter?.Definition.ParameterGroup);
       DA.SetData("Type", (int) parameter?.Definition.ParameterType);
       DA.SetData("Unit", (int) parameter?.Definition.UnitType);
       DA.SetData("IsReadOnly", parameter?.IsReadOnly);
@@ -451,7 +577,7 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddTextParameter("Name", "N", "Parameter name", GH_ParamAccess.item);
       manager.AddIntegerParameter("StorageType", "T", "Parameter value type", GH_ParamAccess.item);
       manager.AddBooleanParameter("Visible", "V", "Parameter is visible in UI", GH_ParamAccess.item);
-      manager.AddParameter(new Param_Guid(), "Guid", "ID", "Parameter BuiltInParameter id", GH_ParamAccess.item);
+      manager.AddParameter(new Param_Guid(), "Guid", "ID", "Shared Parameter global identifier", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)

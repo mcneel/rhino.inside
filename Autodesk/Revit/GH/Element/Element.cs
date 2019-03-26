@@ -2,10 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
+using System.Windows.Forms;
+using Control = System.Windows.Forms.Control;
 
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Attributes;
+using Grasshopper.GUI.Canvas;
+using Grasshopper.GUI;
 
 using Autodesk.Revit.DB;
 
@@ -37,7 +41,7 @@ namespace RhinoInside.Revit.GH.Types
     }
 
     static public new Element Make(ElementId Id)    => Make(Revit.ActiveDBDocument.GetElement(Id));
-    static public Element Make(string uniqueId) => Make(Revit.ActiveDBDocument.GetElement(uniqueId));
+    static public     Element Make(string uniqueId) => Make(Revit.ActiveDBDocument.GetElement(uniqueId));
 
     public Element() : base() { }
     protected Element(Autodesk.Revit.DB.Element element)     : base(element.Id, element.UniqueId) { }
@@ -169,6 +173,41 @@ namespace RhinoInside.Revit.GH.Types
 
       return base.CastTo<Q>(ref target);
     }
+
+    class Proxy : IGH_GooProxy
+    {
+      readonly Element proxyOwner;
+      public Proxy(Element owner) { proxyOwner = owner; (this as IGH_GooProxy).UserString = FormatInstance(); }
+
+      IGH_Goo IGH_GooProxy.ProxyOwner => proxyOwner;
+      public bool Valid => proxyOwner.Value != null ? Revit.ActiveDBDocument.GetElement(proxyOwner.Value) != null : false;
+      bool IGH_GooProxy.IsParsable => true;
+      string IGH_GooProxy.UserString { get; set; }
+      void IGH_GooProxy.Construct() { }
+      public string FormatInstance() => proxyOwner.Value?.IntegerValue.ToString() ?? string.Empty;
+      public bool FromString(string str)
+      {
+        if (int.TryParse(str, out int elementId))
+        {
+          proxyOwner.Value = new ElementId(elementId);
+          return true;
+        }
+
+        return false;
+      }
+      public string MutateString(string str) => str.Trim();
+
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("A human readable name for the Element.")]
+      public string Name => Revit.ActiveDBDocument.GetElement(proxyOwner.Value)?.Name;
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Category or sub category in which the element resides.")]
+      public string Category => Revit.ActiveDBDocument.GetElement(proxyOwner.Value)?.Category.Name;
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Element type name if the element has one assigned.")]
+      public string Type => (Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetElement(proxyOwner.Value)?.GetTypeId()) as Autodesk.Revit.DB.ElementType)?.Name;
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("A stable unique identifier for an element within the document.")]
+      public string UniqueID => Revit.ActiveDBDocument.GetElement(proxyOwner.Value)?.UniqueId;
+    }
+
+    public override IGH_GooProxy EmitProxy() => new Proxy(this);
 
     public override string ToString()
     {
@@ -370,7 +409,7 @@ namespace RhinoInside.Revit.GH.Types
     {
       Value = ElementId.InvalidElementId;
 
-      try { Value = Revit.ActiveDBDocument.GetElement(UniqueID)?.Id ?? ElementId.InvalidElementId; }
+      try { Value = Revit.ActiveDBDocument?.GetElement(UniqueID)?.Id ?? ElementId.InvalidElementId; }
       catch (ArgumentException) { }
 
       return IsValid;
@@ -821,13 +860,13 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementGetPreview : ElementGetter
+  public class ElementPreview : ElementGetter
   {
     public override Guid ComponentGuid => new Guid("A95C7B73-6F70-46CA-85FC-A4402A3B6971");
     static readonly string PropertyName = "Preview";
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P");
 
-    public ElementGetPreview() : base(PropertyName) { }
+    public ElementPreview() : base(PropertyName) { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
@@ -885,18 +924,19 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementEnumParameters : GH_Component
+  public class ElementParameters : ElementGetter
   {
     public override Guid ComponentGuid => new Guid("44515A6B-84EE-4DBD-8241-17EDBE07C5B6");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{P}");
+    static readonly string PropertyName = "Parameters";
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{}");
 
-    public ElementEnumParameters() : base("Element.EnumParameters", "EnumParameters", "Enumerates all parameters defined in an Element", "Revit", "Element") { }
+    public ElementParameters() : base(PropertyName) { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to inspect", GH_ParamAccess.item);
+      base.RegisterInputParams(manager);
       manager[manager.AddTextParameter("Name", "N", "Filter params by Name", GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddIntegerParameter("Group", "G", "Filter params by the group they belong", GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.BuiltInParameterGroup(), "Group", "G", "Filter params by the group they belong", GH_ParamAccess.item)].Optional = true;
       manager[manager.AddBooleanParameter("ReadOnly", "R", "Filter params by its ReadOnly property", GH_ParamAccess.item)].Optional = true;
     }
 
@@ -908,13 +948,13 @@ namespace RhinoInside.Revit.GH.Components
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       Autodesk.Revit.DB.Element element = null;
-      if (!DA.GetData("Element", ref element))
+      if (!DA.GetData(ObjectType.Name, ref element))
         return;
 
       string parameterName = null;
       bool noFilterName = (!DA.GetData("Name", ref parameterName) && Params.Input[1].Sources.Count == 0);
 
-      int builtInParameterGroup = (int) BuiltInParameterGroup.INVALID;
+      var builtInParameterGroup = BuiltInParameterGroup.INVALID;
       bool noFilterGroup = (!DA.GetData("Group", ref builtInParameterGroup) && Params.Input[2].Sources.Count == 0);
 
       bool readOnly = false;
@@ -931,7 +971,7 @@ namespace RhinoInside.Revit.GH.Components
             if (!noFilterName && parameterName != param.Definition.Name)
               continue;
 
-            if (!noFilterGroup && (BuiltInParameterGroup) builtInParameterGroup != param.Definition.ParameterGroup)
+            if (!noFilterGroup && builtInParameterGroup != param.Definition.ParameterGroup)
               continue;
 
             if (!noFilterReadOnly && readOnly != param.IsReadOnly)
@@ -946,15 +986,13 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementParameters : ElementGetter, IGH_VariableParameterComponent
+  public class ElementDecompose : GH_Component, IGH_VariableParameterComponent
   {
     public override Guid ComponentGuid => new Guid("FAD33C4B-A7C3-479B-B309-8F5363B25599");
-    static readonly string PropertyName = "Parameters";
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{");
+    public ElementDecompose() : base("Element.Decompose", "Decompose", "Decomposes an Element into its parameters", "Revit", "Element") { }
 
-    public ElementParameters() : base(PropertyName) { }
-
-    public override void AppendAdditionalMenuItems(System.Windows.Forms.ToolStripDropDown menu)
+    public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
     {
       base.AppendAdditionalMenuItems(menu);
 
@@ -976,6 +1014,38 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
+    class ComponentAttributes : GH_ComponentAttributes
+    {
+      public ComponentAttributes(IGH_Component component) : base(component) { }
+
+      public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
+      {
+        bool ctrl  = Control.ModifierKeys == Keys.Control;
+        bool shift = Control.ModifierKeys == Keys.Shift;
+
+        if (e.Button == MouseButtons.Left && (ctrl || shift))
+        {
+          if (!Owner.Params.Input[0].VolatileData.IsEmpty)
+          {
+            if (Owner is ElementDecompose elementDecompose)
+            {
+              sender.ActiveInteraction = null;
+              if (shift)
+                elementDecompose.Menu_PopulateOutputsWithCommonParameters(sender, e);
+              else if (ctrl)
+                elementDecompose.Menu_RemoveUnconnectedParameters(sender, e);
+
+              return GH_ObjectResponse.Handled;
+            }
+          }
+        }
+
+        return GH_ObjectResponse.Ignore;
+      }
+    }
+
+    public override void CreateAttributes() => m_attributes = new ComponentAttributes(this);
+
     void AddOutputParameter(IGH_Param param)
     {
       if (param.Attributes == null)
@@ -993,11 +1063,6 @@ namespace RhinoInside.Revit.GH.Components
 
     void Menu_PopulateOutputsWithCommonParameters(object sender, EventArgs e)
     {
-      RecordUndoEvent("Get Common Parameters");
-
-      foreach (var output in Params.Output.ToArray())
-        Params.UnregisterOutputParameter(output);
-
       IEnumerable<KeyValuePair<int, Parameter>> common = null;
 
       foreach (var goo in Params.Input[0].VolatileData.AllData(true).OfType<Types.Element>())
@@ -1020,23 +1085,26 @@ namespace RhinoInside.Revit.GH.Components
           common = common.Intersect(definitions, new EqualityComparer());
       }
 
-      foreach (var group in common.GroupBy((x) => x.Value.Definition.ParameterGroup).OrderBy((x) => x.Key))
+      if (common != null)
       {
-        foreach (var pair in group.OrderBy(x => x.Value.Id.IntegerValue))
-          AddOutputParameter(new Parameters.ParameterParam(pair.Value));
-      }
+        RecordUndoEvent("Get Common Parameters");
 
-      Params.OnParametersChanged();
-      ExpireSolution(true);
+        foreach (var output in Params.Output.ToArray())
+          Params.UnregisterOutputParameter(output);
+
+        foreach (var group in common.GroupBy((x) => x.Value.Definition.ParameterGroup).OrderBy((x) => x.Key))
+        {
+          foreach (var pair in group.OrderBy(x => x.Value.Id.IntegerValue))
+            AddOutputParameter(new Parameters.ParameterParam(pair.Value));
+        }
+
+        Params.OnParametersChanged();
+        ExpireSolution(true);
+      }
     }
 
     void Menu_PopulateOutputsWithAllParameters(object sender, EventArgs e)
     {
-      RecordUndoEvent("Get All Parameters");
-
-      foreach (var output in Params.Output.ToArray())
-        Params.UnregisterOutputParameter(output);
-
       var definitions = new Dictionary<int, Parameter>();
 
       foreach (var goo in Params.Input[0].VolatileData.AllData(true).OfType<Types.Element>())
@@ -1052,14 +1120,22 @@ namespace RhinoInside.Revit.GH.Components
         }
       }
 
-      foreach (var group in definitions.GroupBy((x) => x.Value.Definition.ParameterGroup).OrderBy((x) => x.Key))
+      if (definitions != null)
       {
-        foreach (var definition in group.OrderBy(x => x.Value.Id.IntegerValue))
-          AddOutputParameter(new Parameters.ParameterParam(definition.Value));
-      }
+        RecordUndoEvent("Get All Parameters");
 
-      Params.OnParametersChanged();
-      ExpireSolution(true);
+        foreach (var output in Params.Output.ToArray())
+          Params.UnregisterOutputParameter(output);
+
+        foreach (var group in definitions.GroupBy((x) => x.Value.Definition.ParameterGroup).OrderBy((x) => x.Key))
+        {
+          foreach (var definition in group.OrderBy(x => x.Value.Id.IntegerValue))
+            AddOutputParameter(new Parameters.ParameterParam(definition.Value));
+        }
+
+        Params.OnParametersChanged();
+        ExpireSolution(true);
+      }
     }
 
     void Menu_RemoveUnconnectedParameters(object sender, EventArgs e)
@@ -1078,12 +1154,17 @@ namespace RhinoInside.Revit.GH.Components
       OnDisplayExpired(false);
     }
 
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to inspect", GH_ParamAccess.item);
+    }
+
     protected override void RegisterOutputParams(GH_OutputParamManager manager) { }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       Autodesk.Revit.DB.Element element = null;
-      if (!DA.GetData(ObjectType.Name, ref element))
+      if (!DA.GetData("Element", ref element))
         return;
 
       for (int p = 0; p < Params.Output.Count; ++p)

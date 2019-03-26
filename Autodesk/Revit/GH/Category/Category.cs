@@ -105,6 +105,7 @@ namespace RhinoInside.Revit.GH.Parameters
   public class Category : GH_Param<Types.Category>
   {
     public override Guid ComponentGuid => new Guid("6722C7A5-EFD3-4119-A7FD-6C8BE892FD04");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("C");
 
     public Category() : base("Category", "Category", "Represents a Revit document category.", "Revit", "Category", GH_ParamAccess.item) { }
