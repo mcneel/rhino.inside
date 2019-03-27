@@ -40,12 +40,48 @@ namespace RhinoInside.Revit
         MethodBase.GetCurrentMethod().DeclaringType.FullName
       );
 
-      if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
+      var comboBoxData = new ComboBoxData("Category")
+      {
+        ToolTip = "Category where Sample 4 will place geometry."
+      };
+
+      var items = ribbonPanel.AddStackedItems(buttonData, comboBoxData);
+
+      if (items[0] is PushButton pushButton)
       {
         pushButton.ToolTip = "Eval a Grasshopper definition";
         pushButton.LargeImage = ImageBuilder.BuildImage("4");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
       }
+
+      categoriesComboBox = items[1] as Autodesk.Revit.UI.ComboBox;
+      Revit.ApplicationUI.ViewActivated += ActiveUIApplication_ViewActivated;
+    }
+
+    static Autodesk.Revit.UI.ComboBox categoriesComboBox = null;
+
+    static void ActiveUIApplication_ViewActivated(object sender, Autodesk.Revit.UI.Events.ViewActivatedEventArgs e)
+    {
+      var directShapeCategories = Enum.GetValues(typeof(BuiltInCategory)).Cast<BuiltInCategory>().
+      Where(categoryId => DirectShape.IsValidCategoryId(new ElementId(categoryId), e.CurrentActiveView.Document)).
+      Select(categoryId => Autodesk.Revit.DB.Category.GetCategory(e.CurrentActiveView.Document, categoryId));
+
+      foreach (var group in directShapeCategories.GroupBy(x => x.CategoryType).OrderBy(x => x.Key.ToString()))
+      {
+        foreach (var category in group.OrderBy(x => x.Name))
+        {
+          var comboBoxMemberData = new ComboBoxMemberData(((BuiltInCategory) category.Id.IntegerValue).ToString(), category.Name)
+          {
+            GroupName = group.Key.ToString()
+          };
+          var item = categoriesComboBox.AddItem(comboBoxMemberData);
+
+          if((BuiltInCategory) category.Id.IntegerValue == BuiltInCategory.OST_GenericModel)
+            categoriesComboBox.Current = item;
+        }
+      }
+
+      Revit.ApplicationUI.ViewActivated -= ActiveUIApplication_ViewActivated;
     }
 
     const ObjectSnapTypes DefaultSnapTypes =
@@ -337,7 +373,7 @@ namespace RhinoInside.Revit
             }
 
             if (output.Count > 0)
-              outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.Name, output));
+              outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.NickName, output));
           }
         }
         catch(Exception)
@@ -360,7 +396,10 @@ namespace RhinoInside.Revit
         {
           if (trans.Start(MethodBase.GetCurrentMethod().DeclaringType.Name) == TransactionStatus.Started)
           {
-            var categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
+            if (!Enum.TryParse(categoriesComboBox.Current.Name, out BuiltInCategory builtInCategory))
+              builtInCategory = BuiltInCategory.OST_GenericModel;
+
+            var categoryId = new ElementId(builtInCategory);
 
             foreach (var output in outputs)
             {
