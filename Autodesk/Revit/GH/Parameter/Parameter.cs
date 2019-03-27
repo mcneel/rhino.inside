@@ -70,13 +70,10 @@ namespace RhinoInside.Revit.GH.Types
 
     class Proxy : IGH_GooProxy
     {
-      readonly ParameterElement proxyOwner;
-      public Proxy(ParameterElement owner) { proxyOwner = owner; UserString = FormatInstance(); }
-      public IGH_Goo ProxyOwner => proxyOwner;
-      public bool Valid => proxyOwner.IsValid;
-      public bool IsParsable => true;
-      public string UserString { get; set; }
+      public Proxy(ParameterElement owner) { proxyOwner = owner; (this as IGH_GooProxy).UserString = FormatInstance(); }
+
       public void Construct() { }
+      public string MutateString(string str) => str.Trim();
       public string FormatInstance()
       {
         int value = proxyOwner.Value.IntegerValue;
@@ -95,7 +92,29 @@ namespace RhinoInside.Revit.GH.Types
 
         return false;
       }
-      public string MutateString(string str) => str.Trim();
+
+      readonly ParameterElement proxyOwner;
+      IGH_Goo IGH_GooProxy.ProxyOwner => proxyOwner;
+      bool    IGH_GooProxy.IsParsable => true;
+      string  IGH_GooProxy.UserString { get; set; }
+
+      Autodesk.Revit.DB.BuiltInParameter builtInParameter => IsBuiltIn ? (BuiltInParameter) proxyOwner.Value.IntegerValue : BuiltInParameter.INVALID;
+      Autodesk.Revit.DB.ParameterElement parameter => IsBuiltIn ? null : Revit.ActiveDBDocument?.GetElement(proxyOwner.Value) as Autodesk.Revit.DB.ParameterElement;
+
+      public bool Valid => proxyOwner.IsValid;
+      [System.ComponentModel.Description("The parameter identifier in this session.")]
+      public int Id => proxyOwner.Value.IntegerValue;
+      [System.ComponentModel.Description("The user-visible name for the parameter.")]
+      public string Name => IsBuiltIn ? builtInParameter != BuiltInParameter.INVALID ? LabelUtils.GetLabelFor(builtInParameter) : string.Empty : parameter?.GetDefinition().Name;
+      [System.ComponentModel.Description("The Guid that identifies this parameter as a shared parameter.")]
+      public Guid Guid => IsBuiltIn ? Guid.Empty : (parameter as SharedParameterElement)?.GuidValue ?? Guid.Empty;
+
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Parameter is built in Revit.")]
+      public bool IsBuiltIn => Enum.IsDefined(typeof(BuiltInParameter), proxyOwner.Value.IntegerValue);
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Group of the parameter definition.")]
+      public string Type => IsBuiltIn ? builtInParameter != BuiltInParameter.INVALID ? Revit.ActiveDBDocument.get_TypeOfStorage(builtInParameter).ToString() : string.Empty : LabelUtils.GetLabelFor(parameter.GetDefinition().ParameterType);
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Element type name if the element has one assigned.")]
+      public bool Visible => IsBuiltIn ? true : parameter.GetDefinition().Visible;
     }
 
     public override IGH_GooProxy EmitProxy() => new Proxy(this);
@@ -413,7 +432,6 @@ namespace RhinoInside.Revit.GH.Parameters
 
     protected override GH_GetterResult Prompt_Plural(ref List<Types.BuiltInParameterGroup> values) => GH_GetterResult.cancel;
     protected override GH_GetterResult Prompt_Singular(ref Types.BuiltInParameterGroup value) => GH_GetterResult.cancel;
-
   }
 
   public class BuiltInParameterGroups : GH_ValueList
