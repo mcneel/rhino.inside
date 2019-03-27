@@ -12,6 +12,7 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI;
 
 using Autodesk.Revit.DB;
+using System.ComponentModel;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -174,19 +175,21 @@ namespace RhinoInside.Revit.GH.Types
       return base.CastTo<Q>(ref target);
     }
 
+    [TypeConverter(typeof(Proxy.ObjectConverter))]
     class Proxy : IGH_GooProxy
     {
-      readonly Element proxyOwner;
       public Proxy(Element owner) { proxyOwner = owner; (this as IGH_GooProxy).UserString = FormatInstance(); }
 
-      IGH_Goo IGH_GooProxy.ProxyOwner => proxyOwner;
-      public bool Valid => proxyOwner.Value != null ? Revit.ActiveDBDocument.GetElement(proxyOwner.Value) != null : false;
-      bool IGH_GooProxy.IsParsable => true;
-      string IGH_GooProxy.UserString { get; set; }
-      void IGH_GooProxy.Construct() { }
-      public string FormatInstance() => proxyOwner.Value?.IntegerValue.ToString() ?? string.Empty;
+      public void Construct() { }
+      public string MutateString(string str) => str.Trim();
+      public string FormatInstance() => element != null ? string.Format("{0}:{1}", proxyOwner.Value.IntegerValue, element.Name) : string.Empty;
       public bool FromString(string str)
       {
+        int index = str.IndexOf(':');
+        if(index >= 0)
+          str = str.Substring(0, index);
+
+        str = str.Trim();
         if (int.TryParse(str, out int elementId))
         {
           proxyOwner.Value = new ElementId(elementId);
@@ -195,16 +198,77 @@ namespace RhinoInside.Revit.GH.Types
 
         return false;
       }
-      public string MutateString(string str) => str.Trim();
 
-      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("A human readable name for the Element.")]
-      public string Name => Revit.ActiveDBDocument.GetElement(proxyOwner.Value)?.Name;
-      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Category or sub category in which the element resides.")]
-      public string Category => Revit.ActiveDBDocument.GetElement(proxyOwner.Value)?.Category.Name;
-      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Element type name if the element has one assigned.")]
-      public string Type => (Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetElement(proxyOwner.Value)?.GetTypeId()) as Autodesk.Revit.DB.ElementType)?.Name;
-      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("A stable unique identifier for an element within the document.")]
-      public string UniqueID => Revit.ActiveDBDocument.GetElement(proxyOwner.Value)?.UniqueId;
+      readonly Element proxyOwner;
+      IGH_Goo IGH_GooProxy.ProxyOwner => proxyOwner;
+      bool IGH_GooProxy.IsParsable => true;
+      string IGH_GooProxy.UserString { get; set; }
+
+      Autodesk.Revit.DB.Element element => proxyOwner.Value != null ? Revit.ActiveDBDocument?.GetElement(proxyOwner.Value) : null;
+
+      public bool Valid => element != null;
+      [System.ComponentModel.Description("The element identifier in this session.")]
+      public int Id => proxyOwner.Value.IntegerValue;
+      [System.ComponentModel.Description("A human readable name for the Element.")]
+      public string Name => element?.Name;
+      [System.ComponentModel.Description(".NET Object Type.")]
+      public string Object => element?.GetType().FullName;
+      [System.ComponentModel.Description("A stable unique identifier for an element within the document.")]
+      public string UniqueID => element?.UniqueId;
+
+      class ObjectConverter : ExpandableObjectConverter
+      {
+        public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext context, object value, Attribute[] attributes)
+        {
+          var properties = base.GetProperties(context, value, attributes);
+          if (value is Proxy proxy)
+          {
+            var parameters = proxy.element?.Parameters;
+            var parametersSize = parameters?.Size ?? 0;
+            var propertiesCount = properties.Count;
+            if (parametersSize > 0)
+            {
+              PropertyDescriptor[] descriptors = new PropertyDescriptor[propertiesCount + parametersSize];
+              properties.CopyTo(descriptors, 0);
+
+              foreach (var paramter in parameters.Cast<Autodesk.Revit.DB.Parameter>())
+                descriptors[propertiesCount++] = new ParameterPropertyDescriptor(paramter);
+
+              return new PropertyDescriptorCollection(descriptors, true);
+            }
+          }
+
+          return properties;
+        }
+      }
+
+      private class ParameterPropertyDescriptor : PropertyDescriptor
+      {
+        readonly Autodesk.Revit.DB.Parameter parameter;
+        public ParameterPropertyDescriptor(Autodesk.Revit.DB.Parameter p) : base(p.Definition.Name, null) { parameter = p; }
+        public override Type   ComponentType => typeof(Proxy);
+        public override bool   IsReadOnly    => true;
+        public override string Name          => parameter.Definition.Name;
+        public override string Category      => LabelUtils.GetLabelFor(parameter.Definition.ParameterGroup);
+        public override string Description
+        {
+          get
+          {
+            var description = string.Empty;
+            try { description = parameter.StorageType == StorageType.ElementId ? "ElementId" : LabelUtils.GetLabelFor(parameter.Definition.ParameterType); }
+            catch (Autodesk.Revit.Exceptions.InvalidOperationException)
+            { description = parameter.Definition.UnitType == UnitType.UT_Number ? "Enumerate" : LabelUtils.GetLabelFor(parameter.Definition.UnitType); }
+
+            return description;
+          }
+        }
+        public override bool ShouldSerializeValue(object component) { return false; }
+        public override void ResetValue(object component) { }
+        public override bool CanResetValue(object component) { return false; }
+        public override void SetValue(object component, object value) { }
+        public override Type PropertyType   => typeof(string);
+        public override object GetValue(object component) => parameter.Element != null ? (parameter.StorageType == StorageType.String ? parameter.AsString() : parameter.AsValueString()) : null;
+      }
     }
 
     public override IGH_GooProxy EmitProxy() => new Proxy(this);
