@@ -39,7 +39,7 @@ namespace RhinoInside.Revit.GH.Types
     public virtual Guid ReferenceID
     {
       get => Guid.Empty;
-      set => throw new InvalidOperationException();
+      set { if (value != Guid.Empty) throw new InvalidOperationException(); }
     }
     public string UniqueID { get; protected set; }
     public bool IsReferencedGeometry => UniqueID.Length > 0;
