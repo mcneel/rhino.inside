@@ -240,21 +240,44 @@ namespace RhinoInside.Revit
               {
                 component.ExpireSolution(false);
               }
-              else foreach (var outParam in component.Params.Output)
+              else
               {
-                if (outParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
+                bool needsToBeExpired = false;
+                foreach (var inputParam in component.Params.Input)
                 {
-                  if (persistent.NeedsToBeExpired(document, added, deleted, modified))
+                  if (inputParam.SourceCount > 0)
+                    continue;
+
+                  if (inputParam.Phase == GH_SolutionPhase.Blank)
+                    continue;
+
+                  if (inputParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
                   {
-                    foreach (var r in outParam.Recipients)
-                      r.ExpireSolution(false);
-                  }
-                  else if (materialsChanged)
-                  {
-                    foreach (var goo in outParam.VolatileData.AllData(true))
+                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
                     {
-                      if (goo is IGH_PreviewMeshData previewMeshData)
-                        previewMeshData.DestroyPreviewMeshes();
+                      needsToBeExpired = true;
+                      break;
+                    }
+                  }
+                }
+
+                if (needsToBeExpired) component.ExpireSolution(true);
+                else foreach (var outParam in component.Params.Output)
+                {
+                  if (outParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
+                  {
+                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
+                    {
+                      foreach (var r in outParam.Recipients)
+                        r.ExpireSolution(false);
+                    }
+                    else if (materialsChanged)
+                    {
+                      foreach (var goo in outParam.VolatileData.AllData(true))
+                      {
+                        if (goo is IGH_PreviewMeshData previewMeshData)
+                          previewMeshData.DestroyPreviewMeshes();
+                      }
                     }
                   }
                 }
@@ -486,30 +509,6 @@ namespace RhinoInside.Revit
         case ';':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Regex;
         default: return CompareMethod.Equals;
       }
-    }
-
-    static CompareMethod _CompareMethodFromPattern(ref string pattern, ref bool not)
-    {
-      if (string.IsNullOrEmpty(pattern))
-        return CompareMethod.Nothing;
-
-      var method = CompareMethod.Equals;
-      switch (pattern[0])
-      {
-        case '~': not = !not; pattern = pattern.Substring(1); return _CompareMethodFromPattern(ref pattern, ref not);
-        case '>': method = CompareMethod.StartsWith; break;
-        case '<': method = CompareMethod.EndsWith; break;
-        case '?': method = CompareMethod.Contains; break;
-        case ':': method = CompareMethod.Wildcard; break;
-        case ';': method = CompareMethod.Regex; break;
-        default: return CompareMethod.Equals;
-      }
-
-      if (pattern.Length == 1)
-        return CompareMethod.Nothing;
-
-      pattern = pattern.Substring(1);
-      return method;
     }
 
     public static bool IsSymbolNameLike(this string source, string pattern)

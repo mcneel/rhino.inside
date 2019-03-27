@@ -21,6 +21,57 @@ namespace RhinoInside.Revit
 {
   public static class Convert
   {
+    #region Enums
+    public static StorageType ToStorageType(this ParameterType parameterType)
+    {
+      switch (parameterType)
+      {
+        case ParameterType.Invalid:
+          return StorageType.None;
+        case ParameterType.Text:
+        case ParameterType.MultilineText:
+          return StorageType.String;
+        case ParameterType.YesNo:
+        case ParameterType.Integer:
+          return StorageType.Integer;
+        case ParameterType.Material:
+        case ParameterType.FamilyType:
+        case ParameterType.Image:
+          return StorageType.ElementId;
+        case ParameterType.Number:
+        default:
+          return StorageType.Double;
+      }
+    }
+
+    public static BuiltInParameter ToBuiltInParameter(this int value)
+    {
+      switch (value)
+      {
+        case (int) BuiltInParameter.GENERIC_THICKNESS:          return BuiltInParameter.GENERIC_THICKNESS;
+        case (int) BuiltInParameter.GENERIC_WIDTH:              return BuiltInParameter.GENERIC_WIDTH;
+        case (int) BuiltInParameter.GENERIC_HEIGHT:             return BuiltInParameter.GENERIC_HEIGHT;
+        case (int) BuiltInParameter.GENERIC_DEPTH:              return BuiltInParameter.GENERIC_DEPTH;
+        case (int) BuiltInParameter.GENERIC_FINISH:             return BuiltInParameter.GENERIC_FINISH;
+        case (int) BuiltInParameter.GENERIC_CONSTRUCTION_TYPE:  return BuiltInParameter.GENERIC_CONSTRUCTION_TYPE;
+        case (int) BuiltInParameter.FIRE_RATING:                return BuiltInParameter.FIRE_RATING;
+        case (int) BuiltInParameter.ALL_MODEL_COST:             return BuiltInParameter.ALL_MODEL_COST;
+        case (int) BuiltInParameter.ALL_MODEL_MARK:             return BuiltInParameter.ALL_MODEL_MARK;
+        case (int) BuiltInParameter.ALL_MODEL_FAMILY_NAME:      return BuiltInParameter.ALL_MODEL_FAMILY_NAME;
+        case (int) BuiltInParameter.ALL_MODEL_TYPE_NAME:        return BuiltInParameter.ALL_MODEL_TYPE_NAME;
+        case (int) BuiltInParameter.ALL_MODEL_TYPE_MARK:        return BuiltInParameter.ALL_MODEL_TYPE_MARK;
+      }
+
+      return (BuiltInParameter) value;
+    }
+
+    public static BuiltInParameter AsBuiltInParameter(this int value)
+    {
+      var builtInParameter = ToBuiltInParameter(value);
+      return Enum.IsDefined(typeof(BuiltInParameter), builtInParameter) ? builtInParameter : BuiltInParameter.INVALID;
+    }
+    #endregion
+
     #region Math
     public static int Clamp(this int v, int lo, int hi)
     {

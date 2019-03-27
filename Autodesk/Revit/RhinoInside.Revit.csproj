@@ -120,6 +120,7 @@
     <Compile Include="GH\Document\Categories.cs" />
     <Compile Include="GH\Document\Elements.cs" />
     <Compile Include="GH\Document\ElementTypes.cs" />
+    <Compile Include="GH\Document\Parameters.cs" />
     <Compile Include="GH\ElementType\ElementType.cs" />
     <Compile Include="GH\Element\Beam\ByCurve.cs" />
     <Compile Include="GH\Element\CurveElement\ByCurve.cs" />
@@ -128,6 +129,7 @@
     <Compile Include="GH\Element\SketchPlane\ByPlane.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
+    <Compile Include="GH\Parameter\Parameter.cs" />
     <Compile Include="GH\PreviewServer.cs" />
     <Compile Include="GH\ID.cs" />
     <Compile Include="GH\GeometryObject\GeometryObject.cs" />
