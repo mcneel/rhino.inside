@@ -1105,7 +1105,7 @@ namespace RhinoInside.Revit
       return objects;
     }
 
-    static internal IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
+    static public IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
       foreach (var geometry in geometries)
