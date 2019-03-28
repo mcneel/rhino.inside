@@ -1063,19 +1063,10 @@ namespace RhinoInside.Revit.GH.Components
       bool hasInputData = !Params.Input[0].VolatileData.IsEmpty;
       bool hasOutputParameters = Params.Output.Count > 0;
 
-      if (hasInputData || hasOutputParameters)
-        Menu_AppendSeparator(menu);
-
-      if (hasInputData)
-      {
-        Menu_AppendItem(menu, "Get common parameters", Menu_PopulateOutputsWithCommonParameters, true, false);
-        Menu_AppendItem(menu, "Get all parameters", Menu_PopulateOutputsWithAllParameters, true, false);
-      }
-
-      if(hasOutputParameters)
-      {
-        Menu_AppendItem(menu, "Remove unconnected parameters", Menu_RemoveUnconnectedParameters, true, false);
-      }
+      Menu_AppendSeparator(menu);
+      Menu_AppendItem(menu, "Get common parameters", Menu_PopulateOutputsWithCommonParameters, hasInputData, false);
+      Menu_AppendItem(menu, "Get all parameters", Menu_PopulateOutputsWithAllParameters, hasInputData, false);
+      Menu_AppendItem(menu, "Remove unconnected parameters", Menu_RemoveUnconnectedParameters, hasOutputParameters, false);
     }
 
     class ComponentAttributes : GH_ComponentAttributes
@@ -1253,6 +1244,27 @@ namespace RhinoInside.Revit.GH.Components
     IGH_Param IGH_VariableParameterComponent.CreateParameter(GH_ParameterSide side, int index) => null;
     bool IGH_VariableParameterComponent.DestroyParameter(GH_ParameterSide side, int index) => true;
     void IGH_VariableParameterComponent.VariableParameterMaintenance() { }
+
+    protected override string HtmlHelp_Source()
+    {
+      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this);
+      nTopic.Title = Name;
+      nTopic.Description =
+      @"<p>This component is a special interface object that allows for quick accessing to Revit Element parameters.</p>" +
+      @"<p>It's able to modify itself in order to show any parameter its input element parameter contains. " +
+      @"It also allows to remove some output parameters if are not connected to anything else.</p>" +
+      @"<p>Under the component contextual menu you would find these options:</p>" +
+      @"<dl>" +
+      @"<dt><b>Get common parameters</b></dt><dd>Populates the output parameters list with common parameters in all input elements</dd>" +
+      @"<dt><b>Get all parameters</b></dt><dd>Populates the output parameters list with all parameters found in all input elements</dd>" +
+      @"<dt><b>Remove unconnected parameters</b></dt><dd>Removes the output parameters that are not connected to anything else</dd>" +
+      @"</dl>";
+      nTopic.ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside";
+      nTopic.AddRemark("SHIFT + Double click runs \"Get common parameters\"");
+      nTopic.AddRemark("CTRL + Double click runs \"Remove unconnected parameters\".");
+
+      return nTopic.HtmlFormat();
+    }
   }
 
   public class ElementParameterGet : GH_Component

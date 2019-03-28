@@ -244,8 +244,8 @@ namespace RhinoInside.Revit.GH.Parameters
       nTopic.Description =
       @"<p>This component is a special interface object that allows for quick picking a Revit ElementType object.</p>" +
       @"<p>Double click on it and use the name input box to enter a family name, alternativelly you can enter a name patter. " +
-      @"If a pattern is used, this param list will be filled up with all the element types that match it.<p>" +
-      @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:<p>" +
+      @"If a pattern is used, this param list will be filled up with all the element types that match it.</p>" +
+      @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:</p>" +
       @"<dl>" +
       @"<dt><b>></b></dt><dd>Starts with</dd>" +
       @"<dt><b><</b></dt><dd>Ends with</dd>" +
