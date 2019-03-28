@@ -1,5 +1,5 @@
 # Rhino Inside Revit
-The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.
+The Rhino Inside © technology allows Rhino and Grasshopper to be embedded within other products.
 
 This folder contains a sample project that demonstrates:
 

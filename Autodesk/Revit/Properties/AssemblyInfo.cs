@@ -9,8 +9,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Robert McNeel & Associates")]
-[assembly: AssemblyProduct("Rhino Inside Revit")]
-[assembly: AssemblyCopyright("Copyright © 2018")]
+[assembly: AssemblyProduct("RhinoInside")]
+[assembly: AssemblyCopyright("© 2019 Robert McNeel & Associates.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
