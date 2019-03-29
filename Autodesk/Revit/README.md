@@ -44,11 +44,10 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 ### Sample 7
 ![](doc/Sample7.png)
 
-1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
-2. Run the _EditPythonScript_.
-3. Load pyhthon script file called _"Sample7.py"_ there is in this folder.
-4. Click on the green play button you will fond on the Pyhton script editor window.
-5. You should have an sphere in the Revil model.
+1. Use the _Pyhton_ icon into the Add-Ins tab to open Rhino Python editor window.
+2. Load pyhthon script file called _"Sample7.py"_ there is in this folder.
+3. Click on the green play button you will fond on the Pyhton script editor window.
+4. You should have an sphere in the Revil model.
 
 ### Sample 6
 ![](doc/Sample6.gif)
