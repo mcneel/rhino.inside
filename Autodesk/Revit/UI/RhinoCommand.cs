@@ -32,7 +32,7 @@ namespace RhinoInside.Revit.UI
       {
         pushButton.ToolTip = "Toggle Rhino window visibility";
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Rhino.png");
-        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md"));
+        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://discourse.mcneel.com/"));
       }
     }
 
