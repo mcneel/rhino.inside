@@ -137,7 +137,7 @@
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
     <Compile Include="GH\PreviewServer.cs" />
-    <Compile Include="UI\APIDocsCommand.cs" />
+    <Compile Include="UI\HelpCommands.cs" />
     <Compile Include="UI\GrasshopperCommand.cs" />
     <Compile Include="UI\RhinoCommand.cs" />
     <Compile Include="DocumentPreviewServer.cs" />
