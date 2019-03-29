@@ -46,7 +46,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 
 1. Use the _Pyhton_ icon into the Add-Ins tab to open Rhino Python editor window.
 2. Load pyhthon script file called _"Sample7.py"_ there is in this folder.
-3. Click on the green play button you will fond on the Pyhton script editor window.
+3. Click on the green play button you will found on the Pyhton script editor window.
 4. You should have an sphere in the Revil model.
 
 ### Sample 6
@@ -54,14 +54,14 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 
 1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
 2. Create some geometry in Rhino.
-3. Click on the button you will found on the _Rhinoceros_ panel called _Sample 6_.
-4. You should have a preview of Rhino geometry into the Revit view.
+3. Click on the button on the _Rhinoceros_ panel called _Sample 6_.
+4. You should have a preview of Rhino geometry in the Revit view.
 
 ### Sample 5
 ![](doc/Sample5.gif)
 
 1. Open the ribbon tab called Add-Ins.
-2. Click on the button you will found on the _Rhinoceros_ panel called _Grasshopper_.
+2. Click on the button on the _Rhinoceros_ panel called _Grasshopper_.
 3. Open the _Revit_ tab in the Grasshopper toolbar.
 3. Enjoy!!
 
@@ -69,7 +69,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 ![](doc/Sample4.png)
 
 1. Open the ribbon tab called Add-Ins.
-2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 4_.
+2. Click on the button on the _Rhinoceros_ panel called _Sample 4_.
 3. Open _"Sample4.ghx"_ file.
 4. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
 5. You should have a collection of pipes over a 3D Voronoi diagram in Revit.

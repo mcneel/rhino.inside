@@ -1,4 +1,8 @@
-# Rhino Inside 
+# Rhino Inside
+
+[![Discourse users](https://img.shields.io/discourse/https/discourse.mcneel.com/users.svg)](https://discourse.mcneel.com/c/serengeti/inside)
+
+
 The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.  It may be possible to:
 
 * Starting Rhino and Grasshopper as an add in another product.
@@ -22,6 +26,8 @@ This repository contains samples for:
    - [Revit](Autodesk/Revit)
 - [Bricsys](Bricsys)
    - [BricsCAD](Bricsys/BricsCAD)
-- [A simple console application](ConsoleApps/HelloWorld)
+- [Console](ConsoleApps)
+   - [A simple console application](ConsoleApps/HelloWorld)
+   - [A simple console application for converting files to .obj](ConsoleApps/Convert)
 
 **If you have any questions, [visit the discussion forum...](https://discourse.mcneel.com/c/serengeti/inside)**

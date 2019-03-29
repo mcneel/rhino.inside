@@ -328,3 +328,7 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+/CPython/dist
+/CPython/build
+/CPython/rhinoinside.egg-info
+/CPython/rhinoinside/RhinoInsidePythonShim.dll
