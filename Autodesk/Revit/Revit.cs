@@ -84,7 +84,7 @@ namespace RhinoInside.Revit
         Sample4.CreateUI(ribbonPanel);
         Sample6.CreateUI(ribbonPanel);
         ribbonPanel.AddSeparator();
-        UI.APIDocsCommand.CreateUI(ribbonPanel);
+        UI.HelpCommand.CreateUI(ribbonPanel);
       }
 
       // Register some events
