@@ -11,32 +11,82 @@ using Autodesk.Revit.UI;
 
 namespace RhinoInside.Revit.UI
 {
-  [Transaction(TransactionMode.Manual)]
-  [Regeneration(RegenerationOption.Manual)]
-  class APIDocsCommand : IExternalCommand
+  abstract class HelpCommand : IExternalCommand
   {
-    public static void CreateUI(RibbonPanel ribbonPanel)
+    internal static void CreateUI(RibbonPanel ribbonPanel)
     {
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-
-      var buttonData = new PushButtonData
-      (
-        "cmdRhinoInside.RevitAPIDocs", "APIDocs",
-        thisAssembly.Location,
-        MethodBase.GetCurrentMethod().DeclaringType.FullName
-      );
-
-      if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
+      if (ribbonPanel.AddItem(new PulldownButtonData("cmdRhinoInside.Help", "Help")) is PulldownButton pullDownButton)
       {
-        pushButton.ToolTip = "Opens revitapidocs.com website";
-        pushButton.LargeImage = ImageBuilder.BuildImage("?");
+        pullDownButton.LargeImage = ImageBuilder.BuildImage("?");
+
+        AddPushButton(pullDownButton, typeof(APIDocsCommand),           "APIDocs", "Opens revitapidocs.com website");
+        AddPushButton(pullDownButton, typeof(TheBuildingCoderCommand),  "TheBuildingCoder", "Opens thebuildingcoder.typepad.com website");
+        pullDownButton.AddSeparator();
+        AddPushButton(pullDownButton, typeof(RhinoDevDocsCommand),      "Rhino Dev Docs", "Opens developer.rhino3d.com website");
+        AddPushButton(pullDownButton, typeof(DiscourseCommand),         "McNeel Discourse", "Opens discourse.mcneel.com website");
       }
     }
 
-    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    private static void AddPushButton(PulldownButton pullDownButton, Type commandType,string text, string tooltip = default(string))
+    {
+      // Create a push button to trigger a command add it to the ribbon panel.
+      var thisAssembly = Assembly.GetExecutingAssembly();
+      var buttonData = new PushButtonData("cmdRhinoInside." + commandType.Name, text, thisAssembly.Location, commandType.FullName);
+
+      if (pullDownButton.AddPushButton(buttonData) is PushButton pushButton)
+      {
+        pushButton.ToolTip = tooltip;
+        pushButton.AvailabilityClassName = typeof(CommandAvailability).FullName;
+      }
+    }
+
+    public abstract Result Execute(ExternalCommandData data, ref string message, ElementSet elements);
+
+    class CommandAvailability : IExternalCommandAvailability
+    {
+      bool IExternalCommandAvailability.IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories) => true;
+    }
+  }
+
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  class APIDocsCommand : HelpCommand
+  {
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       using (System.Diagnostics.Process.Start("http://www.revitapidocs.com/")) { }
+
+      return Result.Succeeded;
+    }
+  }
+
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  class TheBuildingCoderCommand : HelpCommand
+  {
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    {
+      using (System.Diagnostics.Process.Start("https://thebuildingcoder.typepad.com/")) { }
+
+      return Result.Succeeded;
+    }
+  }
+  
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  class RhinoDevDocsCommand : HelpCommand
+  {
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    {
+      using (System.Diagnostics.Process.Start("https://developer.rhino3d.com/")) { }
+
+      return Result.Succeeded;
+    }
+  }
+
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  class DiscourseCommand : HelpCommand
+  {
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    {
+      using (System.Diagnostics.Process.Start("https://discourse.mcneel.com/c/serengeti/inside")) { }
 
       return Result.Succeeded;
     }
