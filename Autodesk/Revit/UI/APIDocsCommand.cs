@@ -11,7 +11,33 @@ using Autodesk.Revit.UI;
 
 namespace RhinoInside.Revit.UI
 {
-  abstract class HelpCommand : IExternalCommand
+  static class Extension
+  {
+    internal static void AddPushButton(this PulldownButton pullDownButton, Type commandType, string text, string tooltip = default(string), Type availability = null)
+    {
+      // Create a push button to trigger a command and add it to the pull down button.
+      var thisAssembly = Assembly.GetExecutingAssembly();
+      var buttonData = new PushButtonData("cmdRhinoInside." + commandType.Name, text, thisAssembly.Location, commandType.FullName);
+
+      if (pullDownButton.AddPushButton(buttonData) is PushButton pushButton)
+      {
+        pushButton.ToolTip = tooltip;
+        pushButton.AvailabilityClassName = availability?.FullName ?? string.Empty;
+      }
+    }
+  }
+
+  abstract class Command : IExternalCommand
+  {
+    internal class AllwaysAvailable : IExternalCommandAvailability
+    {
+      bool IExternalCommandAvailability.IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories) => true;
+    }
+
+    public abstract Result Execute(ExternalCommandData data, ref string message, ElementSet elements);
+  }
+
+  abstract class HelpCommand : Command
   {
     internal static void CreateUI(RibbonPanel ribbonPanel)
     {
@@ -19,32 +45,13 @@ namespace RhinoInside.Revit.UI
       {
         pullDownButton.LargeImage = ImageBuilder.BuildImage("?");
 
-        AddPushButton(pullDownButton, typeof(APIDocsCommand),           "APIDocs", "Opens revitapidocs.com website");
-        AddPushButton(pullDownButton, typeof(TheBuildingCoderCommand),  "TheBuildingCoder", "Opens thebuildingcoder.typepad.com website");
+        pullDownButton.AddPushButton(typeof(APIDocsCommand),           "APIDocs",           "Opens revitapidocs.com website",             typeof(AllwaysAvailable));
+        pullDownButton.AddPushButton(typeof(TheBuildingCoderCommand),  "TheBuildingCoder",  "Opens thebuildingcoder.typepad.com website", typeof(AllwaysAvailable));
         pullDownButton.AddSeparator();
-        AddPushButton(pullDownButton, typeof(RhinoDevDocsCommand),      "Rhino Dev Docs", "Opens developer.rhino3d.com website");
-        AddPushButton(pullDownButton, typeof(DiscourseCommand),         "McNeel Discourse", "Opens discourse.mcneel.com website");
+        pullDownButton.AddPushButton(typeof(RhinoDevDocsCommand),      "Rhino Dev Docs",    "Opens developer.rhino3d.com website",        typeof(AllwaysAvailable));
+        pullDownButton.AddPushButton(typeof(DiscourseCommand),         "McNeel Discourse",  "Opens discourse.mcneel.com website",         typeof(AllwaysAvailable));
+        pullDownButton.AddPushButton(typeof(AboutCommand),             "About",             "Opens GitHub Repo website",                  typeof(AllwaysAvailable));
       }
-    }
-
-    private static void AddPushButton(PulldownButton pullDownButton, Type commandType,string text, string tooltip = default(string))
-    {
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-      var buttonData = new PushButtonData("cmdRhinoInside." + commandType.Name, text, thisAssembly.Location, commandType.FullName);
-
-      if (pullDownButton.AddPushButton(buttonData) is PushButton pushButton)
-      {
-        pushButton.ToolTip = tooltip;
-        pushButton.AvailabilityClassName = typeof(CommandAvailability).FullName;
-      }
-    }
-
-    public abstract Result Execute(ExternalCommandData data, ref string message, ElementSet elements);
-
-    class CommandAvailability : IExternalCommandAvailability
-    {
-      bool IExternalCommandAvailability.IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories) => true;
     }
   }
 
@@ -91,4 +98,16 @@ namespace RhinoInside.Revit.UI
       return Result.Succeeded;
     }
   }
+
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  class AboutCommand : HelpCommand
+  {
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    {
+      using (System.Diagnostics.Process.Start("https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md")) { }
+
+      return Result.Succeeded;
+    }
+  }
+  
 }
