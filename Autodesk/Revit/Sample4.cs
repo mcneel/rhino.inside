@@ -22,10 +22,9 @@ using Grasshopper.Kernel.Types;
 using Cursor = System.Windows.Forms.Cursor;
 using Cursors = System.Windows.Forms.Cursors;
 
-namespace RhinoInside.Revit
+namespace RhinoInside.Revit.Samples
 {
-  [Transaction(TransactionMode.Manual)]
-  [Regeneration(RegenerationOption.Manual)]
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
   public class Sample4 : IExternalCommand
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
@@ -42,7 +41,7 @@ namespace RhinoInside.Revit
 
       var comboBoxData = new ComboBoxData("Category")
       {
-        ToolTip = "Category where Sample 4 will place geometry."
+        ToolTip = "Category where Grasshopper Player will place geometry."
       };
 
       var items = ribbonPanel.AddStackedItems(buttonData, comboBoxData);

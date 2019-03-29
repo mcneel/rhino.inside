@@ -139,6 +139,7 @@
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Document\Levels.cs" />
     <Compile Include="GH\Element\Element.cs" />
+    <Compile Include="DocumentPreviewServer.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

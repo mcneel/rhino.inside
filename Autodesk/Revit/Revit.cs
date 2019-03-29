@@ -81,9 +81,9 @@ namespace RhinoInside.Revit
         UI.GrasshopperCommand.CreateUI(ribbonPanel);
         UI.PythonCommand.CreateUI(ribbonPanel);
         ribbonPanel.AddSeparator();
-        Sample1.CreateUI(ribbonPanel);
-        Sample4.CreateUI(ribbonPanel);
-        Sample6.CreateUI(ribbonPanel);
+        Samples.Sample1.CreateUI(ribbonPanel);
+        Samples.Sample4.CreateUI(ribbonPanel);
+        Samples.Sample6.CreateUI(ribbonPanel);
         ribbonPanel.AddSeparator();
         UI.HelpCommand.CreateUI(ribbonPanel);
       }

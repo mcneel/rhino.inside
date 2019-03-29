@@ -12,10 +12,9 @@ using Autodesk.Revit.UI;
 
 using Rhino.Geometry;
 
-namespace RhinoInside.Revit
+namespace RhinoInside.Revit.Samples
 {
-  [Transaction(TransactionMode.Manual)]
-  [Regeneration(RegenerationOption.Manual)]
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
   public class Sample1 : IExternalCommand
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
