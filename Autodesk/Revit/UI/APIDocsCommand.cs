@@ -43,7 +43,7 @@ namespace RhinoInside.Revit.UI
     {
       if (ribbonPanel.AddItem(new PulldownButtonData("cmdRhinoInside.Help", "Help")) is PulldownButton pullDownButton)
       {
-        pullDownButton.LargeImage = ImageBuilder.BuildImage("?");
+        pullDownButton.LargeImage = ImageBuilder.BuildLargeImage("?");
 
         pullDownButton.AddPushButton(typeof(APIDocsCommand),           "APIDocs",           "Opens revitapidocs.com website",             typeof(AllwaysAvailable));
         pullDownButton.AddPushButton(typeof(TheBuildingCoderCommand),  "TheBuildingCoder",  "Opens thebuildingcoder.typepad.com website", typeof(AllwaysAvailable));

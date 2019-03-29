@@ -35,7 +35,7 @@ namespace RhinoInside.Revit
 
       var buttonData = new PushButtonData
       (
-        "cmdRhinoInsideSample4", "Sample 4",
+        "cmdRhinoInsideSample4", "Grasshopper Player",
         thisAssembly.Location,
         MethodBase.GetCurrentMethod().DeclaringType.FullName
       );
@@ -49,8 +49,8 @@ namespace RhinoInside.Revit
 
       if (items[0] is PushButton pushButton)
       {
-        pushButton.ToolTip = "Eval a Grasshopper definition";
-        pushButton.LargeImage = ImageBuilder.BuildImage("4");
+        pushButton.ToolTip = "Loads and eval a Grasshopper definition";
+        pushButton.Image = ImageBuilder.BuildImage("4");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
       }
 

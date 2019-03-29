@@ -71,7 +71,7 @@ namespace RhinoInside.Revit.UI
 
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
-        pushButton.ToolTip = "Shows Rhino Python editor window visibility";
+        pushButton.ToolTip = "Shows Rhino Python editor window";
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Python.png");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://developer.rhino3d.com/guides/rhinopython/"));
       }

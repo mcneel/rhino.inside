@@ -86,6 +86,10 @@ namespace RhinoInside
 
     static public System.Windows.Media.ImageSource BuildImage(string tag)
     {
+      return BuildIcon(tag, 64, 64).ToBitmapImage(16, 16);
+    }
+    static public System.Windows.Media.ImageSource BuildLargeImage(string tag)
+    {
       return BuildIcon(tag, 64, 64).ToBitmapImage(32, 32);
     }
   }
