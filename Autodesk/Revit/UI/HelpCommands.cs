@@ -11,32 +11,6 @@ using Autodesk.Revit.UI;
 
 namespace RhinoInside.Revit.UI
 {
-  static class Extension
-  {
-    internal static void AddPushButton(this PulldownButton pullDownButton, Type commandType, string text, string tooltip = default(string), Type availability = null)
-    {
-      // Create a push button to trigger a command and add it to the pull down button.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-      var buttonData = new PushButtonData("cmdRhinoInside." + commandType.Name, text, thisAssembly.Location, commandType.FullName);
-
-      if (pullDownButton.AddPushButton(buttonData) is PushButton pushButton)
-      {
-        pushButton.ToolTip = tooltip;
-        pushButton.AvailabilityClassName = availability?.FullName ?? string.Empty;
-      }
-    }
-  }
-
-  abstract class Command : IExternalCommand
-  {
-    internal class AllwaysAvailable : IExternalCommandAvailability
-    {
-      bool IExternalCommandAvailability.IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories) => true;
-    }
-
-    public abstract Result Execute(ExternalCommandData data, ref string message, ElementSet elements);
-  }
-
   abstract class HelpCommand : Command
   {
     internal static void CreateUI(RibbonPanel ribbonPanel)

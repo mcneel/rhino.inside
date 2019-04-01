@@ -65,7 +65,7 @@ namespace RhinoInside
       };
 
       g.FillEllipse(Brushes.Black, 1.0f, 1.0f, width - 2.0f, height - 2.0f);
-      float emSize = ((float) width - ((float) tag.Length * 4.0f));
+      float emSize = ((float) (width) / ((float) tag.Length));
 
       if (width == 24)
       {
