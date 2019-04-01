@@ -143,6 +143,17 @@ namespace RhinoInside.Revit
         new object[] { new GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
       );
 
+      // Load all the gha installed under the %APPDATA%\Grasshopper\Libraries-Autodesk-Revit-20XX
+      var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
+      var revitAssemblyFolder = Grasshopper.Folders.DefaultAssemblyFolder.Substring(0, Grasshopper.Folders.DefaultAssemblyFolder.Length - 1) + '-' + schemeName;
+      var assemblyFolder = new DirectoryInfo(revitAssemblyFolder);
+      try
+      {
+        foreach (var file in assemblyFolder.EnumerateFiles("*.gha"))
+          LoadGHAProc.Invoke(Instances.ComponentServer, new object[] { new GH_ExternalFile(file.FullName), false });
+      }
+      catch (System.IO.DirectoryNotFoundException) { }
+
       Instances.Settings.SetValue("Assemblies:COFF", bCoff);
 
       if (rc)
