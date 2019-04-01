@@ -22,42 +22,45 @@ using Grasshopper.Kernel.Types;
 using Cursor = System.Windows.Forms.Cursor;
 using Cursors = System.Windows.Forms.Cursors;
 
+using RhinoInside.Revit.UI;
+
 namespace RhinoInside.Revit.Samples
 {
-  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  public class Sample4 : IExternalCommand
+  public abstract class Sample4 : Command
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
       // Create a push button to trigger a command add it to the ribbon panel.
       var thisAssembly = Assembly.GetExecutingAssembly();
 
-      var buttonData = new PushButtonData
+      var items = ribbonPanel.AddStackedItems
       (
-        "cmdRhinoInsideSample4", "Grasshopper Player",
-        thisAssembly.Location,
-        MethodBase.GetCurrentMethod().DeclaringType.FullName
+        new ComboBoxData("Category"),
+        new PulldownButtonData("cmdRhinoInside.GrasshopperPlayer", "Grasshopper Player")
       );
 
-      var comboBoxData = new ComboBoxData("Category")
+      categoriesComboBox = items[0] as Autodesk.Revit.UI.ComboBox;
+      if (categoriesComboBox != null)
       {
-        ToolTip = "Category where Grasshopper Player will place geometry."
-      };
-
-      var items = ribbonPanel.AddStackedItems(buttonData, comboBoxData);
-
-      if (items[0] is PushButton pushButton)
-      {
-        pushButton.ToolTip = "Loads and eval a Grasshopper definition";
-        pushButton.Image = ImageBuilder.BuildImage("4");
-        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
+        categoriesComboBox.ToolTip = "Category where Grasshopper Player will place geometry.";
       }
 
-      categoriesComboBox = items[1] as Autodesk.Revit.UI.ComboBox;
+      mruPullDownButton = items[1] as Autodesk.Revit.UI.PulldownButton;
+      if (mruPullDownButton != null)
+      {
+        mruPullDownButton.ToolTip = "Loads and evals a Grasshopper definition";
+        mruPullDownButton.Image = ImageBuilder.BuildImage("4");
+        mruPullDownButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
+
+        mruPullDownButton.AddPushButton(typeof(Browse), "Browse...", "Browse for a Grasshopper definition to evaluate");
+      }
+
       Revit.ApplicationUI.ViewActivated += ActiveUIApplication_ViewActivated;
     }
 
     static Autodesk.Revit.UI.ComboBox categoriesComboBox = null;
+    static PulldownButton mruPullDownButton = null;
+    static Autodesk.Revit.UI.PushButton[] mruPushPuttons = null;
 
     static void ActiveUIApplication_ViewActivated(object sender, Autodesk.Revit.UI.Events.ViewActivatedEventArgs e)
     {
@@ -227,29 +230,67 @@ namespace RhinoInside.Revit.Samples
       return null;
     }
 
-    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    bool AddFileToMru(string filePath)
     {
-      // Load Grasshopper
-      PlugIn.LoadPlugIn(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF));
+      if (!File.Exists(filePath))
+        return false;
 
-      string filePath;
-      using (var openFileDialog = new OpenFileDialog())
+      if(mruPushPuttons == null)
       {
-        openFileDialog.Filter = "Grasshopper Binary (*.gh)|*.gh|Grasshopper Xml (*.ghx)|*.ghx";
-#if DEBUG
-        openFileDialog.FilterIndex = 2;
-#else
-        openFileDialog.FilterIndex = 1;
-#endif
-        openFileDialog.RestoreDirectory = true;
-
-        switch (openFileDialog.ShowDialog())
+        mruPullDownButton.AddSeparator();
+        mruPushPuttons = new Type[] { typeof(Mru0), typeof(Mru1), typeof(Mru2), typeof(Mru3), typeof(Mru4), typeof(Mru5) }.
+                         Select(x => mruPullDownButton.AddPushButton(x)).ToArray();
+        foreach (var mru in mruPushPuttons)
         {
-          case DialogResult.OK:     filePath = openFileDialog.FileName; break;
-          case DialogResult.Cancel: return Result.Cancelled;
-          default:                  return Result.Failed;
+          mru.Visible = false;
+          mru.Enabled = false;
         }
       }
+
+      int lastItemToMove = 0;
+      for (int m = 0; m < mruPushPuttons.Length; ++m)
+      {
+        lastItemToMove++;
+
+        if (mruPushPuttons[m].ToolTip == filePath)
+          break;
+      }
+
+      int itemsToMove = lastItemToMove - 1;
+      if (itemsToMove > 0)
+      {
+        for (int m = lastItemToMove - 1; m > 0; --m)
+        {
+          mruPushPuttons[m].Visible = mruPushPuttons[m - 1].Visible;
+          mruPushPuttons[m].Enabled = mruPushPuttons[m - 1].Enabled;
+          mruPushPuttons[m].ToolTipImage = mruPushPuttons[m - 1].ToolTipImage;
+          mruPushPuttons[m].LongDescription = mruPushPuttons[m - 1].LongDescription;
+          mruPushPuttons[m].ToolTip = mruPushPuttons[m - 1].ToolTip;
+          mruPushPuttons[m].ItemText = mruPushPuttons[m - 1].ItemText;
+          mruPushPuttons[m].Image = mruPushPuttons[m - 1].Image;
+          mruPushPuttons[m].LargeImage = mruPushPuttons[m - 1].LargeImage;
+        }
+
+        mruPushPuttons[0].Visible = true;
+        mruPushPuttons[0].Enabled = true;
+        mruPushPuttons[0].ToolTipImage = null;
+        mruPushPuttons[0].LongDescription = string.Empty;
+        mruPushPuttons[0].ToolTip = filePath;
+        mruPushPuttons[0].ItemText = Path.GetFileNameWithoutExtension(filePath);
+        mruPushPuttons[0].Image = ImageBuilder.BuildImage(Path.GetExtension(filePath).Substring(1));
+        mruPushPuttons[0].LargeImage = ImageBuilder.BuildLargeImage(Path.GetExtension(filePath).Substring(1));
+      }
+
+      return true;
+    }
+
+    Result BakeDefinition(UIApplication application, string filePath)
+    {
+      if (!AddFileToMru(filePath))
+        return Result.Failed;
+
+      // Load Grasshopper
+      PlugIn.LoadPlugIn(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF));
 
       var transactionName = string.Empty;
 
@@ -262,6 +303,14 @@ namespace RhinoInside.Revit.Samples
       {
         if (!archive.ExtractObject(definition, "Definition"))
           return Result.Failed;
+
+        // Update Most recet used item extended ToolTip information
+        {
+          mruPushPuttons[0].LongDescription = definition.Properties.Description;
+
+          if (archive.GetRootNode.FindChunk("Thumbnail")?.GetDrawingBitmap("Thumbnail") is System.Drawing.Bitmap bitmap)
+            mruPushPuttons[0].ToolTipImage = bitmap.ToBitmapImage(Math.Min(bitmap.Width, 355), Math.Min(bitmap.Height, 355));
+        }
 
         transactionName = Path.GetFileNameWithoutExtension(definition.Properties.ProjectFileName);
 
@@ -292,31 +341,31 @@ namespace RhinoInside.Revit.Samples
           switch (input)
           {
             case Param_Box box:
-              var boxes = PromptBox(data.Application.ActiveUIDocument, input.NickName);
+              var boxes = PromptBox(application.ActiveUIDocument, input.NickName);
               if (boxes == null)
                 return Result.Cancelled;
               values.Add(input, boxes);
               break;
             case Param_Point point:
-              var points = PromptPoint(data.Application.ActiveUIDocument, input.NickName);
+              var points = PromptPoint(application.ActiveUIDocument, input.NickName);
               if (points == null)
                 return Result.Cancelled;
               values.Add(input, points);
               break;
             case Param_Curve curve:
-              var curves = PromptEdge(data.Application.ActiveUIDocument, input.NickName);
+              var curves = PromptEdge(application.ActiveUIDocument, input.NickName);
               if (curves == null)
                 return Result.Cancelled;
               values.Add(input, curves);
               break;
             case Param_Surface surface:
-              var surfaces = PromptSurface(data.Application.ActiveUIDocument, input.NickName);
+              var surfaces = PromptSurface(application.ActiveUIDocument, input.NickName);
               if (surfaces == null)
                 return Result.Cancelled;
               values.Add(input, surfaces);
               break;
             case Param_Brep brep:
-              var breps = PromptBrep(data.Application.ActiveUIDocument, input.NickName);
+              var breps = PromptBrep(application.ActiveUIDocument, input.NickName);
               if (breps == null)
                 return Result.Cancelled;
               values.Add(input, breps);
@@ -388,8 +437,7 @@ namespace RhinoInside.Revit.Samples
       // Bake output geometry
       if (outputs.Count > 0)
       {
-        var uiApp = data.Application;
-        var doc = uiApp.ActiveUIDocument.Document;
+        var doc = application.ActiveUIDocument.Document;
 
         using (var trans = new Transaction(doc, transactionName))
         {
@@ -419,5 +467,51 @@ namespace RhinoInside.Revit.Samples
 
       return Result.Succeeded;
     }
+
+    [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+    public class Browse : Sample4
+    {
+      public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+      {
+        string filePath;
+        using (var openFileDialog = new OpenFileDialog())
+        {
+          openFileDialog.Filter = "Grasshopper Binary (*.gh)|*.gh|Grasshopper Xml (*.ghx)|*.ghx";
+#if DEBUG
+          openFileDialog.FilterIndex = 2;
+#else
+        openFileDialog.FilterIndex = 1;
+#endif
+          openFileDialog.RestoreDirectory = true;
+
+          switch (openFileDialog.ShowDialog())
+          {
+            case DialogResult.OK: filePath = openFileDialog.FileName; break;
+            case DialogResult.Cancel: return Result.Cancelled;
+            default: return Result.Failed;
+          }
+        }
+
+        return BakeDefinition(data.Application, filePath);
+      }
+    }
+
+    [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+    public class Mru0 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[0].ToolTip); }
+
+    [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+    public class Mru1 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[1].ToolTip); }
+
+    [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+    public class Mru2 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[2].ToolTip); }
+
+    [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+    public class Mru3 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[3].ToolTip); }
+
+    [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+    public class Mru4 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[4].ToolTip); }
+
+    [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+    public class Mru5 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[5].ToolTip); }
   }
 }
