@@ -22,10 +22,9 @@ using Grasshopper.Kernel.Types;
 using Cursor = System.Windows.Forms.Cursor;
 using Cursors = System.Windows.Forms.Cursors;
 
-namespace RhinoInside.Revit
+namespace RhinoInside.Revit.Samples
 {
-  [Transaction(TransactionMode.Manual)]
-  [Regeneration(RegenerationOption.Manual)]
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
   public class Sample4 : IExternalCommand
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
@@ -35,22 +34,22 @@ namespace RhinoInside.Revit
 
       var buttonData = new PushButtonData
       (
-        "cmdRhinoInsideSample4", "Sample 4",
+        "cmdRhinoInsideSample4", "Grasshopper Player",
         thisAssembly.Location,
         MethodBase.GetCurrentMethod().DeclaringType.FullName
       );
 
       var comboBoxData = new ComboBoxData("Category")
       {
-        ToolTip = "Category where Sample 4 will place geometry."
+        ToolTip = "Category where Grasshopper Player will place geometry."
       };
 
       var items = ribbonPanel.AddStackedItems(buttonData, comboBoxData);
 
       if (items[0] is PushButton pushButton)
       {
-        pushButton.ToolTip = "Eval a Grasshopper definition";
-        pushButton.LargeImage = ImageBuilder.BuildImage("4");
+        pushButton.ToolTip = "Loads and eval a Grasshopper definition";
+        pushButton.Image = ImageBuilder.BuildImage("4");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
       }
 

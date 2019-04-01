@@ -4,13 +4,9 @@ using System.Reflection;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Color = System.Drawing.Color;
 
-using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
 #if REVIT_2018
 using Autodesk.Revit.DB.DirectContext3D;
 
@@ -20,40 +16,9 @@ using Autodesk.Revit.DB.ExternalService;
 
 namespace RhinoInside.Revit
 {
-  [Transaction(TransactionMode.Manual)]
-  [Regeneration(RegenerationOption.Manual)]
-  public class Sample6 : IExternalCommand
+  class DocumentPreviewServer : DirectContext3DServer
   {
-    public static void CreateUI(RibbonPanel ribbonPanel)
-    {
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-
-      var buttonData = new PushButtonData
-      (
-        "cmdRhinoInsideSample6", "Sample 6",
-        thisAssembly.Location,
-        MethodBase.GetCurrentMethod().DeclaringType.FullName
-      );
-
-      if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
-      {
-        pushButton.ToolTip = "Toggle Rhino model preview visibility";
-        pushButton.LargeImage = ImageBuilder.BuildImage("6");
-        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-6"));
-      }
-    }
-
-    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
-    {
-      ObjectPreviewServer.Toggle();
-      return Result.Succeeded;
-    }
-  }
-
-  class ObjectPreviewServer : DirectContext3DServer
-  {
-    static ObjectPreviewServer()
+    static DocumentPreviewServer()
     {
       RhinoDoc.CloseDocument += RhinoDoc_CloseDocument;
       RhinoDoc.AddRhinoObject += RhinoDoc_AddRhinoObject;
@@ -74,7 +39,7 @@ namespace RhinoInside.Revit
     {
       if (e.TheObject.Document == ActiveDocument && ObjectPrimitive.IsSupportedObject(e.TheObject, true))
       {
-        Revit.EnqueueReadAction((doc, canceled) => new ObjectPreviewServer(e.TheObject).Register());
+        Revit.EnqueueReadAction((doc, canceled) => new DocumentPreviewServer(e.TheObject).Register());
         Revit.RefreshActiveView();
       }
     }
@@ -123,9 +88,9 @@ namespace RhinoInside.Revit
       ActiveDocument = ActiveDocument == null ? RhinoDoc.ActiveDoc : null;
     }
 
-    static Dictionary<Guid, ObjectPreviewServer> objectPreviews;
+    static Dictionary<Guid, DocumentPreviewServer> objectPreviews;
     readonly Rhino.DocObjects.RhinoObject rhinoObject;
-    ObjectPreviewServer(Rhino.DocObjects.RhinoObject o) { rhinoObject = o; }
+    DocumentPreviewServer(Rhino.DocObjects.RhinoObject o) { rhinoObject = o; }
 
     override public void Register()
     {
@@ -151,7 +116,7 @@ namespace RhinoInside.Revit
 
     static void Start()
     {
-      objectPreviews = new Dictionary<Guid, ObjectPreviewServer>();
+      objectPreviews = new Dictionary<Guid, DocumentPreviewServer>();
 
       using (var service = ExternalServiceRegistry.GetService(ExternalServices.BuiltInExternalServices.DirectContext3DService) as MultiServerService)
       {
@@ -161,7 +126,7 @@ namespace RhinoInside.Revit
           if (!ObjectPrimitive.IsSupportedObject(o, true))
             continue;
 
-          var preview = new ObjectPreviewServer(o);
+          var preview = new DocumentPreviewServer(o);
           var serverId = preview.GetServerId();
           objectPreviews.Add(serverId, preview);
           service.AddServer(preview);
@@ -505,37 +470,6 @@ namespace RhinoInside.Revit
       }
     }
     #endregion
-  }
-}
-#else
-namespace RhinoInside.Revit
-{
-  [Transaction(TransactionMode.Manual)]
-  [Regeneration(RegenerationOption.Manual)]
-  public class Sample6 : IExternalCommand
-  {
-    public static void CreateUI(RibbonPanel ribbonPanel)
-    {
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-
-      var buttonData = new PushButtonData
-      (
-        "cmdRhinoInsideSample6", "Sample 6",
-        thisAssembly.Location,
-        MethodBase.GetCurrentMethod().DeclaringType.FullName
-      );
-
-      if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
-      {
-        pushButton.ToolTip = "Toggle Rhino model preview visibility (Revit 2018 or above)";
-        pushButton.LargeImage = ImageBuilder.BuildImage("6");
-        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-6"));
-        pushButton.Enabled = false;
-      }
-    }
-
-    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => Result.Failed;
   }
 }
 #endif

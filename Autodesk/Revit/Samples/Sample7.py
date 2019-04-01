@@ -17,7 +17,7 @@ def CommitToDocument(doc):
 
     category = ElementId(BuiltInCategory.OST_GenericModel)
     ds = DirectShape.CreateElement(doc, category)
-    
+
     for geometry in Enumerable.ToList(Convert.ToHost(meshes)):
         ds.AppendShape(geometry)
 
