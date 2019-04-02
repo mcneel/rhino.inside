@@ -90,7 +90,7 @@ namespace RhinoInside.Revit
       public ElementId GraphicsStyleId = ElementId.InvalidElementId;
       public ElementId MaterialId = ElementId.InvalidElementId;
       public Rhino.Geometry.MeshingParameters MeshingParameters = null;
-      public double TriangulateLevelOfDetail => MeshingParameters != null ? MeshingParameters.RelativeTolerance : double.NaN;
+      public double TriangulateLevelOfDetail => MeshingParameters?.RelativeTolerance ?? double.NaN;
     }
     #endregion
 
@@ -285,23 +285,129 @@ namespace RhinoInside.Revit
       }
     }
 
-    static internal Rhino.Geometry.Brep[] ToRhino(this Autodesk.Revit.DB.PlanarFace face)
+    static internal Rhino.Geometry.PlaneSurface ToRhino(this Autodesk.Revit.DB.Plane surface, Interval xExtents, Interval yExtents)
     {
-      var loops = face.GetEdgesAsCurveLoops().ToRhino();
-      return Rhino.Geometry.Brep.CreatePlanarBreps(loops, Revit.VertexTolerance);
+      var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XVec.ToRhino(), (Vector3d) surface.YVec.ToRhino());
+      return new Rhino.Geometry.PlaneSurface(plane, xExtents, yExtents);
+    }
+
+    static internal Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.CylindricalSurface surface, Interval interval)
+    {
+      var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
+      var circle = new Rhino.Geometry.Circle(plane, surface.Radius);
+      var cylinder = new Rhino.Geometry.Cylinder(circle)
+      {
+        Height1 = interval.Min,
+        Height2 = interval.Max
+      };
+
+      return Rhino.Geometry.RevSurface.CreateFromCylinder(cylinder);
+    }
+
+    static Rhino.Geometry.Brep TrimFace(this Rhino.Geometry.Brep brep, int faceIndex, IEnumerable<Rhino.Geometry.Curve> curves, double tolerance)
+    {
+      var trimmedBrep = brep.Faces[faceIndex].Split(curves, Revit.VertexTolerance);
+
+      {
+        var nakedFaces = new List<int>();
+        foreach (var trimedFace in trimmedBrep.Faces)
+        {
+          foreach (var trim in trimedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.Edge.Valence == EdgeAdjacency.Naked))
+          {
+            var midPoint = trim.Edge.PointAtNormalizedLength(0.5);
+            if (!curves.Where(curve => curve.ClosestPoint(midPoint, out var t, Revit.VertexTolerance)).Any())
+            {
+              nakedFaces.Add(trimedFace.FaceIndex);
+              break;
+            }
+          }
+        }
+
+        foreach (var nakedFace in nakedFaces.OrderByDescending(x => x))
+          trimmedBrep.Faces.RemoveAt(nakedFace);
+      }
+
+      {
+        var interiorFaces = new List<int>();
+
+        foreach (var trimedFace in trimmedBrep.Faces)
+        {
+          foreach (var trim in trimedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.Edge.Valence == EdgeAdjacency.Interior))
+          {
+            if (trim.Loop.LoopType == BrepLoopType.Outer)
+            {
+              interiorFaces.Add(trimedFace.FaceIndex);
+              break;
+            }
+          }
+        }
+
+        foreach (var interiorFace in interiorFaces.OrderByDescending(x => x))
+          trimmedBrep.Faces.RemoveAt(interiorFace);
+      }
+
+      return trimmedBrep;
+    }
+
+    static internal Rhino.Geometry.Brep ToRhino(this Autodesk.Revit.DB.Face face)
+    {
+      using (var surface = face.GetSurface())
+      {
+        Rhino.Geometry.Brep brep = null;
+        var loops = face.GetEdgesAsCurveLoops().ToRhino().ToArray();
+
+        switch (surface)
+        {
+          case Autodesk.Revit.DB.Plane planeSurface:
+            {
+              var plane = new Rhino.Geometry.Plane(planeSurface.Origin.ToRhino(), (Vector3d) planeSurface.XVec.ToRhino(), (Vector3d) planeSurface.YVec.ToRhino());
+
+              var bbox = BoundingBox.Empty;
+              foreach (var loop in loops)
+              {
+                var edgeBoundingBox = loop.GetBoundingBox(plane);
+                bbox = BoundingBox.Union(bbox, edgeBoundingBox);
+              }
+
+              brep = Brep.CreateFromSurface(planeSurface.ToRhino(new Interval(bbox.Min.X, bbox.Max.X), new Interval(bbox.Min.Y, bbox.Max.Y)));
+              break;
+            }
+          case CylindricalSurface cylindricalSurface:
+            {
+              var plane = new Rhino.Geometry.Plane(cylindricalSurface.Origin.ToRhino(), (Vector3d) cylindricalSurface.XDir.ToRhino(), (Vector3d) cylindricalSurface.YDir.ToRhino());
+
+              var bbox = BoundingBox.Empty;
+              foreach (var loop in loops)
+              {
+                var edgeBoundingBox = loop.GetBoundingBox(plane);
+                bbox = BoundingBox.Union(bbox, edgeBoundingBox);
+              }
+
+              brep = Rhino.Geometry.Brep.CreateFromRevSurface(cylindricalSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
+              break;
+            }
+          default:
+            return null;
+        }
+
+        Debug.Assert(brep.Faces.Count == 1);
+
+        brep.Faces[0].OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation;
+        return brep.TrimFace(0, loops, Revit.VertexTolerance);
+      }
     }
 
     static Rhino.Geometry.GeometryBase ToRhino(this Autodesk.Revit.DB.Solid solid)
     {
-      bool hasNonPlanarFaces = false;
+      bool hasNotImplementedFaces = false;
 
       foreach (var face in solid.Faces)
       {
-        if (hasNonPlanarFaces = !(face is PlanarFace))
+        if (hasNotImplementedFaces = !(face is PlanarFace || face is CylindricalFace))
           break;
       }
 
-      if (hasNonPlanarFaces)
+      if (hasNotImplementedFaces)
       {
         // Emergency conversion to mesh
         var triangulateLevelOfDetail = GraphicAttributes.Peek.TriangulateLevelOfDetail;
@@ -321,19 +427,8 @@ namespace RhinoInside.Revit
       }
       else
       {
-        var faces = new List<Rhino.Geometry.Brep>(solid.Faces.Size);
-        foreach (var face in solid.Faces)
-        {
-          switch (face)
-          {
-            case PlanarFace planarFace:
-              faces.AddRange(planarFace.ToRhino());
-              break;
-          }
-        }
-
-        var breps = Rhino.Geometry.Brep.JoinBreps(faces, Revit.VertexTolerance);
-        return Rhino.Geometry.Brep.MergeBreps(breps, Revit.VertexTolerance);
+        var breps = Rhino.Geometry.Brep.JoinBreps(solid.Faces.Cast<Face>().Select(x => x.ToRhino()), Revit.VertexTolerance);
+        return breps.Length == 1 ? breps[0] : Rhino.Geometry.Brep.MergeBreps(breps, Revit.VertexTolerance);
       }
     }
 
