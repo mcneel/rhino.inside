@@ -307,10 +307,10 @@ namespace RhinoInside.Revit.GH.Components
             foreach(var previousParameter in previousElement.Parameters.Cast<Parameter>())
             {
               var param = element.get_Parameter(previousParameter.Definition);
-              if (param.IsReadOnly)
+              if (param == null || param.IsReadOnly)
                 continue;
 
-              switch(previousParameter?.StorageType)
+              switch(previousParameter.StorageType)
               {
                 case StorageType.Integer:   param.Set(previousParameter.AsInteger()); break;
                 case StorageType.Double:    param.Set(previousParameter.AsDouble()); break;
