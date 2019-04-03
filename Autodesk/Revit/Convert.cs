@@ -291,6 +291,15 @@ namespace RhinoInside.Revit
       return new Rhino.Geometry.PlaneSurface(plane, xExtents, yExtents);
     }
 
+    static internal Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.ConicalSurface surface, Interval interval)
+    {
+      var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
+      double height = interval.Min;
+      var cone = new Rhino.Geometry.Cone(plane, height, Math.Tan(surface.HalfAngle) * height);
+
+      return cone.ToRevSurface();
+    }
+
     static internal Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.CylindricalSurface surface, Interval interval)
     {
       var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
@@ -301,7 +310,15 @@ namespace RhinoInside.Revit
         Height2 = interval.Max
       };
 
-      return Rhino.Geometry.RevSurface.CreateFromCylinder(cylinder);
+      return cylinder.ToRevSurface();
+    }
+
+    static internal Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.RevolvedSurface surface, Interval interval)
+    {
+      var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
+      var curve = surface.GetProfileCurveInWorldCoordinates().ToRhino();
+      var axis = new Rhino.Geometry.Line(surface.Origin.ToRhino(), surface.Origin.ToRhino() + (Vector3d) surface.Axis.ToRhino());
+      return Rhino.Geometry.RevSurface.Create(curve, axis);
     }
 
     static Rhino.Geometry.Brep TrimFace(this Rhino.Geometry.Brep brep, int faceIndex, IEnumerable<Rhino.Geometry.Curve> curves, double tolerance)
@@ -372,6 +389,20 @@ namespace RhinoInside.Revit
               brep = Brep.CreateFromSurface(planeSurface.ToRhino(new Interval(bbox.Min.X, bbox.Max.X), new Interval(bbox.Min.Y, bbox.Max.Y)));
               break;
             }
+          case ConicalSurface conicalSurface:
+            {
+              var plane = new Rhino.Geometry.Plane(conicalSurface.Origin.ToRhino(), (Vector3d) conicalSurface.XDir.ToRhino(), (Vector3d) conicalSurface.YDir.ToRhino());
+
+              var bbox = BoundingBox.Empty;
+              foreach (var loop in loops)
+              {
+                var edgeBoundingBox = loop.GetBoundingBox(plane);
+                bbox = BoundingBox.Union(bbox, edgeBoundingBox);
+              }
+
+              brep = Rhino.Geometry.Brep.CreateFromRevSurface(conicalSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
+              break;
+            }
           case CylindricalSurface cylindricalSurface:
             {
               var plane = new Rhino.Geometry.Plane(cylindricalSurface.Origin.ToRhino(), (Vector3d) cylindricalSurface.XDir.ToRhino(), (Vector3d) cylindricalSurface.YDir.ToRhino());
@@ -384,6 +415,20 @@ namespace RhinoInside.Revit
               }
 
               brep = Rhino.Geometry.Brep.CreateFromRevSurface(cylindricalSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
+              break;
+            }
+          case RevolvedSurface revolvedSurface:
+            {
+              var plane = new Rhino.Geometry.Plane(revolvedSurface.Origin.ToRhino(), (Vector3d) revolvedSurface.XDir.ToRhino(), (Vector3d) revolvedSurface.YDir.ToRhino());
+
+              var bbox = BoundingBox.Empty;
+              foreach (var loop in loops)
+              {
+                var edgeBoundingBox = loop.GetBoundingBox(plane);
+                bbox = BoundingBox.Union(bbox, edgeBoundingBox);
+              }
+
+              brep = Rhino.Geometry.Brep.CreateFromRevSurface(revolvedSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
               break;
             }
           default:
@@ -403,7 +448,7 @@ namespace RhinoInside.Revit
 
       foreach (var face in solid.Faces)
       {
-        if (hasNotImplementedFaces = !(face is PlanarFace || face is CylindricalFace))
+        if (hasNotImplementedFaces = !(face is PlanarFace /*|| face is ConicalFace*/ || face is CylindricalFace || face is RevolvedFace))
           break;
       }
 
@@ -427,8 +472,9 @@ namespace RhinoInside.Revit
       }
       else
       {
-        var breps = Rhino.Geometry.Brep.JoinBreps(solid.Faces.Cast<Face>().Select(x => x.ToRhino()), Revit.VertexTolerance);
-        return breps.Length == 1 ? breps[0] : Rhino.Geometry.Brep.MergeBreps(breps, Revit.VertexTolerance);
+        var brepsToJoin = solid.Faces.Cast<Face>().Select(x => x.ToRhino()).ToArray();
+        var breps = Rhino.Geometry.Brep.JoinBreps(brepsToJoin, Revit.VertexTolerance);
+        return breps?.Length == 1 ? breps[0] : Rhino.Geometry.Brep.MergeBreps(breps, Revit.VertexTolerance);
       }
     }
 
