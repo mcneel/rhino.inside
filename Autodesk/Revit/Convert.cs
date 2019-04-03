@@ -366,6 +366,41 @@ namespace RhinoInside.Revit
       return trimmedBrep;
     }
 
+#if !REVIT2018
+    static internal Autodesk.Revit.DB.Surface GetSurface(this Autodesk.Revit.DB.Face face)
+    {
+      switch(face)
+      {
+        case PlanarFace planarFace:
+          return Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(planarFace.Origin, planarFace.XVector, planarFace.YVector);
+        case ConicalFace conicalFace:
+          {
+            var basisX = conicalFace.get_Radius(0).Normalize();
+            var basisY = conicalFace.get_Radius(1).Normalize();
+            var basisZ = conicalFace.Axis.Normalize();
+            return Autodesk.Revit.DB.ConicalSurface.Create(new Frame(conicalFace.Origin, basisX, basisY, basisZ), conicalFace.HalfAngle);
+          }
+        case CylindricalFace cylindricalFace:
+          {
+            double radius = cylindricalFace.get_Radius(0).GetLength();
+            var basisX = cylindricalFace.get_Radius(0).Normalize();
+            var basisY = cylindricalFace.get_Radius(1).Normalize();
+            var basisZ = cylindricalFace.Axis.Normalize();
+            return Autodesk.Revit.DB.CylindricalSurface.Create(new Frame(cylindricalFace.Origin, basisX, basisY, basisZ), radius);
+          }
+        case RevolvedFace revolvedFace:
+          {
+            var basisX = revolvedFace.get_Radius(0).Normalize();
+            var basisY = revolvedFace.get_Radius(1).Normalize();
+            var basisZ = revolvedFace.Axis.Normalize();
+            return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(revolvedFace.Origin, basisX, basisY, basisZ), revolvedFace.Curve);
+          }
+      }
+
+      return null;
+    }
+#endif
+
     static internal Rhino.Geometry.Brep ToRhino(this Autodesk.Revit.DB.Face face)
     {
       using (var surface = face.GetSurface())
@@ -437,7 +472,9 @@ namespace RhinoInside.Revit
 
         Debug.Assert(brep.Faces.Count == 1);
 
+#if REVIT2018
         brep.Faces[0].OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation;
+#endif
         return brep.TrimFace(0, loops, Revit.VertexTolerance);
       }
     }
