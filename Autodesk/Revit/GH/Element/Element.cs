@@ -1308,4 +1308,133 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
   }
+
+  public class ElementParameterSet : GH_Component
+  {
+    public override Guid ComponentGuid => new Guid("8F1EE110-7FDA-49E0-BED4-E8E0227BC021");
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("SET");
+
+    public ElementParameterSet()
+    : base("Element.ParameterSet", "ParameterSet", "Sets the parameter value of a specified Revit Element", "Revit", "Element")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to update", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.ParameterElement(), "Parameter", "P", "Element parameter to query", GH_ParamAccess.item);
+      manager.AddGenericParameter("Value", "V", "Element parameter value", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "Element", "E", "Updated Element", GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Element element = null;
+      if (!DA.GetData("Element", ref element))
+        return;
+
+      Types.ParameterElement parameterElement = null;
+      if (!DA.GetData("Parameter", ref parameterElement))
+        return;
+
+      IGH_Goo goo = null;
+      if (!DA.GetData("Value", ref goo))
+        return;
+
+      Autodesk.Revit.DB.Parameter parameter = null;
+      if (Enum.IsDefined(typeof(BuiltInParameter), parameterElement.Value.IntegerValue))
+      {
+        parameter = element.get_Parameter((BuiltInParameter) parameterElement.Value.IntegerValue);
+      }
+      else if (Revit.ActiveDBDocument.GetElement(parameterElement.Value) is ParameterElement parameterelement)
+      {
+        parameter = element.get_Parameter(parameterelement.GetDefinition());
+      }
+
+      DA.DisableGapLogic();
+      int Iteration = DA.Iteration;
+      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, element, parameter, goo));
+    }
+
+    double ToHost(double value, UnitType unit)
+    {
+      switch (unit)
+      {
+        case UnitType.UT_Length:  return value / Math.Pow(Revit.ModelUnits, 1.0);
+        case UnitType.UT_Area:    return value / Math.Pow(Revit.ModelUnits, 2.0);
+        case UnitType.UT_Volume:  return value / Math.Pow(Revit.ModelUnits, 3.0);
+      }
+
+      return value;
+    }
+
+    void CommitInstance
+    (
+      Document doc, IGH_DataAccess DA, int Iteration,
+      Autodesk.Revit.DB.Element element,
+      Autodesk.Revit.DB.Parameter parameter,
+      IGH_Goo goo
+    )
+    {
+      var value = goo.ScriptVariable();
+      switch (parameter?.StorageType)
+      {
+        case StorageType.Integer:
+          {
+            switch(value)
+            {
+              case bool boolean:    parameter.Set(boolean ? 1 : 0); break;
+              case int  integer:    parameter.Set(integer); break;
+              case double real:     parameter.Set(Math.Round(ToHost(real, parameter.Definition.UnitType)).Clamp(int.MinValue, int.MaxValue)); break;
+              case System.Drawing.Color color: parameter.Set(((int) color.R) | ((int) color.G << 8) | ((int) color.B << 16)); break;
+              default: element = null; break;
+            }
+            break;
+          }
+        case StorageType.Double:
+          {
+            switch (value)
+            {
+              case int integer: parameter.Set((double) integer); break;
+              case double real: parameter.Set(ToHost(real, parameter.Definition.UnitType)); break;
+              default: element = null; break;
+            }
+            break;
+          }
+        case StorageType.String:
+          {
+            switch (value)
+            {
+              case string str: parameter.Set(str); break;
+              default: element = null; break;
+            }
+            break;
+          }
+        default:
+          {
+            element = null;
+            break;
+          }
+      }
+
+      if(element == null)
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Unable to cast 'Value' from {0} to {1}.", value.GetType().Name, parameter.StorageType.ToString()));
+
+      DA.SetData(0, element, Iteration);
+
+      if (Iteration == DA.Iteration)
+      {
+        // Notify Grasshopper continue evaluating the definition from this component
+        if (RuntimeMessageLevel < GH_RuntimeMessageLevel.Error)
+        {
+          foreach (var recipient in Params.Output.SelectMany(x => x.Recipients))
+            recipient.ExpireSolution(false);
+        }
+      }
+    }
+  }
 }
