@@ -375,19 +375,25 @@ namespace RhinoInside.Revit
           return Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(planarFace.Origin, planarFace.XVector, planarFace.YVector);
         case ConicalFace conicalFace:
           {
-            var plane = Autodesk.Revit.DB.Plane.CreateByNormalAndOrigin(conicalFace.Axis, conicalFace.Origin);
-            return Autodesk.Revit.DB.ConicalSurface.Create(new Frame(plane.Origin, plane.XVec, plane.YVec, plane.Normal), conicalFace.HalfAngle);
+            var basisX = conicalFace.get_Radius(0).Normalize();
+            var basisY = conicalFace.get_Radius(1).Normalize();
+            var basisZ = conicalFace.Axis.Normalize();
+            return Autodesk.Revit.DB.ConicalSurface.Create(new Frame(conicalFace.Origin, basisX, basisY, basisZ), conicalFace.HalfAngle);
           }
         case CylindricalFace cylindricalFace:
           {
             double radius = cylindricalFace.get_Radius(0).GetLength();
-            var plane = Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(cylindricalFace.Axis, cylindricalFace.get_Radius(0), cylindricalFace.get_Radius(1));
-            return Autodesk.Revit.DB.CylindricalSurface.Create(new Frame(plane.Origin, plane.XVec, plane.YVec, plane.Normal), radius);
+            var basisX = cylindricalFace.get_Radius(0).Normalize();
+            var basisY = cylindricalFace.get_Radius(1).Normalize();
+            var basisZ = cylindricalFace.Axis.Normalize();
+            return Autodesk.Revit.DB.CylindricalSurface.Create(new Frame(cylindricalFace.Origin, basisX, basisY, basisZ), radius);
           }
         case RevolvedFace revolvedFace:
           {
-            var plane = Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(revolvedFace.Axis, revolvedFace.get_Radius(0), revolvedFace.get_Radius(1));
-            return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(plane.Origin, plane.XVec, plane.YVec, plane.Normal), revolvedFace.Curve);
+            var basisX = revolvedFace.get_Radius(0).Normalize();
+            var basisY = revolvedFace.get_Radius(1).Normalize();
+            var basisZ = revolvedFace.Axis.Normalize();
+            return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(revolvedFace.Origin, basisX, basisY, basisZ), revolvedFace.Curve);
           }
       }
 
