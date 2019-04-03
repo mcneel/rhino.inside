@@ -215,6 +215,8 @@ namespace RhinoInside.Revit.GH
           {
             if (previewObject.IsPreviewCapable)
             {
+              primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, previewObject.ClippingBox);
+
               if (obj is IGH_Component component)
               {
                 foreach (var param in component.Params.Output)
@@ -222,10 +224,8 @@ namespace RhinoInside.Revit.GH
               }
               else if (obj is IGH_Param param)
               {
-                primitivesBoundingBox = Rhino.Geometry.BoundingBox.Union(primitivesBoundingBox, previewObject.ClippingBox);
                 DrawData(param.VolatileData, obj);
               }
-                
             }
           }
         }
