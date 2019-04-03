@@ -366,6 +366,35 @@ namespace RhinoInside.Revit
       return trimmedBrep;
     }
 
+#if !REVIT2018
+    static internal Autodesk.Revit.DB.Surface GetSurface(this Autodesk.Revit.DB.Face face)
+    {
+      switch(face)
+      {
+        case PlanarFace planarFace:
+          return Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(planarFace.Origin, planarFace.XVector, planarFace.YVector);
+        case ConicalFace conicalFace:
+          {
+            var plane = Autodesk.Revit.DB.Plane.CreateByNormalAndOrigin(conicalFace.Axis, conicalFace.Origin);
+            return Autodesk.Revit.DB.ConicalSurface.Create(new Frame(plane.Origin, plane.XVec, plane.YVec, plane.Normal), conicalFace.HalfAngle);
+          }
+        case CylindricalFace cylindricalFace:
+          {
+            double radius = cylindricalFace.get_Radius(0).GetLength();
+            var plane = Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(cylindricalFace.Axis, cylindricalFace.get_Radius(0), cylindricalFace.get_Radius(1));
+            return Autodesk.Revit.DB.CylindricalSurface.Create(new Frame(plane.Origin, plane.XVec, plane.YVec, plane.Normal), radius);
+          }
+        case RevolvedFace revolvedFace:
+          {
+            var plane = Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(revolvedFace.Axis, revolvedFace.get_Radius(0), revolvedFace.get_Radius(1));
+            return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(plane.Origin, plane.XVec, plane.YVec, plane.Normal), revolvedFace.Curve);
+          }
+      }
+
+      return null;
+    }
+#endif
+
     static internal Rhino.Geometry.Brep ToRhino(this Autodesk.Revit.DB.Face face)
     {
       using (var surface = face.GetSurface())
@@ -437,7 +466,9 @@ namespace RhinoInside.Revit
 
         Debug.Assert(brep.Faces.Count == 1);
 
+#if REVIT2018
         brep.Faces[0].OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation;
+#endif
         return brep.TrimFace(0, loops, Revit.VertexTolerance);
       }
     }
