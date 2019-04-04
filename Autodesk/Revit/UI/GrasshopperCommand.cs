@@ -64,7 +64,7 @@ namespace RhinoInside.Revit.UI
 
       var buttonData = new PushButtonData
       (
-        "cmdRhinoInside.EditPythonScript", "Pyhton",
+        "cmdRhinoInside.EditPythonScript", "Python",
         thisAssembly.Location,
         MethodBase.GetCurrentMethod().DeclaringType.FullName
       );
