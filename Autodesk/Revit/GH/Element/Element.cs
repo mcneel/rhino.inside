@@ -1380,51 +1380,58 @@ namespace RhinoInside.Revit.GH.Components
       IGH_Goo goo
     )
     {
-      var value = goo.ScriptVariable();
-      switch (parameter?.StorageType)
+      try
       {
-        case StorageType.Integer:
-          {
-            switch(value)
+        var value = goo.ScriptVariable();
+        switch (parameter?.StorageType)
+        {
+          case StorageType.Integer:
             {
-              case bool boolean:    parameter.Set(boolean ? 1 : 0); break;
-              case int  integer:    parameter.Set(integer); break;
-              case double real:     parameter.Set(Math.Round(ToHost(real, parameter.Definition.UnitType)).Clamp(int.MinValue, int.MaxValue)); break;
-              case System.Drawing.Color color: parameter.Set(((int) color.R) | ((int) color.G << 8) | ((int) color.B << 16)); break;
-              default: element = null; break;
+              switch (value)
+              {
+                case bool boolean: parameter.Set(boolean ? 1 : 0); break;
+                case int integer: parameter.Set(integer); break;
+                case double real: parameter.Set(Math.Round(ToHost(real, parameter.Definition.UnitType)).Clamp(int.MinValue, int.MaxValue)); break;
+                case System.Drawing.Color color: parameter.Set(((int) color.R) | ((int) color.G << 8) | ((int) color.B << 16)); break;
+                default: element = null; break;
+              }
+              break;
             }
-            break;
-          }
-        case StorageType.Double:
-          {
-            switch (value)
+          case StorageType.Double:
             {
-              case int integer: parameter.Set((double) integer); break;
-              case double real: parameter.Set(ToHost(real, parameter.Definition.UnitType)); break;
-              default: element = null; break;
+              switch (value)
+              {
+                case int integer: parameter.Set((double) integer); break;
+                case double real: parameter.Set(ToHost(real, parameter.Definition.UnitType)); break;
+                default: element = null; break;
+              }
+              break;
             }
-            break;
-          }
-        case StorageType.String:
-          {
-            switch (value)
+          case StorageType.String:
             {
-              case string str: parameter.Set(str); break;
-              default: element = null; break;
+              switch (value)
+              {
+                case string str: parameter.Set(str); break;
+                default: element = null; break;
+              }
+              break;
             }
-            break;
-          }
-        default:
-          {
-            element = null;
-            break;
-          }
+          default:
+            {
+              element = null;
+              break;
+            }
+        }
+
+        if (element == null)
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Unable to cast 'Value' from {0} to {1}.", value.GetType().Name, parameter.StorageType.ToString()));
+
+        DA.SetData(0, element, Iteration);
       }
-
-      if(element == null)
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Unable to cast 'Value' from {0} to {1}.", value.GetType().Name, parameter.StorageType.ToString()));
-
-      DA.SetData(0, element, Iteration);
+      catch (Exception e)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Unable to set 'Value' to parameter {0} : {1}", parameter.Definition.Name, e.Message));
+      }
 
       if (Iteration == DA.Iteration)
       {
