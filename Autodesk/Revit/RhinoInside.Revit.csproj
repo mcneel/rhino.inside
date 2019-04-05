@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
@@ -135,6 +135,7 @@
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
+    <Compile Include="GH\Element\Form\ByGeometry.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
     <Compile Include="GH\PreviewServer.cs" />
     <Compile Include="UI\Command.cs" />
