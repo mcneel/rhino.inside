@@ -1142,8 +1142,6 @@ namespace RhinoInside.Revit
         {
           brep = splittedBrep;
 
-          //RhinoDoc.ActiveDoc.Objects.Add(brep);
-
           try
           {
             var builder = new BRepBuilder(brep.IsSolid ? BRepType.Solid : BRepType.OpenShell);
@@ -1334,6 +1332,66 @@ namespace RhinoInside.Revit
             break;
         }
       }
+    }
+    #endregion
+
+    #region Utils
+    static public bool TryGetExtrusion(this Rhino.Geometry.Surface surface, out Rhino.Geometry.Extrusion extrusion, int direction = 1)
+    {
+      extrusion = null;
+      var nurbsSurface = surface as NurbsSurface ?? surface.ToNurbsSurface();
+
+      var oposite = direction == 0 ? 1 : 0;
+
+      var domain = nurbsSurface.Domain(direction);
+      var iso0 = nurbsSurface.IsoCurve(oposite, domain.Min);
+      var iso1 = nurbsSurface.IsoCurve(oposite, domain.Max);
+
+      // Revit needs closed loops for NewExtrusionForm()
+      if (iso0.IsClosed)
+        return false;
+
+      if(iso0.TryGetPlane(out var plane0) && iso1.TryGetPlane(out var plane1))
+      {
+        if(plane0.Normal.IsParallelTo(plane1.Normal, RhinoMath.ToRadians(1.0 / 100.0)) == 1)
+        {
+          double tolerance = Revit.VertexTolerance * Revit.ModelUnits;
+
+          var rows    = direction == 0 ? nurbsSurface.Points.CountU : nurbsSurface.Points.CountV;
+          var columns = direction == 0 ? nurbsSurface.Points.CountV : nurbsSurface.Points.CountU;
+          for (int c = 0; c < columns; ++c)
+          {
+            var point = direction == 0 ? nurbsSurface.Points.GetControlPoint(0, c) : nurbsSurface.Points.GetControlPoint(c, 0);
+            for (int r = 1; r < rows; ++r)
+            {
+              var pointR = direction == 0 ? nurbsSurface.Points.GetControlPoint(r, c) : nurbsSurface.Points.GetControlPoint(c, r);
+              if(plane0.ClosestPoint(pointR.Location).DistanceTo(point.Location) > tolerance)
+                return false;
+
+              if (pointR.Weight != point.Weight)
+                return false;
+            }
+          }
+
+          extrusion = Rhino.Geometry.Extrusion.Create(iso0, iso0.PointAtStart.DistanceTo(iso1.PointAtStart), false);
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    static public bool TryGetExtrusion(this Rhino.Geometry.Brep brep, out Rhino.Geometry.Extrusion extrusion)
+    {
+      extrusion = null;
+
+      if (brep.Faces.Count == 3)
+      {
+        // TODO : Find the wall surface but Rhino.Geometry.ExtrusionToBrep.ToBrep() conversion sets the wall in face[0] end extrude in U direction
+        return brep.Faces[0].TryGetExtrusion(out extrusion, 1);
+      }
+
+      return false;
     }
     #endregion
   };
