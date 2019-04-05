@@ -1,5 +1,5 @@
 # Rhino Inside Revit
-The Rhino Inside © technology allows Rhino and Grasshopper to be embedded within other products.
+The Rhino Inside® technology allows Rhino and Grasshopper to be embedded within other products.
 
 This folder contains a sample project that demonstrates:
 
@@ -41,49 +41,10 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 * Now in the Add-ins Ribbon tab you have a _Rhinoceros_ section.
 * Be careful about your model units in Rhino
 
-### Sample 7
-![](doc/Sample7.png)
-
-1. Use the _Pyhton_ icon into the Add-Ins tab to open Rhino Python editor window.
-2. Load pyhthon script file called _"Sample7.py"_ there is in this folder.
-3. Click on the green play button you will found on the Pyhton script editor window.
-4. You should have an sphere in the Revil model.
-
-### Sample 6
-![](doc/Sample6.gif)
-
-1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
-2. Create some geometry in Rhino.
-3. Click on the button on the _Rhinoceros_ panel called _Sample 6_.
-4. You should have a preview of Rhino geometry in the Revit view.
-
-### Sample 5
-![](doc/Sample5.gif)
-
-1. Open the ribbon tab called Add-Ins.
-2. Click on the button on the _Rhinoceros_ panel called _Grasshopper_.
-3. Open the _Revit_ tab in the Grasshopper toolbar.
-3. Enjoy!!
-
-### Sample 4
-![](doc/Sample4.png)
-
-1. Open the ribbon tab called Add-Ins.
-2. Click on the button on the _Rhinoceros_ panel called _Sample 4_.
-3. Open _"Sample4.ghx"_ file.
-4. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
-5. You should have a collection of pipes over a 3D Voronoi diagram in Revit.
-
-### Sample 3
-![](doc/Sample3.gif)
-
-1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
-2. Create a surface on Rhino. (It is best if it is site size objects to start.)
-4. Run _Grasshopper_ command.
-5. Open _"Sample3.ghx"_ file in Grasshopper.
-6. Inside Grasshopper using the _Surface_ param pick the breps you created in step 2.
-7. Inside Grasshopper click on the button _Update Topography surface_.
-8. You should have a Topography surface in Revit.
+### Sample 1
+1. Open the ribbon tab called _Add-Ins_.
+2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 1_.
+3. You should have an sphere in the Revil model.
 
 ### Sample 2
 ![](doc/Sample2.jpg)
@@ -97,7 +58,48 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 7. Inside Grasshopper click on the button _Push to Bake_.
 8. You should have the breps created in step 2 in the Revit model, and they should belong to the specified category (Generic is available and is also used as a catch-all fallback).
 
-### Sample 1
-1. Open the ribbon tab called _Add-Ins_.
-2. Click on the button you will found on the _Rhinoceros_ panel called _Sample 1_.
-3. You should have an sphere in the Revil model.
+### Sample 3
+![](doc/Sample3.gif)
+
+1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
+2. Create a surface on Rhino. (It is best if it is site size objects to start.)
+4. Run _Grasshopper_ command.
+5. Open _"Sample3.ghx"_ file in Grasshopper.
+6. Inside Grasshopper using the _Surface_ param pick the breps you created in step 2.
+7. Inside Grasshopper click on the button _Update Topography surface_.
+8. You should have a Topography surface in Revit.
+
+### Sample 4
+![](doc/Sample4.png)
+
+1. Open the ribbon tab called Add-Ins.
+2. Click on the button on the _Rhinoceros_ panel called _Sample 4_.
+3. Open _"Sample4.ghx"_ file.
+4. The Grasshopper definition will be evaluated in background and the result baked in the Revit model.
+5. You should have a collection of pipes over a 3D Voronoi diagram in Revit.
+
+### Sample 5
+![](doc/Sample5.gif)
+
+1. Open the ribbon tab called Add-Ins.
+2. Click on the button on the _Rhinoceros_ panel called _Grasshopper_.
+3. Open the _Revit_ tab in the Grasshopper toolbar.
+3. Enjoy!!
+
+### Sample 6
+![](doc/Sample6.gif)
+
+1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
+2. Create some geometry in Rhino.
+3. Click on the button on the _Rhinoceros_ panel called _Sample 6_.
+4. You should have a preview of Rhino geometry in the Revit view.
+
+### Sample 7
+![](doc/Sample7.png)
+
+1. Use the _Pyhton_ icon into the Add-Ins tab to open Rhino Python editor window.
+2. Load pyhthon script file called _"Sample7.py"_ there is in this folder.
+3. Click on the green play button you will found on the Pyhton script editor window.
+4. You should have an sphere in the Revil model.
+
+
