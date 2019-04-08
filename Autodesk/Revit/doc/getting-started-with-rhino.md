@@ -12,7 +12,7 @@ After installing RhinoInside Revit, a toolbar will show up in Revit under Add-on
 - Sample 1 will simply draw a Rhino sphere in Revit as a example for developers.
 - The Grasshopper Player will run any existing Grasshopper definition and immediately return to Revit.
 
-## <img src="../Resources/Rhino.png" width="50px"> Running Rhino in Revit
+## <img src="../Resources/Rhino.png" width="35px"> Running Rhino in Revit
 
 While there is no direct command in Rhino to access Revit directly there are a number of simple ways Rhino geometry and be pushed into Revit from Rhino.  When Revit starts with the RhinoIndie add-on, Rhino and Grasshopper do startup in the background. Use the Rhino button in the Revit Toolbar to bring up the Rhino running indie.
 
@@ -30,11 +30,16 @@ Should it happen in Python Scripts?
 
 
 
-## <img src="../Resources/Grasshopper.png" width="50px"> Running Grasshopper in Revit
+## <img src="../Resources/Grasshopper.png" width="35px"> Running Grasshopper in Revit
 
-Grasshopper can be started within
+Grasshopper can be started within Revit. Within Grasshopper there is a Revit toolbar of components which manage the interaction of Grasshopper and Revit.  To find out more about these tools, see the [Grasshopper Components in Revit Guide](gh-components.md)
+
+<!---
+When interacting with Grasshopper Params, it is important to note that Rhino also needs to be visible.
+-->
 
 
-## <img src="../Resources/Python.png" width="50px"> Running Rhino.Python in Revit
+
+## <img src="../Resources/Python.png" width="35px"> Running Rhino.Python in Revit
 
 ## Running the Grasshopper Player in Revit
