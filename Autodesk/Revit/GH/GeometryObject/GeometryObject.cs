@@ -388,6 +388,7 @@ namespace RhinoInside.Revit.GH.Parameters
   public class Vertex : GH_PersistentGeometryParam<Types.Vertex>
   {
     public Vertex() : base("Vertex", "Vertex", "Represents a Revit vertex.", "Revit", "Geometry") { }
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("BC1B160A-DC04-4139-AB7D-1AECBDE7FF88");
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("VTX");
 
@@ -444,6 +445,7 @@ namespace RhinoInside.Revit.GH.Parameters
   public class Edge : GH_PersistentGeometryParam<Types.Edge>
   {
     public Edge() : base("Edge", "Edge", "Represents a Revit edge.", "Revit", "Geometry") { }
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("B79FD0FD-63AE-4776-A0A7-6392A3A58B0D");
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("EDGE");
 
@@ -483,6 +485,7 @@ namespace RhinoInside.Revit.GH.Parameters
   public class Face : GH_PersistentGeometryParam<Types.Face>
   {
     public Face() : base("Face", "Face", "Represents a Revit face.", "Revit", "Geometry") { }
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("759700ED-BC79-4986-A6AB-84921A7C9293");
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("FACE");
 

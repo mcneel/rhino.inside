@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
     (
       "CurveElement.ByCurve", "ByCurve",
       "Create a Curve element from a curve",
-      "Revit", "Model"
+      "Revit", "Geometry"
     )
     { }
 
@@ -90,7 +90,12 @@ namespace RhinoInside.Revit.GH.Components
               index++;
 
               if (element?.Pinned ?? true)
-                element = doc.Create.NewModelCurve(c, plane);
+              {
+                if (doc.IsFamilyDocument)
+                  element = doc.FamilyCreate.NewModelCurve(c, plane);
+                else
+                  element = doc.Create.NewModelCurve(c, plane);
+              }
 
               newElements.Add(element);
             }

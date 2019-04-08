@@ -428,12 +428,10 @@ namespace RhinoInside.Revit
             {
               Debug.Fail(e.Source, e.Message);
 
+              docWriteActions.Clear();
+
               if (trans.HasStarted())
                 trans.RollBack();
-            }
-            finally
-            {
-              docWriteActions.Clear();
             }
           }
         }
@@ -476,6 +474,9 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Public Properties
+    static string CallerFilePath([System.Runtime.CompilerServices.CallerFilePath] string CallerFilePath = "") => CallerFilePath;
+    static public string SourceCodePath => Path.GetDirectoryName(CallerFilePath());
+
     public static IntPtr MainWindowHandle { get; private set; }
     public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI { get; private set; }
     public static Autodesk.Revit.UI.UIApplication ActiveUIApplication { get; private set; }
