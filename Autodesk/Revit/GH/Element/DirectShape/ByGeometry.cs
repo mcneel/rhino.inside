@@ -17,14 +17,14 @@ namespace RhinoInside.Revit.GH.Components
   public class DirectShapeByGeometry : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("0bfbda45-49cc-4ac6-8d6d-ecd2cfed062a");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("DS");
 
     public DirectShapeByGeometry() : base
     (
       "DirectShape.ByGeometry", "ByGeometry",
       "Create a DirectShape element from geometry",
-      "Revit", "Model"
+      "Revit", "Build"
     )
     { }
 
@@ -143,7 +143,7 @@ namespace RhinoInside.Revit.GH.Components
     public DirectShapeCategories()
     {
       Category = "Revit";
-      SubCategory = "Model";
+      SubCategory = "Build";
       Name = "DirectShape.Categories";
       NickName = "Categories";
       Description = "Provides a picker of a valid DirectShape category";
