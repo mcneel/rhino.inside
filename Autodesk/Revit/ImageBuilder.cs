@@ -48,7 +48,7 @@ namespace RhinoInside
       }
     }
 
-    static public Bitmap BuildIcon(string tag, int width = 24, int height = 24)
+    static public Bitmap BuildIcon(string tag, int width = 24, int height = 24, Color color = default(Color))
     {
       var bitmap = new Bitmap(width, height);
       var g = System.Drawing.Graphics.FromImage(bitmap);
@@ -64,9 +64,12 @@ namespace RhinoInside
         LineAlignment = StringAlignment.Center
       };
 
-      g.FillEllipse(Brushes.Black, 1.0f, 1.0f, width - 2.0f, height - 2.0f);
-      float emSize = ((float) (width) / ((float) tag.Length));
+      if(color.IsEmpty)
+        g.FillEllipse(Brushes.Black, 1.0f, 1.0f, width - 2.0f, height - 2.0f);
+      else using (var brush = new SolidBrush(color))
+        g.FillEllipse(brush, 1.0f, 1.0f, width - 2.0f, height - 2.0f);
 
+      float emSize = ((float) (width) / ((float) tag.Length));
       if (width == 24)
       {
         switch (tag.Length)
@@ -84,13 +87,23 @@ namespace RhinoInside
       return bitmap;
     }
 
-    static public System.Windows.Media.ImageSource BuildImage(string tag)
+    static public System.Windows.Media.ImageSource BuildImage(string tag, Color color = default(Color))
     {
-      return BuildIcon(tag, 64, 64).ToBitmapImage(16, 16);
+      using (var g = Graphics.FromHwnd(Revit.Revit.MainWindowHandle))
+      {
+        int pixelX = (int) Math.Round((g.DpiX / 96.0) * 16);
+        int pixelY = (int) Math.Round((g.DpiY / 96.0) * 16);
+        return BuildIcon(tag, 64, 64, color).ToBitmapImage(pixelX, pixelY);
+      }
     }
-    static public System.Windows.Media.ImageSource BuildLargeImage(string tag)
+    static public System.Windows.Media.ImageSource BuildLargeImage(string tag, Color color = default(Color))
     {
-      return BuildIcon(tag, 64, 64).ToBitmapImage(32, 32);
+      using (var g = Graphics.FromHwnd(Revit.Revit.MainWindowHandle))
+      {
+        int pixelX = (int) Math.Round((g.DpiX / 96.0) * 32);
+        int pixelY = (int) Math.Round((g.DpiY / 96.0) * 32);
+        return BuildIcon(tag, 64, 64, color).ToBitmapImage(pixelX, pixelY);
+      }
     }
   }
 }
