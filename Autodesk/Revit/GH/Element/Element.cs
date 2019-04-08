@@ -279,7 +279,20 @@ namespace RhinoInside.Revit.GH.Types
       {
         var element = (Autodesk.Revit.DB.Element) this;
         if (element != null)
-          return "Revit " + element.GetType().Name + " \"" + element.Name + "\"";
+        {
+          var str = "Revit " + element.GetType().Name;
+
+          var ToolTip = element.Category?.Name ?? string.Empty;
+          if (string.IsNullOrEmpty(ToolTip))
+            ToolTip = element.Name;
+          else if(!string.IsNullOrEmpty(element.Name))
+            ToolTip += " : " + element.Name;
+
+          if(!string.IsNullOrEmpty(ToolTip))
+            str += " \"" + ToolTip + "\"";
+
+          return str;
+        }
       }
 
       return base.ToString();
@@ -1416,6 +1429,16 @@ namespace RhinoInside.Revit.GH.Components
               }
               break;
             }
+          case StorageType.ElementId:
+          {
+            switch (value)
+            {
+              case Autodesk.Revit.DB.Element  ele: parameter.Set(ele.Id); break;
+              case Autodesk.Revit.DB.Category cat: parameter.Set(cat.Id); break;
+              default: element = null; break;
+            }
+            break;
+          }
           default:
             {
               element = null;
