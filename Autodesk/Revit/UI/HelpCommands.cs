@@ -107,7 +107,11 @@ namespace RhinoInside.Revit.UI
             var taskDialog = new TaskDialog("RhinoInside.Revit.CheckForUpdates")
             {
               Title = "Updates",
+#if REVIT_2018
               MainIcon = TaskDialogIcon.TaskDialogIconInformation,
+#else
+              MainIcon = TaskDialogIcon.TaskDialogIconWarning,
+#endif
               TitleAutoPrefix = true,
               AllowCancellation = true,
               FooterText = Revit.SourceCodePath
@@ -129,7 +133,11 @@ namespace RhinoInside.Revit.UI
 
             if (forceFetch && powerShell.HadErrors)
             {
+#if REVIT_2018
               taskDialog.MainIcon = TaskDialogIcon.TaskDialogIconError;
+#else
+              taskDialog.MainIcon = TaskDialogIcon.TaskDialogIconWarning;
+#endif
               taskDialog.MainInstruction = "Failed to fetch changes from the repository";
 
               foreach (var f in powerShell.Streams.Error)
@@ -176,7 +184,7 @@ namespace RhinoInside.Revit.UI
 
       return retCode;
 #else
-      return 0;
+              return 0;
 #endif
     }
 
