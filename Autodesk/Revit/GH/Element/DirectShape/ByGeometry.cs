@@ -22,8 +22,8 @@ namespace RhinoInside.Revit.GH.Components
 
     public DirectShapeByGeometry() : base
     (
-      "DirectShape.ByGeometry", "ByGeometry",
-      "Create a DirectShape element from geometry",
+      "AddDirectShape.ByGeometry", "ByGeometry",
+      "Given its Geometry, it adds a DirectShape element to the active Revit document",
       "Revit", "Build"
     )
     { }

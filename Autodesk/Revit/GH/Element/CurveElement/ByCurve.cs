@@ -19,8 +19,8 @@ namespace RhinoInside.Revit.GH.Components
 
     public CurveElementByCurve() : base
     (
-      "CurveElement.ByCurve", "ByCurve",
-      "Create a Curve element from a curve",
+      "AddCurveElement.ByCurve", "ByCurve",
+      "Given a Curve, it adds a Curve element to the active Revit document",
       "Revit", "Geometry"
     )
     { }

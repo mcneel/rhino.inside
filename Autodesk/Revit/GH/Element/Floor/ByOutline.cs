@@ -19,8 +19,8 @@ namespace RhinoInside.Revit.GH.Components
 
     public FloorByOutline() : base
     (
-      "Floor.ByOutline", "ByOutline",
-      "Create a Floor element from curves",
+      "AddFloor.ByOutline", "ByOutline",
+      "Given its outline curve, it adds a Floor element to the active Revit document",
       "Revit", "Build"
     )
     { }
