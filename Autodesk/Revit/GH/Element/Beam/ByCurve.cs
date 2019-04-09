@@ -99,10 +99,7 @@ namespace RhinoInside.Revit.GH.Components
             var axisList = curve.ToHost().ToList();
             Debug.Assert(axisList.Count == 1);
 
-            if (axisPlane.Normal.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) != 0)
-              element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
-            else
-              element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Brace);
+            element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
           }
         }
       }
