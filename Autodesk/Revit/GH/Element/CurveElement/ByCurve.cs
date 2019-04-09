@@ -91,10 +91,17 @@ namespace RhinoInside.Revit.GH.Components
 
               if (element?.Pinned ?? true)
               {
-                if (doc.IsFamilyDocument)
-                  element = doc.FamilyCreate.NewModelCurve(c, plane);
+                if (element is ModelCurve && element?.Location is LocationCurve locationCurve)
+                {
+                  locationCurve.Curve = c;
+                }
                 else
-                  element = doc.Create.NewModelCurve(c, plane);
+                {
+                  if (doc.IsFamilyDocument)
+                    element = doc.FamilyCreate.NewModelCurve(c, plane);
+                  else
+                    element = doc.Create.NewModelCurve(c, plane);
+                }
               }
 
               newElements.Add(element);

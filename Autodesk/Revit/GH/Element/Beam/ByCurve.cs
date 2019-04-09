@@ -99,7 +99,17 @@ namespace RhinoInside.Revit.GH.Components
             var axisList = curve.ToHost().ToList();
             Debug.Assert(axisList.Count == 1);
 
-            element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
+            if (element is FamilyInstance && familySymbol.Id != element.GetTypeId())
+            {
+              var newElmentId = element.ChangeTypeId(familySymbol.Id);
+              if (newElmentId != ElementId.InvalidElementId)
+                element = doc.GetElement(newElmentId);
+            }
+
+            if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
+              locationCurve.Curve = axisList[0];
+            else
+              element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
           }
         }
       }
