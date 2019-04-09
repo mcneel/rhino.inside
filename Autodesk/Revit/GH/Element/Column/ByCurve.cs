@@ -19,8 +19,8 @@ namespace RhinoInside.Revit.GH.Components
 
     public ColumnByCurve() : base
     (
-      "Column.ByCurve", "ByCurve",
-      "Create a structural Column from a curve",
+      "AddColumn.ByCurve", "ByCurve",
+      "Given its Axis, it adds a structural Column to the active Revit document",
       "Revit", "Build"
     )
     { }
@@ -103,7 +103,17 @@ namespace RhinoInside.Revit.GH.Components
           }
           else
           {
-            element = doc.Create.NewFamilyInstance(line.ToHost(), familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Column);
+            if(element is FamilyInstance && familySymbol.Id != element.GetTypeId())
+            {
+              var newElmentId = element.ChangeTypeId(familySymbol.Id);
+              if (newElmentId != ElementId.InvalidElementId)
+                element = doc.GetElement(newElmentId);
+            }
+
+            if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
+              locationCurve.Curve = line.ToHost();
+            else
+              element = doc.Create.NewFamilyInstance(line.ToHost(), familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Column);
           }
         }
       }

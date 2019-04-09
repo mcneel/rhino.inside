@@ -22,8 +22,8 @@ namespace RhinoInside.Revit.GH.Components
 
     public BrepElementByGeometry() : base
     (
-      "BrepElement.ByGeometry", "ByGeometry",
-      "Create a Brep element from geometry",
+      "AddBrepElement.ByGeometry", "ByGeometry",
+      "Given a Brep, it adds a Brep element to the active Revit document",
       "Revit", "Geometry"
     )
     { }

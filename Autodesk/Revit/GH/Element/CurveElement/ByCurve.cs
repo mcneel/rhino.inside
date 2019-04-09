@@ -19,8 +19,8 @@ namespace RhinoInside.Revit.GH.Components
 
     public CurveElementByCurve() : base
     (
-      "CurveElement.ByCurve", "ByCurve",
-      "Create a Curve element from a curve",
+      "AddCurveElement.ByCurve", "ByCurve",
+      "Given a Curve, it adds a Curve element to the active Revit document",
       "Revit", "Geometry"
     )
     { }
@@ -91,10 +91,17 @@ namespace RhinoInside.Revit.GH.Components
 
               if (element?.Pinned ?? true)
               {
-                if (doc.IsFamilyDocument)
-                  element = doc.FamilyCreate.NewModelCurve(c, plane);
+                if (element is ModelCurve && element?.Location is LocationCurve locationCurve)
+                {
+                  locationCurve.Curve = c;
+                }
                 else
-                  element = doc.Create.NewModelCurve(c, plane);
+                {
+                  if (doc.IsFamilyDocument)
+                    element = doc.FamilyCreate.NewModelCurve(c, plane);
+                  else
+                    element = doc.Create.NewModelCurve(c, plane);
+                }
               }
 
               newElements.Add(element);

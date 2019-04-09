@@ -19,8 +19,8 @@ namespace RhinoInside.Revit.GH.Components
 
     public BeamByCurve() : base
     (
-      "Beam.ByCurve", "ByCurve",
-      "Create a Beam element from a curve",
+      "AddBeam.ByCurve", "ByCurve",
+      "Given its Axis, it adds a Beam element to the active Revit document",
       "Revit", "Build"
     )
     { }
@@ -99,10 +99,17 @@ namespace RhinoInside.Revit.GH.Components
             var axisList = curve.ToHost().ToList();
             Debug.Assert(axisList.Count == 1);
 
-            if (axisPlane.Normal.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) != 0)
-              element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
+            if (element is FamilyInstance && familySymbol.Id != element.GetTypeId())
+            {
+              var newElmentId = element.ChangeTypeId(familySymbol.Id);
+              if (newElmentId != ElementId.InvalidElementId)
+                element = doc.GetElement(newElmentId);
+            }
+
+            if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
+              locationCurve.Curve = axisList[0];
             else
-              element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Brace);
+              element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
           }
         }
       }

@@ -19,8 +19,8 @@ namespace RhinoInside.Revit.GH.Components
 
     public WallByCurve() : base
     (
-      "Wall.ByCurve", "ByCurve",
-      "Create a Wall element from a curve",
+      "AddWall.ByCurve", "ByCurve",
+      "Given its Axis, it adds a Wall element to the active Revit document",
       "Revit", "Build"
     )
     { }
@@ -122,7 +122,21 @@ namespace RhinoInside.Revit.GH.Components
             var axisList = curve.ToHost().ToList();
             Debug.Assert(axisList.Count == 1);
 
-            element = Autodesk.Revit.DB.Wall.Create(doc, axisList[0], wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural);
+            if (element != null && wallType.Id != element.GetTypeId())
+            {
+              var newElmentId = element.ChangeTypeId(wallType.Id);
+              if (newElmentId != ElementId.InvalidElementId)
+                element = doc.GetElement(newElmentId);
+            }
+
+            if (element is Wall wall && element?.Location is LocationCurve locationCurve)
+            {
+              locationCurve.Curve = axisList[0];
+              wall.get_Parameter(BuiltInParameter.WALL_BASE_OFFSET).Set(0.0);
+              wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
+            }
+            else
+              element = Autodesk.Revit.DB.Wall.Create(doc, axisList[0], wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural);
           }
         }
       }
