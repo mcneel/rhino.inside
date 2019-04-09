@@ -76,36 +76,8 @@
     <Optimize>true</Optimize>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Eto">
-      <HintPath>C:\Program Files\Rhino WIP\System\Eto.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="GH_IO">
-      <HintPath>C:\Program Files\Rhino WIP\Plug-ins\Grasshopper\GH_IO.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Grasshopper">
-      <HintPath>C:\Program Files\Rhino WIP\Plug-ins\Grasshopper\Grasshopper.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="PresentationCore" />
-    <Reference Include="RevitAPI">
-      <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\RevitAPI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="RevitAPIUI">
-      <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Rhino.UI">
-      <HintPath>C:\Program Files\Rhino WIP\System\Rhino.UI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="RhinoCommon">
-      <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -185,6 +157,20 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\Python.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Grasshopper" IncludeAssets="build; compile">
+      <Version>7.0.19092.12305-wip</Version>
+    </PackageReference>
+    <PackageReference Include="Revit.RevitApi.x64" IncludeAssets="build; compile">
+      <Version>$(RevitVersion).*</Version>
+    </PackageReference>
+    <PackageReference Include="Revit.RevitApiUI.x64" IncludeAssets="build; compile">
+      <Version>$(RevitVersion).*</Version>
+    </PackageReference>
+    <PackageReference Include="RhinoCommon" IncludeAssets="build; compile">
+      <Version>7.0.19092.12305-wip</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">

@@ -366,7 +366,7 @@ namespace RhinoInside.Revit
       return trimmedBrep;
     }
 
-#if !REVIT2018
+#if !REVIT_2018
     static internal Autodesk.Revit.DB.Surface GetSurface(this Autodesk.Revit.DB.Face face)
     {
       switch(face)
@@ -390,14 +390,35 @@ namespace RhinoInside.Revit
           }
         case RevolvedFace revolvedFace:
           {
-            var basisX = revolvedFace.get_Radius(0).Normalize();
-            var basisY = revolvedFace.get_Radius(1).Normalize();
-            var basisZ = revolvedFace.Axis.Normalize();
-            return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(revolvedFace.Origin, basisX, basisY, basisZ), revolvedFace.Curve);
+            var ECStoWCS = new Autodesk.Revit.DB.Transform(Autodesk.Revit.DB.Transform.Identity)
+            {
+              Origin = revolvedFace.Origin,
+              BasisX = revolvedFace.get_Radius(0).Normalize(),
+              BasisY = revolvedFace.get_Radius(1).Normalize(),
+              BasisZ = revolvedFace.Axis.Normalize()
+            };
+
+            var profileInWCS = revolvedFace.Curve.CreateTransformed(ECStoWCS);
+
+            return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(ECStoWCS.Origin, ECStoWCS.BasisX, ECStoWCS.BasisY, ECStoWCS.BasisZ), profileInWCS);
           }
       }
 
       return null;
+    }
+
+    static internal Autodesk.Revit.DB.Curve GetProfileCurveInWorldCoordinates(this RevolvedSurface revolvedSurface)
+    {
+      var profileCurve = revolvedSurface.GetProfileCurve();
+      var ECStoWCS = new Autodesk.Revit.DB.Transform(Autodesk.Revit.DB.Transform.Identity)
+      {
+        Origin = revolvedSurface.Origin,
+        BasisX = revolvedSurface.XDir.Normalize(),
+        BasisY = revolvedSurface.YDir.Normalize(),
+        BasisZ = revolvedSurface.Axis.Normalize()
+      };
+
+      return profileCurve.CreateTransformed(ECStoWCS);
     }
 #endif
 
@@ -472,7 +493,7 @@ namespace RhinoInside.Revit
 
         Debug.Assert(brep.Faces.Count == 1);
 
-#if REVIT2018
+#if REVIT_2018
         brep.Faces[0].OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation;
 #endif
         return brep.TrimFace(0, loops, Revit.VertexTolerance);
@@ -962,7 +983,11 @@ namespace RhinoInside.Revit
 
             if (nurbsCurve.TryGetEllipse(out var ellipse, Revit.VertexTolerance))
             {
+#if REVIT_2018
               yield return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, (2.0 * Math.PI) - 2e-8);
+#else
+              yield return Autodesk.Revit.DB.Ellipse.Create(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, (2.0 * Math.PI) - 2e-8);
+#endif
               yield break;
             }
 
@@ -1145,8 +1170,10 @@ namespace RhinoInside.Revit
           try
           {
             var builder = new BRepBuilder(brep.IsSolid ? BRepType.Solid : BRepType.OpenShell);
+#if REVIT_2018
             builder.AllowRemovalOfProblematicFaces();
             builder.SetAllowShortEdges();
+#endif
 
             var brepEdges = new List<BRepBuilderGeometryId>[brep.Edges.Count];
             foreach (var face in brep.Faces)
@@ -1333,9 +1360,9 @@ namespace RhinoInside.Revit
         }
       }
     }
-    #endregion
+#endregion
 
-    #region Utils
+#region Utils
     static public bool TryGetExtrusion(this Rhino.Geometry.Surface surface, out Rhino.Geometry.Extrusion extrusion, int direction = 1)
     {
       extrusion = null;
@@ -1393,6 +1420,6 @@ namespace RhinoInside.Revit
 
       return false;
     }
-    #endregion
+#endregion
   };
 }
