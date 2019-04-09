@@ -23,7 +23,7 @@ namespace RhinoInside.Revit.UI
         helpButton = pullDownButton;
         helpButton.LargeImage = ImageBuilder.BuildLargeImage("?");
 
-        helpButton.AddPushButton(typeof(APIDocsCommand),           "APIDocs",           "Opens revitapidocs.com website",             typeof(AllwaysAvailable));
+        helpButton.AddPushButton(typeof(APIDocsCommand),           "APIDocs",           "Opens apidocs.co website",                   typeof(AllwaysAvailable));
         helpButton.AddPushButton(typeof(TheBuildingCoderCommand),  "TheBuildingCoder",  "Opens thebuildingcoder.typepad.com website", typeof(AllwaysAvailable));
         helpButton.AddSeparator();
         helpButton.AddPushButton(typeof(RhinoDevDocsCommand),      "Rhino Dev Docs",    "Opens developer.rhino3d.com website",        typeof(AllwaysAvailable));
@@ -44,7 +44,7 @@ namespace RhinoInside.Revit.UI
   {
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      using (System.Diagnostics.Process.Start("http://www.revitapidocs.com/")) { }
+      using (System.Diagnostics.Process.Start("https://www.apidocs.co/apps/")) { }
 
       return Result.Succeeded;
     }
