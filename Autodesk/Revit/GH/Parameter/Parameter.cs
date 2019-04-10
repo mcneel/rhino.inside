@@ -13,12 +13,14 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class ParameterElement : Element
+  public class ParameterKey : Element
   {
-    public override string TypeName => "Revit Parameter element";
-    public override string TypeDescription => "Represents a Revit parameter element";
-    protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.ParameterElement);
-    public static explicit operator Autodesk.Revit.DB.ParameterElement(ParameterElement self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.ParameterElement;
+    public override string TypeName => "Revit ParameterKey";
+    public override string TypeDescription => "Represents a Revit parameter definition";
+    override public object ScriptVariable() => Value;
+    protected override Type ScriptVariableType => typeof(ElementId);
+
+    public static explicit operator Autodesk.Revit.DB.ParameterElement(ParameterKey self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.ParameterElement;
 
     #region IGH_PersitentGoo
     public override Guid ReferenceID
@@ -28,9 +30,9 @@ namespace RhinoInside.Revit.GH.Types
     }
     #endregion
 
-    public ParameterElement() { }
-    public ParameterElement(Autodesk.Revit.DB.ParameterElement parameterElement) : base(parameterElement) { }
-    public ParameterElement(Autodesk.Revit.DB.ElementId elementId)               : base(elementId) { }
+    public ParameterKey() { }
+    public ParameterKey(Autodesk.Revit.DB.ParameterElement parameterElement) : base(parameterElement) { }
+    public ParameterKey(Autodesk.Revit.DB.ElementId elementId)               : base(elementId) { }
 
     public override sealed bool CastFrom(object source)
     {
@@ -70,7 +72,7 @@ namespace RhinoInside.Revit.GH.Types
 
     class Proxy : IGH_GooProxy
     {
-      public Proxy(ParameterElement owner) { proxyOwner = owner; (this as IGH_GooProxy).UserString = FormatInstance(); }
+      public Proxy(ParameterKey owner) { proxyOwner = owner; (this as IGH_GooProxy).UserString = FormatInstance(); }
 
       public void Construct() { }
       public string MutateString(string str) => str.Trim();
@@ -93,7 +95,7 @@ namespace RhinoInside.Revit.GH.Types
         return false;
       }
 
-      readonly ParameterElement proxyOwner;
+      readonly ParameterKey proxyOwner;
       IGH_Goo IGH_GooProxy.ProxyOwner => proxyOwner;
       bool    IGH_GooProxy.IsParsable => true;
       string  IGH_GooProxy.UserString { get; set; }
@@ -140,10 +142,10 @@ namespace RhinoInside.Revit.GH.Types
     }
   }
 
-  public class Parameter : GH_Goo<Autodesk.Revit.DB.Parameter>
+  public class ParameterValue : GH_Goo<Autodesk.Revit.DB.Parameter>
   {
-    public override string TypeName => "Revit Parameter";
-    public override string TypeDescription => "Represents a Revit Parameter";
+    public override string TypeName => "Revit ParameterValue";
+    public override string TypeDescription => "Represents a Revit parameter value on an element";
     protected Type ScriptVariableType => typeof(Autodesk.Revit.DB.Parameter);
     public override bool IsValid => Value != null;
     public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
@@ -361,30 +363,30 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class ParameterElement : GH_PersistentParam<Types.ParameterElement>
+  public class ParameterKey : GH_PersistentParam<Types.ParameterKey>
   {
     public override Guid ComponentGuid => new Guid("A550F532-8C68-460B-91F3-DA0A5A0D42B5");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("K");
 
-    public ParameterElement() : base("ParameterElement", "ParameterElement", "Represents a Revit parameter definition.", "Revit", "Parameter") { }
+    public ParameterKey() : base("ParameterKey", "ParameterKey", "Represents a Revit parameter definition.", "Revit", "Parameter") { }
 
-    protected override GH_GetterResult Prompt_Plural(ref List<Types.ParameterElement> values) => GH_GetterResult.cancel;
-    protected override GH_GetterResult Prompt_Singular(ref Types.ParameterElement value) => GH_GetterResult.cancel;
+    protected override GH_GetterResult Prompt_Plural(ref List<Types.ParameterKey> values) => GH_GetterResult.cancel;
+    protected override GH_GetterResult Prompt_Singular(ref Types.ParameterKey value) => GH_GetterResult.cancel;
   }
 
-  public class Parameter : GH_Param<Types.Parameter>
+  public class ParameterValue : GH_Param<Types.ParameterValue>
   {
     public override Guid ComponentGuid => new Guid("3E13D360-4B29-42C7-8F3E-2AB8F74B4EA8");
     public override GH_Exposure Exposure => GH_Exposure.hidden;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon(".");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("#");
 
-    public Parameter() : base("Parameter", "Parameter", "Represents a Revit parameter.", "Revit", "Parameter", GH_ParamAccess.item) { }
-    protected Parameter(string name, string nickname, string description, string category, string subcategory, GH_ParamAccess access) :
+    public ParameterValue() : base("ParameterValue", "ParameterValue", "Represents a Revit parameter value on an element.", "Revit", "Parameter", GH_ParamAccess.item) { }
+    protected ParameterValue(string name, string nickname, string description, string category, string subcategory, GH_ParamAccess access) :
     base(name, nickname, description, category, subcategory, access) { }
   }
 
-  public class ParameterParam : Parameter
+  public class ParameterParam : ParameterValue
   {
     public override Guid ComponentGuid => new Guid("43F0E4E9-3DC4-4965-AB80-07E28E203A91");
 
@@ -463,7 +465,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("C1D96F56-F53C-4DFC-8090-EC2050BDBB66");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P*");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("K*");
 
     public BuiltInParameterByName()
     {
@@ -539,18 +541,65 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class ParameterDecompose : GH_Component
+  public class ParameterKeyDecompose : GH_Component
   {
-    public override Guid ComponentGuid => new Guid("3BDE5890-FB80-4AF2-B9AC-373661756BDA");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("V{");
+    public override Guid ComponentGuid => new Guid("A80F4919-2387-4C78-BE2B-2F35B2E60298");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("K{");
 
-    public ParameterDecompose()
-    : base("Parameter.Decompose", "Parameter.Decompose", "Decompose a parameter value", "Revit", "Parameter")
+    public ParameterKeyDecompose()
+    : base("ParameterKey.Decompose", "ParameterKey.Decompose", "Decompose a parameter definition", "Revit", "Parameter")
     { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Parameter(), "Value", "V", "Parameter value to decompose", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.ParameterKey(), "ParameterKey", "K", "Parameter key to decompose", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddTextParameter("Name", "N", "Parameter name", GH_ParamAccess.item);
+      manager.AddIntegerParameter("StorageType", "T", "Parameter value type", GH_ParamAccess.item);
+      manager.AddBooleanParameter("Visible", "V", "Parameter is visible in UI", GH_ParamAccess.item);
+      manager.AddParameter(new Param_Guid(), "Guid", "ID", "Shared Parameter global identifier", GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Types.ParameterKey parameter = null;
+      if (!DA.GetData("ParameterKey", ref parameter))
+        return;
+
+      if (Enum.IsDefined(typeof(BuiltInParameter), parameter.Value.IntegerValue))
+      {
+        var builtInParameter = (BuiltInParameter) parameter.Value.IntegerValue;
+        DA.SetData("Name", LabelUtils.GetLabelFor(builtInParameter));
+        DA.SetData("StorageType", Revit.ActiveDBDocument.get_TypeOfStorage(builtInParameter));
+        DA.SetData("Visible", true);
+        DA.SetData("Guid", Guid.Empty);
+      }
+      else if (Revit.ActiveDBDocument.GetElement(parameter.Value) is ParameterElement parameterElement)
+      {
+        var definition = parameterElement.GetDefinition();
+        DA.SetData("Name", definition?.Name);
+        DA.SetData("StorageType", definition?.ParameterType.ToStorageType());
+        DA.SetData("Visible", definition?.Visible);
+        DA.SetData("Guid", (parameterElement as SharedParameterElement)?.GuidValue ?? Guid.Empty);
+      }
+    }
+  }
+
+  public class ParameterValueDecompose : GH_Component
+  {
+    public override Guid ComponentGuid => new Guid("3BDE5890-FB80-4AF2-B9AC-373661756BDA");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("V{");
+
+    public ParameterValueDecompose()
+    : base("ParameterValue.Decompose", "ParameterValue.Decompose", "Decompose a parameter value", "Revit", "Parameter")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ParameterValue(), "ParameterValue", "V", "Parameter value to decompose", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -565,7 +614,7 @@ namespace RhinoInside.Revit.GH.Components
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       Autodesk.Revit.DB.Parameter parameter = null;
-      if (!DA.GetData("Value", ref parameter))
+      if (!DA.GetData("ParameterValue", ref parameter))
         return;
 
       DA.SetData("Group", parameter?.Definition.ParameterGroup);
@@ -573,54 +622,6 @@ namespace RhinoInside.Revit.GH.Components
       DA.SetData("Unit", (int) parameter?.Definition.UnitType);
       DA.SetData("IsReadOnly", parameter?.IsReadOnly);
       DA.SetData("UserModifiable", parameter?.UserModifiable);
-    }
-  }
-
-  public class ParameterElementDecompose : GH_Component
-  {
-    public override Guid ComponentGuid => new Guid("A80F4919-2387-4C78-BE2B-2F35B2E60298");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P{");
-
-    public ParameterElementDecompose()
-    : base("ParameterElement.Decompose", "ParameterElement.Decompose", "Decompose a parameter definition", "Revit", "Parameter")
-    { }
-
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddParameter(new Parameters.ParameterElement(), "Parameter", "P", "Parameter to decompose", GH_ParamAccess.item);
-    }
-
-    protected override void RegisterOutputParams(GH_OutputParamManager manager)
-    {
-      manager.AddTextParameter("Name", "N", "Parameter name", GH_ParamAccess.item);
-      manager.AddIntegerParameter("StorageType", "T", "Parameter value type", GH_ParamAccess.item);
-      manager.AddBooleanParameter("Visible", "V", "Parameter is visible in UI", GH_ParamAccess.item);
-      manager.AddParameter(new Param_Guid(), "Guid", "ID", "Shared Parameter global identifier", GH_ParamAccess.item);
-    }
-
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      Types.ParameterElement parameter = null;
-      if (!DA.GetData("Parameter", ref parameter))
-        return;
-
-      if (Enum.IsDefined(typeof(BuiltInParameter), parameter.Value.IntegerValue))
-      {
-        var builtInParameter = (BuiltInParameter) parameter.Value.IntegerValue;
-        DA.SetData("Name", LabelUtils.GetLabelFor(builtInParameter));
-        DA.SetData("StorageType", Revit.ActiveDBDocument.get_TypeOfStorage(builtInParameter));
-        DA.SetData("Visible", true);
-        DA.SetData("Guid", Guid.Empty);
-      }
-      else if (Revit.ActiveDBDocument.GetElement(parameter.Value) is ParameterElement parameterElement)
-      {
-        var definition = parameterElement.GetDefinition();
-        //var storageType = StorageType.None;
-        DA.SetData("Name", definition?.Name);
-        DA.SetData("StorageType", definition?.ParameterType.ToStorageType());
-        DA.SetData("Visible", definition?.Visible);
-        DA.SetData("Guid", (parameterElement as SharedParameterElement)?.GuidValue ?? Guid.Empty);
-      }
     }
   }
 }

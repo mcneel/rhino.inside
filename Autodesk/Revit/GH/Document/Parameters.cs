@@ -17,7 +17,7 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("189F0A94-D077-4B96-8A92-6D5334EF7157");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{P}");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{K}");
 
     public DocumentParameters() : base
     (
@@ -35,7 +35,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.ParameterElement(), "Parameters", "Parameters", "Parameters list", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.ParameterKey(), "ParameterKeys", "ParameterKeys", "Parameter definitions list", GH_ParamAccess.list);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -44,8 +44,8 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Category", ref category))
         return;
 
-      var parameters = TableView.GetAvailableParameters(Revit.ActiveDBDocument, category.Id);
-      DA.SetDataList("Parameters", parameters);
+      var parameterKeys = TableView.GetAvailableParameters(Revit.ActiveDBDocument, category.Id);
+      DA.SetDataList("ParameterKeys", parameterKeys);
     }
   }
 }
