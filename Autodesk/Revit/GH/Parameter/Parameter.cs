@@ -10,6 +10,7 @@ using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Special;
 
 using Autodesk.Revit.DB;
+using System.IO;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -41,6 +42,13 @@ namespace RhinoInside.Revit.GH.Types
 
       switch (source)
       {
+        case Autodesk.Revit.DB.ParameterElement parameterElement:
+          {
+            Value = parameterElement.Id;
+            UniqueID = string.Empty;
+            return true;
+          }
+          //break;
         case Autodesk.Revit.DB.Parameter parameter:
           if(parameter.Id != ElementId.InvalidElementId)
           {
@@ -53,6 +61,12 @@ namespace RhinoInside.Revit.GH.Types
           if (Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue))
           {
             Value = new ElementId(id.IntegerValue.ToBuiltInParameter());
+            UniqueID = string.Empty;
+            return true;
+          }
+          else if(Revit.ActiveDBDocument.GetElement(id) is ParameterElement parameterElement)
+          {
+            Value = parameterElement.Id;
             UniqueID = string.Empty;
             return true;
           }
@@ -622,6 +636,131 @@ namespace RhinoInside.Revit.GH.Components
       DA.SetData("Unit", (int) parameter?.Definition.UnitType);
       DA.SetData("IsReadOnly", parameter?.IsReadOnly);
       DA.SetData("UserModifiable", parameter?.UserModifiable);
+    }
+  }
+
+  public class AddParameterByName : GH_TransactionalComponentItem
+  {
+    public override Guid ComponentGuid => new Guid("84AB6F3C-BB4B-48E4-9175-B7F40791BB7F");
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("K");
+
+    public AddParameterByName() : base
+    (
+      "AddParameterKey.ByName", "ByName",
+      "Given its Name, it adds a Parameter definition to the active Revit document",
+      "Revit", "Parameter"
+    )
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddTextParameter("Name", "N", "Parameter Name", GH_ParamAccess.item);
+      manager.AddBooleanParameter("Overwrite", "K", "Overwrite Parameter definition if found", GH_ParamAccess.item, false);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ParameterKey(), "ParameterKey", "K", "New Parameter definition", GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      string parameterName = string.Empty;
+      if (!DA.GetData("Name", ref parameterName))
+        return;
+
+      bool overwrite = false;
+      if (!DA.GetData("Overwrite", ref overwrite))
+        return;
+
+      DA.DisableGapLogic();
+      int Iteration = DA.Iteration;
+      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, parameterName, overwrite));
+    }
+
+    void CommitInstance
+    (
+      Document doc, IGH_DataAccess DA, int Iteration,
+      string parameterName,
+      bool overwrite
+    )
+    {
+      var app = Revit.ActiveUIApplication.Application;
+
+      var parameterType = ParameterType.Text;
+      var parameterGroup = BuiltInParameterGroup.PG_DATA;
+      bool instance = true;
+      bool visible = true;
+
+      if (!overwrite)
+      {
+        using (var bindings = doc.ParameterBindings.ReverseIterator())
+        {
+          while (bindings.MoveNext())
+          {
+            if (bindings.Key is InternalDefinition def)
+            {
+              if
+              (
+                def.Name == parameterName &&
+                def.Visible == visible &&
+                def.ParameterType == parameterType &&
+                def.ParameterGroup == parameterGroup &&
+                bindings.Current is InstanceBinding)
+              {
+                if (doc.GetElement(def.Id) is ParameterElement parameterElement)
+                {
+                  AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("A parameter called \"{0}\" is already in the document", parameterName));
+                  ReplaceElement(doc, DA, Iteration, parameterElement);
+                  return;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      using (var defOptions = new ExternalDefinitionCreationOptions(parameterName, parameterType) { Visible = visible })
+      {
+        string sharedParametersFilename = app.SharedParametersFilename;
+        string tempParametersFilename = Path.GetTempFileName() + ".txt";
+
+        ExternalDefinition definition = null;
+        try
+        {
+          // Create Temp Shared Parameters File
+          {
+            using (File.Create(tempParametersFilename)) { }
+            app.SharedParametersFilename = tempParametersFilename;
+          }
+          definition = app.OpenSharedParameterFile().Groups.Create(parameterGroup.ToString()).Definitions.Create(defOptions) as ExternalDefinition;
+        }
+        finally
+        {
+          // Restore User Shared Parameters File
+          app.SharedParametersFilename = sharedParametersFilename;
+          File.Delete(tempParametersFilename);
+        }
+
+        if (overwrite || !doc.ParameterBindings.Contains(definition))
+        {
+          // TODO : Ask for categories
+          var categorySet = new CategorySet();
+          foreach (var category in doc.Settings.Categories.Cast<Category>().Where(category => category.AllowsBoundParameters))
+              categorySet.Insert(category);
+
+          var binding = instance ? (ElementBinding) new InstanceBinding(categorySet) : (ElementBinding) new TypeBinding(categorySet);
+
+          if (!doc.ParameterBindings.Insert(definition, binding, parameterGroup))
+          {
+            ReplaceElement(doc, DA, Iteration, null);
+            return;
+          }
+        }
+
+        ReplaceElement(doc, DA, Iteration, Autodesk.Revit.DB.SharedParameterElement.Lookup(doc, definition.GUID));
+      }
     }
   }
 }
