@@ -30,7 +30,7 @@ namespace RhinoInside.Revit.GH.Types
         return null;
 
       if (element is Autodesk.Revit.DB.ParameterElement parameterElement)
-        return new ParameterElement(parameterElement);
+        return new ParameterKey(parameterElement);
 
       if (element is Autodesk.Revit.DB.ElementType elementType)
         return new ElementType(elementType);
@@ -1019,7 +1019,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.ParameterElement(), "Parameters", "P", "Element parameters", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.ParameterKey(), "Parameters", "P", "Element parameters", GH_ParamAccess.list);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -1293,12 +1293,12 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to query", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.ParameterElement(), "Parameter", "P", "Element parameter to query", GH_ParamAccess.item);
+      manager.AddGenericParameter("ParameterKey", "K", "Element parameter to query", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Parameter(), "Value", "V", "Element parameter value", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.ParameterValue(), "ParameterValue", "V", "Element parameter value", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -1307,18 +1307,63 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Element", ref element))
         return;
 
-      Types.ParameterElement parameter = null;
-      if (!DA.GetData("Parameter", ref parameter))
+      IGH_Goo parameterKey = null;
+      if (!DA.GetData("ParameterKey", ref parameterKey))
         return;
 
-      if (Enum.IsDefined(typeof(BuiltInParameter), parameter.Value.IntegerValue))
+      Autodesk.Revit.DB.Parameter parameter = null;
+      switch (parameterKey.ScriptVariable())
       {
-        DA.SetData("Value", element.get_Parameter((BuiltInParameter) parameter.Value.IntegerValue));
+        case Parameter param:
+          parameter = param;
+          break;
+
+        case string parameterName:
+          parameter = element.LookupParameter(parameterName);
+          if (parameter == null)
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterName));
+          break;
+
+        case int parameterId:
+          if (Enum.IsDefined(typeof(BuiltInParameter), parameterId))
+          {
+            parameter = element.get_Parameter((BuiltInParameter) parameterId);
+            if (parameter == null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", LabelUtils.GetLabelFor((BuiltInParameter) parameterId)));
+          }
+          else if (Revit.ActiveDBDocument.GetElement(new ElementId(parameterId)) is ParameterElement parameterElement)
+          {
+            parameter = element.get_Parameter(parameterElement.GetDefinition());
+            if (parameter == null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterElement.Name));
+          }
+          else
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+          break;
+
+        case ElementId parameterElementId:
+          if (Enum.IsDefined(typeof(BuiltInParameter), parameterElementId.IntegerValue))
+          {
+            parameter = element.get_Parameter((BuiltInParameter) parameterElementId.IntegerValue);
+            if (parameter == null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", LabelUtils.GetLabelFor((BuiltInParameter) parameterElementId.IntegerValue)));
+          }
+          else if (Revit.ActiveDBDocument.GetElement(parameterElementId) is ParameterElement parameterElement)
+          {
+            parameter = element.get_Parameter(parameterElement.GetDefinition());
+            if (parameter == null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterElement.Name));
+          }
+          else
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+          break;
+
+        default:
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+          break;
       }
-      else if (Revit.ActiveDBDocument.GetElement(parameter.Value) is ParameterElement parameterelement)
-      {
-        DA.SetData("Value", element.get_Parameter(parameterelement.GetDefinition()));
-      }
+
+      DA.SetData("ParameterValue", parameter);
     }
   }
 
@@ -1335,8 +1380,8 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to update", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.ParameterElement(), "Parameter", "P", "Element parameter to query", GH_ParamAccess.item);
-      manager.AddGenericParameter("Value", "V", "Element parameter value", GH_ParamAccess.item);
+      manager.AddGenericParameter("ParameterKey", "K", "Element parameter to modify", GH_ParamAccess.item);
+      manager.AddGenericParameter("ParameterValue", "V", "Element parameter value", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -1350,22 +1395,64 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Element", ref element))
         return;
 
-      Types.ParameterElement parameterElement = null;
-      if (!DA.GetData("Parameter", ref parameterElement))
+      IGH_Goo parameterKey = null;
+      if (!DA.GetData("ParameterKey", ref parameterKey))
         return;
 
       IGH_Goo goo = null;
-      if (!DA.GetData("Value", ref goo))
+      if (!DA.GetData("ParameterValue", ref goo))
         return;
 
       Autodesk.Revit.DB.Parameter parameter = null;
-      if (Enum.IsDefined(typeof(BuiltInParameter), parameterElement.Value.IntegerValue))
+      switch (parameterKey.ScriptVariable())
       {
-        parameter = element.get_Parameter((BuiltInParameter) parameterElement.Value.IntegerValue);
-      }
-      else if (Revit.ActiveDBDocument.GetElement(parameterElement.Value) is ParameterElement parameterelement)
-      {
-        parameter = element.get_Parameter(parameterelement.GetDefinition());
+        case Parameter param:
+          parameter = param;
+          break;
+
+        case string parameterName:
+          parameter = element.LookupParameter(parameterName);
+          if (parameter == null)
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterName));
+          break;
+
+        case int parameterId:
+          if (Enum.IsDefined(typeof(BuiltInParameter), parameterId))
+          {
+            parameter = element.get_Parameter((BuiltInParameter) parameterId);
+            if (parameter == null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", LabelUtils.GetLabelFor((BuiltInParameter) parameterId)));
+          }
+          else if (Revit.ActiveDBDocument.GetElement(new ElementId(parameterId)) is ParameterElement parameterElement)
+          {
+            parameter = element.get_Parameter(parameterElement.GetDefinition());
+            if (parameter == null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterElement.Name));
+          }
+          else
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+          break;
+
+        case ElementId parameterElementId:
+          if (Enum.IsDefined(typeof(BuiltInParameter), parameterElementId.IntegerValue))
+          {
+            parameter = element.get_Parameter((BuiltInParameter) parameterElementId.IntegerValue);
+            if (parameter == null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", LabelUtils.GetLabelFor((BuiltInParameter) parameterElementId.IntegerValue)));
+          }
+          else if (Revit.ActiveDBDocument.GetElement(parameterElementId) is ParameterElement parameterElement)
+          {
+            parameter = element.get_Parameter(parameterElement.GetDefinition());
+            if (parameter == null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterElement.Name));
+          }
+          else
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+          break;
+
+        default:
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+          break;
       }
 
       DA.DisableGapLogic();
@@ -1446,7 +1533,7 @@ namespace RhinoInside.Revit.GH.Components
             }
         }
 
-        if (element == null)
+        if (element == null && parameter != null)
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Unable to cast 'Value' from {0} to {1}.", value.GetType().Name, parameter.StorageType.ToString()));
 
         DA.SetData(0, element, Iteration);
