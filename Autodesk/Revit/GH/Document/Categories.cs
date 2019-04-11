@@ -116,6 +116,13 @@ namespace RhinoInside.Revit.GH.Components
             ListItems.Add(item);
           }
         }
+
+        // Preselect OST_GenericModel category by default
+        if (selectedItems.Count == 0 && ListMode != GH_ValueListMode.CheckList)
+        {
+          foreach (var item in ListItems)
+            item.Selected = item.Expression == ((int) BuiltInCategory.OST_GenericModel).ToString();
+        }
       }
     }
 
