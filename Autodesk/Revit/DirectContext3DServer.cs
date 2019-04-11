@@ -566,14 +566,14 @@ namespace RhinoInside.Revit
       }
       protected Part part;
 
-      public Rhino.Geometry.BoundingBox ClippingBox => geometry.GetBoundingBox(false);
+      public readonly Rhino.Geometry.BoundingBox ClippingBox;
 
-      public Primitive(Rhino.Geometry.Point p)               { geometry = p; }
-      public Primitive(Rhino.Geometry.PointCloud pc)         { geometry = pc; part = pc; }
-      public Primitive(Rhino.Geometry.PointCloud pc, Part p) { geometry = pc; part = p; }
-      public Primitive(Rhino.Geometry.Curve c)               { geometry = c; }
-      public Primitive(Rhino.Geometry.Mesh m)                { geometry = m; part = m; }
-      public Primitive(Rhino.Geometry.Mesh m, Part p)        { geometry = m; part = p; }
+      public Primitive(Rhino.Geometry.Point p)               { geometry = p; ClippingBox = geometry.GetBoundingBox(false); }
+      public Primitive(Rhino.Geometry.PointCloud pc)         { geometry = pc; ClippingBox = geometry.GetBoundingBox(false); part = pc; }
+      public Primitive(Rhino.Geometry.PointCloud pc, Part p) { geometry = pc; ClippingBox = geometry.GetBoundingBox(false); part = p; }
+      public Primitive(Rhino.Geometry.Curve c)               { geometry = c; ClippingBox = geometry.GetBoundingBox(false); }
+      public Primitive(Rhino.Geometry.Mesh m)                { geometry = m; ClippingBox = geometry.GetBoundingBox(false); part = m; }
+      public Primitive(Rhino.Geometry.Mesh m, Part p)        { geometry = m; ClippingBox = geometry.GetBoundingBox(false); part = p; }
 
       void IDisposable.Dispose()
       {

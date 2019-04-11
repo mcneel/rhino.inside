@@ -302,7 +302,7 @@ namespace RhinoInside.Revit.GH.Components
       {
         if (id != list[index])
         {
-          if (doc.GetElement(list[index]) is Element previousElement)
+          if (doc.GetElement(list[index]) is Element previousElement && element != null)
           {
             foreach(var previousParameter in previousElement.Parameters.Cast<Parameter>())
             {
