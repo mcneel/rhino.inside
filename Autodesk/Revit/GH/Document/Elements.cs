@@ -46,12 +46,12 @@ namespace RhinoInside.Revit.GH.Components
       {
         if (category == null)
         {
-          foreach (var element in collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().ToElementIds())
+          foreach (var element in collector.WhereElementIsNotElementType().ToElementIds())
             elements.Add(Types.Element.Make(element));
         }
         else
         {
-          foreach (var element in collector.WhereElementIsNotElementType().WhereElementIsViewIndependent().OfCategoryId(category.Id).ToElementIds())
+          foreach (var element in collector.WhereElementIsNotElementType().OfCategoryId(category.Id).ToElementIds())
             elements.Add(Types.Element.Make(element));
         }
       }
