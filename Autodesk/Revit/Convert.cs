@@ -95,36 +95,36 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Scale
-    static internal Point3d Scale(this Point3d p, double factor)
+    public static Point3d Scale(this Point3d p, double factor)
     {
-      return new Point3d(p.X * factor, p.Y * factor, p.Z * factor);
+      return p * factor;
     }
-    static internal Vector3d Scale(this Vector3d p, double factor)
+    public static Vector3d Scale(this Vector3d p, double factor)
     {
-      return new Vector3d(p.X * factor, p.Y * factor, p.Z * factor);
+      return p * factor;
     }
-    static internal BoundingBox Scale(this BoundingBox bbox, double factor)
+    public static BoundingBox Scale(this BoundingBox bbox, double factor)
     {
-      return new BoundingBox(bbox.Min.Scale(factor), bbox.Max.Scale(factor));
+      return new BoundingBox(bbox.Min * factor, bbox.Max * factor);
     }
-    static internal Rhino.Geometry.Line Scale(this Rhino.Geometry.Line l, double factor)
+    public static Rhino.Geometry.Line Scale(this Rhino.Geometry.Line l, double factor)
     {
-      return new Rhino.Geometry.Line(l.From.Scale(factor), l.To.Scale(factor));
+      return new Rhino.Geometry.Line(l.From * factor, l.To * factor);
     }
-    static internal Rhino.Geometry.Plane Scale(this Rhino.Geometry.Plane p, double factor)
+    public static Rhino.Geometry.Plane Scale(this Rhino.Geometry.Plane p, double factor)
     {
-      return new Rhino.Geometry.Plane(p.Origin.Scale(factor), p.XAxis, p.YAxis);
+      return new Rhino.Geometry.Plane(p.Origin * factor, p.XAxis, p.YAxis);
     }
     #endregion
 
     #region ToRhino
-    static public System.Drawing.Color ToRhino(this Color c)
+    public static System.Drawing.Color ToRhino(this Color c)
     {
       return System.Drawing.Color.FromArgb((int) c.Red, (int) c.Green, (int) c.Blue);
     }
 
     static readonly Rhino.Display.DisplayMaterial defaultMaterial = new Rhino.Display.DisplayMaterial(System.Drawing.Color.WhiteSmoke);
-    static internal Rhino.Display.DisplayMaterial ToRhino(this Autodesk.Revit.DB.Material material, Rhino.Display.DisplayMaterial parentMaterial)
+    public static Rhino.Display.DisplayMaterial ToRhino(this Autodesk.Revit.DB.Material material, Rhino.Display.DisplayMaterial parentMaterial)
     {
       return (material == null) ? parentMaterial ?? defaultMaterial :
         new Rhino.Display.DisplayMaterial()
@@ -135,18 +135,18 @@ namespace RhinoInside.Revit
         };
     }
 
-    static public Point3d ToRhino(this XYZ p)
+    public static Point3d ToRhino(this XYZ p)
     {
       return new Point3d(p.X, p.Y, p.Z);
     }
 
-    static IEnumerable<Point3d> ToRhino(this IEnumerable<XYZ> points)
+    public static IEnumerable<Point3d> ToRhino(this IEnumerable<XYZ> points)
     {
       foreach (var p in points)
         yield return p.ToRhino();
     }
 
-    static public Rhino.Geometry.BoundingBox ToRhino(this BoundingBoxXYZ bbox)
+    public static Rhino.Geometry.BoundingBox ToRhino(this BoundingBoxXYZ bbox)
     {
       if (bbox?.Enabled ?? false)
       {
@@ -157,7 +157,7 @@ namespace RhinoInside.Revit
       return Rhino.Geometry.BoundingBox.Empty;
     }
 
-    static public Rhino.Geometry.Transform ToRhino(this Autodesk.Revit.DB.Transform transform)
+    public static Rhino.Geometry.Transform ToRhino(this Autodesk.Revit.DB.Transform transform)
     {
       var value = new Rhino.Geometry.Transform
       {
@@ -185,12 +185,12 @@ namespace RhinoInside.Revit
       return value;
     }
 
-    static public Rhino.Geometry.Plane ToRhino(this Autodesk.Revit.DB.Plane plane)
+    public static Rhino.Geometry.Plane ToRhino(this Autodesk.Revit.DB.Plane plane)
     {
       return new Rhino.Geometry.Plane(plane.Origin.ToRhino(), (Vector3d) plane.XVec.ToRhino(), (Vector3d) plane.YVec.ToRhino());
     }
 
-    static internal Rhino.Geometry.Curve ToRhino(this Autodesk.Revit.DB.Curve curve)
+    public static Rhino.Geometry.Curve ToRhino(this Autodesk.Revit.DB.Curve curve)
     {
       switch (curve)
       {
@@ -241,7 +241,7 @@ namespace RhinoInside.Revit
           {
             using (var Weights = nurb.Weights)
             {
-              var weights = Weights.OfType<double>().ToArray();
+              var weights = Weights.Cast<double>().ToArray();
               int index = 0;
               foreach (var pt in controlPoints)
               {
@@ -260,7 +260,7 @@ namespace RhinoInside.Revit
           using (var Knots = nurb.Knots)
           {
             int index = 0;
-            foreach (var w in Knots.OfType<double>().Skip(1).Take(n.Knots.Count))
+            foreach (var w in Knots.Cast<double>().Skip(1).Take(n.Knots.Count))
               n.Knots[index++] = w;
           }
 
@@ -272,7 +272,7 @@ namespace RhinoInside.Revit
       }
     }
 
-    static internal IEnumerable<Rhino.Geometry.Curve> ToRhino(this IEnumerable<CurveLoop> loops)
+    public static IEnumerable<Rhino.Geometry.Curve> ToRhino(this IEnumerable<CurveLoop> loops)
     {
       foreach (var loop in loops)
       {
@@ -285,13 +285,13 @@ namespace RhinoInside.Revit
       }
     }
 
-    static internal Rhino.Geometry.PlaneSurface ToRhino(this Autodesk.Revit.DB.Plane surface, Interval xExtents, Interval yExtents)
+    public static Rhino.Geometry.PlaneSurface ToRhino(this Autodesk.Revit.DB.Plane surface, Interval xExtents, Interval yExtents)
     {
       var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XVec.ToRhino(), (Vector3d) surface.YVec.ToRhino());
       return new Rhino.Geometry.PlaneSurface(plane, xExtents, yExtents);
     }
 
-    static internal Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.ConicalSurface surface, Interval interval)
+    public static Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.ConicalSurface surface, Interval interval)
     {
       var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
       double height = interval.Min;
@@ -300,7 +300,7 @@ namespace RhinoInside.Revit
       return cone.ToRevSurface();
     }
 
-    static internal Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.CylindricalSurface surface, Interval interval)
+    public static Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.CylindricalSurface surface, Interval interval)
     {
       var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
       var circle = new Rhino.Geometry.Circle(plane, surface.Radius);
@@ -313,7 +313,7 @@ namespace RhinoInside.Revit
       return cylinder.ToRevSurface();
     }
 
-    static internal Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.RevolvedSurface surface, Interval interval)
+    public static Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.RevolvedSurface surface, Interval interval)
     {
       var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
       var curve = surface.GetProfileCurveInWorldCoordinates().ToRhino();
@@ -321,9 +321,9 @@ namespace RhinoInside.Revit
       return Rhino.Geometry.RevSurface.Create(curve, axis);
     }
 
-    static Rhino.Geometry.Brep TrimFace(this Rhino.Geometry.Brep brep, int faceIndex, IEnumerable<Rhino.Geometry.Curve> curves, double tolerance)
+    public static Rhino.Geometry.Brep CreateTrimmedSurface(this Rhino.Geometry.BrepFace face, IEnumerable<Rhino.Geometry.Curve> curves, double tolerance)
     {
-      var trimmedBrep = brep.Faces[faceIndex].Split(curves, Revit.VertexTolerance);
+      var trimmedBrep = face.Split(curves, Revit.VertexTolerance);
 
       {
         var nakedFaces = new List<int>();
@@ -332,7 +332,7 @@ namespace RhinoInside.Revit
           foreach (var trim in trimedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.Edge.Valence == EdgeAdjacency.Naked))
           {
             var midPoint = trim.Edge.PointAtNormalizedLength(0.5);
-            if (!curves.Where(curve => curve.ClosestPoint(midPoint, out var t, Revit.VertexTolerance)).Any())
+            if (!curves.Where(curve => curve.ClosestPoint(midPoint, out var t, tolerance)).Any())
             {
               nakedFaces.Add(trimedFace.FaceIndex);
               break;
@@ -346,7 +346,6 @@ namespace RhinoInside.Revit
 
       {
         var interiorFaces = new List<int>();
-
         foreach (var trimedFace in trimmedBrep.Faces)
         {
           foreach (var trim in trimedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.Edge.Valence == EdgeAdjacency.Interior))
@@ -367,47 +366,47 @@ namespace RhinoInside.Revit
     }
 
 #if !REVIT_2018
-    static internal Autodesk.Revit.DB.Surface GetSurface(this Autodesk.Revit.DB.Face face)
+    internal static Autodesk.Revit.DB.Surface GetSurface(this Autodesk.Revit.DB.Face face)
     {
       switch(face)
       {
         case PlanarFace planarFace:
           return Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(planarFace.Origin, planarFace.XVector, planarFace.YVector);
         case ConicalFace conicalFace:
-          {
-            var basisX = conicalFace.get_Radius(0).Normalize();
-            var basisY = conicalFace.get_Radius(1).Normalize();
-            var basisZ = conicalFace.Axis.Normalize();
-            return Autodesk.Revit.DB.ConicalSurface.Create(new Frame(conicalFace.Origin, basisX, basisY, basisZ), conicalFace.HalfAngle);
-          }
+        {
+          var basisX = conicalFace.get_Radius(0).Normalize();
+          var basisY = conicalFace.get_Radius(1).Normalize();
+          var basisZ = conicalFace.Axis.Normalize();
+          return Autodesk.Revit.DB.ConicalSurface.Create(new Frame(conicalFace.Origin, basisX, basisY, basisZ), conicalFace.HalfAngle);
+        }
         case CylindricalFace cylindricalFace:
-          {
-            double radius = cylindricalFace.get_Radius(0).GetLength();
-            var basisX = cylindricalFace.get_Radius(0).Normalize();
-            var basisY = cylindricalFace.get_Radius(1).Normalize();
-            var basisZ = cylindricalFace.Axis.Normalize();
-            return Autodesk.Revit.DB.CylindricalSurface.Create(new Frame(cylindricalFace.Origin, basisX, basisY, basisZ), radius);
-          }
+        {
+          double radius = cylindricalFace.get_Radius(0).GetLength();
+          var basisX = cylindricalFace.get_Radius(0).Normalize();
+          var basisY = cylindricalFace.get_Radius(1).Normalize();
+          var basisZ = cylindricalFace.Axis.Normalize();
+          return Autodesk.Revit.DB.CylindricalSurface.Create(new Frame(cylindricalFace.Origin, basisX, basisY, basisZ), radius);
+        }
         case RevolvedFace revolvedFace:
+        {
+          var ECStoWCS = new Autodesk.Revit.DB.Transform(Autodesk.Revit.DB.Transform.Identity)
           {
-            var ECStoWCS = new Autodesk.Revit.DB.Transform(Autodesk.Revit.DB.Transform.Identity)
-            {
-              Origin = revolvedFace.Origin,
-              BasisX = revolvedFace.get_Radius(0).Normalize(),
-              BasisY = revolvedFace.get_Radius(1).Normalize(),
-              BasisZ = revolvedFace.Axis.Normalize()
-            };
+            Origin = revolvedFace.Origin,
+            BasisX = revolvedFace.get_Radius(0).Normalize(),
+            BasisY = revolvedFace.get_Radius(1).Normalize(),
+            BasisZ = revolvedFace.Axis.Normalize()
+          };
 
-            var profileInWCS = revolvedFace.Curve.CreateTransformed(ECStoWCS);
+          var profileInWCS = revolvedFace.Curve.CreateTransformed(ECStoWCS);
 
-            return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(ECStoWCS.Origin, ECStoWCS.BasisX, ECStoWCS.BasisY, ECStoWCS.BasisZ), profileInWCS);
-          }
+          return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(ECStoWCS.Origin, ECStoWCS.BasisX, ECStoWCS.BasisY, ECStoWCS.BasisZ), profileInWCS);
+        }
       }
 
       return null;
     }
 
-    static internal Autodesk.Revit.DB.Curve GetProfileCurveInWorldCoordinates(this RevolvedSurface revolvedSurface)
+    internal static Autodesk.Revit.DB.Curve GetProfileCurveInWorldCoordinates(this RevolvedSurface revolvedSurface)
     {
       var profileCurve = revolvedSurface.GetProfileCurve();
       var ECStoWCS = new Autodesk.Revit.DB.Transform(Autodesk.Revit.DB.Transform.Identity)
@@ -422,7 +421,7 @@ namespace RhinoInside.Revit
     }
 #endif
 
-    static internal Rhino.Geometry.Brep ToRhino(this Autodesk.Revit.DB.Face face)
+    public static Rhino.Geometry.Brep ToRhino(this Autodesk.Revit.DB.Face face)
     {
       using (var surface = face.GetSurface())
       {
@@ -496,11 +495,11 @@ namespace RhinoInside.Revit
 #if REVIT_2018
         brep.Faces[0].OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation;
 #endif
-        return brep.TrimFace(0, loops, Revit.VertexTolerance);
+        return brep.Faces[0].CreateTrimmedSurface(loops, Revit.VertexTolerance);
       }
     }
 
-    static Rhino.Geometry.GeometryBase ToRhino(this Autodesk.Revit.DB.Solid solid)
+    public static Rhino.Geometry.GeometryBase ToRhino(this Autodesk.Revit.DB.Solid solid)
     {
       bool hasNotImplementedFaces = false;
 
@@ -536,7 +535,7 @@ namespace RhinoInside.Revit
       }
     }
 
-    static Rhino.Geometry.Mesh ToRhino(this Autodesk.Revit.DB.Mesh mesh)
+    public static Rhino.Geometry.Mesh ToRhino(this Autodesk.Revit.DB.Mesh mesh)
     {
       var result = new Rhino.Geometry.Mesh();
 
@@ -559,7 +558,7 @@ namespace RhinoInside.Revit
       return result;
     }
 
-    static internal IEnumerable<Rhino.Geometry.GeometryBase> ToRhino(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries)
+    public static IEnumerable<Rhino.Geometry.GeometryBase> ToRhino(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries)
     {
       var scaleFactor = Revit.ModelUnits;
       foreach (var geometry in geometries)
@@ -625,7 +624,7 @@ namespace RhinoInside.Revit
       return false;
     }
 
-    static internal IEnumerable<Rhino.Display.DisplayMaterial> GetPreviewMaterials(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries, Rhino.Display.DisplayMaterial defaultMaterial)
+    internal static IEnumerable<Rhino.Display.DisplayMaterial> GetPreviewMaterials(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries, Rhino.Display.DisplayMaterial defaultMaterial)
     {
       var scaleFactor = Revit.ModelUnits;
       foreach (var geometry in geometries)
@@ -668,7 +667,7 @@ namespace RhinoInside.Revit
     #endregion
 
     #region GetPreviewMeshes
-    static internal IEnumerable<Rhino.Geometry.Mesh> GetPreviewMeshes(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries)
+    internal static IEnumerable<Rhino.Geometry.Mesh> GetPreviewMeshes(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries)
     {
       var scaleFactor = Revit.ModelUnits;
       foreach (var geometry in geometries)
@@ -735,7 +734,7 @@ namespace RhinoInside.Revit
     #endregion
 
     #region GetPreviewWires
-    static internal IEnumerable<Rhino.Geometry.Curve> GetPreviewWires(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries)
+    internal static IEnumerable<Rhino.Geometry.Curve> GetPreviewWires(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries)
     {
       var scaleFactor = Revit.ModelUnits;
       foreach (var geometry in geometries)
@@ -790,42 +789,42 @@ namespace RhinoInside.Revit
     #endregion
 
     #region ToHost
-    static public Color ToHost(this System.Drawing.Color c)
+    public static Color ToHost(this System.Drawing.Color c)
     {
       return new Color(c.R, c.G, c.B);
     }
 
-    static public XYZ ToHost(this Point3f p)
+    public static XYZ ToHost(this Point3f p)
     {
       return new XYZ(p.X, p.Y, p.Z);
     }
 
-    static public XYZ ToHost(this Point3d p)
+    public static XYZ ToHost(this Point3d p)
     {
       return new XYZ(p.X, p.Y, p.Z);
     }
 
-    static public XYZ ToHost(this Vector3f p)
+    public static XYZ ToHost(this Vector3f p)
     {
       return new XYZ(p.X, p.Y, p.Z);
     }
 
-    static public XYZ ToHost(this Vector3d p)
+    public static XYZ ToHost(this Vector3d p)
     {
       return new XYZ(p.X, p.Y, p.Z);
     }
 
-    static public Autodesk.Revit.DB.Line ToHost(this Rhino.Geometry.Line line)
+    public static Autodesk.Revit.DB.Line ToHost(this Rhino.Geometry.Line line)
     {
       return Autodesk.Revit.DB.Line.CreateBound(line.From.ToHost(), line.To.ToHost());
     }
 
-    static public Autodesk.Revit.DB.Plane ToHost(this Rhino.Geometry.Plane plane)
+    public static Autodesk.Revit.DB.Plane ToHost(this Rhino.Geometry.Plane plane)
     {
       return Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(plane.Origin.ToHost(), plane.XAxis.ToHost(), plane.YAxis.ToHost());
     }
 
-    static public Autodesk.Revit.DB.Transform ToHost(this Rhino.Geometry.Transform transform)
+    public static Autodesk.Revit.DB.Transform ToHost(this Rhino.Geometry.Transform transform)
     {
       var value = Autodesk.Revit.DB.Transform.CreateTranslation(new XYZ(transform.M03, transform.M13, transform.M23));
       value.BasisX = new XYZ(transform.M00, transform.M10, transform.M20);
@@ -834,34 +833,12 @@ namespace RhinoInside.Revit
       return value;
     }
 
-    static internal IList<XYZ> ToHost(this IList<Point3d> points)
+    public static IEnumerable<XYZ> ToHost(this IEnumerable<Point3d> points)
     {
-      var xyz = new List<XYZ>(points.Count);
-      foreach (var p in points)
-        xyz.Add(p.ToHost());
-
-      return xyz;
+      return points.Select(p => p.ToHost());
     }
 
-    static internal IList<XYZ> ToHost(this IList<ControlPoint> points)
-    {
-      var xyz = new List<XYZ>(points.Count);
-      foreach (var p in points)
-        xyz.Add(p.Location.ToHost());
-
-      return xyz;
-    }
-
-    static internal IList<XYZ> ToHost(this IEnumerable<ControlPoint> points)
-    {
-      var xyz = new List<XYZ>();
-      foreach (var p in points)
-        xyz.Add(p.Location.ToHost());
-
-      return xyz;
-    }
-
-    static internal IList<double> ToHost(this NurbsCurveKnotList knotList)
+    internal static IList<double> ToHost(this NurbsCurveKnotList knotList)
     {
       var knotListCount = knotList.Count;
       if (knotListCount > 0)
@@ -879,7 +856,7 @@ namespace RhinoInside.Revit
       return new List<double>();
     }
 
-    static internal IList<double> ToHost(this NurbsSurfaceKnotList knotList)
+    internal static IList<double> ToHost(this NurbsSurfaceKnotList knotList)
     {
       var knotListCount = knotList.Count;
       if (knotListCount > 0)
@@ -897,25 +874,21 @@ namespace RhinoInside.Revit
       return new List<double>();
     }
 
-    static internal Autodesk.Revit.DB.Point ToHost(this Rhino.Geometry.Point point)
+    public static Autodesk.Revit.DB.Point ToHost(this Rhino.Geometry.Point point)
     {
       return Autodesk.Revit.DB.Point.Create(ToHost(point.Location));
     }
 
-    static internal IEnumerable<Autodesk.Revit.DB.Point> ToHost(this Rhino.Geometry.PointCloud pointCloud)
+    public static IEnumerable<Autodesk.Revit.DB.Point> ToHost(this Rhino.Geometry.PointCloud pointCloud)
     {
       foreach(var p in pointCloud)
         yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));
     }
 
-    static internal IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve, double curveTolerance = double.PositiveInfinity)
+    public static IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve, double curveTolerance = double.PositiveInfinity)
     {
       curveTolerance = Math.Min(Revit.ShortCurveTolerance, Math.Abs(curveTolerance));
       Debug.Assert(!curve.IsShort(curveTolerance));
-
-      var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, curveTolerance, Revit.AngleTolerance);
-      if (simplifiedCurve != null)
-        curve = simplifiedCurve;
 
       switch (curve)
       {
@@ -933,7 +906,7 @@ namespace RhinoInside.Revit
         case Rhino.Geometry.ArcCurve arc:
 
           if (arc.IsClosed)
-            yield return Autodesk.Revit.DB.Arc.Create(arc.Arc.Plane.ToHost(), arc.Arc.Radius, 0.0, (2.0 * Math.PI) - 2e-8);
+            yield return Autodesk.Revit.DB.Arc.Create(arc.Arc.Plane.ToHost(), arc.Arc.Radius, 0.0, 2.0 * Math.PI);
           else
             yield return Autodesk.Revit.DB.Arc.Create(arc.Arc.StartPoint.ToHost(), arc.Arc.EndPoint.ToHost(), arc.Arc.MidPoint.ToHost());
           break;
@@ -966,28 +939,29 @@ namespace RhinoInside.Revit
             yield break;
           }
 
-          if (nurbsCurve.TryGetArc(out var arcSegment, Revit.VertexTolerance))
-          {
-            yield return Autodesk.Revit.DB.Arc.Create(arcSegment.StartPoint.ToHost(), arcSegment.EndPoint.ToHost(), arcSegment.MidPoint.ToHost());
-            yield break;
-
-          }
-
           if (nurbsCurve.IsClosed)
           {
             if (nurbsCurve.TryGetCircle(out var circle, Revit.VertexTolerance))
             {
-              yield return Autodesk.Revit.DB.Arc.Create(circle.Plane.ToHost(), circle.Radius, 0.0, 2.0 * (2.0 * Math.PI) - 2e-8);
+              yield return Autodesk.Revit.DB.Arc.Create(circle.Plane.ToHost(), circle.Radius, 0.0, 2.0 * Math.PI);
               yield break;
             }
 
             if (nurbsCurve.TryGetEllipse(out var ellipse, Revit.VertexTolerance))
             {
 #if REVIT_2018
-              yield return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, (2.0 * Math.PI) - 2e-8);
+              yield return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, 2.0 * Math.PI);
 #else
-              yield return Autodesk.Revit.DB.Ellipse.Create(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, (2.0 * Math.PI) - 2e-8);
+              yield return Autodesk.Revit.DB.Ellipse.Create(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, 2.0 * Math.PI);
 #endif
+              yield break;
+            }
+
+            var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, curveTolerance, Revit.AngleTolerance);
+            if (simplifiedCurve != null)
+            {
+              foreach(var simpleCurve in simplifiedCurve.ToHost())
+                yield return simpleCurve;
               yield break;
             }
 
@@ -997,11 +971,25 @@ namespace RhinoInside.Revit
           }
           else
           {
+            if (nurbsCurve.TryGetArc(out var arcSegment, Revit.VertexTolerance))
+            {
+              yield return Autodesk.Revit.DB.Arc.Create(arcSegment.StartPoint.ToHost(), arcSegment.EndPoint.ToHost(), arcSegment.MidPoint.ToHost());
+              yield break;
+            }
+
+            var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, curveTolerance, Revit.AngleTolerance);
+            if (simplifiedCurve != null)
+            {
+              foreach (var simpleCurve in simplifiedCurve.ToHost())
+                yield return simpleCurve;
+              yield break;
+            }
+
             nurbsCurve.Knots.RemoveMultipleKnots(1, nurbsCurve.Degree, Revit.VertexTolerance);
 
             var degree = nurbsCurve.Degree;
             var knots = nurbsCurve.Knots.ToHost();
-            var controlPoints = nurbsCurve.Points.ToHost();
+            var controlPoints = nurbsCurve.Points.Select(p => p.Location.ToHost()).ToList();
 
             Debug.Assert(degree >= 1);
             Debug.Assert(controlPoints.Count > nurbsCurve.Degree);
@@ -1012,15 +1000,7 @@ namespace RhinoInside.Revit
             {
               if (nurbsCurve.IsRational)
               {
-                var weights = new List<double>(controlPoints.Count);
-                foreach (var p in nurbsCurve.Points)
-                {
-                  Debug.Assert(p.Weight > 0.0);
-                  weights.Add(p.Weight);
-                }
-
-                Debug.Assert(weights.Count == controlPoints.Count);
-
+                var weights = nurbsCurve.Points.Select(p => p.Weight).ToList();
                 nurbSpline = NurbSpline.CreateCurve(nurbsCurve.Degree, knots, controlPoints, weights);
               }
               else
@@ -1044,7 +1024,7 @@ namespace RhinoInside.Revit
       }
     }
 
-    static internal BRepBuilderSurfaceGeometry ToHost(this Rhino.Geometry.BrepFace faceSurface)
+    static BRepBuilderSurfaceGeometry ToHost(this Rhino.Geometry.BrepFace faceSurface)
     {
       using (var nurbsSurface = faceSurface.ToNurbsSurface())
       {
@@ -1059,7 +1039,7 @@ namespace RhinoInside.Revit
         var degreeV = nurbsSurface.Degree(1);
         var knotsU = nurbsSurface.KnotsU.ToHost();
         var knotsV = nurbsSurface.KnotsV.ToHost();
-        var controlPoints = nurbsSurface.Points.ToHost();
+        var controlPoints = nurbsSurface.Points.Select(p => p.Location.ToHost()).ToList();
 
         Debug.Assert(degreeU >= 1);
         Debug.Assert(degreeV >= 1);
@@ -1071,12 +1051,7 @@ namespace RhinoInside.Revit
         {
           if (nurbsSurface.IsRational)
           {
-            var weights = new List<double>(controlPoints.Count);
-            foreach (var p in nurbsSurface.Points)
-            {
-              Debug.Assert(p.Weight > 0.0);
-              weights.Add(p.Weight);
-            }
+            var weights = nurbsSurface.Points.Select(p => p.Weight).ToList();
 
             return BRepBuilderSurfaceGeometry.CreateNURBSSurface
             (
@@ -1100,7 +1075,7 @@ namespace RhinoInside.Revit
       return null;
     }
 
-    static private Rhino.Geometry.Brep SplitClosedFaces(Rhino.Geometry.Brep brep)
+    static Rhino.Geometry.Brep SplitClosedFaces(Rhino.Geometry.Brep brep)
     {
       Brep brepToSplit = null;
 
@@ -1155,7 +1130,7 @@ namespace RhinoInside.Revit
       return brep;
     }
 
-    static internal IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.Brep brep)
+    public static IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.Brep brep)
     {
       Solid solid = null;
 
@@ -1169,7 +1144,14 @@ namespace RhinoInside.Revit
 
           try
           {
-            var builder = new BRepBuilder(brep.IsSolid ? BRepType.Solid : BRepType.OpenShell);
+            var brepType = BRepType.OpenShell;
+            switch (brep.SolidOrientation)
+            {
+              case BrepSolidOrientation.Inward: brepType = BRepType.Void; break;
+              case BrepSolidOrientation.Outward:brepType = BRepType.Solid; break;
+            }
+
+            var builder = new BRepBuilder(brepType);
 #if REVIT_2018
             builder.AllowRemovalOfProblematicFaces();
             builder.SetAllowShortEdges();
@@ -1257,7 +1239,7 @@ namespace RhinoInside.Revit
       }
     }
 
-    static internal IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.Mesh mesh)
+    public static IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.Mesh mesh)
     {
       var faceVertices = new List<XYZ>(4);
 
@@ -1275,10 +1257,9 @@ namespace RhinoInside.Revit
       {
         piece.Faces.ConvertNonPlanarQuadsToTriangles(Revit.VertexTolerance, RhinoMath.UnsetValue, 5);
 
-        var isSolid = piece.IsClosed && piece.IsManifold(true, out var isOriented, out var hasBoundary) && isOriented;
         var vertices = piece.Vertices.ToPoint3dArray();
 
-        builder.OpenConnectedFaceSet(isSolid);
+        builder.OpenConnectedFaceSet(piece.SolidOrientation() != -1);
         foreach (var face in piece.Faces)
         {
           faceVertices.Add(vertices[face.A].ToHost());
@@ -1308,7 +1289,7 @@ namespace RhinoInside.Revit
       return objects;
     }
 
-    static public IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
+    public static IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
       foreach (var geometry in geometries)
@@ -1360,66 +1341,290 @@ namespace RhinoInside.Revit
         }
       }
     }
-#endregion
+    #endregion
 
-#region Utils
-    static public bool TryGetExtrusion(this Rhino.Geometry.Surface surface, out Rhino.Geometry.Extrusion extrusion, int direction = 1)
+    #region TryGetExtrusion
+    public static bool TryGetExtrusion(this Rhino.Geometry.Surface surface, out Rhino.Geometry.Extrusion extrusion)
     {
       extrusion = null;
       var nurbsSurface = surface as NurbsSurface ?? surface.ToNurbsSurface();
 
-      var oposite = direction == 0 ? 1 : 0;
-
-      var domain = nurbsSurface.Domain(direction);
-      var iso0 = nurbsSurface.IsoCurve(oposite, domain.Min);
-      var iso1 = nurbsSurface.IsoCurve(oposite, domain.Max);
-
-      // Revit needs closed loops for NewExtrusionForm()
-      if (iso0.IsClosed)
-        return false;
-
-      if(iso0.TryGetPlane(out var plane0) && iso1.TryGetPlane(out var plane1))
+      for (int direction = 1; direction >= 0; --direction)
       {
-        if(plane0.Normal.IsParallelTo(plane1.Normal, RhinoMath.ToRadians(1.0 / 100.0)) == 1)
+        var oposite = direction == 0 ? 1 : 0;
+
+        if (surface.IsClosed(direction))
+          continue;
+
+        var domain = nurbsSurface.Domain(direction);
+        var iso0 = nurbsSurface.IsoCurve(oposite, domain.Min);
+        var iso1 = nurbsSurface.IsoCurve(oposite, domain.Max);
+
+        if (iso0.TryGetPlane(out var plane0) && iso1.TryGetPlane(out var plane1))
         {
-          double tolerance = Revit.VertexTolerance * Revit.ModelUnits;
-
-          var rows    = direction == 0 ? nurbsSurface.Points.CountU : nurbsSurface.Points.CountV;
-          var columns = direction == 0 ? nurbsSurface.Points.CountV : nurbsSurface.Points.CountU;
-          for (int c = 0; c < columns; ++c)
+          if (plane0.Normal.IsParallelTo(plane1.Normal, RhinoMath.DefaultAngleTolerance / 100.0) == 1)
           {
-            var point = direction == 0 ? nurbsSurface.Points.GetControlPoint(0, c) : nurbsSurface.Points.GetControlPoint(c, 0);
-            for (int r = 1; r < rows; ++r)
+            var rowCount = direction == 0 ? nurbsSurface.Points.CountU : nurbsSurface.Points.CountV;
+            var columnCount = direction == 0 ? nurbsSurface.Points.CountV : nurbsSurface.Points.CountU;
+            for (int c = 0; c < columnCount; ++c)
             {
-              var pointR = direction == 0 ? nurbsSurface.Points.GetControlPoint(r, c) : nurbsSurface.Points.GetControlPoint(c, r);
-              if(plane0.ClosestPoint(pointR.Location).DistanceTo(point.Location) > tolerance)
-                return false;
+              var point = direction == 0 ? nurbsSurface.Points.GetControlPoint(0, c) : nurbsSurface.Points.GetControlPoint(c, 0);
+              for (int r = 1; r < rowCount; ++r)
+              {
+                var pointR = direction == 0 ? nurbsSurface.Points.GetControlPoint(r, c) : nurbsSurface.Points.GetControlPoint(c, r);
+                var projectedPointR = plane0.ClosestPoint(pointR.Location);
+                if (projectedPointR.DistanceToSquared(point.Location) > RhinoMath.SqrtEpsilon)
+                  return false;
 
-              if (pointR.Weight != point.Weight)
-                return false;
+                if (Math.Abs(pointR.Weight - point.Weight) > RhinoMath.ZeroTolerance)
+                  return false;
+              }
             }
-          }
 
-          extrusion = Rhino.Geometry.Extrusion.Create(iso0, iso0.PointAtStart.DistanceTo(iso1.PointAtStart), false);
-          return true;
+            // Rhino.Geometry.Extrusion.Create does not work well when 'iso0' is a line-like curve,
+            // plane used to extrude is "arbitrary" in this case
+            //extrusion = Rhino.Geometry.Extrusion.Create(iso0, zAxis.Length, false);
+
+            var axis = new Rhino.Geometry.Line(iso0.PointAtStart, iso1.PointAtStart);
+            var zAxis = iso1.PointAtStart - iso0.PointAtStart;
+            var xAxis = (iso0.IsClosed ? iso0.PointAt(iso0.Domain.Mid) : iso0.PointAtEnd) - iso0.PointAtStart;
+            var yAxis = Vector3d.CrossProduct(zAxis, xAxis);
+
+            extrusion = new Rhino.Geometry.Extrusion();
+            if (!iso0.Transform(Rhino.Geometry.Transform.PlaneToPlane(new Rhino.Geometry.Plane(iso0.PointAtStart, xAxis, yAxis), Rhino.Geometry.Plane.WorldXY)))
+              return false;
+
+            return extrusion.SetPathAndUp(axis.From, axis.To, yAxis) && extrusion.SetOuterProfile(iso0, false);
+          }
         }
       }
 
       return false;
     }
 
-    static public bool TryGetExtrusion(this Rhino.Geometry.Brep brep, out Rhino.Geometry.Extrusion extrusion)
+    public static bool TryGetExtrusion(this Rhino.Geometry.BrepFace face, out Rhino.Geometry.Extrusion extrusion)
     {
-      extrusion = null;
-
-      if (brep.Faces.Count == 3)
+      if (face.UnderlyingSurface().TryGetExtrusion(out extrusion))
       {
-        // TODO : Find the wall surface but Rhino.Geometry.ExtrusionToBrep.ToBrep() conversion sets the wall in face[0] end extrude in U direction
-        return brep.Faces[0].TryGetExtrusion(out extrusion, 1);
+        if (face.OrientationIsReversed)
+        {
+          var profile = extrusion.Profile3d(new ComponentIndex(ComponentIndexType.ExtrusionBottomProfile, 0));
+          profile.Reverse();
+
+          if (!extrusion.GetProfileTransformation(0.0).TryGetInverse(out var WCStoECS))
+            return false;
+
+          if (!profile.Transform(WCStoECS))
+            return false;
+
+          return extrusion.SetOuterProfile(profile, false);
+        }
+
+        return true;
+      }
+
+      extrusion = null;
+      return false;
+    }
+
+    struct PlanarBrepFace
+    {
+      public PlanarBrepFace(BrepFace f)
+      {
+        Face = f;
+        Face.TryGetPlane(out Plane);
+        loop = null;
+        area = double.NaN;
+        centroid = new Point3d(double.NaN, double.NaN, double.NaN);
+      }
+
+      public readonly BrepFace Face;
+      public readonly Rhino.Geometry.Plane Plane;
+      Rhino.Geometry.NurbsCurve loop;
+      Point3d centroid;
+      double area;
+
+      public Rhino.Geometry.NurbsCurve Loop
+      {
+        get { if (loop == null) loop = Face.OuterLoop.To3dCurve().ToNurbsCurve(); return loop; }
+      }
+      public Point3d Centroid
+      {
+        get { if (!centroid.IsValid)  using (var mp = AreaMassProperties.Compute(Loop)) { area = mp.Area; centroid = mp.Centroid; } return centroid; }
+      }
+      public double LoopArea
+      {
+        get { if (double.IsNaN(area)) using (var mp = AreaMassProperties.Compute(Loop)) { area = mp.Area; centroid = mp.Centroid; } return area; }
+      }
+
+      public bool ProjectionDegenartesToCurve(Rhino.Geometry.Surface surface)
+      {
+        // This function basically tests if 'surface' projected to 'plane' degenerate to a curve
+        // So it can be used with any kind of surface even Rhino.Geometry.BrepFace, trims doesn't matter.
+        // But if called with a Rhino.Geometry.BrepFace using UnderlyingSurface() may avoid one extra surface conversion
+        var nurbsSurface = surface as NurbsSurface ?? surface.ToNurbsSurface();
+
+        var domainU = nurbsSurface.Domain(0);
+        var domainV = nurbsSurface.Domain(1);
+        var isoU = nurbsSurface.IsoCurve(1, domainU.Min);
+        var isoV = nurbsSurface.IsoCurve(0, domainV.Min);
+
+        // To avoid problems with lines we test for perpendicularity instead planar parallelism
+        // To avoid problems with closed curves we use the mid point instead of PointAtEnd
+        // Self intersected curves are not allowed here, isoU and isoV are edges of a face,
+        // so PointAt(Domain.Mid) will not be equal to PointAtStart
+        int row = -1;
+        if (isoU.IsPlanar() && (isoU.PointAtStart - isoU.PointAt(domainU.Mid)).IsPerpendicularTo(Plane.Normal))
+          row = 0;
+        else if (isoV.IsPlanar() && (isoV.PointAtStart - isoV.PointAt(domainV.Mid)).IsPerpendicularTo(Plane.Normal))
+          row = 1;
+
+        // No Edge parallel to plane
+        if (row < 0)
+          return false;
+
+        var column = row == 0 ? 1 : 0;
+
+        // Test if projection of all rows of control points projected to 'plane' are coincident.
+        // This means 'surface' degenerate to a curve if projected to 'plane', so an "extrusion".
+        var rowCount = row == 0 ? nurbsSurface.Points.CountU : nurbsSurface.Points.CountV;
+        var columnCount = row == 0 ? nurbsSurface.Points.CountV : nurbsSurface.Points.CountU;
+        for (int c = 0; c < columnCount; ++c)
+        {
+          var point = row == 0 ? nurbsSurface.Points.GetControlPoint(0, c) : nurbsSurface.Points.GetControlPoint(c, 0);
+          var projectedPoint = Plane.ClosestPoint(point.Location);
+          for (int r = 1; r < rowCount; ++r)
+          {
+            var pointR = row == 0 ? nurbsSurface.Points.GetControlPoint(r, c) : nurbsSurface.Points.GetControlPoint(c, r);
+            var projectedPointR = Plane.ClosestPoint(pointR.Location);
+
+            if (projectedPointR.DistanceToSquared(projectedPoint) > RhinoMath.SqrtEpsilon)
+              return false;
+
+            if (Math.Abs(pointR.Weight - point.Weight) > RhinoMath.ZeroTolerance)
+              return false;
+          }
+        }
+
+        return true;
+      }
+    }
+
+    public static bool TryGetExtrusion(this Rhino.Geometry.Brep brep, out Rhino.Geometry.Extrusion extrusion)
+    {
+      if (brep.IsSurface)
+          return brep.Faces[0].TryGetExtrusion(out extrusion);
+
+      extrusion = null;
+      if (brep.Faces.Count < 3)
+        return false;
+
+      // Requiere manifold breps
+      if (brep.SolidOrientation == BrepSolidOrientation.None || brep.SolidOrientation == BrepSolidOrientation.Unknown)
+        return false;
+
+      // If brep has more that 3 faces we should check if there are faces with interior loops
+      if (brep.Faces.Count > 3 && brep.Faces.Where(face => face.Loops.Count != 1).Any())
+        return false;
+
+      var candidateFaces = new List<int[]>();
+
+      // Array with just planar faces sorted by its area to search for similar faces
+      var planarFaces = brep.Faces.
+                        Select(face => new PlanarBrepFace(face)).
+                        Where(face => face.Plane.IsValid).
+                        OrderByDescending(face => face.LoopArea).
+                        ToArray();
+
+      // A capped Rhino.Geometry.Extrusion converted to Brep has wall surfaces in face[0] to face[N-3], caps are face[N-2] and face[N-1]
+      // I iterate in reverse order to be optimisitc, maybe brep comes from an Extrusion.ToBrep() call
+      for (int f = planarFaces.Length - 1; f > 0; --f)
+      {
+        var planeF = planarFaces[f].Plane;
+        var loopF = planarFaces[f].Loop;
+        var centroidF = planarFaces[f].Centroid;
+
+        // Check if they have same area.
+        for (int g = f - 1; g >= 0 && RhinoMath.EpsilonEquals(planarFaces[f].LoopArea, planarFaces[g].LoopArea, RhinoMath.SqrtEpsilon); --g)
+        {
+          // Planes should be parallel or anti-parallel
+          if (planeF.Normal.IsParallelTo(planarFaces[g].Plane.Normal, RhinoMath.DefaultAngleTolerance / 100.0) == 0)
+            continue;
+
+          // Here f, ang are perfect candidates to test adjacent faces for perpendicularity to them,
+          // but we may try to quick reject some candidates if it's obvious that doesn't match
+
+          // A "perfect" curve overlap match may be a test but is too much in this ocasion
+
+          // We expect same NURBS structure, so point count should match
+          if (loopF.Points.Count != planarFaces[g].Loop.Points.Count)
+            continue;
+
+          // Since we have computed the area the centroid comes for free.
+          // Centroids should also match
+          if (planeF.ClosestPoint(planarFaces[g].Centroid).DistanceToSquared(centroidF) > RhinoMath.SqrtEpsilon)
+            continue;
+
+          // Add result to candidates List reversing index order to keep extrusion creation direction
+          // Breps that come from a Rhino.Geometry.Extrusion have the Cap[0] before Cap[1]
+          candidateFaces.Add(new int[] { g, f });
+        }
+      }
+
+      // No twin faces found
+      if (candidateFaces.Count == 0)
+        return false;
+
+      // Candidates are in 'LoopArea' order, we will find here smaller profiles sooner
+      // This is good for beam like objects, bad for slab like objects.
+
+      // On box-like Breps the result could be ambigous for the user so,
+      // to give him some control on the result, we will prioritize first and last faces no matter their area.
+      // First and Last are "special" because if somebody observe an extrusion-like Brep and sees
+      // it as an extrusion he tends to categorize faces in one of the following schemas:
+      // { Cap[0], Wall[0] .. Wall[N], Cap[1] }
+      // { Cap[0], Cap[1], Wall[0] .. Wall[N] }
+      // { Wall[0] .. Wall[N], Cap[0], Cap[1] }
+      // So if he is using the join command to create a Brep from surfaces at the model,
+      // it's natural to start or end the selection with one of the extrusion caps.
+      // On horizontal extrusions, slab-like Breps, the user use to observe the model from above,
+      // so probably he will end with the bottom cap.
+      // Also Last face is a Cap in Breps that come from Rhino.Geometry.Extrusion
+      // If caps and walls are interleaved, smallest pair of faces will be used as caps, producing beam-like extrusions.
+
+      //  System.Linq.Enumerable.OrderBy performs a stable sort so only first and last face will be moved if found.
+      foreach (var candidate in candidateFaces.OrderBy(pair => (planarFaces[pair[1]].Face.FaceIndex == brep.Faces.Count - 1) ? 0 : // Last,  in case it comes from Rhino.Geometry.Extrusion
+                                                               (planarFaces[pair[0]].Face.FaceIndex == 0)                    ? 1 : // First, in case it comes from a JOIN command
+                                                                                                                    int.MaxValue)) // Others
+      {
+        var startFace = planarFaces[candidate[0]];
+        var endFace   = planarFaces[candidate[1]];
+
+        // If any face, ignorig twins candidates, does not degenrate
+        // to a curve when projected to 'planeF', then brep is not an extrusion
+        if
+        (
+          brep.Faces.
+          Where(face => face.FaceIndex != startFace.Face.FaceIndex && face.FaceIndex != endFace.Face.FaceIndex).
+          Select(face => startFace.ProjectionDegenartesToCurve(face.UnderlyingSurface())).
+          Any(degenerateToCurve => degenerateToCurve == false)
+        )
+          return false;
+
+        // We use the orginal OuterLoop as profile not the NURBS version of it
+        // to keep the structure as much as possible
+        var profile = startFace.Face.OuterLoop.To3dCurve();
+
+        double height = startFace.Face.OrientationIsReversed ?
+                        -startFace.Plane.DistanceTo(endFace.Plane.Origin):
+                        +startFace.Plane.DistanceTo(endFace.Plane.Origin);
+
+        extrusion = Rhino.Geometry.Extrusion.Create(profile, height, true);
+        return true;
       }
 
       return false;
     }
-#endregion
+    #endregion
   };
 }

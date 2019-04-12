@@ -50,7 +50,7 @@ namespace RhinoInside.Revit.GH.Components
     void CommitInstance
     (
       Document doc, IGH_DataAccess DA, int Iteration,
-      IList<Rhino.Geometry.Point3d> points
+      IEnumerable<Rhino.Geometry.Point3d> points
     )
     {
       var element = PreviousElement(doc, Iteration);
@@ -60,12 +60,9 @@ namespace RhinoInside.Revit.GH.Components
         {
           var scaleFactor = 1.0 / Revit.ModelUnits;
           if (scaleFactor != 1.0)
-          {
-            for (int p = 0; p < points.Count; ++p)
-              points[p] = points[p].Scale(scaleFactor);
-          }
+            points = points.Select(p => p * scaleFactor);
 
-          element = TopographySurface.Create(doc, points.ToHost());
+          element = TopographySurface.Create(doc, points.ToHost().ToList());
         }
       }
       catch (Exception e)

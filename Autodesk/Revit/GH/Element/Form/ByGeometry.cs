@@ -18,13 +18,13 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("D2FDF2A0-1E48-4075-814A-685D91A6CD94");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("FF");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("BF");
 
     public FormByGeometry() : base
     (
-      "Form.ByGeometry", "ByGeometry",
-      "Create a FreeForm element from geometry",
-      "Revit", "Family"
+      "AddForm.ByGeometry", "ByGeometry",
+      "Given its Geometry, it adds a Form element to the active Revit document",
+      "Revit", "Mass"
     )
     { }
 
@@ -46,7 +46,7 @@ namespace RhinoInside.Revit.GH.Components
 
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, (Rhino.Geometry.Brep) brep?.DuplicateShallow()));
+      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, brep));
     }
 
     void CommitInstance
@@ -60,7 +60,11 @@ namespace RhinoInside.Revit.GH.Components
       {
         if (element?.Pinned ?? true)
         {
-          if (brep == null)
+          if (!Revit.ActiveDBDocument.IsFamilyDocument || !Revit.ActiveDBDocument.OwnerFamily.IsConceptualMassFamily)
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "This component can only run in Conceptual Mass Family editor");
+          }
+          else if (brep == null)
           {
             AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be valid Brep.", Params.Input[0].Name));
           }
@@ -70,7 +74,23 @@ namespace RhinoInside.Revit.GH.Components
             if (scaleFactor != 1.0)
               brep.Scale(scaleFactor);
 
-            if (brep.TryGetExtrusion(out var extrusion))
+            if (brep.Faces.Count == 1 && brep.Faces[0].Loops.Count == 1 && brep.Faces[0].TryGetPlane(out var capPlane))
+            {
+              var sketchPlane = SketchPlane.Create(doc, capPlane.ToHost());
+
+              var referenceArray = new ReferenceArray();
+              var loop = brep.Faces[0].OuterLoop.To3dCurve();
+
+              foreach (var curve in brep.Faces[0].OuterLoop.To3dCurve().ToHost())
+                referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
+
+              element = doc.FamilyCreate.NewFormByCap
+              (
+                brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
+                referenceArray
+              );
+            }
+            else if (brep.TryGetExtrusion(out var extrusion) && (extrusion.CapCount == 2 || !extrusion.IsClosed(0)))
             {
               var sketchPlane = SketchPlane.Create(doc, extrusion.GetProfilePlane(0.0).ToHost());
 
@@ -92,7 +112,17 @@ namespace RhinoInside.Revit.GH.Components
                 if (element is FreeFormElement freeFormElement)
                   freeFormElement.UpdateSolidGeometry(solid);
                 else
-                  element = Autodesk.Revit.DB.FreeFormElement.Create(doc, solid);
+                {
+                  element = FreeFormElement.Create(doc, solid);
+                  element.get_Parameter(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY).Set(new ElementId(BuiltInCategory.OST_MassForm));
+                }
+
+                element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING)?.Set
+                (
+                  brep.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Inward ?
+                  1 /*VOID*/ :
+                  0 /*SOLID*/
+                );
               }
             }
           }

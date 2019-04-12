@@ -302,20 +302,23 @@ namespace RhinoInside.Revit.GH.Components
       {
         if (id != list[index])
         {
-          if (doc.GetElement(list[index]) is Element previousElement && element != null)
+          if (doc.GetElement(list[index]) is Element previousElement)
           {
-            foreach(var previousParameter in previousElement.Parameters.Cast<Parameter>())
+            if (element != null)
             {
-              var param = element.get_Parameter(previousParameter.Definition);
-              if (param == null || param.IsReadOnly)
-                continue;
-
-              switch(previousParameter.StorageType)
+              foreach (var previousParameter in previousElement.Parameters.Cast<Parameter>())
               {
-                case StorageType.Integer:   param.Set(previousParameter.AsInteger()); break;
-                case StorageType.Double:    param.Set(previousParameter.AsDouble()); break;
-                case StorageType.String:    param.Set(previousParameter.AsString()); break;
-                case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
+                var param = element.get_Parameter(previousParameter.Definition);
+                if (param == null || param.IsReadOnly)
+                  continue;
+
+                switch (previousParameter.StorageType)
+                {
+                  case StorageType.Integer:   param.Set(previousParameter.AsInteger()); break;
+                  case StorageType.Double:    param.Set(previousParameter.AsDouble()); break;
+                  case StorageType.String:    param.Set(previousParameter.AsString()); break;
+                  case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
+                }
               }
             }
 

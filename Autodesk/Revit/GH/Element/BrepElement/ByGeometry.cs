@@ -78,16 +78,19 @@ namespace RhinoInside.Revit.GH.Components
 
             if (element?.Pinned ?? true)
             {
-              if (doc.IsFamilyDocument)
+              if (doc.IsFamilyDocument && doc.OwnerFamily.IsConceptualMassFamily)
               {
                 if (element is FreeFormElement freeFormElement)
                   freeFormElement.UpdateSolidGeometry(s);
                 else
+                {
                   element = FreeFormElement.Create(doc, s);
+                  element.get_Parameter(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY).Set(new ElementId(BuiltInCategory.OST_MassForm));
+                }
 
                 element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING)?.Set
                 (
-                  s.Volume < 0.0 ?
+                  brep.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Inward ?
                   1 /*VOID*/ :
                   0 /*SOLID*/
                 );
