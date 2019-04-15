@@ -71,11 +71,11 @@ namespace RhinoInside.Revit.GH.Components
         }
         else
         {
-          curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane.GetPlane().ToRhino());
-
           var scaleFactor = 1.0 / Revit.ModelUnits;
           if (scaleFactor != 1.0)
             curve.Scale(scaleFactor);
+
+          curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane.GetPlane().ToRhino());
 
           if (curve.IsShort(Revit.ShortCurveTolerance))
           {
@@ -91,9 +91,9 @@ namespace RhinoInside.Revit.GH.Components
 
               if (element?.Pinned ?? true)
               {
-                if (element is ModelCurve && element?.Location is LocationCurve locationCurve)
+                if (element is ModelCurve modelCurve)
                 {
-                  locationCurve.Curve = c;
+                  modelCurve.SetSketchPlaneAndCurve(plane, c);
                 }
                 else
                 {
