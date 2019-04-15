@@ -80,7 +80,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.SketchPlane(), "SketchPlane", "C", "New SketchPlane", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.SketchPlane(), "SketchPlane", "P", "New SketchPlane", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -112,7 +112,64 @@ namespace RhinoInside.Revit.GH.Components
           if (scaleFactor != 1.0)
             plane = plane.Scale(scaleFactor);
 
-          element = SketchPlane.Create(doc, plane.ToHost());
+          if (element is SketchPlane sketchPlane)
+          {
+            bool pinned = element.Pinned;
+            element.Pinned = false;
+
+            // Move currentPlane to Origin
+            {
+              var cPlane = sketchPlane.GetPlane().ToRhino();
+              ElementTransformUtils.MoveElement(Revit.ActiveDBDocument, element.Id, (- cPlane.Origin).ToHost());
+            }
+
+            // Orient from currentPlane to WorldXY
+            {
+              var planeToPlane = Rhino.Geometry.Transform.PlaneToPlane(sketchPlane.GetPlane().ToRhino(), Rhino.Geometry.Plane.WorldXY);
+              planeToPlane.GetEulerZYZ(out var alpha, out var beta, out var gamma);
+
+              // Rotate around currentPlane.ZAxis
+              using (var currentPlane = sketchPlane.GetPlane()) using (var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.Normal))
+                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, alpha);
+
+              // Rotate around currentPlane.YAxis
+              using (var currentPlane = sketchPlane.GetPlane()) using (var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.YVec))
+                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, beta);
+
+              // Rotate around currentPlane.ZAxis
+              using (var currentPlane = sketchPlane.GetPlane()) using(var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.Normal))
+                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, gamma);
+            }
+
+            // Orient from WorldXY to plane
+            {
+              var cPlane = plane;
+              cPlane.Origin = Rhino.Geometry.Point3d.Origin;
+              var planeToPlane = Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, cPlane);
+              planeToPlane.GetEulerZYZ(out var alpha, out var beta, out var gamma);
+
+              // Rotate around currentPlane.ZAxis
+              using (var currentPlane = sketchPlane.GetPlane()) using (var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.Normal))
+                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, alpha);
+
+              // Rotate around currentPlane.YAxis
+              using (var currentPlane = sketchPlane.GetPlane()) using (var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.YVec))
+                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, beta);
+
+              // Rotate around currentPlane.ZAxis
+              using (var currentPlane = sketchPlane.GetPlane()) using(var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.Normal))
+                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, gamma);
+            }
+
+            // Move currentPlane to plane.Origin
+            {
+              ElementTransformUtils.MoveElement(Revit.ActiveDBDocument, element.Id, (plane.Origin).ToHost());
+            }
+
+            element.Pinned = pinned;
+          }
+          else
+            element = SketchPlane.Create(doc, plane.ToHost());
         }
       }
       catch (Exception e)
