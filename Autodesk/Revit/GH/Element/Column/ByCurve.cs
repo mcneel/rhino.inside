@@ -114,6 +114,11 @@ namespace RhinoInside.Revit.GH.Components
               locationCurve.Curve = line.ToHost();
             else
               element = doc.Create.NewFamilyInstance(line.ToHost(), familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Column);
+
+            if (line.Direction.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0)
+              element.get_Parameter(BuiltInParameter.SLANTED_COLUMN_TYPE_PARAM).Set((int) SlantedOrVerticalColumnType.CT_EndPoint);
+            else
+              element.get_Parameter(BuiltInParameter.SLANTED_COLUMN_TYPE_PARAM).Set((int) SlantedOrVerticalColumnType.CT_Vertical);
           }
         }
       }
