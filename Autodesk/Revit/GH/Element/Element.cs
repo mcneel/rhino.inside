@@ -1522,6 +1522,7 @@ namespace RhinoInside.Revit.GH.Components
             {
               case Autodesk.Revit.DB.Element  ele: parameter.Set(ele.Id); break;
               case Autodesk.Revit.DB.Category cat: parameter.Set(cat.Id); break;
+              case int integer: parameter.Set(new ElementId(integer)); break;
               default: element = null; break;
             }
             break;

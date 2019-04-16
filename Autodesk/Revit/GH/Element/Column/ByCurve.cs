@@ -83,52 +83,45 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var element = PreviousElement(doc, Iteration);
-      try
+      if (!element?.Pinned ?? false)
       {
-        if (element?.Pinned ?? true)
+        ReplaceElement(doc, DA, Iteration, element);
+      }
+      else try
+      {
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+          line = line.Scale(scaleFactor);
+
+        if (line.Length < Revit.ShortCurveTolerance)
+          throw new Exception(string.Format("Parameter '{0}' is too short.", Params.Input[0].Name));
+
+        if (level == null)
+          throw new Exception(string.Format("Parameter '{0}' is mandatory.", Params.Input[2].Name));
+
+        if(element is FamilyInstance && familySymbol.Id != element.GetTypeId())
         {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-          {
-            line = line.Scale(scaleFactor);
-          }
-
-          if (line.Length < Revit.ShortCurveTolerance)
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is too short.", Params.Input[0].Name));
-          }
-          else if (level == null)
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is mandatory.", Params.Input[2].Name));
-          }
-          else
-          {
-            if(element is FamilyInstance && familySymbol.Id != element.GetTypeId())
-            {
-              var newElmentId = element.ChangeTypeId(familySymbol.Id);
-              if (newElmentId != ElementId.InvalidElementId)
-                element = doc.GetElement(newElmentId);
-            }
-
-            if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
-              locationCurve.Curve = line.ToHost();
-            else
-              element = doc.Create.NewFamilyInstance(line.ToHost(), familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Column);
-
-            if (line.Direction.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0)
-              element.get_Parameter(BuiltInParameter.SLANTED_COLUMN_TYPE_PARAM).Set((int) SlantedOrVerticalColumnType.CT_EndPoint);
-            else
-              element.get_Parameter(BuiltInParameter.SLANTED_COLUMN_TYPE_PARAM).Set((int) SlantedOrVerticalColumnType.CT_Vertical);
-          }
+          var newElmentId = element.ChangeTypeId(familySymbol.Id);
+          if (newElmentId != ElementId.InvalidElementId)
+            element = doc.GetElement(newElmentId);
         }
+
+        if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
+          locationCurve.Curve = line.ToHost();
+        else
+          element = CopyParametersFrom(doc.Create.NewFamilyInstance(line.ToHost(), familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Column), element);
+
+        if (line.Direction.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0)
+          element.get_Parameter(BuiltInParameter.SLANTED_COLUMN_TYPE_PARAM).Set((int) SlantedOrVerticalColumnType.CT_EndPoint);
+        else
+          element.get_Parameter(BuiltInParameter.SLANTED_COLUMN_TYPE_PARAM).Set((int) SlantedOrVerticalColumnType.CT_Vertical);
+
+        ReplaceElement(doc, DA, Iteration, element);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElement(doc, DA, Iteration, element);
+        ReplaceElement(doc, DA, Iteration, null);
       }
     }
   }

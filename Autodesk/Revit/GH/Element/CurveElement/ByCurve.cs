@@ -59,65 +59,46 @@ namespace RhinoInside.Revit.GH.Components
       var elements = PreviousElements(doc, Iteration).ToList();
       try
       {
-        var newElements = new List<Element>();
-
         if (curve == null)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is null.", Params.Input[0].Name));
-        }
-        else if (plane  == null)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is null.", Params.Input[1].Name));
-        }
-        else
-        {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-            curve.Scale(scaleFactor);
+          throw new Exception(string.Format("Parameter '{0}' is null.", Params.Input[0].Name));
 
-          curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane.GetPlane().ToRhino());
+        if (plane  == null)
+          throw new Exception(string.Format("Parameter '{0}' is null.", Params.Input[1].Name));
 
-          if (curve.IsShort(Revit.ShortCurveTolerance))
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+          curve.Scale(scaleFactor);
+
+        curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane.GetPlane().ToRhino());
+
+        var newElements = new List<Element>();
+        {
+          int index = 0;
+          foreach (var c in curve.ToHost() ?? Enumerable.Empty<Autodesk.Revit.DB.Curve>())
           {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is too short.", Params.Input[0].Name));
-          }
-          else
-          {
-            int index = 0;
-            foreach (var c in curve.ToHost() ?? Enumerable.Empty<Autodesk.Revit.DB.Curve>())
+            var element = index < elements.Count ? elements[index] : null;
+            index++;
+
+            if (element?.Pinned ?? true)
             {
-              var element = index < elements.Count ? elements[index] : null;
-              index++;
-
-              if (element?.Pinned ?? true)
-              {
-                if (element is ModelCurve modelCurve)
-                {
-                  modelCurve.SetSketchPlaneAndCurve(plane, c);
-                }
-                else
-                {
-                  if (doc.IsFamilyDocument)
-                    element = doc.FamilyCreate.NewModelCurve(c, plane);
-                  else
-                    element = doc.Create.NewModelCurve(c, plane);
-                }
-              }
-
-              newElements.Add(element);
+              if (element is ModelCurve modelCurve)
+                modelCurve.SetSketchPlaneAndCurve(plane, c);
+              else if (doc.IsFamilyDocument)
+                element = CopyParametersFrom(doc.FamilyCreate.NewModelCurve(c, plane), element);
+              else
+                element = CopyParametersFrom(doc.Create.NewModelCurve(c, plane), element);
             }
+
+            newElements.Add(element);
           }
         }
 
-        elements = newElements;
+        ReplaceElements(doc, DA, Iteration, newElements);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElements(doc, DA, Iteration, elements);
+        ReplaceElements(doc, DA, Iteration, null);
       }
     }
   }

@@ -294,6 +294,29 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
+    static protected T CopyParametersFrom<T>(T to, Element from) where T : Element
+    {
+      if (from != null && to != null)
+      {
+        foreach (var previousParameter in from.Parameters.Cast<Parameter>())
+        {
+          var param = to.get_Parameter(previousParameter.Definition);
+          if (param == null || param.IsReadOnly)
+            continue;
+
+          switch (previousParameter.StorageType)
+          {
+            case StorageType.Integer:   param.Set(previousParameter.AsInteger()); break;
+            case StorageType.Double:    param.Set(previousParameter.AsDouble()); break;
+            case StorageType.String:    param.Set(previousParameter.AsString()); break;
+            case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
+          }
+        }
+      }
+
+      return to;
+    }
+
     static protected void ReplaceElement(Document doc, List<ElementId> list, int index, Element element)
     {
       var id = element?.Id ?? ElementId.InvalidElementId;
@@ -302,28 +325,8 @@ namespace RhinoInside.Revit.GH.Components
       {
         if (id != list[index])
         {
-          if (doc.GetElement(list[index]) is Element previousElement)
-          {
-            if (element != null)
-            {
-              foreach (var previousParameter in previousElement.Parameters.Cast<Parameter>())
-              {
-                var param = element.get_Parameter(previousParameter.Definition);
-                if (param == null || param.IsReadOnly)
-                  continue;
-
-                switch (previousParameter.StorageType)
-                {
-                  case StorageType.Integer:   param.Set(previousParameter.AsInteger()); break;
-                  case StorageType.Double:    param.Set(previousParameter.AsDouble()); break;
-                  case StorageType.String:    param.Set(previousParameter.AsString()); break;
-                  case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
-                }
-              }
-            }
-
+          if (doc.GetElement(list[index]) != null)
             doc.Delete(list[index]);
-          }
 
           list[index] = id;
           if (element != null) element.Pinned = true;

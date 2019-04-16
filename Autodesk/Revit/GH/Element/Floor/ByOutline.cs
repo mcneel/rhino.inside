@@ -49,6 +49,20 @@ namespace RhinoInside.Revit.GH.Components
 
       Autodesk.Revit.DB.Level level = null;
       DA.GetData("Level", ref level);
+      if (level == null && boundary != null)
+      {
+        var boundaryBBox = boundary.GetBoundingBox(true);
+        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+        {
+          foreach (var levelN in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderBy(c => c.Elevation))
+          {
+            if (level == null)
+              level = levelN;
+            else if (boundaryBBox.Min.Z >= levelN.Elevation)
+              level = levelN;
+          }
+        }
+      }
 
       bool structural = true;
       DA.GetData("Structural", ref structural);
@@ -68,51 +82,48 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var element = PreviousElement(doc, Iteration);
-      try
+      if (!element?.Pinned ?? false)
       {
-        if (element?.Pinned ?? true)
+        ReplaceElement(doc, DA, Iteration, element);
+      }
+      else try
+      {
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
         {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-          {
-            boundary?.Scale(scaleFactor);
-          }
-
-          if
-          (
-            boundary == null ||
-            boundary.IsShort(Revit.ShortCurveTolerance) ||
-            !boundary.IsClosed ||
-            !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
-            boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
-          )
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be an horizontal planar closed curve.", Params.Input[0].Name));
-          }
-          else
-          {
-            var curveArray = new CurveArray();
-            foreach (var curve in boundary.ToHost())
-              curveArray.Append(curve);
-
-            if (floorType.IsFoundationSlab)
-            {
-              element = doc.Create.NewFoundationSlab(curveArray, floorType, level, structural, XYZ.BasisZ);
-            }
-            else
-            {
-              element = doc.Create.NewFloor(curveArray, floorType, level, structural, XYZ.BasisZ);
-            }
-          }
+          boundary?.Scale(scaleFactor);
         }
+
+        if
+        (
+          boundary == null ||
+          boundary.IsShort(Revit.ShortCurveTolerance) ||
+          !boundary.IsClosed ||
+          !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
+          boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+        )
+          throw new Exception(string.Format("Parameter '{0}' must be an horizontal planar closed curve.", Params.Input[0].Name));
+
+        var curveArray = boundary.ToHost().ToCurveArray();
+
+        if (floorType.IsFoundationSlab)
+          element = CopyParametersFrom(doc.Create.NewFoundationSlab(curveArray, floorType, level, structural, XYZ.BasisZ), element);
+        else
+          element = CopyParametersFrom(doc.Create.NewFloor(curveArray, floorType, level, structural, XYZ.BasisZ), element);
+
+        if (element != null)
+        {
+          var boundaryBBox = boundary.GetBoundingBox(true);
+          element.get_Parameter(BuiltInParameter.LEVEL_PARAM).Set(level.Id);
+          element.get_Parameter(BuiltInParameter.FLOOR_HEIGHTABOVELEVEL_PARAM).Set(boundaryBBox.Min.Z - level.Elevation);
+        }
+
+        ReplaceElement(doc, DA, Iteration, element);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElement(doc, DA, Iteration, element);
+        ReplaceElement(doc, DA, Iteration, null);
       }
     }
   }

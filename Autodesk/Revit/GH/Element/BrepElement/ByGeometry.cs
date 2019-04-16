@@ -58,18 +58,15 @@ namespace RhinoInside.Revit.GH.Components
       var elements = PreviousElements(doc, Iteration).ToList();
       try
       {
-        var newElements = new List<Element>();
-
         if (brep == null)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be valid Brep.", Params.Input[0].Name));
-        }
-        else
-        {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-            brep.Scale(scaleFactor);
+          throw new Exception(string.Format("Parameter '{0}' must be valid Brep.", Params.Input[0].Name));
 
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+          brep.Scale(scaleFactor);
+
+        var newElements = new List<Element>();
+        {
           int index = 0;
           foreach (var s in brep.ToHost().Cast<Autodesk.Revit.DB.Solid>() ?? Enumerable.Empty<Autodesk.Revit.DB.Solid>())
           {
@@ -84,7 +81,7 @@ namespace RhinoInside.Revit.GH.Components
                   freeFormElement.UpdateSolidGeometry(s);
                 else
                 {
-                  element = FreeFormElement.Create(doc, s);
+                  element = CopyParametersFrom(FreeFormElement.Create(doc, s), element);
                   element.get_Parameter(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY).Set(new ElementId(BuiltInCategory.OST_MassForm));
                 }
 
@@ -107,15 +104,12 @@ namespace RhinoInside.Revit.GH.Components
           }
         }
 
-        elements = newElements;
+        ReplaceElements(doc, DA, Iteration, newElements);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElements(doc, DA, Iteration, elements);
+        ReplaceElements(doc, DA, Iteration, null);
       }
     }
   }

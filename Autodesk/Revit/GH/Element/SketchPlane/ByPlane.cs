@@ -103,61 +103,56 @@ namespace RhinoInside.Revit.GH.Components
       try
       {
         if (!plane.IsValid)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is not valid.", Params.Input[0].Name));
-        }
-        else
-        {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-            plane = plane.Scale(scaleFactor);
+          throw new Exception(string.Format("Parameter '{0}' is not valid.", Params.Input[0].Name));
 
-          if (element is SketchPlane sketchPlane)
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+          plane = plane.Scale(scaleFactor);
+
+        if (element is SketchPlane sketchPlane)
+        {
+          bool pinned = element.Pinned;
+          element.Pinned = false;
+
+          var plane0 = sketchPlane.GetPlane();
+          using (var plane1 = plane.ToHost())
           {
-            bool pinned = element.Pinned;
-            element.Pinned = false;
-
-            var plane0 = sketchPlane.GetPlane();
-            using (var plane1 = plane.ToHost())
+            if (!plane0.Normal.IsParallelTo(plane1.Normal))
             {
-              if (!plane0.Normal.IsParallelTo(plane1.Normal))
-              {
-                var axisDirection = plane0.Normal.CrossProduct(plane1.Normal);
-                double angle = plane0.Normal.AngleTo(plane1.Normal);
+              var axisDirection = plane0.Normal.CrossProduct(plane1.Normal);
+              double angle = plane0.Normal.AngleTo(plane1.Normal);
 
-                using (var axis = Line.CreateUnbound(plane0.Origin, axisDirection))
-                  ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, angle);
+              using (var axis = Line.CreateUnbound(plane0.Origin, axisDirection))
+                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, angle);
 
-                plane0 = sketchPlane.GetPlane();
-              }
-
-              {
-                double angle = plane0.XVec.AngleOnPlaneTo(plane1.XVec, plane1.Normal);
-                if (angle != 0.0)
-                {
-                  using (var axis = Line.CreateUnbound(plane0.Origin, plane1.Normal))
-                    ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, angle);
-                }
-              }
-
-              var trans = plane1.Origin - plane0.Origin;
-              if(!trans.IsZeroLength())
-                ElementTransformUtils.MoveElement(Revit.ActiveDBDocument, element.Id, trans);
+              plane0 = sketchPlane.GetPlane();
             }
 
-            element.Pinned = pinned;
+            {
+              double angle = plane0.XVec.AngleOnPlaneTo(plane1.XVec, plane1.Normal);
+              if (angle != 0.0)
+              {
+                using (var axis = Line.CreateUnbound(plane0.Origin, plane1.Normal))
+                  ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, angle);
+              }
+            }
+
+            var trans = plane1.Origin - plane0.Origin;
+            if(!trans.IsZeroLength())
+              ElementTransformUtils.MoveElement(Revit.ActiveDBDocument, element.Id, trans);
           }
-          else
-            element = SketchPlane.Create(doc, plane.ToHost());
+
+          element.Pinned = pinned;
         }
+        else
+          element = CopyParametersFrom(SketchPlane.Create(doc, plane.ToHost()), element);
+
+        ReplaceElement(doc, DA, Iteration, element);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElement(doc, DA, Iteration, element);
+        ReplaceElement(doc, DA, Iteration, null);
       }
     }
   }
