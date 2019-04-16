@@ -117,53 +117,32 @@ namespace RhinoInside.Revit.GH.Components
             bool pinned = element.Pinned;
             element.Pinned = false;
 
-            // Move currentPlane to Origin
+            var plane0 = sketchPlane.GetPlane();
+            using (var plane1 = plane.ToHost())
             {
-              var cPlane = sketchPlane.GetPlane().ToRhino();
-              ElementTransformUtils.MoveElement(Revit.ActiveDBDocument, element.Id, (- cPlane.Origin).ToHost());
-            }
+              if (!plane0.Normal.IsParallelTo(plane1.Normal))
+              {
+                var axisDirection = plane0.Normal.CrossProduct(plane1.Normal);
+                double angle = plane0.Normal.AngleTo(plane1.Normal);
 
-            // Orient from currentPlane to WorldXY
-            {
-              var planeToPlane = Rhino.Geometry.Transform.PlaneToPlane(sketchPlane.GetPlane().ToRhino(), Rhino.Geometry.Plane.WorldXY);
-              planeToPlane.GetEulerZYZ(out var alpha, out var beta, out var gamma);
+                using (var axis = Line.CreateUnbound(plane0.Origin, axisDirection))
+                  ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, angle);
 
-              // Rotate around currentPlane.ZAxis
-              using (var currentPlane = sketchPlane.GetPlane()) using (var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.Normal))
-                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, alpha);
+                plane0 = sketchPlane.GetPlane();
+              }
 
-              // Rotate around currentPlane.YAxis
-              using (var currentPlane = sketchPlane.GetPlane()) using (var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.YVec))
-                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, beta);
+              {
+                double angle = plane0.XVec.AngleOnPlaneTo(plane1.XVec, plane1.Normal);
+                if (angle != 0.0)
+                {
+                  using (var axis = Line.CreateUnbound(plane0.Origin, plane1.Normal))
+                    ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, angle);
+                }
+              }
 
-              // Rotate around currentPlane.ZAxis
-              using (var currentPlane = sketchPlane.GetPlane()) using(var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.Normal))
-                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, gamma);
-            }
-
-            // Orient from WorldXY to plane
-            {
-              var cPlane = plane;
-              cPlane.Origin = Rhino.Geometry.Point3d.Origin;
-              var planeToPlane = Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, cPlane);
-              planeToPlane.GetEulerZYZ(out var alpha, out var beta, out var gamma);
-
-              // Rotate around currentPlane.ZAxis
-              using (var currentPlane = sketchPlane.GetPlane()) using (var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.Normal))
-                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, alpha);
-
-              // Rotate around currentPlane.YAxis
-              using (var currentPlane = sketchPlane.GetPlane()) using (var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.YVec))
-                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, beta);
-
-              // Rotate around currentPlane.ZAxis
-              using (var currentPlane = sketchPlane.GetPlane()) using(var axis = Line.CreateUnbound(XYZ.Zero, currentPlane.Normal))
-                ElementTransformUtils.RotateElement(Revit.ActiveDBDocument, element.Id, axis, gamma);
-            }
-
-            // Move currentPlane to plane.Origin
-            {
-              ElementTransformUtils.MoveElement(Revit.ActiveDBDocument, element.Id, (plane.Origin).ToHost());
+              var trans = plane1.Origin - plane0.Origin;
+              if(!trans.IsZeroLength())
+                ElementTransformUtils.MoveElement(Revit.ActiveDBDocument, element.Id, trans);
             }
 
             element.Pinned = pinned;

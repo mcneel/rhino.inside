@@ -82,6 +82,11 @@ namespace RhinoInside.Revit
     {
       return hi < v ? hi : v < lo ? lo : v;
     }
+
+    public static bool IsParallelTo(this XYZ a, XYZ b)
+    {
+      return a.IsAlmostEqualTo(a.DotProduct(b) < 0.0 ? -b : b);
+    }
     #endregion
 
     #region GraphicAttributes
@@ -1340,6 +1345,17 @@ namespace RhinoInside.Revit
             break;
         }
       }
+    }
+    #endregion
+
+    #region ToCurveArray
+    public static Autodesk.Revit.DB.CurveArray ToCurveArray(this IEnumerable<Autodesk.Revit.DB.Curve> curves)
+    {
+      var curveArray = new CurveArray();
+      foreach (var curve in curves)
+        curveArray.Append(curve);
+
+      return curveArray;
     }
     #endregion
 
