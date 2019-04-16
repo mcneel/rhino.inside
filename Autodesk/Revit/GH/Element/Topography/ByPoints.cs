@@ -54,24 +54,33 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var element = PreviousElement(doc, Iteration);
-      try
-      {
-        if (element?.Pinned ?? true)
-        {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-            points = points.Select(p => p * scaleFactor);
 
-          element = TopographySurface.Create(doc, points.ToHost().ToList());
+      if (!element?.Pinned ?? false)
+      {
+        ReplaceElement(doc, DA, Iteration, element);
+      }
+      else try
+      {
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+          points = points.Select(p => p * scaleFactor);
+
+        if (element is TopographySurface topography)
+        {
+          topography.DeletePoints(topography.GetPoints());
+          topography.AddPoints(points.ToHost().ToList());
         }
+        else
+        {
+          element = CopyParametersFrom(TopographySurface.Create(doc, points.ToHost().ToList()), element);
+        }
+
+        ReplaceElement(doc, DA, Iteration, element);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElement(doc, DA, Iteration, element);
+        ReplaceElement(doc, DA, Iteration, null);
       }
     }
   }

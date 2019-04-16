@@ -87,66 +87,66 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var element = PreviousElement(doc, Iteration);
-      try
+
+      if (!element?.Pinned ?? false)
       {
-        if (element?.Pinned ?? true)
+        ReplaceElement(doc, DA, Iteration, element);
+      }
+      else try
+      {
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
         {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-          {
-            height *= scaleFactor;
-            curve?.Scale(scaleFactor);
-          }
+          height *= scaleFactor;
+          curve?.Scale(scaleFactor);
+        }
 
-          if
-          (
-            curve == null ||
-            curve.IsShort(Revit.ShortCurveTolerance) ||
-            !(curve.IsArc(Revit.VertexTolerance) || curve.IsLinear(Revit.VertexTolerance)) ||
-            !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-            axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
-          )
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be a horizontal line or arc curve.", Params.Input[0].Name));
-          }
-          else if (level == null)
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' no suitable level is been found.", Params.Input[3].Name));
-          }
-          else if (height < Revit.VertexTolerance)
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' is too small.", Params.Input[5].Name));
-          }
-          else
-          {
-            var axisList = curve.ToHost().ToList();
-            Debug.Assert(axisList.Count == 1);
+        if
+        (
+          curve == null ||
+          curve.IsShort(Revit.ShortCurveTolerance) ||
+          !(curve.IsArc(Revit.VertexTolerance) || curve.IsLinear(Revit.VertexTolerance)) ||
+          !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
+          axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+        )
+          throw new Exception(string.Format("Parameter '{0}' must be a horizontal line or arc curve.", Params.Input[0].Name));
 
-            if (element != null && wallType.Id != element.GetTypeId())
-            {
-              var newElmentId = element.ChangeTypeId(wallType.Id);
-              if (newElmentId != ElementId.InvalidElementId)
-                element = doc.GetElement(newElmentId);
-            }
+        if (level == null)
+          throw new Exception(string.Format("Parameter '{0}' no suitable level is been found.", Params.Input[2].Name));
 
-            if (element is Wall wall && element?.Location is LocationCurve locationCurve)
-            {
-              locationCurve.Curve = axisList[0];
-              wall.get_Parameter(BuiltInParameter.WALL_BASE_OFFSET).Set(0.0);
-              wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
-            }
-            else
-              element = Autodesk.Revit.DB.Wall.Create(doc, axisList[0], wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural);
+        if (height < Revit.VertexTolerance)
+          throw new Exception(string.Format("Parameter '{0}' is too small.", Params.Input[4].Name));
+
+        var axisList = curve.ToHost().ToList();
+        Debug.Assert(axisList.Count == 1);
+
+        if (element != null && wallType.Id != element.GetTypeId())
+        {
+          var newElmentId = element.ChangeTypeId(wallType.Id);
+          if (newElmentId != ElementId.InvalidElementId)
+          {
+            element = doc.GetElement(newElmentId);
+            ReplaceElement(doc, DA, Iteration, element);
           }
         }
+
+        if (element is Wall wall && element?.Location is LocationCurve locationCurve)
+        {
+          locationCurve.Curve = axisList[0];
+          wall.get_Parameter(BuiltInParameter.WALL_BASE_OFFSET).Set(0.0);
+          wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
+        }
+        else
+        {
+          element = CopyParametersFrom(Wall.Create(doc, axisList[0], wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural), element);
+        }
+
+        ReplaceElement(doc, DA, Iteration, element);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElement(doc, DA, Iteration, element);
+        ReplaceElement(doc, DA, Iteration, null);
       }
     }
   }

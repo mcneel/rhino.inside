@@ -56,85 +56,90 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var element = PreviousElement(doc, Iteration);
-      try
+      if (!element?.Pinned ?? false)
       {
-        if (element?.Pinned ?? true)
+        ReplaceElement(doc, DA, Iteration, element);
+      }
+      else try
+      {
+        if (!Revit.ActiveDBDocument.IsFamilyDocument || !Revit.ActiveDBDocument.OwnerFamily.IsConceptualMassFamily)
+          throw new Exception("This component can only run in Conceptual Mass Family editor");
+
+        if (brep == null)
+          throw new Exception(string.Format("Parameter '{0}' must be valid Brep.", Params.Input[0].Name));
+
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
+          brep.Scale(scaleFactor);
+
+        if (brep.Faces.Count == 1 && brep.Faces[0].Loops.Count == 1 && brep.Faces[0].TryGetPlane(out var capPlane))
         {
-          if (!Revit.ActiveDBDocument.IsFamilyDocument || !Revit.ActiveDBDocument.OwnerFamily.IsConceptualMassFamily)
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "This component can only run in Conceptual Mass Family editor");
-          }
-          else if (brep == null)
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be valid Brep.", Params.Input[0].Name));
-          }
-          else
-          {
-            var scaleFactor = 1.0 / Revit.ModelUnits;
-            if (scaleFactor != 1.0)
-              brep.Scale(scaleFactor);
+          var sketchPlane = SketchPlane.Create(doc, capPlane.ToHost());
 
-            if (brep.Faces.Count == 1 && brep.Faces[0].Loops.Count == 1 && brep.Faces[0].TryGetPlane(out var capPlane))
+          var referenceArray = new ReferenceArray();
+          var loop = brep.Faces[0].OuterLoop.To3dCurve();
+
+          foreach (var curve in brep.Faces[0].OuterLoop.To3dCurve().ToHost())
+            referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
+
+          element = CopyParametersFrom
+          (
+            doc.FamilyCreate.NewFormByCap
+            (
+              brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
+              referenceArray
+            ),
+            element
+          );
+        }
+        else if (brep.TryGetExtrusion(out var extrusion) && (extrusion.CapCount == 2 || !extrusion.IsClosed(0)))
+        {
+          var sketchPlane = SketchPlane.Create(doc, extrusion.GetProfilePlane(0.0).ToHost());
+
+          var referenceArray = new ReferenceArray();
+          foreach (var curve in extrusion.Profile3d(new Rhino.Geometry.ComponentIndex(Rhino.Geometry.ComponentIndexType.ExtrusionBottomProfile, 0)).ToHost())
+            referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
+
+          element = CopyParametersFrom
+          (
+            element = doc.FamilyCreate.NewExtrusionForm
+            (
+              brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
+              referenceArray, extrusion.PathLineCurve().Line.Direction.ToHost()
+            ),
+            element
+          );
+        }
+        else
+        {
+          var solids = brep.ToHost().ToArray();
+          if (solids.Length == 1 && (solids[0] is Solid solid))
+          {
+            if (element is FreeFormElement freeFormElement)
             {
-              var sketchPlane = SketchPlane.Create(doc, capPlane.ToHost());
-
-              var referenceArray = new ReferenceArray();
-              var loop = brep.Faces[0].OuterLoop.To3dCurve();
-
-              foreach (var curve in brep.Faces[0].OuterLoop.To3dCurve().ToHost())
-                referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
-
-              element = doc.FamilyCreate.NewFormByCap
-              (
-                brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
-                referenceArray
-              );
-            }
-            else if (brep.TryGetExtrusion(out var extrusion) && (extrusion.CapCount == 2 || !extrusion.IsClosed(0)))
-            {
-              var sketchPlane = SketchPlane.Create(doc, extrusion.GetProfilePlane(0.0).ToHost());
-
-              var referenceArray = new ReferenceArray();
-              foreach (var curve in extrusion.Profile3d(new Rhino.Geometry.ComponentIndex(Rhino.Geometry.ComponentIndexType.ExtrusionBottomProfile, 0)).ToHost())
-                referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
-
-              element = doc.FamilyCreate.NewExtrusionForm
-              (
-                brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
-                referenceArray, extrusion.PathLineCurve().Line.Direction.ToHost()
-              );
+              freeFormElement.UpdateSolidGeometry(solid);
             }
             else
             {
-              var solids = brep.ToHost().ToArray();
-              if (solids.Length == 1 && (solids[0] is Solid solid))
-              {
-                if (element is FreeFormElement freeFormElement)
-                  freeFormElement.UpdateSolidGeometry(solid);
-                else
-                {
-                  element = FreeFormElement.Create(doc, solid);
-                  element.get_Parameter(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY).Set(new ElementId(BuiltInCategory.OST_MassForm));
-                }
-
-                element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING)?.Set
-                (
-                  brep.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Inward ?
-                  1 /*VOID*/ :
-                  0 /*SOLID*/
-                );
-              }
+              element = CopyParametersFrom(FreeFormElement.Create(doc, solid), element);
+              element.get_Parameter(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY).Set(new ElementId(BuiltInCategory.OST_MassForm));
             }
+
+            element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING)?.Set
+            (
+              brep.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Inward ?
+              1 /*VOID*/ :
+              0 /*SOLID*/
+            );
           }
         }
+
+        ReplaceElement(doc, DA, Iteration, element);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElement(doc, DA, Iteration, element);
+        ReplaceElement(doc, DA, Iteration, null);
       }
     }
   }

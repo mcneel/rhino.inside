@@ -73,53 +73,53 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var element = PreviousElement(doc, Iteration);
-      try
+      if (!element?.Pinned ?? false)
       {
-        if (element?.Pinned ?? true)
+        ReplaceElement(doc, DA, Iteration, element);
+      }
+      else try
+      {
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        if (scaleFactor != 1.0)
         {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-          {
-            curve?.Scale(scaleFactor);
-          }
-
-          if
-          (
-            curve == null ||
-            curve.IsShort(Revit.ShortCurveTolerance) ||
-            curve.IsClosed ||
-            !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-            curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
-          )
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be a C1 continuous planar non closed curve.", Params.Input[0].Name));
-          }
-          else
-          {
-            var axisList = curve.ToHost().ToList();
-            Debug.Assert(axisList.Count == 1);
-
-            if (element is FamilyInstance && familySymbol.Id != element.GetTypeId())
-            {
-              var newElmentId = element.ChangeTypeId(familySymbol.Id);
-              if (newElmentId != ElementId.InvalidElementId)
-                element = doc.GetElement(newElmentId);
-            }
-
-            if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
-              locationCurve.Curve = axisList[0];
-            else
-              element = doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam);
-          }
+          curve?.Scale(scaleFactor);
         }
+
+        if
+        (
+          curve == null ||
+          curve.IsShort(Revit.ShortCurveTolerance) ||
+          curve.IsClosed ||
+          !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
+          curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
+        )
+          throw new Exception(string.Format("Parameter '{0}' must be a C1 continuous planar non closed curve.", Params.Input[0].Name));
+
+        var axisList = curve.ToHost().ToList();
+        Debug.Assert(axisList.Count == 1);
+
+        if (element is FamilyInstance && familySymbol.Id != element.GetTypeId())
+        {
+          var newElmentId = element.ChangeTypeId(familySymbol.Id);
+          if (newElmentId != ElementId.InvalidElementId)
+            element = doc.GetElement(newElmentId);
+        }
+
+        if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
+        {
+          locationCurve.Curve = axisList[0];
+        }
+        else
+        {
+          element = CopyParametersFrom(doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam), element);
+        }
+
+        ReplaceElement(doc, DA, Iteration, element);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElement(doc, DA, Iteration, element);
+        ReplaceElement(doc, DA, Iteration, null);
       }
     }
   }

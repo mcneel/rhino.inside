@@ -56,83 +56,72 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var element = PreviousElement(doc, Iteration);
-      try
+      if (!element?.Pinned ?? false)
       {
-        if (element?.Pinned ?? true)
+        ReplaceElement(doc, DA, Iteration, element);
+      }
+      else try
+      {
+        if (!Revit.ActiveDBDocument.IsFamilyDocument || !Revit.ActiveDBDocument.OwnerFamily.IsConceptualMassFamily)
+          throw new Exception("This component can only run in Conceptual Mass Family editor");
+
+        if (profiles == null || profiles?.Count == 0 )
+          throw new Exception(string.Format("Parameter '{0}' must be valid curve list.", Params.Input[0].Name));
+
+        var scaleFactor = 1.0 / Revit.ModelUnits;
+        var planes = new List<Rhino.Geometry.Plane>();
+        foreach (var profile in profiles)
         {
-          if (!Revit.ActiveDBDocument.IsFamilyDocument || !Revit.ActiveDBDocument.OwnerFamily.IsConceptualMassFamily)
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "This component can only run in Conceptual Mass Family editor");
-          }
-          else if (profiles == null || profiles.Count == 0)
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' must be valid curve list.", Params.Input[0].Name));
-          }
-          else
-          {
-            var scaleFactor = 1.0 / Revit.ModelUnits;
-            var planes = new List<Rhino.Geometry.Plane>();
-            foreach (var profile in profiles)
-            {
-              if (scaleFactor != 1.0)
-                profile.Scale(scaleFactor);
+          if (scaleFactor != 1.0)
+            profile.Scale(scaleFactor);
 
-              if (!profile.TryGetPlane(out var plane))
-                continue;
+          if (!profile.TryGetPlane(out var plane))
+            continue;
 
-              plane.Origin = profile.IsClosed ? Rhino.Geometry.AreaMassProperties.Compute(profile).Centroid : profile.PointAt(profile.Domain.Mid);
-              planes.Add(plane);
-            }
-
-            if (profiles.Count != planes.Count)
-            {
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("All curves in '{0}' must be planar.", Params.Input[0].Name));
-              element = null;
-            }
-            else if (profiles.Count == 1)
-            {
-              var profile = profiles[0];
-              var plane = planes[0];
-
-              var sketchPlane = SketchPlane.Create(doc, plane.ToHost());
-
-              var referenceArray = new ReferenceArray();
-              foreach (var curve in profile.ToHost())
-                referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
-
-              element = doc.FamilyCreate.NewFormByCap
-              (
-                true,
-                referenceArray
-              );
-            }
-            else
-            {
-              var referenceArrayArray = new ReferenceArrayArray();
-              int index = 0;
-              foreach (var profile in profiles)
-              {
-                var sketchPlane = SketchPlane.Create(doc, planes[index++].ToHost());
-
-                var referenceArray = new ReferenceArray();
-                foreach (var curve in profile.ToHost())
-                  referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
-
-                referenceArrayArray.Append(referenceArray);
-              }
-
-              element = doc.FamilyCreate.NewLoftForm(true, referenceArrayArray);
-            }
-          }
+          plane.Origin = profile.IsClosed ? Rhino.Geometry.AreaMassProperties.Compute(profile).Centroid : profile.PointAt(profile.Domain.Mid);
+          planes.Add(plane);
         }
+
+        if (profiles.Count != planes.Count)
+          throw new Exception(string.Format("All curves in '{0}' must be planar.", Params.Input[0].Name));
+
+        if (profiles.Count == 1)
+        {
+          var profile = profiles[0];
+          var plane = planes[0];
+
+          var sketchPlane = SketchPlane.Create(doc, plane.ToHost());
+
+          var referenceArray = new ReferenceArray();
+          foreach (var curve in profile.ToHost())
+            referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
+
+          element = CopyParametersFrom(doc.FamilyCreate.NewFormByCap(true,referenceArray), element);
+        }
+        else
+        {
+          var referenceArrayArray = new ReferenceArrayArray();
+          int index = 0;
+          foreach (var profile in profiles)
+          {
+            var sketchPlane = SketchPlane.Create(doc, planes[index++].ToHost());
+
+            var referenceArray = new ReferenceArray();
+            foreach (var curve in profile.ToHost())
+              referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
+
+            referenceArrayArray.Append(referenceArray);
+          }
+
+          element = CopyParametersFrom(doc.FamilyCreate.NewLoftForm(true, referenceArrayArray), element);
+        }
+
+        ReplaceElement(doc, DA, Iteration, element);
       }
       catch (Exception e)
       {
         AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-      }
-      finally
-      {
-        ReplaceElement(doc, DA, Iteration, element);
+        ReplaceElement(doc, DA, Iteration, null);
       }
     }
   }
