@@ -31,7 +31,7 @@ This guide documents the Grasshopper components that support Revit interaction.
    | Icon | Name | Description |
    | --- | --- | --- |
    | ![](GH/DocumentCategories.png) | Document Categories | Get Active Revit Document Category list |
-   | ![](GH/DocumentElements.jpg) | Document Elements | Get Active Document Elements list using a Category filter|
+   | ![](GH/DocumentElements.png) | Document Elements | Get Active Document Elements list using a Category filter|
    | ![](GH/DocumentElementTypes.png) | Document Element Types | Get Active Document Element Types using the Category, Family and Type filter |
    | ![](GH/DocumentLevels.png) | Document Levels | Get Active Document levels list from Revit |
    | ![](GH/DocumentParameters.png) | Document Parameters | Get Active Document Parameters attached to a specific category from Revit |
