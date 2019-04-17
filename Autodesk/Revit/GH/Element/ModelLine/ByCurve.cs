@@ -11,17 +11,17 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class CurveElementByCurve : GH_TransactionalComponentList
+  public class ModelLineByCurve : GH_TransactionalComponentList
   {
     public override Guid ComponentGuid => new Guid("240127B1-94EE-47C9-98F8-05DE32447B01");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("C");
+    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("MC");
 
-    public CurveElementByCurve() : base
+    public ModelLineByCurve() : base
     (
-      "AddCurveElement.ByCurve", "ByCurve",
+      "AddModelLine.ByCurve", "ByCurve",
       "Given a Curve, it adds a Curve element to the active Revit document",
-      "Revit", "Geometry"
+      "Revit", "Model"
     )
     { }
 
@@ -81,7 +81,7 @@ namespace RhinoInside.Revit.GH.Components
 
             if (element?.Pinned ?? true)
             {
-              if (element is ModelCurve modelCurve)
+              if (element is ModelCurve modelCurve && modelCurve.GeometryCurve.IsBound == c.IsBound)
                 modelCurve.SetSketchPlaneAndCurve(plane, c);
               else if (doc.IsFamilyDocument)
                 element = CopyParametersFrom(doc.FamilyCreate.NewModelCurve(c, plane), element);
