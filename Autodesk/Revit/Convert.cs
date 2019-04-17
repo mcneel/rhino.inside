@@ -1250,8 +1250,8 @@ namespace RhinoInside.Revit
 
       var builder = new TessellatedShapeBuilder()
       {
-        Target = TessellatedShapeBuilderTarget.AnyGeometry,
-        Fallback = TessellatedShapeBuilderFallback.Mesh
+        Target = TessellatedShapeBuilderTarget.Mesh,
+        Fallback = TessellatedShapeBuilderFallback.Salvage
       };
 
       var pieces = mesh.DisjointMeshCount > 1 ?
