@@ -116,7 +116,7 @@ namespace RhinoInside.Revit.GH.Components
           }
         }
 
-        if (element.Category.Id != category.Id)
+        if (element?.Category.Id != category.Id)
           element = null;
 
         var ds = element as DirectShape ?? CopyParametersFrom(DirectShape.CreateElement(doc, category.Id), element);
