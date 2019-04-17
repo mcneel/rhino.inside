@@ -31,7 +31,7 @@ This guide documents the Grasshopper components that support Revit interaction.
    | Icon | Name | Description |
    | --- | --- | --- |
    | ![Rhino sending geometry to Revit](GH/DocumentCategories.png) | Document Categories | Get Active Document Category list Using the Type, and HasMaterial filter. |
-   | ![Rhino sending geometry to Revit](GH/DocumentElements.jpg) | Document Elements | Get Active Document Elements list using a Category filter|
+   | ![Rhino sending geometry to Revit](GH/DocumentElements.png) | Document Elements | Get Active Document Elements list using a Category filter|
    | ![Rhino sending geometry to Revit](GH/DocumentElementTypes.png) | Document Element Types | Get Active Document Element Types using the Category, Family and Type filter|
    | ![Rhino sending geometry to Revit](GH/DocumentLevels.png) | Document Levels | Get Active Document levels list from Revit|
    | ![Rhino sending geometry to Revit](GH/DocumentParameters.png) | Document Parameters | Get Active Document Parameters attached to a specific category from Revit |
