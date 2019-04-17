@@ -1354,6 +1354,19 @@ namespace RhinoInside.Revit
       switch (geometry)
       {
         case Autodesk.Revit.DB.Point p: yield return p; yield break;
+        case Autodesk.Revit.DB.Curve c:
+          foreach (var unbounded in ToUnboundedCurves(c))
+            yield return unbounded;
+          yield break;
+        case Autodesk.Revit.DB.Solid s: yield return s; yield break;
+        case Autodesk.Revit.DB.Mesh m: yield return m; yield break;
+      }
+    }
+
+    public static IEnumerable<Autodesk.Revit.DB.Curve> ToUnboundedCurves(this Autodesk.Revit.DB.Curve curve)
+    {
+      switch (curve)
+      {
         case Autodesk.Revit.DB.Arc arc:
           if (!arc.IsBound)
           {
@@ -1365,14 +1378,17 @@ namespace RhinoInside.Revit
         case Autodesk.Revit.DB.Ellipse ellipse:
           if (!ellipse.IsBound)
           {
+#if REVIT_2018
             yield return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, 0.0, Math.PI);
             yield return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, Math.PI, Math.PI * 2.0);
+#else
+            yield return Autodesk.Revit.DB.Ellipse.Create(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, 0.0, Math.PI);
+            yield return Autodesk.Revit.DB.Ellipse.Create(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, Math.PI, Math.PI * 2.0);
+#endif
           }
           else yield return ellipse;
           yield break;
         case Autodesk.Revit.DB.Curve c: yield return c; yield break;
-        case Autodesk.Revit.DB.Solid s: yield return s; yield break;
-        case Autodesk.Revit.DB.Mesh m: yield return m; yield break;
       }
     }
     #endregion
@@ -1386,6 +1402,7 @@ namespace RhinoInside.Revit
 
       return curveArray;
     }
+
     #endregion
 
     #region TryGetExtrusion

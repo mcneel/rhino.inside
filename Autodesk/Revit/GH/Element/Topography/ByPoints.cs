@@ -22,13 +22,14 @@ namespace RhinoInside.Revit.GH.Components
     (
       "AddTopography.ByPoints", "ByPoints",
       "Given a set of Points, it adds a Topography surface to the active Revit document",
-      "Revit", "Model Site"
+      "Revit", "Site"
     )
     { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddPointParameter("Points", "P", string.Empty, GH_ParamAccess.list);
+      manager[manager.AddCurveParameter("Regions", "R", string.Empty, GH_ParamAccess.list)].Optional = true;
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -42,15 +43,19 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetDataList("Points", points))
         return;
 
+      var regions = new List<Rhino.Geometry.Curve>();
+      DA.GetDataList("Regions", regions);
+
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, points));
+      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, points, regions));
     }
 
     void CommitInstance
     (
       Document doc, IGH_DataAccess DA, int Iteration,
-      IEnumerable<Rhino.Geometry.Point3d> points
+      IEnumerable<Rhino.Geometry.Point3d> points,
+      IEnumerable<Rhino.Geometry.Curve> regions
     )
     {
       var element = PreviousElement(doc, Iteration);
@@ -63,16 +68,38 @@ namespace RhinoInside.Revit.GH.Components
       {
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)
+        {
           points = points.Select(p => p * scaleFactor);
 
-        if (element is TopographySurface topography)
-        {
-          topography.DeletePoints(topography.GetPoints());
-          topography.AddPoints(points.ToHost().ToList());
+          foreach (var region in regions)
+            region.Scale(scaleFactor);
         }
-        else
+
+        TopographySurface topography = null;
+        //if (element is TopographySurface topography)
+        //{
+        //  using (var editScope = new TopographyEditScope(doc, "TopographyByPoints"))
+        //  {
+        //    editScope.Start(element.Id);
+        //    topography.DeletePoints(topography.GetPoints());
+        //    topography.AddPoints(points.ToHost().ToList());
+
+        //    foreach (var subRegionId in topography.GetHostedSubRegionIds())
+        //      doc.Delete(subRegionId);
+
+        //    editScope.Commit(new Revit.FailuresPreprocessor());
+        //  }
+        //}
+        //else
         {
-          element = CopyParametersFrom(TopographySurface.Create(doc, points.ToHost().ToList()), element);
+          topography = CopyParametersFrom(TopographySurface.Create(doc, points.ToHost().ToList()), element);
+          element = topography;
+        }
+
+        if (topography != null && regions.Any())
+        {
+          var curveLoops = regions.Select(region => CurveLoop.Create(region.ToHost().ToList())).ToList();
+          SiteSubRegion.Create(doc, curveLoops, topography.Id);
         }
 
         ReplaceElement(doc, DA, Iteration, element);
