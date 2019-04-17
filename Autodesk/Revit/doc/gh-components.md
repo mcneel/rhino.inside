@@ -1,6 +1,8 @@
 # Grasshopper components for Revit
 The Rhino Inside® technology allows Rhino and Grasshopper to be embedded within Revit.
 
+It is important to have a basic understanding to the [Revit Data Hierarchy](https://www.modelical.com/en/gdocs/revit-data-hierarchy/) of Category -> Family -> Type -> Instance/Element to create and select elements.
+
 This guide documents the Grasshopper components that support Revit interaction.
 
 ## Components
@@ -16,7 +18,7 @@ This guide documents the Grasshopper components that support Revit interaction.
  | ![](GH/DirectShapeByGeometry.png) | DirectShape | Create a Directshape Element using a plan curve. This is the most generic way to import Geometry. |
  | ![](GH/DirectShapeCategories.png) | DirectShape Category | Create a Directshape category For using with the DirectShape Component |
 
- #### Category Components
+#### Category Components
 
   | Icon | Name | Description |
   | --- | --- | --- |
@@ -24,7 +26,7 @@ This guide documents the Grasshopper components that support Revit interaction.
   | ![](GH/Category.png) | Category | Revit Category Param |
   | ![](GH/CategoryTypes.png) | Category Types | A pick list of category types in Revit. |
 
-  #### Document Components
+#### Document Components
 
    | Icon | Name | Description |
    | --- | --- | --- |
