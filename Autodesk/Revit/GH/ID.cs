@@ -445,8 +445,11 @@ namespace RhinoInside.Revit.GH.Components
           previousElementValues = PreviousElementValues[Iteration] = new List<ElementId>();
 
         int index = 0;
-        foreach (var element in elements)
-          ReplaceElement(doc, previousElementValues, index++, element);
+        if (elements != null)
+        {
+          foreach (var element in elements)
+            ReplaceElement(doc, previousElementValues, index++, element);
+        }
 
         // Remove extra elements in PreviousElementValues
         TrimExcess(doc, previousElementValues, index);

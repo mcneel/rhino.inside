@@ -103,7 +103,7 @@ namespace RhinoInside.Revit.GH.Components
           foreach (var geometry in geometries.Select((x) => AsGeometryBase(x)).ToHost())
           {
             // DirectShape only accepts those types and no nulls
-            foreach (var g in geometry)
+            foreach (var g in geometry.SelectMany(g => g.ToDirectShapeGeometry()))
             {
               switch (g)
               {

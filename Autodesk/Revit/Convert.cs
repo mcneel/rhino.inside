@@ -1250,8 +1250,8 @@ namespace RhinoInside.Revit
 
       var builder = new TessellatedShapeBuilder()
       {
-        Target = TessellatedShapeBuilderTarget.AnyGeometry,
-        Fallback = TessellatedShapeBuilderFallback.Mesh
+        Target = TessellatedShapeBuilderTarget.Mesh,
+        Fallback = TessellatedShapeBuilderFallback.Salvage
       };
 
       var pieces = mesh.DisjointMeshCount > 1 ?
@@ -1344,6 +1344,35 @@ namespace RhinoInside.Revit
             yield return mesh.ToHost().Cast<GeometryObject>().ToList();
             break;
         }
+      }
+    }
+    #endregion
+
+    #region ToDirectShapeGeometry
+    public static IEnumerable<GeometryObject> ToDirectShapeGeometry(this GeometryObject geometry)
+    {
+      switch (geometry)
+      {
+        case Autodesk.Revit.DB.Point p: yield return p; yield break;
+        case Autodesk.Revit.DB.Arc arc:
+          if (!arc.IsBound)
+          {
+            yield return Autodesk.Revit.DB.Arc.Create(arc.Center, arc.Radius, 0.0, Math.PI, arc.XDirection, arc.YDirection);
+            yield return Autodesk.Revit.DB.Arc.Create(arc.Center, arc.Radius, Math.PI, Math.PI * 2.0, arc.XDirection, arc.YDirection);
+          }
+          else yield return arc;
+          yield break;
+        case Autodesk.Revit.DB.Ellipse ellipse:
+          if (!ellipse.IsBound)
+          {
+            yield return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, 0.0, Math.PI);
+            yield return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, Math.PI, Math.PI * 2.0);
+          }
+          else yield return ellipse;
+          yield break;
+        case Autodesk.Revit.DB.Curve c: yield return c; yield break;
+        case Autodesk.Revit.DB.Solid s: yield return s; yield break;
+        case Autodesk.Revit.DB.Mesh m: yield return m; yield break;
       }
     }
     #endregion

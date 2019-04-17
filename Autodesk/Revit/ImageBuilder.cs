@@ -75,7 +75,7 @@ namespace RhinoInside
         switch (tag.Length)
         {
           case 1: emSize = 20.0f; break;
-          case 2: emSize = 15.0f; break;
+          case 2: emSize = 13.0f; break;
           case 3: emSize = 11.0f; break;
           case 4: emSize = 8.0f; break;
         }

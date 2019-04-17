@@ -93,7 +93,6 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="GH\Element\Roof\ByOutline.cs" />
     <Compile Include="GH\ID.cs" />
     <Compile Include="GH\GeometryObject\GeometryObject.cs" />
     <Compile Include="GH\Category\Category.cs" />
@@ -105,14 +104,18 @@
     <Compile Include="GH\ElementType\ElementType.cs" />
     <Compile Include="GH\Element\Element.cs" />
     <Compile Include="GH\Element\Beam\ByCurve.cs" />
-    <Compile Include="GH\Element\CurveElement\ByCurve.cs" />
-    <Compile Include="GH\Element\BrepElement\ByGeometry.cs" />
+    <Compile Include="GH\Element\ModelLine\ByCurve.cs" />
     <Compile Include="GH\Element\Column\ByCurve.cs" />
     <Compile Include="GH\Element\Floor\ByOutline.cs" />
+    <Compile Include="GH\Element\Roof\ByOutline.cs" />
     <Compile Include="GH\Element\SketchPlane\ByPlane.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
+    <Compile Include="GH\Element\DirectShape\ByMesh.cs" />
+    <Compile Include="GH\Element\DirectShape\ByBrep.cs" />
+    <Compile Include="GH\Element\DirectShape\ByCurve.cs" />
+    <Compile Include="GH\Element\DirectShape\ByPoint.cs" />
     <Compile Include="GH\Element\Form\ByGeometry.cs" />
     <Compile Include="GH\Element\Form\ByCurves.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
