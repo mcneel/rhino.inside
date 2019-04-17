@@ -1355,7 +1355,7 @@ namespace RhinoInside.Revit
       {
         case Autodesk.Revit.DB.Point p: yield return p; yield break;
         case Autodesk.Revit.DB.Curve c:
-          foreach (var unbounded in ToUnboundedCurves(c))
+          foreach (var unbounded in ToBoundedCurves(c))
             yield return unbounded;
           yield break;
         case Autodesk.Revit.DB.Solid s: yield return s; yield break;
@@ -1363,7 +1363,7 @@ namespace RhinoInside.Revit
       }
     }
 
-    public static IEnumerable<Autodesk.Revit.DB.Curve> ToUnboundedCurves(this Autodesk.Revit.DB.Curve curve)
+    public static IEnumerable<Autodesk.Revit.DB.Curve> ToBoundedCurves(this Autodesk.Revit.DB.Curve curve)
     {
       switch (curve)
       {

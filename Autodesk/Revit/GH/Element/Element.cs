@@ -708,6 +708,11 @@ namespace RhinoInside.Revit.GH.Types
             var c = curveLocation.Curve.ToRhino();
             x = c.TangentAt(c.Domain.Min);
           }
+          else if (element.Location is Autodesk.Revit.DB.LocationPoint pointLocation)
+          {
+            x = Rhino.Geometry.Vector3d.XAxis;
+            x.Rotate(pointLocation.Rotation, Rhino.Geometry.Vector3d.ZAxis);
+          }
 
           if (x.IsZero || !x.Unitize())
             x = Rhino.Geometry.Vector3d.XAxis;
@@ -733,6 +738,11 @@ namespace RhinoInside.Revit.GH.Types
             var c = curveLocation.Curve.ToRhino();
             y = c.CurvatureAt(c.Domain.Min);
           }
+          else if (element.Location is Autodesk.Revit.DB.LocationPoint pointLocation)
+          {
+            y = Rhino.Geometry.Vector3d.YAxis;
+            y.Rotate(pointLocation.Rotation, Rhino.Geometry.Vector3d.ZAxis);
+          }
 
           if (y.IsZero || !y.Unitize())
           {
@@ -755,27 +765,31 @@ namespace RhinoInside.Revit.GH.Types
     {
       get
       {
-        var v = Rhino.Geometry.Vector3d.Zero;
+        var z = Rhino.Geometry.Vector3d.Zero;
 
         var element = (Autodesk.Revit.DB.Element) this;
         if (element != null)
         {
           if (element is Autodesk.Revit.DB.Instance instance)
-            v = (Rhino.Geometry.Vector3d) instance.GetTransform().BasisZ.ToRhino();
+            z = (Rhino.Geometry.Vector3d) instance.GetTransform().BasisZ.ToRhino();
           else if (element.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
           {
             var c = curveLocation.Curve.ToRhino();
-            v = Rhino.Geometry.Vector3d.CrossProduct(c.TangentAt(c.Domain.Min), c.CurvatureAt(c.Domain.Min));
+            z = Rhino.Geometry.Vector3d.CrossProduct(c.TangentAt(c.Domain.Min), c.CurvatureAt(c.Domain.Min));
+          }
+          else if (element.Location is Autodesk.Revit.DB.LocationPoint pointLocation)
+          {
+            z = Rhino.Geometry.Vector3d.ZAxis;
           }
 
-          if (v.IsZero || !v.Unitize())
-            v = Rhino.Geometry.Vector3d.CrossProduct(XAxis, YAxis);
+          if (z.IsZero || !z.Unitize())
+            z = Rhino.Geometry.Vector3d.CrossProduct(XAxis, YAxis);
 
-          if (v.IsZero || !v.Unitize())
-            v = Rhino.Geometry.Vector3d.ZAxis;
+          if (z.IsZero || !z.Unitize())
+            z = Rhino.Geometry.Vector3d.ZAxis;
         }
 
-        return v;
+        return z;
       }
     }
 

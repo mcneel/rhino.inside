@@ -96,7 +96,7 @@ namespace RhinoInside.Revit.GH.Components
               boundary.Scale(scaleFactor);
           }
 
-          var curveLoops = boundaries.Select(region => CurveLoop.Create(region.ToHost().SelectMany(x => x.ToUnboundedCurves()).ToList()));
+          var curveLoops = boundaries.Select(region => CurveLoop.Create(region.ToHost().SelectMany(x => x.ToBoundedCurves()).ToList()));
 
           if (buildingPadType == null)
             buildingPadType = BuildingPadType.CreateDefault(Revit.ActiveDBDocument);
