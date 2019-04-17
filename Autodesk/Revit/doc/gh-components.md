@@ -38,14 +38,14 @@ This guide documents the Grasshopper components that support Revit interaction.
 
 #### Elements Components
 
-     | Icon | Name | Description |
-     | --- | --- | --- |
-     | ![](GH/ElementDecompose.png) | Element Decompose | Decompose an Element into its associated data including Constraints, Dimensions, Identity Data, Category, Family, Type, ID, etc...|
-     | ![](GH/ElementGeometry.png) | Element Geometry | Returns one or more Rhino Breps(s) form a Revit Element|
-     | ![](GH/ElementIdentity.png) | Element Identity | Returns Element Name, Category, Type and UUID|
-     | ![](GH/ElementParameterGet.png) | Element Parameter Get | Get Active Document levels list from Revit|
-     | ![](GH/ElementParameters.png) | Element Parameters | Get Active Document Parameters attached to a specific category from Revit |
-     | ![](GH/ElementParameterSet.png) | Element Parameters Set | Get Active Document Elements list using a Category filter|
-     | ![](GH/ElementPreview.png) | Element Preview | Get Active Document Element Types using the Category, Family and Type filter|
-     | ![](GH/Element.png) | Element| Select one or more persistent Element(s) in Revit|
-     | ![](GH/ElementType.png) | Element Type | Get Active Document Parameters attached to a specific category from Revit |
+  | Icon | Name | Description |
+  | --- | --- | --- |
+  | ![](GH/ElementDecompose.png) | Element Decompose | Decompose an Element into its associated data including Constraints, Dimensions, Identity Data, Category, Family, Type, ID, etc...|
+  | ![](GH/ElementGeometry.png) | Element Geometry | Returns one or more Rhino Breps(s) form a Revit Element|
+  | ![](GH/ElementIdentity.png) | Element Identity | Returns Element Name, Category, Type and UUID|
+  | ![](GH/ElementParameterGet.png) | Element Parameter Get | Get Active Document levels list from Revit|
+  | ![](GH/ElementParameters.png) | Element Parameters | Get Active Document Parameters attached to a specific category from Revit |
+  | ![](GH/ElementParameterSet.png) | Element Parameters Set | Get Active Document Elements list using a Category filter|
+  | ![](GH/ElementPreview.png) | Element Preview | Get Active Document Element Types using the Category, Family and Type filter|
+  | ![](GH/Element.png) | Element| Select one or more persistent Element(s) in Revit|
+  | ![](GH/ElementType.png) | Element Type | Get Active Document Parameters attached to a specific category from Revit |
