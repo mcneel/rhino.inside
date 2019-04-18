@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           UpgradeCode="634a05f2-4511-445a-89c1-7305d83d34c7"
+           Manufacturer="Robert McNeel &amp; Associates"
+           Name="RhinoInside.Revit"
+           Version="0.0.0.0"
+           Language="1033">
+    <Package Manufacturer="Robert McNeel &amp; Associates"
+             Description="RhinoInside Revit"
+             InstallerVersion="301"
+             Platform="$(var.Platform)"
+             InstallScope="perUser"
+             InstallPrivileges="limited"
+             Compressed="yes"/>
+
+    <Icon Id="RhinoInside.ico" SourceFile="RhinoInside.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="RhinoInside.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://www.rhino3d.com/inside"/>
+    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/mcneel/rhino.inside.git"/>
+    <Property Id="ARPHELPLINK" Value="https://discourse.mcneel.com/c/serengeti/inside" />
+    <Property Id="ARPCONTACT" Value="tech@mcneel.com"/>
+    <Property Id="ARPHELPTELEPHONE" Value="+1 (206) 545-7000"/>
+    <Property Id='ARPNOMODIFY'>1</Property>
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of RhinoInside.Revit is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="ProductFeature" Title="RhinoInside.Revit" Level="1">
+      <ComponentGroupRef Id="ProductComponents2017" />
+      <ComponentGroupRef Id="ProductAddin2017" />
+      
+      <ComponentGroupRef Id="ProductComponents2018" />
+      <ComponentGroupRef Id="ProductAddin2018" />
+      
+      <ComponentGroupRef Id="ProductComponents2019" />
+      <ComponentGroupRef Id="ProductAddin2019" />
+    </Feature>
+  </Product>
+
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="AppDataFolder" Name="AppData">
+        <Directory Id="AutodeskDirectory" Name="Autodesk">
+          <Directory Id="RevitDirectory" Name="Revit">
+            <Directory Id="AddinsDirectory" Name="Addins">
+              <Directory Id="_2017Directory" Name="2017">
+                <Directory Id="INSTALLFOLDER2017" Name="RhinoInside.Revit"/>
+              </Directory>
+              <Directory Id="_2018Directory" Name="2018">
+                <Directory Id="INSTALLFOLDER2018" Name="RhinoInside.Revit"/>
+              </Directory>
+              <Directory Id="_2019Directory" Name="2019">
+                <Directory Id="INSTALLFOLDER2019" Name="RhinoInside.Revit"/>
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents2017" Directory="INSTALLFOLDER2017">
+      <Component>
+        <File Id="RhinoInside.Revit.2017.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2017\RhinoInside.Revit.dll"/>
+        <RemoveFolder Id="INSTALLFOLDER2017" On="uninstall"/>
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="ProductAddin2017" Directory="_2017Directory">
+      <Component>
+        <File Id="RhinoInside.Revit.2017.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
+        <RemoveFile Id="RhinoInside.Revit.2017.addin" Name="RhinoInside.Revit.addin" On="both"/>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents2018" Directory="INSTALLFOLDER2018">
+      <Component>
+        <File Id="RhinoInside.Revit.2018.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2018\RhinoInside.Revit.dll"/>
+        <RemoveFolder Id="INSTALLFOLDER2018" On="uninstall"/>
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="ProductAddin2018" Directory="_2018Directory">
+      <Component>
+        <File Id="RhinoInside.Revit.2018.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
+        <RemoveFile Id="RhinoInside.Revit.2018.addin" Name="RhinoInside.Revit.addin" On="both"/>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents2019" Directory="INSTALLFOLDER2019">
+      <Component>
+        <File Id="RhinoInside.Revit.2019.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2019\RhinoInside.Revit.dll"/>
+        <RemoveFolder Id="INSTALLFOLDER2019" On="uninstall"/>
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="ProductAddin2019" Directory="_2019Directory">
+      <Component>
+        <File Id="RhinoInside.Revit.2019.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
+        <RemoveFile Id="RhinoInside.Revit.2019.addin" Name="RhinoInside.Revit.addin" On="both"/>
+      </Component>
+    </ComponentGroup>  </Fragment>
+</Wix>
