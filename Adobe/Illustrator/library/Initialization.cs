@@ -46,16 +46,15 @@ namespace RhinoInside.Illustrator
           foreach(var objref in objrefs)
           {
             var crv = objref.Curve();
-            double[] verts = new double[100 * 2];
-            for (int i = 0; i < 100; i++)
+            Point2d[] verts = new Point2d[100];
+            for (int i = 0; i < verts.Length; i++)
             {
               double t = (double) i / 100.0;
               var pt = crv.PointAtNormalizedLength(t);
-              verts[2 * i] = pt.X;
-              verts[2 * i + 1] = pt.Y;
+              verts[i] = new Point2d(pt.X, pt.Y);
             }
 
-            UnsafeNativeMethods.RhDrawShape(100, verts);
+            UnsafeNativeMethods.RhDrawShape(100, verts, crv.IsClosed);
           }
         }
       }
@@ -78,7 +77,7 @@ namespace RhinoInside.Illustrator
   static class UnsafeNativeMethods
   {
     [DllImport("RhinoInside.Illustrator.PlugIn.aip", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void RhDrawShape(int count, double[] locations);
+    internal static extern void RhDrawShape(int count, Point2d[] locations, [MarshalAs(UnmanagedType.U1)]bool closed);
 
   }
 }

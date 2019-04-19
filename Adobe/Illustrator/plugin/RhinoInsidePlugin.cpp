@@ -349,13 +349,33 @@ bool CRhinoInsidePlugIn::RunRhino()
       return false;
   }
 
+  std::wstring path = L"C:\\dev\\github\\mcneel\\rhino.inside\\Adobe\\Illustrator\\bin\\x64\\Debug\\RhinoInside.Illustrator.dll";
+  HMODULE hmodule = ::GetModuleHandle(L"RhinoInside.Illustrator.PlugIn.aip");
+  if (hmodule)
+  {
+    wchar_t plugin_path[256];
+    if (::GetModuleFileName(hmodule, plugin_path, 256))
+    {
+      std::wstring tempPath = plugin_path;
+      tempPath = tempPath.substr(0, tempPath.length() - std::wstring(L".PlugIn.aip").length());
+      path = tempPath + L".dll";
+    }
+  }
   DWORD return_code = 0;
-  const wchar_t* path = L"C:\\dev\\github\\mcneel\\rhino.inside\\Adobe\\Illustrator\\bin\\x64\\Debug\\RhinoInside.Illustrator.dll";
-  HRESULT hr = m_pRuntimeHost->ExecuteInDefaultAppDomain(path, L"RhinoInside.Illustrator.Initialization", L"Start", nullptr, &return_code);
+  HRESULT hr = m_pRuntimeHost->ExecuteInDefaultAppDomain(path.c_str(), L"RhinoInside.Illustrator.Initialization", L"Start", nullptr, &return_code);
 	return SUCCEEDED(hr);
 }
 
-extern "C" __declspec(dllexport) void RhDrawShape(int count, double* points2d)
+
+////// functions exported to .NET for pInvokes
+
+struct ON_2DPOINT_STRUCT
+{
+  double x;
+  double y;
+};
+
+extern "C" __declspec(dllexport) void RhDrawShape(int count, ON_2DPOINT_STRUCT* points2d, bool closed)
 {
   // Create a new path.
   AIArtHandle path;
@@ -375,8 +395,8 @@ extern "C" __declspec(dllexport) void RhDrawShape(int count, double* points2d)
     segment.corner = true;
     for (int i = 0; i < count; ++i)
     {
-      segment.p.h = points2d[2 * i] + center.h;
-      segment.p.v = points2d[2*i+1] + center.v;
+      segment.p.h = points2d[i].x + center.h;
+      segment.p.v = points2d[i].y + center.v;
       segment.in = segment.out = segment.p;
       error = sAIPath->SetPathSegments(path, (short)i, 1, &segment);
       if (error)
@@ -385,9 +405,9 @@ extern "C" __declspec(dllexport) void RhDrawShape(int count, double* points2d)
   }
 
   // Close the path.
-  if (!error)
+  if (!error && closed)
   {
-    //error = sAIPath->SetPathClosed(path, true);
+    error = sAIPath->SetPathClosed(path, true);
   }
 
   // Allow the filter to be recorded as an action event.
