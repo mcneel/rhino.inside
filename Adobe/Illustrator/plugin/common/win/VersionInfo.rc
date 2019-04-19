@@ -1,0 +1,62 @@
+//========================================================================================
+//  
+//  $File: //ai_stream/rel_23_0/devtech/sdk/public/samplecode/common/win/VersionInfo.rc $
+//
+//  $Revision: #1 $
+//
+//  Copyright 2006 Adobe Systems Incorporated. All rights reserved.
+//  
+//  NOTICE:  Adobe permits you to use, modify, and distribute this file in accordance 
+//  with the terms of the Adobe license agreement accompanying it.  If you have received
+//  this file from a source other than Adobe, then your use, modification, or 
+//  distribution of it requires the prior written permission of Adobe.
+//  
+//========================================================================================
+
+#include "../Includes/SDKDef.h"
+
+// Define kYourSDKPluginName before including this file to set the plug-in name for the version resource.
+#ifndef kMySDKPluginName
+#define kMySDKPluginName "MySDKPluginName"
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// VersionInfo
+//
+1 VERSIONINFO
+ FILEVERSION kSDKDefAIMajorVersionNum, kSDKDefAIMinorVersionNum, kSDKDefAIRevisionVersionNum, kSDKDefBuildNumber
+ PRODUCTVERSION kSDKDefAIMajorVersionNum, kSDKDefAIMinorVersionNum, kSDKDefAIRevisionVersionNum, kSDKDefBuildNumber
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS VOS__WINDOWS32
+ FILETYPE VFT_DLL
+ FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4" // Lang=US English, CharSet=Windows Multilingual
+        BEGIN
+            VALUE "CompanyName", kSDKDefAIFullCompanyName, "\0" 
+            VALUE "FileDescription", kSDKDefFileDescriptionString, "\0"
+            VALUE "FileVersion", kSDKDefProductVersionString, "\0"
+            VALUE "InternalName", kMySDKPluginName, "\0"
+            VALUE "LegalCopyright", kSDKDefCopyrightString, "\0"
+            VALUE "OriginalFilename", kMySDKPluginName ".aip", "\0"
+            VALUE "ProductName", kSDKDefAIFullProductName, "\0"
+            VALUE "ProductVersion", kSDKDefProductVersionString, "\0"
+            VALUE "Copyright", kSDKDefCopyrightString, "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04E4
+    END
+END
+/////////////////////////////////////////////////////////////////////////////
+
+
