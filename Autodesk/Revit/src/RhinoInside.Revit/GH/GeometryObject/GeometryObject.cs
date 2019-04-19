@@ -173,6 +173,13 @@ namespace RhinoInside.Revit.GH.Types
         target = (Q) (object) new GH_Point(point);
         return true;
       }
+      else if (typeof(Q).IsAssignableFrom(typeof(Element)))
+      {
+        var reference = Reference.ParseFromStableRepresentation(Revit.ActiveDBDocument, UniqueID);
+        var element = Revit.ActiveDBDocument.GetElement(reference);
+        target = (Q) (object) Element.Make(element);
+        return true;
+      }
 
       return base.CastTo<Q>(ref target);
     }
@@ -210,6 +217,13 @@ namespace RhinoInside.Revit.GH.Types
           target = (Q) (object) new GH_Curve(curve);
           return true;
         }
+        else if (typeof(Q).IsAssignableFrom(typeof(Element)))
+        {
+          var reference = Reference.ParseFromStableRepresentation(Revit.ActiveDBDocument, UniqueID);
+          var element = Revit.ActiveDBDocument.GetElement(reference);
+          target = (Q) (object) Element.Make(element);
+          return true;
+        }
       }
 
       return base.CastTo<Q>(ref target);
@@ -227,6 +241,7 @@ namespace RhinoInside.Revit.GH.Types
       return bbox;
     }
   }
+
   public class Face : GH_GeometricGoo<Autodesk.Revit.DB.Face>
   {
     public override string TypeName => "Revit Face";
@@ -235,6 +250,26 @@ namespace RhinoInside.Revit.GH.Types
     public Face() { }
     public Face(Autodesk.Revit.DB.Face face) : base(face) { }
     public Face(Reference reference, Document doc) : base(reference, doc) { }
+
+    public override bool CastTo<Q>(ref Q target)
+    {
+      if (Value != null)
+      {
+        if (Value.IsElementGeometry)
+        {
+          if (typeof(Q).IsAssignableFrom(typeof(Element)))
+          {
+            var reference = Reference.ParseFromStableRepresentation(Revit.ActiveDBDocument, UniqueID);
+            var element = Revit.ActiveDBDocument.GetElement(reference);
+            target = (Q) (object) Element.Make(element);
+            return true;
+          }
+        }
+      }
+
+      return base.CastTo<Q>(ref target);
+    }
+
     public override BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform)
     {
       if (Value == null)
