@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="RhinoInsidePlugin.cpp" />
+    <ClCompile Include="common\source\AppContext.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\source\FlashUIController.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="Illustrator2019SDK\illustratorapi\illustrator\IAIFilePath.cpp">
+      <Filter>ai_sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="Illustrator2019SDK\illustratorapi\illustrator\IAIStringFormatUtils.cpp">
+      <Filter>ai_sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="Illustrator2019SDK\illustratorapi\illustrator\IAIUnicodeString.cpp">
+      <Filter>ai_sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="common\source\IllustratorSDK.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\source\Plugin.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\source\SDKPlugPlug.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\source\Suites.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="RhinoInsideSuites.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="RhinoInsidePlugin.h" />
+    <ClInclude Include="RhinoInsideID.h" />
+    <ClInclude Include="RhinoInsideSuites.h" />
+    <ClInclude Include="common\includes\Plugin.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources\Win\Tutorial.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{01f26ed2-c3b4-49b6-b42a-d78d9b778086}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ai_sdk">
+      <UniqueIdentifier>{a5be2a66-c578-433f-a364-bbf829c6f723}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

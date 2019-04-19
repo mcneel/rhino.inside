@@ -1,22 +1,7 @@
-//========================================================================================
-//  
-//  $File: //ai/mainline/devtech/sdk/public/samplecode/Tutorial/Resources/Tutorial.rc $
-//
-//  $Revision: #5 $
-//
-//  Copyright 1987 Adobe Systems Incorporated. All rights reserved.
-//  
-//  NOTICE:  Adobe permits you to use, modify, and distribute this file in accordance 
-//  with the terms of the Adobe license agreement accompanying it.  If you have received
-//  this file from a source other than Adobe, then your use, modification, or 
-//  distribution of it requires the prior written permission of Adobe.
-//  
-//========================================================================================
-
 //Microsoft Developer Studio generated resource script.
 //
 #include "resource.h"
-#include "TutorialID.h"
+#include "RhinoInsideID.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -37,7 +22,7 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
 #endif //_WIN32
 
-#define kMySDKPluginName kTutorialPluginName
+#define kMySDKPluginName kPluginName
 #define PIPL_PLUGIN_NAME kMySDKPluginName
 
 /////////////////////////////////////////////////////////////////////////////
@@ -108,7 +93,7 @@ END
 BEGIN
     "#include ""winuser.h""\r\n"
     "#include ""winnt.h""\r\n"
-    "#include ""TutorialID.h""\0"
+    "#include ""RhinoInsideID.h""\0"
 END
 
 3 TEXTINCLUDE DISCARDABLE 

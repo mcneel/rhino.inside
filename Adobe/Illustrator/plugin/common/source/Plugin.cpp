@@ -31,11 +31,11 @@ extern "C" SPBasicSuite *sSPBasic;
 
 //------------
 
-Plugin::Plugin(SPPluginRef pluginRef)
+Plugin::Plugin(SPPluginRef pluginRef, const char* name)
 {
 	fPluginRef = pluginRef;
 	fSuites = NULL;
-	strncpy(fPluginName, "Plugin", kMaxStringLength);
+  m_pluginName = name;
 	fLockCount = 0;
 	fPluginAccess = nullptr;
 	fLastError = kNoErr;
@@ -83,13 +83,13 @@ ASErr Plugin::StartupPlugin(SPInterfaceMessage *message)
 	if (!error)
 	{
 		if(!error)
-			error = sSPPlugins->SetPluginName( message->d.self, fPluginName );
+			error = sSPPlugins->SetPluginName( message->d.self, m_pluginName.c_str() );
 		
 		if (!error)
 		{
 			char notifierName[kMaxStringLength];
 
-			sprintf(notifierName, "%s App Started Notifier", fPluginName);
+			sprintf(notifierName, "%s App Started Notifier", m_pluginName.c_str());
 			error = sAINotifier->AddNotifier(message->d.self, notifierName, kAIApplicationStartedNotifier, NULL);
 		}
 	}
@@ -142,16 +142,6 @@ ASErr Plugin::LockPlugin(ASBoolean lock)
 	}
 
 	return kNoErr;
-}
-
-void Plugin::GetPluginName(char *name, unsigned int maxlen)
-{
-	strncpy(name, fPluginName, maxlen);
-
-	if(maxlen < strlen(fPluginName))
-	{
-		name[maxlen] = 0;
-	}
 }
 
 ASBoolean Plugin::Purge()

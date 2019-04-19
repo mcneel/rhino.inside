@@ -40,27 +40,24 @@ namespace RhinoInside.Illustrator
 
       if( !firstTime)
       {
-        Rhino.DocObjects.ObjRef objref;
-        Rhino.Input.RhinoGet.GetOneObject("Select curve", false, Rhino.DocObjects.ObjectType.Curve, out objref);
-        //Point3d[] points = new Point3d[]
-        //{
-        //  new Point3d(0,0,0),
-        //  new Point3d(100, 0,0),
-        //  new Point3d(0,100, 0),
-        //  new Point3d(100,100,0)
-        //};
-        //var crv = Curve.CreateControlPointCurve(points);
-        var crv = objref.Curve();
-        double[] verts = new double[100 * 2];
-        for( int i=0; i<100; i++ )
+        Rhino.DocObjects.ObjRef[] objrefs;
+        if( Rhino.Input.RhinoGet.GetMultipleObjects("Select curves", false, Rhino.DocObjects.ObjectType.Curve, out objrefs) == Rhino.Commands.Result.Success)
         {
-          double t = (double) i / 100.0;
-          var pt = crv.PointAtNormalizedLength(t);
-          verts[2*i] = pt.X;
-          verts[2*i + 1] = pt.Y;
-        }
+          foreach(var objref in objrefs)
+          {
+            var crv = objref.Curve();
+            double[] verts = new double[100 * 2];
+            for (int i = 0; i < 100; i++)
+            {
+              double t = (double) i / 100.0;
+              var pt = crv.PointAtNormalizedLength(t);
+              verts[2 * i] = pt.X;
+              verts[2 * i + 1] = pt.Y;
+            }
 
-        UnsafeNativeMethods.RhDrawShape(100, verts);
+            UnsafeNativeMethods.RhDrawShape(100, verts);
+          }
+        }
       }
       return 1;
     }

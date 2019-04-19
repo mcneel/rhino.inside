@@ -182,21 +182,18 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\..\obj\Tutorial\debug/RhinoInside.Illustrator.PlugIn.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
-    <ClCompile Include="common\source\SDKAboutPluginsHelper.cpp" />
     <ClCompile Include="common\source\Suites.cpp" />
-    <ClCompile Include="TutorialPanelController.cpp" />
-    <ClCompile Include="TutorialPlugin.cpp" />
-    <ClCompile Include="TutorialSuites.cpp" />
+    <ClCompile Include="RhinoInsidePlugin.cpp" />
+    <ClCompile Include="RhinoInsideSuites.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources\Win\Tutorial.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="TutorialFilterParameters.h" />
-    <ClInclude Include="TutorialID.h" />
-    <ClInclude Include="TutorialPanelController.h" />
-    <ClInclude Include="TutorialPlugin.h" />
-    <ClInclude Include="TutorialSuites.h" />
+    <ClInclude Include="common\includes\Plugin.hpp" />
+    <ClInclude Include="RhinoInsideID.h" />
+    <ClInclude Include="RhinoInsidePlugin.h" />
+    <ClInclude Include="RhinoInsideSuites.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -61,7 +61,7 @@ class Plugin
 {
 protected:
 	SPPluginRef fPluginRef;
-	char fPluginName[kMaxStringLength];
+  std::string m_pluginName;
 	Suites *fSuites;
 	int fLockCount;
 	SPAccessRef fPluginAccess;
@@ -71,7 +71,7 @@ protected:
 	time_t fLastErrorTime;
 		
 public:
-	Plugin(SPPluginRef pluginRef);
+	Plugin(SPPluginRef pluginRef, const char* name);
   Plugin() = default;
 	virtual ~Plugin() = default;
 	void *operator new(size_t size);
@@ -94,7 +94,6 @@ public:
 	virtual ASErr ReloadPlugin(SPInterfaceMessage *message);
 	virtual ASErr AcquireProperty(SPPropertiesMessage *message);
 	virtual ASErr ReleaseProperty(SPPropertiesMessage *message);
-	virtual void GetPluginName(char *name, unsigned int maxlen);
 
 	virtual ASBoolean Purge();
 	virtual ASErr Message(char *caller, char *selector, void *message);

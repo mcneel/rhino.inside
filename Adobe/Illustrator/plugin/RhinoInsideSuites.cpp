@@ -1,20 +1,6 @@
-//========================================================================================
-//  
-//  $File: //ai/mainline/devtech/sdk/public/samplecode/Tutorial/Source/TutorialSuites.cpp $
-//
-//  $Revision: #1 $
-//
-//  Copyright 2010 Adobe Systems Incorporated. All rights reserved.
-//  
-//  NOTICE:  Adobe permits you to use, modify, and distribute this file in accordance 
-//  with the terms of the Adobe license agreement accompanying it.  If you have received
-//  this file from a source other than Adobe, then your use, modification, or 
-//  distribution of it requires the prior written permission of Adobe.
-//  
-//========================================================================================
-
 #include "IllustratorSDK.h"
-#include "TutorialSuites.h"
+#include "RhinoInsideSuites.h"
+#include "AIAnnotatorDrawer.h"
 
 extern "C"
 {
@@ -32,6 +18,7 @@ extern "C"
 	AIUnicodeStringSuite*		sAIUnicodeString = nullptr;
 	AIMdMemorySuite*			sAIMDMemory = nullptr;
 	AIStringFormatUtilsSuite*	sAIStringFormatUtils = nullptr;
+  AIAnnotatorDrawerSuite*		sAIAnnotatorDrawer;
 };
 
 ImportSuite gImportSuites[] =
@@ -50,5 +37,6 @@ ImportSuite gImportSuites[] =
 	kAIUnicodeStringSuite, kAIUnicodeStringSuiteVersion, &sAIUnicodeString,
 	kAIMdMemorySuite, kAIMdMemorySuiteVersion, &sAIMDMemory,
 	kAIStringFormatUtilsSuite, kAIStringFormatUtilsSuiteVersion, &sAIStringFormatUtils,
-	nullptr, 0, nullptr
+  kAIAnnotatorDrawerSuite, kAIAnnotatorDrawerSuiteVersion, &sAIAnnotatorDrawer,
+  nullptr, 0, nullptr
 };
