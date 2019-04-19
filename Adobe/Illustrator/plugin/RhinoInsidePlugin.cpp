@@ -91,14 +91,9 @@ extern "C" ASAPI ASErr PluginMain(char* caller, char* selector, void* message)
     {
       error = kNoErr;
 #ifndef NDEBUG
-#ifdef MAC_ENV
-      fprintf(stderr, "Warning: Unhandled plugin message: caller \"%s\" selector \"%s\"\n", caller, selector);
-#else
       char buf[1024];
-
       sprintf_s(buf + 1, 1024, "Warning: Unhandled plugin message: caller \"%s\" selector \"%s\"\n", caller, selector);
       OutputDebugStringA(buf + 1);
-#endif
 #endif
     }
   }
@@ -134,6 +129,14 @@ CRhinoInsidePlugIn::CRhinoInsidePlugIn(SPPluginRef pluginRef) : Plugin(pluginRef
 ASErr CRhinoInsidePlugIn::StartupPlugin(SPInterfaceMessage* message)
 {
 	ASErr error = Plugin::StartupPlugin(message);
+
+  sAIAnnotator->AddAnnotator(message->d.self, "RhinoInsideAnnotator", &m_annotator_handle);
+  sAIAnnotator->SetAnnotatorActive(m_annotator_handle, true);
+
+  AITimerHandle timer;
+  char name[] = "RedrawTimer";
+  sAITimer->AddTimer(message->d.self, name, 10, &timer);
+  sAITimer->SetTimerActive(timer, true);
 
 	if (!error) {	
 		error = AddFilter(message);
@@ -205,13 +208,14 @@ ASErr CRhinoInsidePlugIn::Message(char *caller, char *selector, void *message)
     if (result == kUnhandledMsgErr) {
       if (strcmp(caller, kCallerAIAnnotation) == 0) {
         if (strcmp(selector, kSelectorAIDrawAnnotation) == 0) {
-          AIAnnotatorMessage* amsg = (AIAnnotatorMessage*)message;
-          
-          result = kNoErr;// this->DrawAnnotation((AIAnnotatorMessage*)message);
-          //aisdk::check_ai_error(result);
+          DrawAnnotation((AIAnnotatorMessage*)message);
+          result = kNoErr;
         }
         else if (strcmp(selector, kSelectorAIInvalAnnotation) == 0) {
+          AIAnnotatorMessage* amsg = (AIAnnotatorMessage*)message;
+          sAIAnnotator->InvalAnnotationRect(NULL, NULL);
           //result = this->InvalAnnotation((AIAnnotatorMessage*)message);
+          result = kNoErr;
           //aisdk::check_ai_error(result);
         }
       }
@@ -284,6 +288,20 @@ AIErr CRhinoInsidePlugIn::GoFilter( AIFilterMessage* /*message*/ )
 	}
 	return error;
 }
+
+AIErr CRhinoInsidePlugIn::GoTimer(AITimerMessage* message)
+{
+  AIRealRect r;
+  r.left = -1000;
+  r.right = 1000;
+  r.top = 1000;
+  r.bottom = -1000;
+  sAIDocumentView->SetDocumentViewInvalidRect(NULL, &r);
+  sAIDocumentView->SetDocumentViewInvalidDocumentRect(NULL, &r);
+  sAIDocument->RedrawDocument();
+  return kNoErr;
+}
+
 
 static ICLRRuntimeHost* LaunchDotNetRuntime()
 {
@@ -366,59 +384,86 @@ bool CRhinoInsidePlugIn::RunRhino()
 	return SUCCEEDED(hr);
 }
 
-
-////// functions exported to .NET for pInvokes
-
 struct ON_2DPOINT_STRUCT
 {
   double x;
   double y;
 };
 
+std::vector< ON_2DPOINT_STRUCT> _points;
+
+void CRhinoInsidePlugIn::DrawAnnotation(AIAnnotatorMessage* message)
+{
+  if (_points.size() < 2)
+    return;
+
+  AIPoint prev;
+  AIRealPoint pt;
+  pt.h = _points[0].x;
+  pt.v = _points[0].y;
+  sAIDocumentView->ArtworkPointToViewPoint(NULL, &pt, &prev);
+
+  for (int i = 1; i < _points.size(); i++)
+  {
+    AIPoint current;
+    pt.h = _points[i].x;
+    pt.v = _points[i].y;
+    sAIDocumentView->ArtworkPointToViewPoint(NULL, &pt, &current);
+    sAIAnnotatorDrawer->DrawLine(message->drawer, prev, current);
+    prev = current;
+  }
+}
+
+////// functions exported to .NET for pInvokes
+
+
 extern "C" __declspec(dllexport) void RhDrawShape(int count, ON_2DPOINT_STRUCT* points2d, bool closed)
 {
-  // Create a new path.
-  AIArtHandle path;
-  AIErr error = sAIArt->NewArt(kPathArt, kPlaceDefault, nullptr, &path);
+  //// Create a new path.
+  //AIArtHandle path;
+  //AIErr error = sAIArt->NewArt(kPathArt, kPlaceDefault, nullptr, &path);
 
-  // Find the point on the page that's in the middle of the window.
-  AIRealPoint center = { 0,0 };
-  if (!error) {
-    error = sAIDocumentView->GetDocumentViewCenter(nullptr, &center);
-  }
+  //// Find the point on the page that's in the middle of the window.
+  //AIRealPoint center = { 0,0 };
+  ////if (!error) {
+  ////  error = sAIDocumentView->GetDocumentViewCenter(nullptr, &center);
+  ////}
 
-  // Create the polygon points, randomly located around the center.
-  if (!error)
-  {
-    AIPathSegment segment;
-    // All of the segments are corners
-    segment.corner = true;
-    for (int i = 0; i < count; ++i)
-    {
-      segment.p.h = points2d[i].x + center.h;
-      segment.p.v = points2d[i].y + center.v;
-      segment.in = segment.out = segment.p;
-      error = sAIPath->SetPathSegments(path, (short)i, 1, &segment);
-      if (error)
-        break;
-    }
-  }
+  //// Create the polygon points, randomly located around the center.
+  //if (!error)
+  //{
+  //  AIPathSegment segment;
+  //  // All of the segments are corners
+  //  segment.corner = true;
+  //  for (int i = 0; i < count; ++i)
+  //  {
+  //    segment.p.h = points2d[i].x + center.h;
+  //    segment.p.v = points2d[i].y + center.v;
+  //    segment.in = segment.out = segment.p;
+  //    error = sAIPath->SetPathSegments(path, (short)i, 1, &segment);
+  //    if (error)
+  //      break;
+  //  }
+  //}
+  _points.clear();
+  for (int i = 0; i < count; i++)
+    _points.push_back(points2d[i]);
 
-  // Close the path.
-  if (!error && closed)
-  {
-    error = sAIPath->SetPathClosed(path, true);
-  }
+  //// Close the path.
+  //if (!error && closed)
+  //{
+  //  error = sAIPath->SetPathClosed(path, true);
+  //}
 
-  // Allow the filter to be recorded as an action event.
-  if (!error)
-  {
-    //error = RecordFilterAction(params);
-  }
+  //// Allow the filter to be recorded as an action event.
+  //if (!error)
+  //{
+  //  //error = RecordFilterAction(params);
+  //}
 
-  if (!error)
-  {
-    error = sAIArt->SetArtUserAttr(path, kArtSelected, kArtSelected);
-  }
+  //if (!error)
+  //{
+  //  error = sAIArt->SetArtUserAttr(path, kArtSelected, kArtSelected);
+  //}
 
 }

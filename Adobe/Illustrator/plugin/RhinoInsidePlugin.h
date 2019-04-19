@@ -3,6 +3,8 @@
 #include "IllustratorSDK.h"
 #include "Plugin.hpp"
 #include "RhinoInsideID.h"
+#include "AIAnnotator.h"
+
 
 void FixupReload(Plugin* plugin);
 
@@ -24,9 +26,11 @@ protected:
 
 	AIErr GetFilterParameters( AIFilterMessage* message ) override;
 	AIErr GoFilter( AIFilterMessage* message ) override;
+  AIErr GoTimer(AITimerMessage* message) override;
 
 private:
   bool RunRhino();
+  void DrawAnnotation(AIAnnotatorMessage* message);
 
   // Adds this plug-in's filter to Illustrator.
 	AIErr AddFilter(SPInterfaceMessage* message);
@@ -34,6 +38,7 @@ private:
 	// Adds the listeners for the notifications we are interested in
 	ASErr AddNotifiers(SPInterfaceMessage* message);
 
+  AIAnnotatorHandle	m_annotator_handle = nullptr;
 
   AIFilterHandle fFilterHandle;
 

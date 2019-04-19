@@ -1,6 +1,5 @@
 #include "IllustratorSDK.h"
 #include "RhinoInsideSuites.h"
-#include "AIAnnotatorDrawer.h"
 
 extern "C"
 {
@@ -18,7 +17,10 @@ extern "C"
 	AIUnicodeStringSuite*		sAIUnicodeString = nullptr;
 	AIMdMemorySuite*			sAIMDMemory = nullptr;
 	AIStringFormatUtilsSuite*	sAIStringFormatUtils = nullptr;
-  AIAnnotatorDrawerSuite*		sAIAnnotatorDrawer;
+  AIAnnotatorSuite*			sAIAnnotator = nullptr;
+  AIAnnotatorDrawerSuite*		sAIAnnotatorDrawer = nullptr;
+  AIDocumentSuite*			sAIDocument = nullptr;
+  AITimerSuite				*sAITimer = nullptr;
 };
 
 ImportSuite gImportSuites[] =
@@ -37,6 +39,9 @@ ImportSuite gImportSuites[] =
 	kAIUnicodeStringSuite, kAIUnicodeStringSuiteVersion, &sAIUnicodeString,
 	kAIMdMemorySuite, kAIMdMemorySuiteVersion, &sAIMDMemory,
 	kAIStringFormatUtilsSuite, kAIStringFormatUtilsSuiteVersion, &sAIStringFormatUtils,
+  kAIAnnotatorSuite, kAIAnnotatorSuiteVersion, &sAIAnnotator,
   kAIAnnotatorDrawerSuite, kAIAnnotatorDrawerSuiteVersion, &sAIAnnotatorDrawer,
+  kAIDocumentSuite, kAIDocumentSuiteVersion, &sAIDocument,
+  kAITimerSuite, kAITimerSuiteVersion, &sAITimer,
   nullptr, 0, nullptr
 };

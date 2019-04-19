@@ -8,6 +8,22 @@ using Rhino.Runtime.InProcess;
 
 namespace RhinoInside.Illustrator
 {
+  public static class TestCurvePreview
+  {
+    public static void UpdateCurvePreview(Curve crv)
+    {
+      Point2d[] verts = new Point2d[100];
+      for (int i = 0; i < verts.Length; i++)
+      {
+        double t = (double) i / 100.0;
+        var pt = crv.PointAtNormalizedLength(t);
+        verts[i] = new Point2d(pt.X, pt.Y);
+      }
+
+      UnsafeNativeMethods.RhDrawShape(100, verts, crv.IsClosed);
+    }
+  }
+
   public static class Initialization
   {
     static RhinoLoader _loader;

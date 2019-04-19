@@ -6,6 +6,8 @@
 #include "AIStringFormatUtils.h"
 #include "AIRandom.h"
 #include "AIDocumentView.h"
+#include "AIAnnotator.h"
+#include "AIAnnotatorDrawer.h"
 
 extern	"C" AIFilterSuite*				sAIFilter;
 extern	"C" SPBlocksSuite*				sSPBlocks;
@@ -21,3 +23,8 @@ extern	"C" AIMenuSuite*				sAIMenu;
 extern	"C" AIUnicodeStringSuite*		sAIUnicodeString;
 extern	"C" AIMdMemorySuite*			sAIMDMemory;
 extern	"C" AIStringFormatUtilsSuite*	sAIStringFormatUtils;
+
+extern	"C" AIAnnotatorSuite*			sAIAnnotator;
+extern	"C"	AIAnnotatorDrawerSuite*		sAIAnnotatorDrawer;
+extern  "C" AIDocumentSuite*			sAIDocument;
+extern "C" AITimerSuite *sAITimer;
