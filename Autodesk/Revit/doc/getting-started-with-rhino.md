@@ -32,15 +32,16 @@ Within the Grasshopper Revit Toolbar is the Directshape Component.  Along with t
 
 Grasshopper can be started within Revit. Within Grasshopper there is a Revit toolbar of components which manage the interaction of Grasshopper and Revit.  To find out more about these tools, see the [Grasshopper Components in Revit Guide](gh-components.md)
 
-<!---
-When interacting with Grasshopper Params, it is important to note that Rhino also needs to be visible.
--->
+
+![Rhino sending geometry to Revit](images/gh-revit-roof.png)
 
 
 
 ## <img src="images/Python.png" width="35px"> Running Rhino.Python in Revit
 
 The Rhino.Python editor can be called up from within Revit. By referencing the Revit.Python namespaces, both the Rhino and Revit Python scripts can be called from a single Python script.
+
+![Rhino sending geometry to Revit](images/Sample7.png)
 
 ## Running the Grasshopper Player in Revit
 The Grasshopper Player will play a single grasshopper definition and return the results to Revit.
