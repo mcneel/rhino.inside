@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <RevitVersion>2017</RevitVersion>
@@ -11,6 +11,10 @@
   <PropertyGroup Condition="$(Configuration.Contains('2019'))">
     <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
     <RevitVersion>2019</RevitVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(Configuration.Contains('2020'))">
+    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
+    <RevitVersion>2020</RevitVersion>
   </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -75,22 +79,76 @@
     <DefineConstants>REVIT_2017; REVIT_2018; REVIT_2019</DefineConstants>
     <Optimize>true</Optimize>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug 2020|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug 2020\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;REVIT_2017; REVIT_2018; REVIT_2019; REVIT_2020</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release 2020|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Release 2020\</OutputPath>
+    <DefineConstants>REVIT_2017; REVIT_2018; REVIT_2019; REVIT_2020</DefineConstants>
+    <Optimize>true</Optimize>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.VisualBasic" />
-    <Reference Include="PresentationCore" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Management.Automation, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\WindowsPowerShell\3.0\System.Management.Automation.dll</HintPath>
-    </Reference>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="WindowsBase" />
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="System.Management.Automation, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\WindowsPowerShell\3.0\System.Management.Automation.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Eto">
+      <HintPath>C:\Program Files\Rhino WIP\System\Eto.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RhinoCommon">
+      <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Rhino.UI">
+      <HintPath>C:\Program Files\Rhino WIP\System\Rhino.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="GH_IO">
+      <HintPath>C:\Program Files\Rhino WIP\Plug-ins\Grasshopper\GH_IO.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Grasshopper">
+      <HintPath>C:\Program Files\Rhino WIP\Plug-ins\Grasshopper\Grasshopper.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPI">
+      <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\RevitAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="RevitAPIUI">
+      <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" Version="7.0.19092.12305-wip" IncludeAssets="build; compile"/>
+    <PackageReference Include="Grasshopper" Version="7.0.19092.12305-wip" IncludeAssets="build; compile"/>
+    <PackageReference Include="Revit.RevitApi.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile"/>
+    <PackageReference Include="Revit.RevitApiUI.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile"/>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GH\ID.cs" />
@@ -162,20 +220,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\Python.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Grasshopper" IncludeAssets="build; compile">
-      <Version>7.0.19092.12305-wip</Version>
-    </PackageReference>
-    <PackageReference Include="Revit.RevitApi.x64" IncludeAssets="build; compile">
-      <Version>$(RevitVersion).*</Version>
-    </PackageReference>
-    <PackageReference Include="Revit.RevitApiUI.x64" IncludeAssets="build; compile">
-      <Version>$(RevitVersion).*</Version>
-    </PackageReference>
-    <PackageReference Include="RhinoCommon" IncludeAssets="build; compile">
-      <Version>7.0.19092.12305-wip</Version>
-    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">
