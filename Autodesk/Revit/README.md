@@ -47,7 +47,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 3. You should have an sphere in the Revil model.
 
 ### Sample 2
-![](doc/Sample2.jpg)
+![](doc/images/Sample2.jpg)
 
 1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
 2. Create some breps in Rhino. (It is best if they are building size objects to start.)
@@ -59,7 +59,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 8. You should have the breps created in step 2 in the Revit model, and they should belong to the specified category (Generic is available and is also used as a catch-all fallback).
 
 ### Sample 3
-![](doc/Sample3.gif)
+![](doc/images/Sample3.gif)
 
 1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
 2. Create a surface on Rhino. (It is best if it is site size objects to start.)
@@ -70,7 +70,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 8. You should have a Topography surface in Revit.
 
 ### Sample 4
-![](doc/Sample4.png)
+![](doc/images/Sample4.png)
 
 1. Open the ribbon tab called Add-Ins.
 2. Click on the button on the _Rhinoceros_ panel called _Sample 4_.
@@ -79,7 +79,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 5. You should have a collection of pipes over a 3D Voronoi diagram in Revit.
 
 ### Sample 5
-![](doc/Sample5.gif)
+![](doc/images/Sample5.gif)
 
 1. Open the ribbon tab called Add-Ins.
 2. Click on the button on the _Rhinoceros_ panel called _Grasshopper_.
@@ -87,7 +87,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 3. Enjoy!!
 
 ### Sample 6
-![](doc/Sample6.gif)
+![](doc/images/Sample6.gif)
 
 1. Use the _Rhino_ icon into the Add-Ins tab to open Rhino editor window.
 2. Create some geometry in Rhino.
@@ -95,7 +95,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 4. You should have a preview of Rhino geometry in the Revit view.
 
 ### Sample 7
-![](doc/Sample7.png)
+![](doc/images/Sample7.png)
 
 1. Use the _Pyhton_ icon into the Add-Ins tab to open Rhino Python editor window.
 2. Load pyhthon script file called _"Sample7.py"_ there is in this folder.
