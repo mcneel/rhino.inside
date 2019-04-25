@@ -94,7 +94,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
         {
-          var options = new Options { ComputeReferences = true };
+          using (var options = new Options { ComputeReferences = true })
           using (var geometry = element.get_Geometry(options))
           {
             if (geometry != null)
@@ -305,7 +305,7 @@ namespace RhinoInside.Revit.GH.Types
       out Rhino.Display.DisplayMaterial[] materials, out Rhino.Geometry.Mesh[] meshes, out Rhino.Geometry.Curve[] wires
     )
     {
-      var options = new Options { ComputeReferences = true, DetailLevel = DetailLevel };
+      using (var options = new Options { ComputeReferences = true, DetailLevel = DetailLevel == ViewDetailLevel.Undefined ? ViewDetailLevel.Medium : DetailLevel })
       using (var geometry = element?.get_Geometry(options))
       {
         if (geometry == null)
@@ -941,8 +941,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData(ObjectType.Name, ref element))
         return;
 
-      var options = new Options { ComputeReferences = true };
-
+      using (var options = new Options { ComputeReferences = true, DetailLevel = ViewDetailLevel.Fine })
       using (var geometry = element?.get_Geometry(options))
       {
         var list = geometry?.ToRhino().Where(x => x != null).ToList();
