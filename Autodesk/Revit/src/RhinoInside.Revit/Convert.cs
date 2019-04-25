@@ -21,6 +21,24 @@ namespace RhinoInside.Revit
 {
   public static class Convert
   {
+    #region Utils
+    public static Autodesk.Revit.DB.Level FindLevelByElevation(this Autodesk.Revit.DB.Document doc, double elevation)
+    {
+      Autodesk.Revit.DB.Level level = null;
+      using (var collector = new FilteredElementCollector(doc))
+      {
+        foreach (var levelN in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderBy(c => c.Elevation))
+        {
+          if (level == null)
+            level = levelN;
+          else if (elevation >= levelN.Elevation)
+            level = levelN;
+        }
+      }
+      return level;
+    }
+    #endregion
+
     #region Enums
     public static StorageType ToStorageType(this ParameterType parameterType)
     {

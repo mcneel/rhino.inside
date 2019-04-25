@@ -52,20 +52,11 @@ namespace RhinoInside.Revit.GH.Components
       DA.GetData("Level", ref level);
       if (level == null && boundaries.Count != 0)
       {
+        var boundaryBBox = Rhino.Geometry.BoundingBox.Empty;
         foreach (var boundary in boundaries.OfType<Rhino.Geometry.Curve>())
-        {
-          var boundaryBBox = boundary.GetBoundingBox(true);
-          using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
-          {
-            foreach (var levelN in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderBy(c => c.Elevation))
-            {
-              if (level == null)
-                level = levelN;
-              else if (boundaryBBox.Min.Z >= levelN.Elevation)
-                level = levelN;
-            }
-          }
-        }
+          boundaryBBox.Union(boundary.GetBoundingBox(true));
+
+        level = Revit.ActiveDBDocument.FindLevelByElevation(boundaryBBox.Min.Z / Revit.ModelUnits);
       }
 
       DA.DisableGapLogic();

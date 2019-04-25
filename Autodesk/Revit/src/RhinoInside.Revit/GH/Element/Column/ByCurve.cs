@@ -57,16 +57,7 @@ namespace RhinoInside.Revit.GH.Components
       DA.GetData("Level", ref level);
       if (level == null)
       {
-        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
-        {
-          foreach (var levelN in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderBy(c => c.Elevation))
-          {
-            if (level == null)
-              level = levelN;
-            else if (axis.FromZ > levelN.Elevation)
-              level = levelN;
-          }
-        }
+        level = Revit.ActiveDBDocument.FindLevelByElevation(axis.FromZ / Revit.ModelUnits);
       }
 
       DA.DisableGapLogic();
