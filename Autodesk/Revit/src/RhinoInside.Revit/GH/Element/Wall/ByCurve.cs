@@ -52,16 +52,7 @@ namespace RhinoInside.Revit.GH.Components
       DA.GetData("Level", ref level);
       if (level == null && axis != null)
       {
-        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
-        {
-          foreach (var levelN in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderBy(c => c.Elevation))
-          {
-            if (level == null)
-              level = levelN;
-            else if (axis.PointAtStart.Z >= levelN.Elevation)
-              level = levelN;
-          }
-        }
+        level = Revit.ActiveDBDocument.FindLevelByElevation(axis.PointAtStart.Z / Revit.ModelUnits);
       }
 
       bool structural = true;
@@ -130,9 +121,10 @@ namespace RhinoInside.Revit.GH.Components
           }
         }
 
-        if (element is Wall wall && element?.Location is LocationCurve locationCurve)
+        if (element is Wall wall && element?.Location is LocationCurve locationCurve && locationCurve.Curve.GetType() == axisList[0].GetType())
         {
           locationCurve.Curve = axisList[0];
+          wall.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT).Set(level.Id);
           wall.get_Parameter(BuiltInParameter.WALL_BASE_OFFSET).Set(0.0);
           wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
         }

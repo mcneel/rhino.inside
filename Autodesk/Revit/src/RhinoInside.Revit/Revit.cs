@@ -71,7 +71,7 @@ namespace RhinoInside.Revit
       }
 
       // Reset document units
-      UI.RhinoCommand.ResetDocumentUnits(Rhino.RhinoDoc.ActiveDoc);
+      UI.RhinoCommand.UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc);
 
       // Register UI on Revit
       {
@@ -407,20 +407,27 @@ namespace RhinoInside.Revit
           {
             try
             {
+              Committing = true;
+
               if (trans.Start("RhinoInside") == TransactionStatus.Started)
               {
                 while (docWriteActions.Count > 0)
                   docWriteActions.Dequeue().Invoke(ActiveDBDocument);
 
-                Committing = true;
                 var options = trans.GetFailureHandlingOptions();
-                trans.Commit(options.SetDelayedMiniWarnings(true).SetForcedModalHandling(false).SetFailuresPreprocessor(new FailuresPreprocessor()));
-                Committing = false;
+                options = options.SetClearAfterRollback(true);
+                options = options.SetDelayedMiniWarnings(true);
+                options = options.SetForcedModalHandling(false);
+                options = options.SetFailuresPreprocessor(new FailuresPreprocessor());
+                var status = trans.Commit(options);
 
-                foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+                if (status == TransactionStatus.Committed)
                 {
-                  if (definition.Enabled)
-                    definition.NewSolution(false);
+                  foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+                  {
+                    if (definition.Enabled)
+                      definition.NewSolution(false);
+                  }
                 }
               }
             }
@@ -432,6 +439,10 @@ namespace RhinoInside.Revit
 
               if (trans.HasStarted())
                 trans.RollBack();
+            }
+            finally
+            {
+              Committing = false;
             }
           }
         }

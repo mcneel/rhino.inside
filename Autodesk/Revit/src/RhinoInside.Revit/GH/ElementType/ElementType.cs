@@ -67,14 +67,9 @@ namespace RhinoInside.Revit.GH.Parameters
 
     protected override void RefreshList(string FamilyName)
     {
-      var selectedItems = new List<string>();
-      {
-        foreach (var item in ListItems)
-          if (item.Selected)
-            selectedItems.Add(item.Expression);
-      }
-
+      var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
       ListItems.Clear();
+
       if (FamilyName.Length == 0 || FamilyName[0] == '\'')
         return;
 
@@ -126,13 +121,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
     protected override void RefreshList(IEnumerable<IGH_Goo> goos)
     {
-      var selectedItems = new List<string>();
-      {
-        foreach (var item in ListItems)
-          if (item.Selected)
-            selectedItems.Add(item.Expression);
-      }
-
+      var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
       ListItems.Clear();
 
       if (Revit.ActiveDBDocument != null)

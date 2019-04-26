@@ -94,7 +94,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
         {
-          var options = new Options { ComputeReferences = true };
+          using (var options = new Options { ComputeReferences = true })
           using (var geometry = element.get_Geometry(options))
           {
             if (geometry != null)
@@ -158,7 +158,7 @@ namespace RhinoInside.Revit.GH.Types
         if (!plane.IsValid || !plane.Origin.IsValid)
           return false;
 
-        target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.ChangeBasis(Rhino.Geometry.Plane.WorldXY, plane));
+        target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, plane));
         return true;
       }
 
@@ -223,16 +223,16 @@ namespace RhinoInside.Revit.GH.Types
           var properties = base.GetProperties(context, value, attributes);
           if (value is Proxy proxy)
           {
-            var parameters = proxy.element?.Parameters;
-            var parametersSize = parameters?.Size ?? 0;
-            var propertiesCount = properties.Count;
-            if (parametersSize > 0)
+            var element = proxy.element;
+            if (element != null)
             {
-              PropertyDescriptor[] descriptors = new PropertyDescriptor[propertiesCount + parametersSize];
-              properties.CopyTo(descriptors, 0);
+              var builtInParameters = element.GetParameters(Extension.ParameterSource.Any).
+                Select(p => new ParameterPropertyDescriptor(p)).
+                ToArray();
 
-              foreach (var paramter in parameters.Cast<Autodesk.Revit.DB.Parameter>())
-                descriptors[propertiesCount++] = new ParameterPropertyDescriptor(paramter);
+              var descriptors = new PropertyDescriptor[properties.Count + builtInParameters.Length];
+              properties.CopyTo(descriptors, 0);
+              builtInParameters.CopyTo(descriptors, properties.Count);
 
               return new PropertyDescriptorCollection(descriptors, true);
             }
@@ -259,9 +259,21 @@ namespace RhinoInside.Revit.GH.Types
             catch (Autodesk.Revit.Exceptions.InvalidOperationException)
             { description = parameter.Definition.UnitType == UnitType.UT_Number ? "Enumerate" : LabelUtils.GetLabelFor(parameter.Definition.UnitType); }
 
+            if (parameter.IsReadOnly)
+              description = "Read only " + description;
+
+            description += "\nParameterId : " + parameter.Id.IntegerValue.ToParameterIdString();
             return description;
           }
         }
+        public override bool Equals(object obj)
+        {
+          if (obj is ParameterPropertyDescriptor other)
+            return other.parameter.Id == parameter.Id;
+
+          return false;
+        }
+        public override int GetHashCode() => parameter.Id.IntegerValue;
         public override bool ShouldSerializeValue(object component) { return false; }
         public override void ResetValue(object component) { }
         public override bool CanResetValue(object component) { return false; }
@@ -305,7 +317,7 @@ namespace RhinoInside.Revit.GH.Types
       out Rhino.Display.DisplayMaterial[] materials, out Rhino.Geometry.Mesh[] meshes, out Rhino.Geometry.Curve[] wires
     )
     {
-      var options = new Options { ComputeReferences = true, DetailLevel = DetailLevel };
+      using (var options = new Options { ComputeReferences = true, DetailLevel = DetailLevel == ViewDetailLevel.Undefined ? ViewDetailLevel.Medium : DetailLevel })
       using (var geometry = element?.get_Geometry(options))
       {
         if (geometry == null)
@@ -941,8 +953,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData(ObjectType.Name, ref element))
         return;
 
-      var options = new Options { ComputeReferences = true };
-
+      using (var options = new Options { ComputeReferences = true, DetailLevel = ViewDetailLevel.Fine })
       using (var geometry = element?.get_Geometry(options))
       {
         var list = geometry?.ToRhino().Where(x => x != null).ToList();
@@ -1055,7 +1066,7 @@ namespace RhinoInside.Revit.GH.Components
       if (element != null)
       {
         paramIds = new List<ElementId>(element.Parameters.Size);
-        foreach (var group in element.Parameters.OfType<Parameter>().GroupBy((x) => x.Definition.ParameterGroup).OrderBy((x) => x.Key))
+        foreach (var group in element.GetParameters(Extension.ParameterSource.Any).GroupBy((x) => x.Definition.ParameterGroup).OrderBy((x) => x.Key))
         {
           foreach (var param in group.OrderBy(x => x.Id.IntegerValue))
           {

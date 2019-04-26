@@ -60,7 +60,7 @@ namespace RhinoInside.Revit.GH.Types
         case Autodesk.Revit.DB.ElementId id:
           if (Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue))
           {
-            Value = new ElementId(id.IntegerValue.ToBuiltInParameter());
+            Value = new ElementId(id.IntegerValue);
             UniqueID = string.Empty;
             return true;
           }
@@ -74,7 +74,7 @@ namespace RhinoInside.Revit.GH.Types
         case int integer:
           if (Enum.IsDefined(typeof(BuiltInParameter), integer))
           {
-            Value = new ElementId(integer.ToBuiltInParameter());
+            Value = new ElementId(integer);
             UniqueID = string.Empty;
             return true;
           }
@@ -94,7 +94,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         int value = proxyOwner.Value.IntegerValue;
         if (Enum.IsDefined(typeof(Autodesk.Revit.DB.BuiltInParameter), value))
-          return value.ToBuiltInParameter().ToString();
+          return value.ToParameterIdString();
 
         return value.ToString();
       }
@@ -272,24 +272,29 @@ namespace RhinoInside.Revit.GH.Types
       if (IsValid)
       {
         string value = null;
-        if (Value.HasValue)
+        try
         {
-          value = Value.AsValueString();
-          if (value == null)
+          if (Value.HasValue)
           {
-            switch (Value.StorageType)
+            value = Value.AsValueString();
+            if (value == null)
             {
-              case StorageType.Integer: value = Value.AsInteger().ToString(); break;
-              case StorageType.Double:  value = Value.AsDouble().ToString(); break;
-              case StorageType.String:  value = Value.AsString(); break;
-              case StorageType.ElementId:
-                var id = Value.AsElementId();
-                var e = Revit.ActiveDBDocument.GetElement(id);
-                value = e?.Name; break;
-              default: value = null; break;
+              switch (Value.StorageType)
+              {
+                case StorageType.Integer: value = Value.AsInteger().ToString(); break;
+                case StorageType.Double: value = Value.AsDouble().ToString(); break;
+                case StorageType.String: value = Value.AsString(); break;
+                case StorageType.ElementId:
+                  var id = Value.AsElementId();
+                  var e = Revit.ActiveDBDocument.GetElement(id);
+                  value = e?.Name; break;
+                default: value = null; break;
+              }
             }
           }
         }
+        catch (Autodesk.Revit.Exceptions.InternalException) { }
+
         return value;
       }
 
@@ -420,7 +425,7 @@ namespace RhinoInside.Revit.GH.Parameters
       set
       {
         parameterId = value;
-        Name = parameterId.ToBuiltInParameter().ToString();
+        Name = parameterId.ToParameterIdString();
       }
     }
 
@@ -497,12 +502,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
     protected override void RefreshList(string ParamName)
     {
-      var selectedItems = new List<string>();
-      {
-        foreach (var item in ListItems)
-          if (item.Selected)
-            selectedItems.Add(item.Expression);
-      }
+      var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
 
       ListItems.Clear();
       if (ParamName.Length == 0 || ParamName[0] == '\'')

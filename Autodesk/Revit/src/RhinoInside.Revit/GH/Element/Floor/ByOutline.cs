@@ -52,16 +52,7 @@ namespace RhinoInside.Revit.GH.Components
       if (level == null && boundary != null)
       {
         var boundaryBBox = boundary.GetBoundingBox(true);
-        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
-        {
-          foreach (var levelN in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderBy(c => c.Elevation))
-          {
-            if (level == null)
-              level = levelN;
-            else if (boundaryBBox.Min.Z >= levelN.Elevation)
-              level = levelN;
-          }
-        }
+        level = Revit.ActiveDBDocument.FindLevelByElevation(boundaryBBox.Min.Z / Revit.ModelUnits);
       }
 
       bool structural = true;

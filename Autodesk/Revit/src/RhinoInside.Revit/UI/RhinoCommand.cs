@@ -16,6 +16,19 @@ namespace RhinoInside.Revit.UI
   [Regeneration(RegenerationOption.Manual)]
   class RhinoCommand : IExternalCommand
   {
+    static RhinoCommand()
+    {
+      Rhino.RhinoDoc.NewDocument += RhinoDoc_NewDocument;
+    }
+
+    private static void RhinoDoc_NewDocument(object sender, Rhino.DocumentEventArgs e)
+    {
+      // If a new document is created without template it is updated from Revit.ActiveDBDocument
+      System.Diagnostics.Debug.Assert(string.IsNullOrEmpty(e.Document.TemplateFileUsed));
+      UpdateDocumentUnits(e.Document);
+      UpdateDocumentUnits(e.Document, Revit.ActiveDBDocument);
+    }
+
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
       // Create a push button to trigger a command add it to the ribbon panel.
@@ -36,7 +49,7 @@ namespace RhinoInside.Revit.UI
       }
     }
 
-    public static void ResetDocumentUnits(Rhino.RhinoDoc rhinoDoc, Document revitDoc = null)
+    public static void UpdateDocumentUnits(Rhino.RhinoDoc rhinoDoc, Document revitDoc = null)
     {
       bool docModified = rhinoDoc.Modified;
 
@@ -46,7 +59,7 @@ namespace RhinoInside.Revit.UI
         rhinoDoc.ModelAbsoluteTolerance = Revit.VertexTolerance;
         rhinoDoc.ModelAngleToleranceRadians = Revit.AngleTolerance;
       }
-      else
+      else if (rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.None)
       {
         var units = revitDoc.GetUnits();
         var lengthFormatoptions = units.GetFormatOptions(UnitType.UT_Length);
@@ -82,94 +95,76 @@ namespace RhinoInside.Revit.UI
         //    break;
         //}
 
-        // Construction Planes
-        {
-          var modelPlane = Rhino.Geometry.Plane.WorldXY;
-
-          var modelGridSpacing = imperial ?
-          1.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Yards, rhinoDoc.ModelUnitSystem) :
-          1.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Meters, rhinoDoc.ModelUnitSystem);
-
-          var modelSnapSpacing = imperial ?
-          1 / 16.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Inches, rhinoDoc.ModelUnitSystem) :
-          1.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Millimeters, rhinoDoc.ModelUnitSystem);
-
-          var modelThickLineFrequency = imperial ? 6 : 5;
-
-          foreach (var view in rhinoDoc.Views)
-          {
-            var cplane = view.MainViewport.GetConstructionPlane();
-
-            cplane.GridSpacing = modelGridSpacing;
-            cplane.SnapSpacing = modelSnapSpacing;
-            cplane.ThickLineFrequency = modelThickLineFrequency;
-
-            view.MainViewport.SetConstructionPlane(cplane);
-
-            var min = cplane.Plane.PointAt(-cplane.GridSpacing * cplane.GridLineCount, -cplane.GridSpacing * cplane.GridLineCount, 0.0);
-            var max = cplane.Plane.PointAt(+cplane.GridSpacing * cplane.GridLineCount, +cplane.GridSpacing * cplane.GridLineCount, 0.0);
-            var bbox = new Rhino.Geometry.BoundingBox(min, max);
-
-            // Zoom to grid
-            view.MainViewport.ZoomBoundingBox(bbox);
-
-            // Adjust to extens in case There is anything in the viewports like Grasshopper previews.
-            view.MainViewport.ZoomExtents();
-          }
-        }
+        UpdateViewConstructionPlanes(rhinoDoc, revitDoc);
       }
 
       rhinoDoc.Modified = docModified;
     }
 
+    private static void UpdateViewConstructionPlanes(Rhino.RhinoDoc rhinoDoc, Document revitDoc)
+    {
+      if (!string.IsNullOrEmpty(rhinoDoc.TemplateFileUsed))
+        return;
+
+      if (rhinoDoc.IsCreating)
+      {
+        Revit.EnqueueAction(doc => UpdateViewConstructionPlanes(rhinoDoc, doc));
+        return;
+      }
+
+      bool imperial = rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.Feet || rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.Inches;
+
+      var modelGridSpacing = imperial ?
+      1.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Yards, rhinoDoc.ModelUnitSystem) :
+      1.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Meters, rhinoDoc.ModelUnitSystem);
+
+      var modelSnapSpacing = imperial ?
+      1 / 16.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Inches, rhinoDoc.ModelUnitSystem) :
+      1.0 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Millimeters, rhinoDoc.ModelUnitSystem);
+
+      var modelThickLineFrequency = imperial ? 6 : 5;
+
+      // Views
+      {
+        foreach (var view in rhinoDoc.Views)
+        {
+          var cplane = view.MainViewport.GetConstructionPlane();
+
+          cplane.GridSpacing = modelGridSpacing;
+          cplane.SnapSpacing = modelSnapSpacing;
+          cplane.ThickLineFrequency = modelThickLineFrequency;
+
+          view.MainViewport.SetConstructionPlane(cplane);
+
+          var min = cplane.Plane.PointAt(-cplane.GridSpacing * cplane.GridLineCount, -cplane.GridSpacing * cplane.GridLineCount, 0.0);
+          var max = cplane.Plane.PointAt(+cplane.GridSpacing * cplane.GridLineCount, +cplane.GridSpacing * cplane.GridLineCount, 0.0);
+          var bbox = new Rhino.Geometry.BoundingBox(min, max);
+
+          // Zoom to grid
+          view.MainViewport.ZoomBoundingBox(bbox);
+
+          // Adjust to extens in case There is anything in the viewports like Grasshopper previews.
+          view.MainViewport.ZoomExtents();
+        }
+      }
+    }
+
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       var MainWindow = Rhino.UI.RhinoEtoApp.MainWindow;
-      if (MainWindow.Visible)
+      if (MainWindow.Visible && MainWindow.WindowState == Eto.Forms.WindowState.Normal)
       {
-        var doc = Rhino.RhinoDoc.ActiveDoc;
-        if (doc.Modified)
-        {
-          string docTitle = doc.Name ?? "Untitled";
-          switch (Eto.Forms.MessageBox.Show("Save changes to " + docTitle + "?", Rhino.RhinoApp.Name, Eto.Forms.MessageBoxButtons.YesNoCancel))
-          {
-            case Eto.Forms.DialogResult.Yes:
-              var docFileName = doc.Path;
-              if (docFileName == null)
-              {
-                using (var dialog = new Eto.Forms.SaveFileDialog())
-                {
-                  dialog.FileName = docTitle;
-                  dialog.Filters.Add(new Eto.Forms.FileFilter("Rhino 3D Model", new string[] { "3dm" }));
-                  if (dialog.ShowDialog(MainWindow) != Eto.Forms.DialogResult.Ok)
-                    return Result.Cancelled;
-
-                  if (Path.HasExtension(dialog.FileName))
-                    docFileName = dialog.FileName;
-                  else
-                    docFileName = Path.ChangeExtension(dialog.FileName, dialog.CurrentFilter.Extensions[0]);
-                }
-              }
-
-              Rhino.RhinoDoc.ActiveDoc.WriteFile(docFileName, new Rhino.FileIO.FileWriteOptions()); break;
-            case Eto.Forms.DialogResult.No: break;
-            case Eto.Forms.DialogResult.Cancel: return Result.Cancelled;
-          }
-
-        }
         // We want to keep Grasshopper visible in this case.
-        //try { MainWindow.WindowState = Eto.Forms.WindowState.Minimized; }
-        //catch (NotImplementedException) { }
+        //MainWindow.WindowState = Eto.Forms.WindowState.Minimized;
         MainWindow.Visible = false;
-        var newDoc = Rhino.RhinoDoc.Create(null);
-        ResetDocumentUnits(newDoc, data.Application.ActiveUIDocument?.Document);
       }
       else
       {
+        // Reset document units
+        UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
+
         MainWindow.Visible = true;
-        try { MainWindow.WindowState = Eto.Forms.WindowState.Normal; }
-        catch (NotImplementedException) { }
-        ResetDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
+        MainWindow.WindowState = Eto.Forms.WindowState.Normal;
       }
 
       return Result.Succeeded;
