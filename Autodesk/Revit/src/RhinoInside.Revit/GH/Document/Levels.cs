@@ -68,13 +68,7 @@ namespace RhinoInside.Revit.GH.Components
 
     void RefreshList()
     {
-      var selectedItems = new List<string>();
-      {
-        foreach (var item in ListItems)
-          if (item.Selected)
-            selectedItems.Add(item.Expression);
-      }
-
+      var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
       ListItems.Clear();
 
       if (Revit.ActiveDBDocument != null)
