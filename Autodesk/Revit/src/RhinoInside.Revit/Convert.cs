@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,9 +18,9 @@ using Rhino.Geometry.Collections;
 
 namespace RhinoInside.Revit
 {
-  public static class Convert
+  public static class Extension
   {
-    #region Utils
+    #region Levels
     public static Autodesk.Revit.DB.Level FindLevelByElevation(this Autodesk.Revit.DB.Document doc, double elevation)
     {
       Autodesk.Revit.DB.Level level = null;
@@ -39,6 +38,49 @@ namespace RhinoInside.Revit
     }
     #endregion
 
+    #region Parameters
+    public enum ParameterSource
+    {
+      Any,
+      BuiltIn,
+      Project,
+      Shared
+    }
+
+    public static IEnumerable<Autodesk.Revit.DB.Parameter> GetParameters(this Autodesk.Revit.DB.Element element, ParameterSource parameterSource)
+    {
+      switch (parameterSource)
+      {
+        case ParameterSource.Any:
+          return Enum.GetValues(typeof(BuiltInParameter)).
+            Cast<BuiltInParameter>().
+            Select(x => element.get_Parameter(x)).
+            Where(x => x?.HasValue ?? false).
+            Union(element.Parameters.Cast<Autodesk.Revit.DB.Parameter>()).
+            GroupBy(x => x.Id).
+            Select(x => x.First());
+        case ParameterSource.BuiltIn:
+          return Enum.GetValues(typeof(BuiltInParameter)).
+            Cast<BuiltInParameter>().
+            GroupBy(x => x).
+            Select(x => x.First()).
+            Select(x => element.get_Parameter(x)).
+            Where(x => x?.HasValue ?? false);
+        case ParameterSource.Project:
+          return element.Parameters.Cast<Autodesk.Revit.DB.Parameter>().
+            Where(p => !p.IsShared);
+        case ParameterSource.Shared:
+          return element.Parameters.Cast<Autodesk.Revit.DB.Parameter>().
+            Where(p => p.IsShared);
+      }
+
+      return Enumerable.Empty<Autodesk.Revit.DB.Parameter>();
+    }
+    #endregion
+  }
+
+  public static class Convert
+  {
     #region Enums
     public static StorageType ToStorageType(this ParameterType parameterType)
     {
@@ -62,31 +104,25 @@ namespace RhinoInside.Revit
       }
     }
 
-    public static BuiltInParameter ToBuiltInParameter(this int value)
+    public static string ToParameterIdString(this int value)
     {
       switch (value)
       {
-        case (int) BuiltInParameter.GENERIC_THICKNESS:          return BuiltInParameter.GENERIC_THICKNESS;
-        case (int) BuiltInParameter.GENERIC_WIDTH:              return BuiltInParameter.GENERIC_WIDTH;
-        case (int) BuiltInParameter.GENERIC_HEIGHT:             return BuiltInParameter.GENERIC_HEIGHT;
-        case (int) BuiltInParameter.GENERIC_DEPTH:              return BuiltInParameter.GENERIC_DEPTH;
-        case (int) BuiltInParameter.GENERIC_FINISH:             return BuiltInParameter.GENERIC_FINISH;
-        case (int) BuiltInParameter.GENERIC_CONSTRUCTION_TYPE:  return BuiltInParameter.GENERIC_CONSTRUCTION_TYPE;
-        case (int) BuiltInParameter.FIRE_RATING:                return BuiltInParameter.FIRE_RATING;
-        case (int) BuiltInParameter.ALL_MODEL_COST:             return BuiltInParameter.ALL_MODEL_COST;
-        case (int) BuiltInParameter.ALL_MODEL_MARK:             return BuiltInParameter.ALL_MODEL_MARK;
-        case (int) BuiltInParameter.ALL_MODEL_FAMILY_NAME:      return BuiltInParameter.ALL_MODEL_FAMILY_NAME;
-        case (int) BuiltInParameter.ALL_MODEL_TYPE_NAME:        return BuiltInParameter.ALL_MODEL_TYPE_NAME;
-        case (int) BuiltInParameter.ALL_MODEL_TYPE_MARK:        return BuiltInParameter.ALL_MODEL_TYPE_MARK;
+        case (int) BuiltInParameter.GENERIC_THICKNESS:          return "GENERIC_THICKNESS";
+        case (int) BuiltInParameter.GENERIC_WIDTH:              return "GENERIC_WIDTH";
+        case (int) BuiltInParameter.GENERIC_HEIGHT:             return "GENERIC_HEIGHT";
+        case (int) BuiltInParameter.GENERIC_DEPTH:              return "GENERIC_DEPTH";
+        case (int) BuiltInParameter.GENERIC_FINISH:             return "GENERIC_FINISH";
+        case (int) BuiltInParameter.GENERIC_CONSTRUCTION_TYPE:  return "GENERIC_CONSTRUCTION_TYPE";
+        case (int) BuiltInParameter.FIRE_RATING:                return "FIRE_RATING";
+        case (int) BuiltInParameter.ALL_MODEL_COST:             return "ALL_MODEL_COST";
+        case (int) BuiltInParameter.ALL_MODEL_MARK:             return "ALL_MODEL_MARK";
+        case (int) BuiltInParameter.ALL_MODEL_FAMILY_NAME:      return "ALL_MODEL_FAMILY_NAME";
+        case (int) BuiltInParameter.ALL_MODEL_TYPE_NAME:        return "ALL_MODEL_TYPE_NAME";
+        case (int) BuiltInParameter.ALL_MODEL_TYPE_MARK:        return "ALL_MODEL_TYPE_MARK";
       }
 
-      return (BuiltInParameter) value;
-    }
-
-    public static BuiltInParameter AsBuiltInParameter(this int value)
-    {
-      var builtInParameter = ToBuiltInParameter(value);
-      return Enum.IsDefined(typeof(BuiltInParameter), builtInParameter) ? builtInParameter : BuiltInParameter.INVALID;
+      return ((BuiltInParameter) value).ToString();
     }
     #endregion
 
