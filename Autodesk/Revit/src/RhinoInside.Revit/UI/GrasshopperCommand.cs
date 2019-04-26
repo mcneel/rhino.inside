@@ -46,9 +46,7 @@ namespace RhinoInside.Revit.UI
         return Result.Failed;
 
       // Reset document units
-      var MainWindow = Rhino.UI.RhinoEtoApp.MainWindow;
-      if (!MainWindow.Visible)
-        UI.RhinoCommand.ResetDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
+      UI.RhinoCommand.UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
 
       return Rhino.RhinoApp.RunScript("!_-Grasshopper _W _T ENTER", false) ? Result.Succeeded : Result.Failed;
     }
@@ -80,9 +78,7 @@ namespace RhinoInside.Revit.UI
     public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       // Reset document units
-      var MainWindow = Rhino.UI.RhinoEtoApp.MainWindow;
-      if (!MainWindow.Visible)
-        UI.RhinoCommand.ResetDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
+      UI.RhinoCommand.UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
 
       return Rhino.RhinoApp.RunScript("!_EditPythonScript", false) ? Result.Succeeded : Result.Failed;
     }
