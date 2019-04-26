@@ -1,0 +1,13 @@
+version: '{build}'
+image: Visual Studio 2017
+configuration:
+- Release 2017
+- Release 2018
+- Release 2019
+platform: Any CPU
+before_build:
+- cmd: msbuild Autodesk/Revit/src/RhinoInside.Revit.Setup.sln /t:restore
+build:
+  project: Autodesk/Revit/src/RhinoInside.Revit.Setup.sln
+  parallel: true
+  verbosity: minimal
