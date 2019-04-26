@@ -20,9 +20,9 @@ Grab the [latest installer](https://ci.appveyor.com/api/projects/mcneel/rhino-in
 If you are looking to contribute, customize or fork this source go to the [build from source instructions](build-source.md).
 
 ### Installing & Uninstalling
-The project is configured to copy .addon file as well as output files to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\RhinoInside.Revit\\"_ folder in order to make Revit load this addon next time it runs.
+The project is configured to copy a .addon file as well as the plugin files to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\RhinoInside.Revit\\"_ folder in order to make Revit load this addon next time it runs.
 
-In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ command or just navigate to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\_ and remove the file _RhinoInside.Revit.addon_ and the folder _RhinoInside.Revit_.
+In order to uninstall it just navigate to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\_ and remove the file _RhinoInside.Revit.addon_ and the folder _RhinoInside.Revit_.
 
 ## Using the samples
 * Once you launch Revit it will warn you this addon is not verified, please click on "Load always" or "Load once".
