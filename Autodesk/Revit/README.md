@@ -1,4 +1,7 @@
 # Rhino Inside Revit
+
+[![Build status](https://ci.appveyor.com/api/projects/status/9ot0iyjqwb1jdn6m/branch/master?svg=true)](https://ci.appveyor.com/project/mcneel/rhino-inside/branch/master)
+
 The Rhino Inside® technology allows Rhino and Grasshopper to be embedded within other products.
 
 This folder contains a sample project that demonstrates:
@@ -11,10 +14,13 @@ This folder contains a sample project that demonstrates:
 [**Questions?** *Visit the discussion forum...*](https://discourse.mcneel.com/c/serengeti/inside)
 
 ## Getting started
+Grab the [latest installer](https://ci.appveyor.com/api/projects/mcneel/rhino-inside/artifacts/Autodesk%2FRevit%2Fsrc%2FRhinoInside.Revit.Setup%2Fbin%2Fx64%2FRelease%2FRhinoInside.Revit.msi?branch=master) (requires [Rhino WIP](https://www.rhino3d.com/download/rhino/wip) and Revit 2017-2019) or [build from source](#building-from-source).
+
+## Building from source
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
 ### Prerequisites
-* Git client. ([download](https://git-scm.com/downloads))
+* Git ([download](https://git-scm.com/downloads))
 * Visual Studio 2017 (15.9 or above) ([download](https://visualstudio.microsoft.com/downloads/))
 * .NET Framework 4.7 ([download](https://www.microsoft.com/net/download/visual-studio-sdks))
 * Rhino WIP ([download](https://www.rhino3d.com/download/rhino/wip))
@@ -97,9 +103,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 ### Sample 7
 ![](doc/images/Sample7.png)
 
-1. Use the _Pyhton_ icon into the Add-Ins tab to open Rhino Python editor window.
+1. Use the _Python_ icon into the Add-Ins tab to open Rhino Python editor window.
 2. Load pyhthon script file called _"Sample7.py"_ there is in this folder.
 3. Click on the green play button you will found on the Pyhton script editor window.
 4. You should have an sphere in the Revil model.
-
-
