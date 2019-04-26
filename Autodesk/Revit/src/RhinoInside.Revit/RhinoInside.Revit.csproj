@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
@@ -149,10 +149,10 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <PackageReference Include="RhinoCommon" Version="7.0.19092.12305-wip" IncludeAssets="build; compile"/>
-        <PackageReference Include="Grasshopper" Version="7.0.19092.12305-wip" IncludeAssets="build; compile"/>
-        <PackageReference Include="Revit.RevitApi.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile"/>
-        <PackageReference Include="Revit.RevitApiUI.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile"/>
+        <PackageReference Include="RhinoCommon" Version="7.0.19092.12305-wip" IncludeAssets="build; compile" />
+        <PackageReference Include="Grasshopper" Version="7.0.19092.12305-wip" IncludeAssets="build; compile" />
+        <PackageReference Include="Revit.RevitApi.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" />
+        <PackageReference Include="Revit.RevitApiUI.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" />
       </ItemGroup>
     </Otherwise>
   </Choose>
@@ -181,6 +181,7 @@
     <Compile Include="GH\Element\DirectShape\ByBrep.cs" />
     <Compile Include="GH\Element\DirectShape\ByCurve.cs" />
     <Compile Include="GH\Element\DirectShape\ByPoint.cs" />
+    <Compile Include="GH\Element\FamilyInstance\ByPointAtHost.cs" />
     <Compile Include="GH\Element\Form\ByGeometry.cs" />
     <Compile Include="GH\Element\Form\ByCurves.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
