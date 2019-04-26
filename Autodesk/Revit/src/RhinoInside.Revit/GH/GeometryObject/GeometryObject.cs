@@ -316,6 +316,9 @@ namespace RhinoInside.Revit.GH.Parameters
 
       public void PrepareForPrompt()
       {
+        mainWindowEnabled = Rhino.UI.RhinoEtoApp.MainWindow.Enabled;
+        mainWindowVisible = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
+
         var mainWindowExtents = Revit.ActiveUIApplication.MainWindowExtents;
         var mainWindowRectangle = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
         mainWindowRectangle.Inflate(-64, -64);
@@ -332,8 +335,6 @@ namespace RhinoInside.Revit.GH.Parameters
           var rhinoWindowBounds = Rhino.UI.RhinoEtoApp.MainWindow.Bounds;
           var rhinoWindowRectangle = new System.Drawing.Rectangle(rhinoWindowBounds.Left, rhinoWindowBounds.Top, rhinoWindowBounds.Width, rhinoWindowBounds.Height);
 
-          mainWindowEnabled = Rhino.UI.RhinoEtoApp.MainWindow.Enabled;
-          mainWindowVisible = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
           Rhino.UI.RhinoEtoApp.MainWindow.Enabled = false;
           if (rhinoWindowRectangle.IntersectsWith(mainWindowRectangle))
             Rhino.UI.RhinoEtoApp.MainWindow.Visible = false;
@@ -360,8 +361,8 @@ namespace RhinoInside.Revit.GH.Parameters
       }
     }
     Prompt prompt;
-    protected override void PrepareForPrompt() => prompt.PrepareForPrompt();
-    protected override void RecoverFromPrompt() => prompt.RecoverFromPrompt();
+    protected override void PrepareForPrompt()  { try { prompt.PrepareForPrompt();  } catch (Exception) { }; }
+    protected override void RecoverFromPrompt() { try { prompt.RecoverFromPrompt(); } catch (Exception) { }; }
 
     public override void AppendAdditionalMenuItems(System.Windows.Forms.ToolStripDropDown menu)
     {
