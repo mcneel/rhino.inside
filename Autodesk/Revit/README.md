@@ -17,7 +17,7 @@ This folder contains a sample project that demonstrates:
 ## Getting started
 Grab the [latest installer](https://ci.appveyor.com/api/projects/mcneel/rhino-inside/artifacts/Autodesk%2FRevit%2Fsrc%2FRhinoInside.Revit.Setup%2Fbin%2Fx64%2FRelease%2FRhinoInside.Revit.msi?branch=master) (requires [Rhino WIP](https://www.rhino3d.com/download/rhino/wip) and Revit 2017-2019)
 
-If you are looking to contribute, customize or fork this source go to the [build from source instructions](build-source.md).
+If you are looking to contribute to or customize this project go to the [build from source instructions](build-source.md).
 
 ### Installing & Uninstalling
 The project is configured to copy a .addon file as well as the plugin files to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\RhinoInside.Revit\\"_ folder in order to make Revit load this addon next time it runs.
