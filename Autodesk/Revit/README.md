@@ -22,7 +22,7 @@ If you are looking to contribute to or customize this project go to the [build f
 ### Installing & Uninstalling
 The project is configured to copy a .addon file as well as the plugin files to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\RhinoInside.Revit\\"_ folder in order to make Revit load this addon next time it runs.
 
-In order to uninstall it just navigate to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\_ and remove the file _RhinoInside.Revit.addon_ and the folder _RhinoInside.Revit_.
+To uninstall, open _Programs and Features_, select "RhinoInside.Revit" and click "Uninstall".
 
 ## Using the samples
 * Once you launch Revit it will warn you this addon is not verified, please click on "Load always" or "Load once".
