@@ -20,7 +20,7 @@ Grab the [latest installer](https://ci.appveyor.com/api/projects/mcneel/rhino-in
 If you are looking to contribute to or customize this project go to the [build from source instructions](build-source.md).
 
 ### Installing & Uninstalling
-The project is configured to copy a .addon file as well as the plugin files to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\RhinoInside.Revit\\"_ folder in order to make Revit load this addon next time it runs.
+The installer copies the necessary files to the _"%APPDATA%\\Autodesk\\Revit\\Addins\\<revit_version>\\"_ folder (for each supported version). Restart Revit to load the add-on.
 
 To uninstall, open _Programs and Features_, select "RhinoInside.Revit" and click "Uninstall".
 
