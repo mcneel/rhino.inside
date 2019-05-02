@@ -26,7 +26,7 @@ This repository contains samples for:
    - [Revit](Autodesk/Revit)
 - [Bricsys](Bricsys)
    - [BricsCAD](Bricsys/BricsCAD)
-- [Game Engine, VR, Mobile]
+- Game Engine, VR, Mobile
    - [Unity Tutorial](https://youtu.be/zUbm83ynn0Q)
 - [Console](ConsoleApps)
    - [A simple console application](ConsoleApps/HelloWorld)
