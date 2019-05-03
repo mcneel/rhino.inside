@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Globalization;
 using System.Windows.Forms;
 using System.Windows.Input;
 
@@ -296,145 +298,158 @@ namespace RhinoInside.Revit.Samples
       PlugIn.LoadPlugIn(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF));
 
       var transactionName = string.Empty;
-
-      var archive = new GH_Archive();
-      if (!archive.ReadFromFile(filePath))
-        return Result.Failed;
-
       var outputs = new List<KeyValuePair<string, List<GeometryBase>>>();
-      using (var definition = new GH_Document())
+
+      var CurrentCulture = Thread.CurrentThread.CurrentCulture;
+      try
       {
-        if (!archive.ExtractObject(definition, "Definition"))
+        Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+        var archive = new GH_Archive();
+        if (!archive.ReadFromFile(filePath))
           return Result.Failed;
 
-        // Update Most recet used item extended ToolTip information
+        using (var definition = new GH_Document())
         {
-          mruPushPuttons[0].LongDescription = definition.Properties.Description;
+          if (!archive.ExtractObject(definition, "Definition"))
+            return Result.Failed;
 
-          if (archive.GetRootNode.FindChunk("Thumbnail")?.GetDrawingBitmap("Thumbnail") is System.Drawing.Bitmap bitmap)
-            mruPushPuttons[0].ToolTipImage = bitmap.ToBitmapImage(Math.Min(bitmap.Width, 355), Math.Min(bitmap.Height, 355));
-        }
-
-        transactionName = Path.GetFileNameWithoutExtension(definition.Properties.ProjectFileName);
-
-        var inputs = new List<IGH_Param>();
-
-        // Collect input params
-        foreach (var obj in definition.Objects)
-        {
-          if (!(obj is IGH_Param param))
-            continue;
-
-          if (param.Sources.Count != 0 || param.Recipients.Count == 0)
-            continue;
-
-          if (param.VolatileDataCount > 0)
-            continue;
-
-          if (param.Locked)
-            continue;
-
-          inputs.Add(param);
-        }
-
-        // Prompt for input values
-        var values = new Dictionary<IGH_Param, IEnumerable<IGH_Goo>>();
-        foreach (var input in inputs.OrderBy((x) => x.Attributes.Pivot.Y))
-        {
-          switch (input)
+          // Update Most recet used item extended ToolTip information
           {
-            case Param_Box box:
-              var boxes = PromptBox(application.ActiveUIDocument, input.NickName);
-              if (boxes == null)
-                return Result.Cancelled;
-              values.Add(input, boxes);
-              break;
-            case Param_Point point:
-              var points = PromptPoint(application.ActiveUIDocument, input.NickName);
-              if (points == null)
-                return Result.Cancelled;
-              values.Add(input, points);
-              break;
-            case Param_Curve curve:
-              var curves = PromptEdge(application.ActiveUIDocument, input.NickName);
-              if (curves == null)
-                return Result.Cancelled;
-              values.Add(input, curves);
-              break;
-            case Param_Surface surface:
-              var surfaces = PromptSurface(application.ActiveUIDocument, input.NickName);
-              if (surfaces == null)
-                return Result.Cancelled;
-              values.Add(input, surfaces);
-              break;
-            case Param_Brep brep:
-              var breps = PromptBrep(application.ActiveUIDocument, input.NickName);
-              if (breps == null)
-                return Result.Cancelled;
-              values.Add(input, breps);
-              break;
+            mruPushPuttons[0].LongDescription = definition.Properties.Description;
+
+            if (archive.GetRootNode.FindChunk("Thumbnail")?.GetDrawingBitmap("Thumbnail") is System.Drawing.Bitmap bitmap)
+              mruPushPuttons[0].ToolTipImage = bitmap.ToBitmapImage(Math.Min(bitmap.Width, 355), Math.Min(bitmap.Height, 355));
           }
-        }
 
-        Cursor.Current = Cursors.WaitCursor;
-        try
-        {
-          // Update input volatile data values
-          foreach (var value in values)
-            value.Key.AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), value.Value);
+          transactionName = Path.GetFileNameWithoutExtension(definition.Properties.ProjectFileName);
 
-          // Collect output values
+          var inputs = new List<IGH_Param>();
+
+          // Collect input params
           foreach (var obj in definition.Objects)
           {
             if (!(obj is IGH_Param param))
               continue;
 
-            if (param.Sources.Count == 0 || param.Recipients.Count != 0)
+            if (param.Sources.Count != 0 || param.Recipients.Count == 0)
+              continue;
+
+            if (param.VolatileDataCount > 0)
               continue;
 
             if (param.Locked)
               continue;
 
-            try
-            {
-              param.CollectData();
-              param.ComputeData();
-            }
-            catch (Exception e)
-            {
-              Debug.Fail(e.Source, e.Message);
-              param.Phase = GH_SolutionPhase.Failed;
-            }
+            inputs.Add(param);
+          }
 
-            if (param.Phase == GH_SolutionPhase.Failed)
-              return Result.Failed;
-
-            var output = new List<GeometryBase>();
-            var volatileData = param.VolatileData;
-            if (volatileData.PathCount > 0)
+          // Prompt for input values
+          Thread.CurrentThread.CurrentCulture = CurrentCulture;
+          var values = new Dictionary<IGH_Param, IEnumerable<IGH_Goo>>();
+          foreach (var input in inputs.OrderBy((x) => x.Attributes.Pivot.Y))
+          {
+            switch (input)
             {
-              foreach (var value in param.VolatileData.AllData(true).Select(x => x.ScriptVariable()))
+              case Param_Box box:
+                var boxes = PromptBox(application.ActiveUIDocument, input.NickName);
+                if (boxes == null)
+                  return Result.Cancelled;
+                values.Add(input, boxes);
+                break;
+              case Param_Point point:
+                var points = PromptPoint(application.ActiveUIDocument, input.NickName);
+                if (points == null)
+                  return Result.Cancelled;
+                values.Add(input, points);
+                break;
+              case Param_Curve curve:
+                var curves = PromptEdge(application.ActiveUIDocument, input.NickName);
+                if (curves == null)
+                  return Result.Cancelled;
+                values.Add(input, curves);
+                break;
+              case Param_Surface surface:
+                var surfaces = PromptSurface(application.ActiveUIDocument, input.NickName);
+                if (surfaces == null)
+                  return Result.Cancelled;
+                values.Add(input, surfaces);
+                break;
+              case Param_Brep brep:
+                var breps = PromptBrep(application.ActiveUIDocument, input.NickName);
+                if (breps == null)
+                  return Result.Cancelled;
+                values.Add(input, breps);
+                break;
+            }
+          }
+
+          Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+          try
+          {
+            Cursor.Current = Cursors.WaitCursor;
+
+            // Update input volatile data values
+            foreach (var value in values)
+              value.Key.AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), value.Value);
+
+            // Collect output values
+            foreach (var obj in definition.Objects)
+            {
+              if (!(obj is IGH_Param param))
+                continue;
+
+              if (param.Sources.Count == 0 || param.Recipients.Count != 0)
+                continue;
+
+              if (param.Locked)
+                continue;
+
+              try
               {
-                switch (value)
+                param.CollectData();
+                param.ComputeData();
+              }
+              catch (Exception e)
+              {
+                Debug.Fail(e.Source, e.Message);
+                param.Phase = GH_SolutionPhase.Failed;
+              }
+
+              if (param.Phase == GH_SolutionPhase.Failed)
+                return Result.Failed;
+
+              var output = new List<GeometryBase>();
+              var volatileData = param.VolatileData;
+              if (volatileData.PathCount > 0)
+              {
+                foreach (var value in param.VolatileData.AllData(true).Select(x => x.ScriptVariable()))
                 {
-                  case Rhino.Geometry.Point3d point:          output.Add(new Rhino.Geometry.Point(point)); break;
-                  case Rhino.Geometry.GeometryBase geometry:  output.Add(geometry); break;
+                  switch (value)
+                  {
+                    case Rhino.Geometry.Point3d point:          output.Add(new Rhino.Geometry.Point(point)); break;
+                    case Rhino.Geometry.GeometryBase geometry:  output.Add(geometry); break;
+                  }
                 }
               }
-            }
 
-            if (output.Count > 0)
-              outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.NickName, output));
+              if (output.Count > 0)
+                outputs.Add(new KeyValuePair<string, List<GeometryBase>>(param.NickName, output));
+            }
+          }
+          finally
+          {
+            Cursor.Current = Cursors.Default;
           }
         }
-        catch(Exception)
-        {
-          return Result.Failed;
-        }
-        finally
-        {
-          Cursor.Current = Cursors.Default;
-        }
+      }
+      catch (Exception)
+      {
+        return Result.Failed;
+      }
+      finally
+      {
+        Thread.CurrentThread.CurrentCulture = CurrentCulture;
       }
 
       // Bake output geometry
