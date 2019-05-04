@@ -95,6 +95,7 @@ namespace RhinoInside.Revit
       // Register GrasshopperPreviewServer
       grasshopperPreviewServer = new GH.PreviewServer();
       grasshopperPreviewServer.Register();
+      RhinoApp.Idle += TryLoadGrasshopperComponents;
 
       return Result.Succeeded;
     }
@@ -162,22 +163,25 @@ namespace RhinoInside.Revit
       return rc;
     }
 
-    static bool LoadedAsGHA = false;
+    private void TryLoadGrasshopperComponents(object sender, EventArgs e)
+    {
+      // Load this assembly as a Grasshopper assembly
+      if (PlugIn.GetPlugInInfo(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF)).IsLoaded)
+      {
+        if(LoadGrasshopperComponents())
+          RhinoApp.Idle -= TryLoadGrasshopperComponents;
+      }
+    }
+
     void OnIdle(object sender, IdlingEventArgs args)
     {
+      ActiveUIApplication = (sender as UIApplication);
+
       // 1. Do Rhino pending OnIdle tasks
       if (rhinoCore.OnIdle())
-      {
         args.SetRaiseWithoutDelay();
-        return;
-      }
-
-      // Load this assembly as a Grasshopper assembly
-      if (!LoadedAsGHA && PlugIn.GetPlugInInfo(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF)).IsLoaded)
-        LoadedAsGHA = LoadGrasshopperComponents();
 
       // Document dependant tasks need a document
-      ActiveUIApplication = (sender as UIApplication);
       if (ActiveDBDocument != null)
       {
         // 1. Do all document read actions
