@@ -121,7 +121,7 @@ namespace RhinoInside.Revit.GH.Components
           }
         }
 
-        if (element is Wall wall && element?.Location is LocationCurve locationCurve && locationCurve.Curve.GetType() == axisList[0].GetType())
+        if (element is Wall wall && element?.Location is LocationCurve locationCurve && axisList[0].IsSameKindAs(locationCurve.Curve))
         {
           locationCurve.Curve = axisList[0];
           wall.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT).Set(level.Id);

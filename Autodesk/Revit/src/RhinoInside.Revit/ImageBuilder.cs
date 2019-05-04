@@ -83,7 +83,10 @@ namespace RhinoInside
 
       // Avoid using ClearType rendering on icons that the user can zoom in like icons on Grashopper components.
       g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-      g.DrawString(tag, new System.Drawing.Font("Calibri", emSize, GraphicsUnit.Pixel), Brushes.White, rect, format);
+
+      using (var Calibri = new System.Drawing.Font("Calibri", emSize, GraphicsUnit.Pixel))
+        g.DrawString(tag, Calibri, Brushes.White, rect, format);
+
       return bitmap;
     }
 
@@ -96,6 +99,7 @@ namespace RhinoInside
         return BuildIcon(tag, 64, 64, color).ToBitmapImage(pixelX, pixelY);
       }
     }
+
     static public System.Windows.Media.ImageSource BuildLargeImage(string tag, Color color = default(Color))
     {
       using (var g = Graphics.FromHwnd(Revit.Revit.MainWindowHandle))

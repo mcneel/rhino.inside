@@ -20,6 +20,13 @@ namespace RhinoInside.Revit
 {
   public static class Extension
   {
+    #region Curves
+    public static bool IsSameKindAs(this Autodesk.Revit.DB.Curve self, Autodesk.Revit.DB.Curve other)
+    {
+      return self.IsBound == other.IsBound && self.GetType() == other.GetType();
+    }
+    #endregion
+
     #region Levels
     public static Autodesk.Revit.DB.Level FindLevelByElevation(this Autodesk.Revit.DB.Document doc, double elevation)
     {

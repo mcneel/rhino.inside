@@ -81,7 +81,7 @@ namespace RhinoInside.Revit.GH.Components
 
             if (element?.Pinned ?? true)
             {
-              if (element is ModelCurve modelCurve && modelCurve.GeometryCurve.IsBound == c.IsBound)
+              if (element is ModelCurve modelCurve && c.IsSameKindAs(modelCurve.GeometryCurve))
                 modelCurve.SetSketchPlaneAndCurve(plane, c);
               else if (doc.IsFamilyDocument)
                 element = CopyParametersFrom(doc.FamilyCreate.NewModelCurve(c, plane), element);

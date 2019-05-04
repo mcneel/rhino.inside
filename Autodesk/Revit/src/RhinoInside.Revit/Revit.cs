@@ -95,6 +95,7 @@ namespace RhinoInside.Revit
       // Register GrasshopperPreviewServer
       grasshopperPreviewServer = new GH.PreviewServer();
       grasshopperPreviewServer.Register();
+      RhinoApp.Idle += TryLoadGrasshopperComponents;
 
       return Result.Succeeded;
     }
@@ -162,22 +163,25 @@ namespace RhinoInside.Revit
       return rc;
     }
 
-    static bool LoadedAsGHA = false;
+    private void TryLoadGrasshopperComponents(object sender, EventArgs e)
+    {
+      // Load this assembly as a Grasshopper assembly
+      if (PlugIn.GetPlugInInfo(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF)).IsLoaded)
+      {
+        if(LoadGrasshopperComponents())
+          RhinoApp.Idle -= TryLoadGrasshopperComponents;
+      }
+    }
+
     void OnIdle(object sender, IdlingEventArgs args)
     {
+      ActiveUIApplication = (sender as UIApplication);
+
       // 1. Do Rhino pending OnIdle tasks
       if (rhinoCore.OnIdle())
-      {
         args.SetRaiseWithoutDelay();
-        return;
-      }
-
-      // Load this assembly as a Grasshopper assembly
-      if (!LoadedAsGHA && PlugIn.GetPlugInInfo(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF)).IsLoaded)
-        LoadedAsGHA = LoadGrasshopperComponents();
 
       // Document dependant tasks need a document
-      ActiveUIApplication = (sender as UIApplication);
       if (ActiveDBDocument != null)
       {
         // 1. Do all document read actions
@@ -503,56 +507,5 @@ namespace RhinoInside.Revit
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
     public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
     #endregion
-  }
-
-  public static class Operator
-  {
-    enum CompareMethod
-    {
-      Nothing,
-      Equals,
-      StartsWith, // >
-      EndsWith,   // <
-      Contains,   // ?
-      Wildcard,   // :
-      Regex,      // ;
-    }
-
-    static CompareMethod CompareMethodFromPattern(ref string pattern, ref bool not)
-    {
-      if (string.IsNullOrEmpty(pattern))
-        return CompareMethod.Nothing;
-
-      switch (pattern[0])
-      {
-        case '~': not = !not; pattern = pattern.Substring(1); return CompareMethodFromPattern(ref pattern, ref not);
-        case '>':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.StartsWith;
-        case '<':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.EndsWith;
-        case '?':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Contains;
-        case ':':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Wildcard;
-        case ';':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Regex;
-        default: return CompareMethod.Equals;
-      }
-    }
-
-    public static bool IsSymbolNameLike(this string source, string pattern)
-    {
-      if (pattern.Length == 0)
-        return false;
-
-      bool not = false;
-      switch (CompareMethodFromPattern(ref pattern, ref not))
-      {
-        case CompareMethod.Nothing:     return not ^ false;
-        case CompareMethod.Equals:      return not ^ string.Equals(source, pattern, StringComparison.OrdinalIgnoreCase);
-        case CompareMethod.StartsWith:  return not ^ source.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
-        case CompareMethod.EndsWith:    return not ^ source.EndsWith(pattern, StringComparison.OrdinalIgnoreCase);
-        case CompareMethod.Contains:    return not ^ (source.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0);
-        case CompareMethod.Wildcard:    return not ^ Microsoft.VisualBasic.CompilerServices.LikeOperator.LikeString(source, pattern, Microsoft.VisualBasic.CompareMethod.Text);
-        case CompareMethod.Regex:       var regex = new System.Text.RegularExpressions.Regex(pattern); return not ^ regex.IsMatch(source);
-      }
-
-      return false;
-    }
   }
 }
