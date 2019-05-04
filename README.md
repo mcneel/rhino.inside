@@ -3,7 +3,7 @@
 [![Discourse users](https://img.shields.io/discourse/https/discourse.mcneel.com/users.svg)](https://discourse.mcneel.com/c/serengeti/inside)
 
 
-The Rhino Inside technology allows Rhino and Grasshopper to be embedded within other products.  It may be possible to:
+The Rhino Inside® technology allows Rhino and Grasshopper to be embedded within other products.  It may be possible to:
 
 * Starting Rhino and Grasshopper as an add in another product.
 * Call directly into the host's native APIs from a Grasshopper or Rhino plugin.
@@ -11,7 +11,7 @@ The Rhino Inside technology allows Rhino and Grasshopper to be embedded within o
 * Grasshopper definitions can be opened and previewed in Rhino within the same process as the parent.
 * Object can be natively created by Rhino or Grasshopper within the parent product.
 
-![sample-shot](Autodesk/Revit/doc/Sample3.gif)
+![sample-shot](Autodesk/Revit/doc/images/Sample5.gif)
 
 This repository contains all the sample developer code for loading Rhino inside other 64-bit Windows applications.
 
@@ -27,6 +27,7 @@ This repository contains samples for:
 - [Bricsys](Bricsys)
    - [BricsCAD](Bricsys/BricsCAD)
 - [Unity](Unity)
+   - [How to use compute.rhino3d with Unity](https://youtu.be/zUbm83ynn0Q)
 - [Console](ConsoleApps)
    - [A simple console application](ConsoleApps/HelloWorld)
    - [A simple console application for converting files to .obj](ConsoleApps/Convert)
