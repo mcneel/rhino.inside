@@ -244,6 +244,7 @@ namespace RhinoInside.Revit.GH
     {
       try
       {
+        if (dBView.ViewType != ViewType.ThreeD) return;
         BuildScene(dBView);
 
         DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
