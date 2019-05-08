@@ -176,6 +176,8 @@ namespace RhinoInside.Revit
     void OnIdle(object sender, IdlingEventArgs args)
     {
       ActiveUIApplication = (sender as UIApplication);
+      var mainWindowExtents = ActiveUIApplication.MainWindowExtents;
+      MainWindowBounds = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
 
       // 1. Do Rhino pending OnIdle tasks
       if (rhinoCore.OnIdle())
@@ -493,6 +495,8 @@ namespace RhinoInside.Revit
     static public string SourceCodePath => Path.GetDirectoryName(CallerFilePath());
 
     public static IntPtr MainWindowHandle { get; private set; }
+    public static System.Drawing.Rectangle MainWindowBounds { get; private set; }
+
     public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI { get; private set; }
     public static Autodesk.Revit.UI.UIApplication ActiveUIApplication { get; private set; }
     public static Autodesk.Revit.ApplicationServices.Application Services => ActiveUIApplication?.Application;
