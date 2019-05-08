@@ -1,0 +1,1 @@
+copy "%ProgramFiles%\Rhino WIP\System\RhinoCommon.dll"
