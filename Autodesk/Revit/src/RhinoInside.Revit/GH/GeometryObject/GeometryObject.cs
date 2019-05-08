@@ -319,8 +319,7 @@ namespace RhinoInside.Revit.GH.Parameters
         mainWindowEnabled = Rhino.UI.RhinoEtoApp.MainWindow.Enabled;
         mainWindowVisible = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
 
-        var mainWindowExtents = Revit.ActiveUIApplication.MainWindowExtents;
-        var mainWindowRectangle = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
+        var mainWindowRectangle = Revit.MainWindowBounds;
         mainWindowRectangle.Inflate(-64, -64);
 
         // Grasshopper Window
