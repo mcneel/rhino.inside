@@ -6,7 +6,7 @@ Embed Rhino in CPython
 ## Requirements:
 - Rhino 7
 - Windows
-- 64 bit version of CPython (2.7, 3.3, 3.4, 3.5, 3.6)
+- 64 bit version of CPython (2.7, 3.5, 3.6)
 
 ## How to use
 ```
