@@ -21,7 +21,7 @@ with open(path.join(this_directory, 'README.md')) as f:
 
 setuptools.setup(
     name="rhinoinside",
-    version="0.2.0",
+    version="0.3.0",
     packages=['rhinoinside'],
     author="Robert McNeel & Associates",
     author_email="steve@mcneel.com",
