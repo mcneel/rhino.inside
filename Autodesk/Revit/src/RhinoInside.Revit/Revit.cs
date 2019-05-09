@@ -180,7 +180,7 @@ namespace RhinoInside.Revit
       MainWindowBounds = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
 
       // 1. Do Rhino pending OnIdle tasks
-      if (rhinoCore.OnIdle())
+      if (rhinoCore.DoIdle() | rhinoCore.DoEvents())
         args.SetRaiseWithoutDelay();
 
       // Document dependant tasks need a document

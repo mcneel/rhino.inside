@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
@@ -149,8 +149,8 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <PackageReference Include="RhinoCommon" Version="7.0.19092.12305-wip" IncludeAssets="build; compile" />
-        <PackageReference Include="Grasshopper" Version="7.0.19092.12305-wip" IncludeAssets="build; compile" />
+        <PackageReference Include="RhinoCommon" Version="7.0.19127.13435-wip" IncludeAssets="compile; build" />
+        <PackageReference Include="Grasshopper" Version="7.0.19127.13435-wip" IncludeAssets="compile; build" />
         <PackageReference Include="Revit.RevitApi.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" />
         <PackageReference Include="Revit.RevitApiUI.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" />
       </ItemGroup>
