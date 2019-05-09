@@ -43,7 +43,7 @@ namespace RhinoInside.BricsCAD
       // Load Rhino
       try
       {
-        var scheme_name = string.Format("BricsCAD.{0}", Application.Version);
+        var scheme_name = string.Format("BricsCAD {0}", Application.Version).Replace(' ', '_');
         m_rhino_core = new Rhino.Runtime.InProcess.RhinoCore(new[] { $"/scheme={scheme_name}" });
       }
       catch

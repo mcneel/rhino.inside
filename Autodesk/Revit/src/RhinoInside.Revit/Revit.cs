@@ -61,7 +61,7 @@ namespace RhinoInside.Revit
       // Load Rhino
       try
       {
-        var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
+        var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '_');
         rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Hidden, MainWindowHandle);
       }
       catch (Exception e)
