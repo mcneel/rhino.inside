@@ -597,6 +597,10 @@ namespace RhinoInside.Revit
       {
         if (geometry != null)
         {
+
+          if (!geometry.IsValid)
+            return false;
+
           if (!BeginRegen())
             return false;
 
