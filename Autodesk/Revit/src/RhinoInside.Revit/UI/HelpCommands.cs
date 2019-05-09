@@ -29,9 +29,7 @@ namespace RhinoInside.Revit.UI
         helpButton.AddPushButton(typeof(RhinoDevDocsCommand),      "Rhino Dev Docs",    "Opens developer.rhino3d.com website",        typeof(AllwaysAvailable));
         helpButton.AddPushButton(typeof(DiscourseCommand),         "McNeel Discourse",  "Opens discourse.mcneel.com website",         typeof(AllwaysAvailable));
         helpButton.AddSeparator();
-#if DEBUG
-        helpButton.AddPushButton(typeof(CheckForUpdatesCommand),    "Check for updates", "Checks if there are updates in GitHub",      typeof(AllwaysAvailable));
-#endif
+        helpButton.AddPushButton(typeof(CheckForUpdatesCommand),    "Updates",           "Checks if there are updates in GitHub",      typeof(AllwaysAvailable));
         helpButton.AddPushButton(typeof(AboutCommand),              "About",             "Opens GitHub Repo website",                  typeof(AllwaysAvailable));
       }
 
@@ -169,7 +167,6 @@ namespace RhinoInside.Revit.UI
               }
             }
 
-
             if (!quiet)
               taskDialog.Show();
           }
@@ -184,7 +181,40 @@ namespace RhinoInside.Revit.UI
 
       return retCode;
 #else
-              return 0;
+      int DaysLeft = Math.Max(0, 45 - (DateTime.Now - Revit.BuildDate).Days);
+
+      if(!quiet) using
+      (
+        var taskDialog = new TaskDialog("RhinoInside.Revit.CheckForUpdates")
+        {
+          Title = "Days left",
+#if REVIT_2018
+          MainIcon = TaskDialogIcon.TaskDialogIconInformation,
+#else
+          MainIcon = TaskDialogIcon.TaskDialogIconWarning,
+#endif
+          TitleAutoPrefix = true,
+          AllowCancellation = true,
+          MainInstruction = $"This WIP build expires in {DaysLeft} days",
+          FooterText = "Current version: " + Revit.DisplayVersion
+        }
+      )
+      {
+        taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Check for updates now...");
+        if (taskDialog.Show() == TaskDialogResult.CommandLink1)
+        {
+          using (System.Diagnostics.Process.Start("https://github.com/mcneel/rhino.inside/releases/latest")) { }
+        }
+      }
+
+      if (helpButton != null)
+      {
+
+        helpButton.LargeImage = DaysLeft <= 15 ? ImageBuilder.BuildLargeImage(DaysLeft.ToString(), System.Drawing.Color.DarkRed) : ImageBuilder.BuildLargeImage("?");
+        helpButton.ToolTip = DaysLeft > 1 ? string.Format("This WIP build expires in {0} days", DaysLeft) : "This WIP build has expired";
+      }
+
+      return (DaysLeft < 1) ? 1 : 0;
 #endif
     }
 

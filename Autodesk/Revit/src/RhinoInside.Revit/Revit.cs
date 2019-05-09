@@ -494,6 +494,10 @@ namespace RhinoInside.Revit
     static string CallerFilePath([System.Runtime.CompilerServices.CallerFilePath] string CallerFilePath = "") => CallerFilePath;
     static public string SourceCodePath => Path.GetDirectoryName(CallerFilePath());
 
+    public static Version Version => Assembly.GetExecutingAssembly().GetName().Version;
+    public static DateTime BuildDate => new DateTime(2000, 1, 1).AddDays(Version.Build).AddSeconds(Version.Revision * 2);
+    public static string DisplayVersion => $"{Version} ({BuildDate})";
+
     public static IntPtr MainWindowHandle { get; private set; }
     public static System.Drawing.Rectangle MainWindowBounds { get; private set; }
 
