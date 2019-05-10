@@ -46,7 +46,7 @@ namespace RhinoInside.Revit
 
     #region IExternalApplication Members
     RhinoCore rhinoCore;
-    GH.PreviewServer grasshopperPreviewServer;
+    GH.Addon grasshopperAddon;
 
     public Result OnStartup(UIControlledApplication applicationUI)
     {
@@ -92,19 +92,18 @@ namespace RhinoInside.Revit
       ApplicationUI.Idling += OnIdle;
       ApplicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
 
-      // Register GrasshopperPreviewServer
-      grasshopperPreviewServer = new GH.PreviewServer();
-      grasshopperPreviewServer.Register();
-      RhinoApp.Idle += TryLoadGrasshopperComponents;
+      // Initialice Grasshopper Addon
+      grasshopperAddon = new GH.Addon();
+      grasshopperAddon.OnStartup(applicationUI);
 
       return Result.Succeeded;
     }
 
     public Result OnShutdown(UIControlledApplication applicationUI)
     {
-      // Unregister GrasshopperPreviewServer
-      grasshopperPreviewServer?.Unregister();
-      grasshopperPreviewServer = null;
+      // Shutdown Grasshopper Addon
+      grasshopperAddon.OnShutdown(applicationUI);
+      grasshopperAddon = null;
 
       // Unregister some events
       ApplicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
@@ -129,49 +128,6 @@ namespace RhinoInside.Revit
     public static void RefreshActiveView() { pendingRefreshActiveView = true; }
 
     public static bool Committing = false;
-    static bool LoadGrasshopperComponents()
-    {
-      var LoadGHAProc = Instances.ComponentServer.GetType().GetMethod("LoadGHA", BindingFlags.NonPublic | BindingFlags.Instance);
-      if (LoadGHAProc == null)
-        return false;
-
-      var bCoff = Instances.Settings.GetValue("Assemblies:COFF", true);
-      Instances.Settings.SetValue("Assemblies:COFF", false);
-
-      var rc = (bool) LoadGHAProc.Invoke
-      (
-        Instances.ComponentServer,
-        new object[] { new GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
-      );
-
-      // Load all the gha installed under the %APPDATA%\Grasshopper\Libraries-Autodesk-Revit-20XX
-      var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
-      var revitAssemblyFolder = Grasshopper.Folders.DefaultAssemblyFolder.Substring(0, Grasshopper.Folders.DefaultAssemblyFolder.Length - 1) + '-' + schemeName;
-      var assemblyFolder = new DirectoryInfo(revitAssemblyFolder);
-      try
-      {
-        foreach (var file in assemblyFolder.EnumerateFiles("*.gha"))
-          LoadGHAProc.Invoke(Instances.ComponentServer, new object[] { new GH_ExternalFile(file.FullName), false });
-      }
-      catch (System.IO.DirectoryNotFoundException) { }
-
-      Instances.Settings.SetValue("Assemblies:COFF", bCoff);
-
-      if (rc)
-        GH_ComponentServer.UpdateRibbonUI();
-
-      return rc;
-    }
-
-    private void TryLoadGrasshopperComponents(object sender, EventArgs e)
-    {
-      // Load this assembly as a Grasshopper assembly
-      if (PlugIn.GetPlugInInfo(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF)).IsLoaded)
-      {
-        if(LoadGrasshopperComponents())
-          RhinoApp.Idle -= TryLoadGrasshopperComponents;
-      }
-    }
 
     void OnIdle(object sender, IdlingEventArgs args)
     {
@@ -180,7 +136,7 @@ namespace RhinoInside.Revit
       MainWindowBounds = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
 
       // 1. Do Rhino pending OnIdle tasks
-      if (rhinoCore.DoIdle() | rhinoCore.DoEvents())
+      if (rhinoCore.DoIdle())
         args.SetRaiseWithoutDelay();
 
       // Document dependant tasks need a document
@@ -226,87 +182,7 @@ namespace RhinoInside.Revit
 
       CancelReadActions();
 
-      var added    = e.GetAddedElementIds();
-      var deleted  = e.GetDeletedElementIds();
-      var modified = e.GetModifiedElementIds();
-
-      if (added.Count > 0 || deleted.Count > 0 || modified.Count > 0)
-      {
-        var materialsChanged = modified.Select((x) => document.GetElement(x)).OfType<Material>().Any();
-
-        foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
-        {
-          foreach (var obj in definition.Objects)
-          {
-            if (obj is IGH_Param param)
-            {
-              if (param.SourceCount > 0)
-                continue;
-
-              if (param.Phase == GH_SolutionPhase.Blank)
-                continue;
-
-              if (obj is GH.Parameters.IGH_PersistentGeometryParam persistent)
-              {
-                if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                  param.ExpireSolution(false);
-              }
-            }
-            else if (obj is IGH_Component component)
-            {
-              if (component is GH.Components.DocumentElements)
-              {
-                component.ExpireSolution(false);
-              }
-              else
-              {
-                bool needsToBeExpired = false;
-                foreach (var inputParam in component.Params.Input)
-                {
-                  if (inputParam.SourceCount > 0)
-                    continue;
-
-                  if (inputParam.Phase == GH_SolutionPhase.Blank)
-                    continue;
-
-                  if (inputParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
-                  {
-                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                    {
-                      needsToBeExpired = true;
-                      break;
-                    }
-                  }
-                }
-
-                if (needsToBeExpired) component.ExpireSolution(true);
-                else foreach (var outParam in component.Params.Output)
-                {
-                  if (outParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
-                  {
-                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                    {
-                      foreach (var r in outParam.Recipients)
-                        r.ExpireSolution(false);
-                    }
-                    else if (materialsChanged)
-                    {
-                      foreach (var goo in outParam.VolatileData.AllData(true))
-                      {
-                        if (goo is IGH_PreviewMeshData previewMeshData)
-                          previewMeshData.DestroyPreviewMeshes();
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          if (definition.Enabled)
-            definition.NewSolution(false);
-        }
-      }
+      grasshopperAddon.OnDocumentChanged(sender, e);
     }
     #endregion
 

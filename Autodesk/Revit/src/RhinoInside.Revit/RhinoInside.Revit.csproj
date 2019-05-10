@@ -157,6 +157,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="GH\Addon.cs" />
     <Compile Include="GH\ID.cs" />
     <Compile Include="GH\GeometryObject\GeometryObject.cs" />
     <Compile Include="GH\Category\Category.cs" />
