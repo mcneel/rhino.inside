@@ -45,7 +45,7 @@ namespace RhinoInside.AutoCAD
       // Load Rhino
       try
       {
-        var scheme_name = ProductName().Replace(' ', '-');
+        var scheme_name = ProductName().Replace(' ', '_');
         m_rhino_core = new Rhino.Runtime.InProcess.RhinoCore(new[] { $"/scheme={scheme_name}" });
       }
       catch
