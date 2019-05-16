@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using Autodesk.Revit.DB;
+
+using Rhino.Geometry;
+
 using GH_IO.Serialization;
+using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
-using Rhino.Geometry;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -125,7 +129,7 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeName => "Revit Vertex";
     public override string TypeDescription => "Represents a Revit Vertex";
 
-    int VertexIndex = -1;
+    readonly int VertexIndex = -1;
     public override bool LoadGeometry(Document doc)
     {
       Value = null;
@@ -319,14 +323,15 @@ namespace RhinoInside.Revit.GH.Parameters
         mainWindowEnabled = Rhino.UI.RhinoEtoApp.MainWindow.Enabled;
         mainWindowVisible = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
 
-        var mainWindowRectangle = Revit.MainWindowBounds;
+        var mainWindowExtents = Revit.ActiveUIApplication.MainWindowExtents;
+        var mainWindowRectangle = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
         mainWindowRectangle.Inflate(-64, -64);
 
         // Grasshopper Window
         {
-          Grasshopper.Instances.DocumentEditor.Enabled = false;
-          if (Grasshopper.Instances.DocumentEditor.DesktopBounds.IntersectsWith(mainWindowRectangle))
-            Grasshopper.Instances.DocumentEditor.Hide();
+          Instances.DocumentEditor.Enabled = false;
+          if (Instances.DocumentEditor.DesktopBounds.IntersectsWith(mainWindowRectangle))
+            Instances.DocumentEditor.Hide();
         }
 
         // Rhino Window
@@ -352,8 +357,8 @@ namespace RhinoInside.Revit.GH.Parameters
 
         // Grasshopper Window
         {
-          Grasshopper.Instances.DocumentEditor.Show();
-          Grasshopper.Instances.DocumentEditor.Enabled = true;
+          Instances.DocumentEditor.Show();
+          Instances.DocumentEditor.Enabled = true;
         }
 
         Revit.RefreshActiveView();
