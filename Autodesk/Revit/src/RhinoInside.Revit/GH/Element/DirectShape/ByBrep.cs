@@ -58,8 +58,16 @@ namespace RhinoInside.Revit.GH.Components
       var element = PreviousElement(doc, Iteration);
       try
       {
-        if (brep == null || !brep.IsValid)
-          throw new Exception(string.Format("Parameter '{0}' must be valid Brep.", Params.Input[0].Name));
+        if (brep == null)
+          throw new NullReferenceException($"Parameter '{Params.Input[0].Name}' not set to an instance of a Brep.");
+
+        if (!brep.IsValidWithLog(out var log))
+        {
+          foreach (var line in log.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, line);
+
+          throw new Exception($"Parameter '{Params.Input[0].Name}' not set to a valid Brep.");
+        }
 
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)

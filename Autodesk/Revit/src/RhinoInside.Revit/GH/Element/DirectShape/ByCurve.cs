@@ -58,8 +58,16 @@ namespace RhinoInside.Revit.GH.Components
       var element = PreviousElement(doc, Iteration);
       try
       {
-        if (curve == null || !curve.IsValid)
-          throw new Exception(string.Format("Parameter '{0}' must be valid Curve.", Params.Input[0].Name));
+        if (curve == null)
+          throw new NullReferenceException($"Parameter '{Params.Input[0].Name}' not set to an instance of a Curve.");
+
+        if (!curve.IsValidWithLog(out var log))
+        {
+          foreach (var line in log.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, line);
+
+          throw new Exception($"Parameter '{Params.Input[0].Name}' not set to a valid Curve.");
+        }
 
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)

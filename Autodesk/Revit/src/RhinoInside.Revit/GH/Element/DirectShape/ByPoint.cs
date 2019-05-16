@@ -59,7 +59,7 @@ namespace RhinoInside.Revit.GH.Components
       try
       {
         if (!point.IsValid)
-          throw new Exception(string.Format("Parameter '{0}' must be valid Point.", Params.Input[0].Name));
+          throw new Exception($"Parameter '{Params.Input[0].Name}' must be valid Point.");
 
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)
