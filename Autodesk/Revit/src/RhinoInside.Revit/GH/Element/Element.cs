@@ -552,10 +552,12 @@ namespace RhinoInside.Revit.GH.Types
           const int factor = 3;
 
           // Erased element
-          material = new Rhino.Display.DisplayMaterial(material);
-          material.Diffuse = System.Drawing.Color.FromArgb(20, 20, 20);
-          material.Emission = System.Drawing.Color.FromArgb(material.Emission.R / factor, material.Emission.G / factor, material.Emission.B / factor);
-          material.Shine = 0.0;
+          material = new Rhino.Display.DisplayMaterial(material)
+          {
+            Diffuse = System.Drawing.Color.FromArgb(20, 20, 20),
+            Emission = System.Drawing.Color.FromArgb(material.Emission.R / factor, material.Emission.G / factor, material.Emission.B / factor),
+            Shine = 0.0,
+          };
         }
         else if (!element.Pinned)
         {
@@ -573,11 +575,14 @@ namespace RhinoInside.Revit.GH.Types
             }
             else
             {
-              material = new Rhino.Display.DisplayMaterial(material);
-              material.Diffuse = element.Category != null ? element.Category.LineColor.ToRhino() : System.Drawing.Color.White;
+              material = new Rhino.Display.DisplayMaterial(material)
+              {
+                Diffuse = element.Category?.LineColor.ToRhino() ?? System.Drawing.Color.White,
+                Transparency = 0.0
+              };
+
               if (material.Diffuse == System.Drawing.Color.Black)
                 material.Diffuse = System.Drawing.Color.White;
-              material.Transparency = 0.0;
             }
           }
         }
@@ -1285,19 +1290,22 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override string HtmlHelp_Source()
     {
-      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this);
-      nTopic.Title = Name;
-      nTopic.Description =
-      @"<p>This component is a special interface object that allows for quick accessing to Revit Element parameters.</p>" +
-      @"<p>It's able to modify itself in order to show any parameter its input element parameter contains. " +
-      @"It also allows to remove some output parameters if are not connected to anything else.</p>" +
-      @"<p>Under the component contextual menu you would find these options:</p>" +
-      @"<dl>" +
-      @"<dt><b>Get common parameters</b></dt><dd>Populates the output parameters list with common parameters in all input elements</dd>" +
-      @"<dt><b>Get all parameters</b></dt><dd>Populates the output parameters list with all parameters found in all input elements</dd>" +
-      @"<dt><b>Remove unconnected parameters</b></dt><dd>Removes the output parameters that are not connected to anything else</dd>" +
-      @"</dl>";
-      nTopic.ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside";
+      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this)
+      {
+        Title = Name,
+        Description =
+        @"<p>This component is a special interface object that allows for quick accessing to Revit Element parameters.</p>" +
+        @"<p>It's able to modify itself in order to show any parameter its input element parameter contains. " +
+        @"It also allows to remove some output parameters if are not connected to anything else.</p>" +
+        @"<p>Under the component contextual menu you would find these options:</p>" +
+        @"<dl>" +
+        @"<dt><b>Get common parameters</b></dt><dd>Populates the output parameters list with common parameters in all input elements</dd>" +
+        @"<dt><b>Get all parameters</b></dt><dd>Populates the output parameters list with all parameters found in all input elements</dd>" +
+        @"<dt><b>Remove unconnected parameters</b></dt><dd>Removes the output parameters that are not connected to anything else</dd>" +
+        @"</dl>",
+        ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside"
+      };
+
       nTopic.AddRemark("SHIFT + Double click runs \"Get common parameters\"");
       nTopic.AddRemark("CTRL + Double click runs \"Remove unconnected parameters\".");
 
