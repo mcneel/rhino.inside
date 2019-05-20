@@ -18,30 +18,38 @@ using Grasshopper.Kernel;
 
 namespace RhinoInside.Revit.GH
 {
-  internal class Addon
+  [GuestPlugInId("B45A29B1-4343-4035-989E-044E8580D9CF")]
+  internal class Guest : IGuest
   {
-    PreviewServer grasshopperPreviewServer;
-
-    internal Result OnStartup(UIControlledApplication applicationUI)
+    PreviewServer previewServer;
+    public string Name => "Grasshopper";
+    LoadReturnCode IGuest.OnCheckIn(ref string errorMessage)
     {
-      // Register GrasshopperPreviewServer
-      grasshopperPreviewServer = new PreviewServer();
-      grasshopperPreviewServer.Register();
-      RhinoApp.Idle += TryLoadGrasshopperComponents;
+      if (!LoadComponents())
+      {
+        errorMessage = "Failed to load Revit Grasshopper components.";
+        return LoadReturnCode.ErrorShowDialog;
+      }
 
-      return Result.Succeeded;
+      // Register PreviewServer
+      previewServer = new PreviewServer();
+      previewServer.Register();
+
+      Revit.DocumentChanged += OnDocumentChanged;
+
+      return LoadReturnCode.Success;
     }
 
-    internal Result OnShutdown(UIControlledApplication applicationUI)
+    void IGuest.OnCheckOut()
     {
-      // Unregister GrasshopperPreviewServer
-      grasshopperPreviewServer?.Unregister();
-      grasshopperPreviewServer = null;
+      Revit.DocumentChanged -= OnDocumentChanged;
 
-      return Result.Succeeded;
+      // Unregister PreviewServer
+      previewServer?.Unregister();
+      previewServer = null;
     }
 
-    static bool LoadGrasshopperComponents()
+    bool LoadComponents()
     {
       var LoadGHAProc = Instances.ComponentServer.GetType().GetMethod("LoadGHA", BindingFlags.NonPublic | BindingFlags.Instance);
       if (LoadGHAProc == null)
@@ -56,16 +64,24 @@ namespace RhinoInside.Revit.GH
         new object[] { new GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
       );
 
-      // Load all the gha installed under the %APPDATA%\Grasshopper\Libraries-Autodesk_Revit_20XX
-      var schemeName = Revit.ApplicationUI.ControlledApplication.VersionName.Replace(' ', '_');
-      var revitAssemblyFolder = Grasshopper.Folders.DefaultAssemblyFolder.Substring(0, Grasshopper.Folders.DefaultAssemblyFolder.Length - 1) + '-' + schemeName;
-      var assemblyFolder = new DirectoryInfo(revitAssemblyFolder);
-      try
+      var assemblyFolders = new DirectoryInfo[]
       {
-        foreach (var file in assemblyFolder.EnumerateFiles("*.gha"))
-          LoadGHAProc.Invoke(Instances.ComponentServer, new object[] { new GH_ExternalFile(file.FullName), false });
+        // %ProgramData%\Grasshopper\Libraries-Inside-Revit-20XX
+        new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Grasshopper", $"Libraries-{Rhinoceros.SchemeName}")),
+
+        // %APPDATA%\Grasshopper\Libraries-Inside-Revit-20XX
+        new DirectoryInfo(Folders.DefaultAssemblyFolder.Substring(0, Folders.DefaultAssemblyFolder.Length - 1) + '-' + Rhinoceros.SchemeName)
+      };
+
+      foreach (var folder in assemblyFolders)
+      {
+        IEnumerable<FileInfo> assemblyFiles;
+        try { assemblyFiles = folder.EnumerateFiles("*.gha");}
+        catch (System.IO.DirectoryNotFoundException) { continue; }
+
+        foreach (var assemblyFile in assemblyFiles)
+          LoadGHAProc.Invoke(Instances.ComponentServer, new object[] { new GH_ExternalFile(assemblyFile.FullName), false });
       }
-      catch (System.IO.DirectoryNotFoundException) { }
 
       Instances.Settings.SetValue("Assemblies:COFF", bCoff);
 
@@ -75,21 +91,11 @@ namespace RhinoInside.Revit.GH
       return rc;
     }
 
-    void TryLoadGrasshopperComponents(object sender, EventArgs e)
-    {
-      // Load this assembly as a Grasshopper assembly
-      if (PlugIn.GetPlugInInfo(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF)).IsLoaded)
-      {
-        if (LoadGrasshopperComponents())
-          RhinoApp.Idle -= TryLoadGrasshopperComponents;
-      }
-    }
-
-    internal void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
+    static void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
     {
       var document = e.GetDocument();
-      var added = e.GetAddedElementIds();
-      var deleted = e.GetDeletedElementIds();
+      var added    = e.GetAddedElementIds();
+      var deleted  = e.GetDeletedElementIds();
       var modified = e.GetModifiedElementIds();
 
       if (added.Count > 0 || deleted.Count > 0 || modified.Count > 0)

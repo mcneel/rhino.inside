@@ -1,7 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <RevitVersion>2017</RevitVersion>
   </PropertyGroup>
   <PropertyGroup Condition="$(Configuration.Contains('2018'))">
@@ -145,19 +145,22 @@
           <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</HintPath>
           <Private>False</Private>
         </Reference>
+        <Reference Include="AdWindows">
+          <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\AdWindows.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
       </ItemGroup>
     </When>
     <Otherwise>
       <ItemGroup>
         <PackageReference Include="RhinoCommon" Version="7.0.19127.13435-wip" IncludeAssets="compile; build" />
         <PackageReference Include="Grasshopper" Version="7.0.19127.13435-wip" IncludeAssets="compile; build" />
-        <PackageReference Include="Revit.RevitApi.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" />
-        <PackageReference Include="Revit.RevitApiUI.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" />
+        <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).0.*" IncludeAssets="build; compile" />
       </ItemGroup>
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="GH\Addon.cs" />
+    <Compile Include="GH\Guest.cs" />
     <Compile Include="GH\ID.cs" />
     <Compile Include="GH\GeometryObject\GeometryObject.cs" />
     <Compile Include="GH\Category\Category.cs" />
@@ -187,6 +190,7 @@
     <Compile Include="GH\Element\Form\ByCurves.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
     <Compile Include="GH\PreviewServer.cs" />
+    <Compile Include="Rhino\Rhinoceros.cs" />
     <Compile Include="UI\Command.cs" />
     <Compile Include="UI\HelpCommands.cs" />
     <Compile Include="UI\GrasshopperCommand.cs" />
@@ -199,6 +203,7 @@
     <Compile Include="Convert.cs" />
     <Compile Include="Revit.cs" />
     <Compile Include="Revit.FailuresPreprocessor.cs" />
+    <Compile Include="Addin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="Properties\RhinoInside.Revit.addin" />
     <Compile Include="Properties\Resources.Designer.cs">
