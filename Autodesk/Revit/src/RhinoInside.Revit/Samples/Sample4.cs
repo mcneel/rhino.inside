@@ -27,6 +27,7 @@ using Cursor = System.Windows.Forms.Cursor;
 using Cursors = System.Windows.Forms.Cursors;
 
 using RhinoInside.Revit.UI;
+using Autodesk.Revit.UI.Events;
 
 namespace RhinoInside.Revit.Samples
 {
@@ -56,36 +57,39 @@ namespace RhinoInside.Revit.Samples
         mruPullDownButton.AddPushButton(typeof(Browse), "Browse...", "Browse for a Grasshopper definition to evaluate", typeof(Availability));
       }
 
-      Revit.ApplicationUI.ViewActivated += ActiveUIApplication_ViewActivated;
+      EventHandler<IdlingEventArgs> BuildDirectShapeCategoryList = null;
+      Revit.ActiveUIApplication.Idling += BuildDirectShapeCategoryList = (sender, args) =>
+      {
+        var doc = (sender as UIApplication)?.ActiveUIDocument.Document;
+        if (doc == null)
+          return;
+
+        var directShapeCategories = Enum.GetValues(typeof(BuiltInCategory)).Cast<BuiltInCategory>().
+        Where(categoryId => DirectShape.IsValidCategoryId(new ElementId(categoryId), doc)).
+        Select(categoryId => Autodesk.Revit.DB.Category.GetCategory(doc, categoryId));
+
+        foreach (var group in directShapeCategories.GroupBy(x => x.CategoryType).OrderBy(x => x.Key.ToString()))
+        {
+          foreach (var category in group.OrderBy(x => x.Name))
+          {
+            var comboBoxMemberData = new ComboBoxMemberData(((BuiltInCategory) category.Id.IntegerValue).ToString(), category.Name)
+            {
+              GroupName = group.Key.ToString()
+            };
+            var item = categoriesComboBox.AddItem(comboBoxMemberData);
+
+            if ((BuiltInCategory) category.Id.IntegerValue == BuiltInCategory.OST_GenericModel)
+              categoriesComboBox.Current = item;
+          }
+        }
+
+        Revit.ActiveUIApplication.Idling -= BuildDirectShapeCategoryList;
+      };
     }
 
     static Autodesk.Revit.UI.ComboBox categoriesComboBox = null;
     static PulldownButton mruPullDownButton = null;
-    static Autodesk.Revit.UI.PushButton[] mruPushPuttons = null;
-
-    static void ActiveUIApplication_ViewActivated(object sender, Autodesk.Revit.UI.Events.ViewActivatedEventArgs e)
-    {
-      var directShapeCategories = Enum.GetValues(typeof(BuiltInCategory)).Cast<BuiltInCategory>().
-      Where(categoryId => DirectShape.IsValidCategoryId(new ElementId(categoryId), e.CurrentActiveView.Document)).
-      Select(categoryId => Autodesk.Revit.DB.Category.GetCategory(e.CurrentActiveView.Document, categoryId));
-
-      foreach (var group in directShapeCategories.GroupBy(x => x.CategoryType).OrderBy(x => x.Key.ToString()))
-      {
-        foreach (var category in group.OrderBy(x => x.Name))
-        {
-          var comboBoxMemberData = new ComboBoxMemberData(((BuiltInCategory) category.Id.IntegerValue).ToString(), category.Name)
-          {
-            GroupName = group.Key.ToString()
-          };
-          var item = categoriesComboBox.AddItem(comboBoxMemberData);
-
-          if((BuiltInCategory) category.Id.IntegerValue == BuiltInCategory.OST_GenericModel)
-            categoriesComboBox.Current = item;
-        }
-      }
-
-      Revit.ApplicationUI.ViewActivated -= ActiveUIApplication_ViewActivated;
-    }
+    static PushButton[] mruPushPuttons = null;
 
     const ObjectSnapTypes DefaultSnapTypes =
       ObjectSnapTypes.Endpoints |
