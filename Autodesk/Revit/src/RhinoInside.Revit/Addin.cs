@@ -45,7 +45,7 @@ namespace RhinoInside.Revit
         RhinoVersionInfo.FileBuildPart,
         RhinoVersionInfo.FilePrivatePart
       );
-      var MinimumRhinoVersion = new Version(7, 0, 19127);
+      var MinimumRhinoVersion = new Version(7, 0, 19134);
 
       if (RhinoVersion < MinimumRhinoVersion)
         return Result.Failed;
