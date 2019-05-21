@@ -11,13 +11,58 @@ using Grasshopper.Kernel.Special;
 
 using Autodesk.Revit.DB;
 
+namespace RhinoInside.Revit.GH.Parameters
+{
+  public class DocumentFamiliesPicker : GH_ValueList
+  {
+    public override Guid ComponentGuid => new Guid("45CEE087-4194-4E55-AA20-9CC5D2193CE0");
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+
+    public DocumentFamiliesPicker()
+    {
+      Category = "Revit";
+      SubCategory = "Input";
+      Name = "Document.FamiliesPicker";
+      MutableNickName = false;
+      Description = "Provides a Family picker";
+
+      ListMode = GH_ValueListMode.DropDown;
+    }
+
+    void RefreshList()
+    {
+      var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
+      ListItems.Clear();
+
+      if (Revit.ActiveDBDocument != null)
+      {
+        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+        {
+          foreach (var family in collector.OfClass(typeof(Family)).Cast<Family>().OrderBy((x) => x.Name))
+          {
+            var item = new GH_ValueListItem(family.Name, family.Id.IntegerValue.ToString());
+            item.Selected = selectedItems.Contains(item.Expression);
+            ListItems.Add(item);
+          }
+        }
+      }
+    }
+
+    protected override void CollectVolatileData_Custom()
+    {
+      NickName = "Family";
+      RefreshList();
+      base.CollectVolatileData_Custom();
+    }
+  }
+}
+
 namespace RhinoInside.Revit.GH.Components
 {
   public class DocumentElementTypes : GH_Component
   {
     public override Guid ComponentGuid => new Guid("7B00F940-4C6E-4F3F-AB81-C3EED430DE96");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{T}");
 
     public DocumentElementTypes() : base(
       "Document.ElementTypes", "ElementTypes",
@@ -98,49 +143,4 @@ namespace RhinoInside.Revit.GH.Components
       DA.SetDataList("ElementTypes", elementTypes);
     }
   }
-
-  public class DocumentFamiliesPicker : GH_ValueList
-  {
-    public override Guid ComponentGuid => new Guid("45CEE087-4194-4E55-AA20-9CC5D2193CE0");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("F*");
-
-    public DocumentFamiliesPicker()
-    {
-      Category = "Revit";
-      SubCategory = "Input";
-      Name = "Document.FamiliesPicker";
-      MutableNickName = false;
-      Description = "Provides a Family picker";
-
-      ListMode = GH_ValueListMode.DropDown;
-    }
-
-    void RefreshList()
-    {
-      var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
-      ListItems.Clear();
-
-      if (Revit.ActiveDBDocument != null)
-      {
-        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
-        {
-          foreach (var family in collector.OfClass(typeof(Family)).Cast<Family>().OrderBy((x) => x.Name))
-          {
-            var item = new GH_ValueListItem(family.Name, family.Id.IntegerValue.ToString());
-            item.Selected = selectedItems.Contains(item.Expression);
-            ListItems.Add(item);
-          }
-        }
-      }
-    }
-
-    protected override void CollectVolatileData_Custom()
-    {
-      NickName = "Family";
-      RefreshList();
-      base.CollectVolatileData_Custom();
-    }
-  }
-
 }

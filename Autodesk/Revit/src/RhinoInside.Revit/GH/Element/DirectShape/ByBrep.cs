@@ -14,16 +14,15 @@ using Grasshopper.Kernel.Special;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class BrepShapeByBrep : GH_TransactionalComponentItem
+  public class DirectShapeByBrep : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("5ADE9AE3-588C-4285-ABC5-09DEB92C6660");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("B");
 
-    public BrepShapeByBrep() : base
+    public DirectShapeByBrep() : base
     (
-      "AddBrepShape.ByBrep", "ByBrep",
-      "Given a Brep, it adds a Brep element to the active Revit document",
+      "AddDirectShape.ByBrep", "ByBrep",
+      "Given a Brep, it adds a Brep shape to the active Revit document",
       "Revit", "Geometry"
     )
     { }

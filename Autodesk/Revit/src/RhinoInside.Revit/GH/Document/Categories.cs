@@ -9,13 +9,65 @@ using Grasshopper.Kernel.Special;
 
 using Autodesk.Revit.DB;
 
+namespace RhinoInside.Revit.GH.Parameters
+{
+  public class DocumentCategoriesPicker : GH_ValueList
+  {
+    public override Guid ComponentGuid => new Guid("EB266925-F1AA-4729-B5C0-B978937F51A3");
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+
+    public DocumentCategoriesPicker()
+    {
+      Category = "Revit";
+      SubCategory = "Input";
+      Name = "Document.CategoriesPicker";
+      MutableNickName = false;
+      Description = "Provides a Category picker";
+
+      ListMode = GH_ValueListMode.DropDown;
+    }
+
+    void RefreshList()
+    {
+      var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
+      ListItems.Clear();
+
+      if (Revit.ActiveDBDocument != null)
+      {
+        foreach (var group in Revit.ActiveDBDocument.Settings.Categories.Cast<Autodesk.Revit.DB.Category>().GroupBy((x) => x.CategoryType).OrderBy((x) => x.Key))
+        {
+          foreach (var category in group.OrderBy((x) => x.Name))
+          {
+            var item = new GH_ValueListItem(category.Name, category.Id.IntegerValue.ToString());
+            item.Selected = selectedItems.Contains(item.Expression);
+            ListItems.Add(item);
+          }
+        }
+
+        // Preselect OST_GenericModel category by default
+        if (selectedItems.Count == 0 && ListMode != GH_ValueListMode.CheckList)
+        {
+          foreach (var item in ListItems)
+            item.Selected = item.Expression == ((int) BuiltInCategory.OST_GenericModel).ToString();
+        }
+      }
+    }
+
+    protected override void CollectVolatileData_Custom()
+    {
+      NickName = "Category";
+      RefreshList();
+      base.CollectVolatileData_Custom();
+    }
+  }
+}
+
 namespace RhinoInside.Revit.GH.Components
 {
   public class DocumentCategories : GH_Component
   {
     public override Guid ComponentGuid => new Guid("D150E40E-0970-4683-B517-038F8BA8B0D8");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{C}");
 
     public DocumentCategories() : base(
       "Document.Categories", "Categories",
@@ -57,7 +109,7 @@ namespace RhinoInside.Revit.GH.Components
 
       var categories = Revit.ActiveDBDocument.Settings.Categories.Cast<Category>();
 
-      if(categoryType != Autodesk.Revit.DB.CategoryType.Invalid)
+      if (categoryType != Autodesk.Revit.DB.CategoryType.Invalid)
         categories = categories.Where((x) => x.CategoryType == categoryType);
 
       if (!nofilterParams)
@@ -74,57 +126,6 @@ namespace RhinoInside.Revit.GH.Components
       }
 
       DA.SetDataList("Categories", list);
-    }
-  }
-
-  public class DocumentCategoriesPicker : GH_ValueList
-  {
-    public override Guid ComponentGuid => new Guid("EB266925-F1AA-4729-B5C0-B978937F51A3");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("C*");
-
-    public DocumentCategoriesPicker()
-    {
-      Category = "Revit";
-      SubCategory = "Input";
-      Name = "Document.CategoriesPicker";
-      MutableNickName = false;
-      Description = "Provides a Category picker";
-
-      ListMode = GH_ValueListMode.DropDown;
-    }
-
-    void RefreshList()
-    {
-      var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
-      ListItems.Clear();
-
-      if (Revit.ActiveDBDocument != null)
-      {
-        foreach (var group in Revit.ActiveDBDocument.Settings.Categories.Cast<Category>().GroupBy((x) => x.CategoryType).OrderBy((x) => x.Key))
-        {
-          foreach (var category in group.OrderBy((x) => x.Name))
-          {
-            var item = new GH_ValueListItem(category.Name, category.Id.IntegerValue.ToString());
-            item.Selected = selectedItems.Contains(item.Expression);
-            ListItems.Add(item);
-          }
-        }
-
-        // Preselect OST_GenericModel category by default
-        if (selectedItems.Count == 0 && ListMode != GH_ValueListMode.CheckList)
-        {
-          foreach (var item in ListItems)
-            item.Selected = item.Expression == ((int) BuiltInCategory.OST_GenericModel).ToString();
-        }
-      }
-    }
-
-    protected override void CollectVolatileData_Custom()
-    {
-      NickName = "Category";
-      RefreshList();
-      base.CollectVolatileData_Custom();
     }
   }
 }

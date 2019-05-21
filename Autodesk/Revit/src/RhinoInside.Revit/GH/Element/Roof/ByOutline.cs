@@ -15,7 +15,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("198E152B-6636-4D90-9443-AE77B8B1475E");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("R");
 
     public RoofByOutline() : base
     (

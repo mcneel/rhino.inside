@@ -842,7 +842,6 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("E");
 
     public Element() : base("Element", "Element", "Represents a Revit document element.", "Revit", "Element") { }
 
@@ -891,7 +890,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected static readonly Type ObjectType = typeof(Types.Element);
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon(ObjectType.Name.Substring(0, 1));
 
     protected ElementGetter(string propertyName)
       : base(ObjectType.Name + "." + propertyName, propertyName, "Get the " + propertyName + " of the specified " + ObjectType.Name, "Revit", ObjectType.Name)
@@ -907,7 +905,6 @@ namespace RhinoInside.Revit.GH.Components
   public class ElementIdentity : GH_Component
   {
     public override Guid ComponentGuid => new Guid("D3917D58-7183-4B3F-9D22-03F0FE93B956");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("ID");
 
     public ElementIdentity()
     : base("Element.Identity", "Element.Identity", "Query element identity information", "Revit", "Element")
@@ -943,7 +940,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("B7E6A82F-684F-4045-A634-A4AA9F7427A8");
     static readonly string PropertyName = "Geometry";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("G");
 
     public ElementGeometry() : base(PropertyName) { }
 
@@ -971,7 +967,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("A95C7B73-6F70-46CA-85FC-A4402A3B6971");
     static readonly string PropertyName = "Preview";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P");
 
     public ElementPreview() : base(PropertyName) { }
 
@@ -1035,7 +1030,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("44515A6B-84EE-4DBD-8241-17EDBE07C5B6");
     static readonly string PropertyName = "Parameters";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{}");
 
     public ElementParameters() : base(PropertyName) { }
 
@@ -1096,7 +1090,6 @@ namespace RhinoInside.Revit.GH.Components
   public class ElementDecompose : GH_Component, IGH_VariableParameterComponent
   {
     public override Guid ComponentGuid => new Guid("FAD33C4B-A7C3-479B-B309-8F5363B25599");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{");
     public ElementDecompose() : base("Element.Decompose", "Decompose", "Decomposes an Element into its parameters", "Revit", "Element") { }
 
     public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
@@ -1317,7 +1310,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("D86050F2-C774-49B1-9973-FB3AB188DC94");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("GET");
 
     public ElementParameterGet()
     : base("Element.ParameterGet", "ParameterGet", "Gets the parameter value of a specified Revit Element", "Revit", "Element")
@@ -1404,7 +1396,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("8F1EE110-7FDA-49E0-BED4-E8E0227BC021");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("SET");
 
     public ElementParameterSet()
     : base("Element.ParameterSet", "ParameterSet", "Sets the parameter value of a specified Revit Element", "Revit", "Element")

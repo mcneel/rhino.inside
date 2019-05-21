@@ -118,4 +118,154 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="BeamByCurve" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\BeamByCurve.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="BuildingPadByOutline" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\BuildingPadByOutline.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="BuiltInParameterByName" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\BuiltInParameterByName.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="BuiltInParameterGroup" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\BuiltInParameterGroup.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="BuiltInParameterGroups" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\BuiltInParameterGroups.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Category" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\Category.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="CategoryDecompose" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\CategoryDecompose.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="CategoryTypes" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\CategoryTypes.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DirectShapeByCurve" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DirectShapeByCurve.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DirectShapeByMesh" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DirectShapeByMesh.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DirectShapeByPoint" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DirectShapeByPoint.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DocumentCategories" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DocumentCategories.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DocumentCategoriesPicker" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DocumentCategoriesPicker.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DocumentElements" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DocumentElements.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DocumentElementTypes" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DocumentElementTypes.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DocumentLevels" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DocumentLevels.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DocumentLevelsPicker" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DocumentLevelsPicker.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DocumentParameters" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DocumentParameters.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Edge" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\Edge.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Element" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\Element.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementDecompose" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementDecompose.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementGeometry" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementGeometry.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementParameterGet" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementParameterGet.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementParameters" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementParameters.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementParameterSet" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementParametersSet.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementPreview" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementPreview.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementType" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementType.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementTypeByName" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementTypeByName.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Face" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\Face.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="FloorByOutline" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\FloorByOutline.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="FormByCurves" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\FormByCurves.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="FormByGeometry" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\FormByGeometry.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ModelLineByCurve" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ModelLineByCurve.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ParameterByName" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ParameterByName.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ParameterKey" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ParameterKey.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ParameterKeyDecompose" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ParameterKeyDecompose.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ParameterValueDecompose" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ParameterValueDecompose.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="SketchPlane" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\SketchPlane.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="SketchPlaneByPlane" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\SketchPlaneByPlane.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="TopographyByPoints" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\TopographyByPoints.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="Vertex" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\Vertex.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="WallByCurve" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\WallByCurve.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DirectShapeByBrep" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DirectShapeByBrep.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ColumnByCurve" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ColumnByCurve.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DirectShapeByGeometry" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DirectShapeByGeometry.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DocumentFamiliesPicker" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DocumentFamiliesPicker.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementIdentity" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementIdentity.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DirectShapeCategories" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\gh\directshapecategories.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="FamilyInstanceByPointAtHost" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\FamilyInstanceByPointAtHost.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="RoofByOutline" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\RoofByOutline.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
 </root>

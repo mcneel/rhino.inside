@@ -14,15 +14,14 @@ using Grasshopper.Kernel.Special;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class PointShapeByCurve : GH_TransactionalComponentItem
+  public class DirectShapeByPoint : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("7A889B89-C423-4ED8-91D9-5CECE1EE803D");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P");
 
-    public PointShapeByCurve() : base
+    public DirectShapeByPoint() : base
     (
-      "AddPointShape.ByCurve", "ByPoint",
+      "AddDirectShape.ByPoint", "ByPoint",
       "Given a Point, it adds a Point shape to the active Revit document",
       "Revit", "Geometry"
     )

@@ -40,7 +40,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("97DD546D-65C3-4D00-A609-3F5FBDA67142");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("TYPE");
+    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Revit", "Element", GH_ParamAccess.item) { }
   }
@@ -49,7 +49,6 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("D3FB53D3-9118-4F11-A32D-AECB30AA418D");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("T*");
 
     public ElementTypeByName()
     {

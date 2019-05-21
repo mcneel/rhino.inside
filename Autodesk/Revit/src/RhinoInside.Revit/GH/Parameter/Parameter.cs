@@ -386,7 +386,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("A550F532-8C68-460B-91F3-DA0A5A0D42B5");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("K");
+    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public ParameterKey() : base("ParameterKey", "ParameterKey", "Represents a Revit parameter definition.", "Revit", "Parameter") { }
 
@@ -447,7 +447,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("3D9979B4-65C8-447F-BCEA-3705249DF3B6");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("[P]");
+    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public BuiltInParameterGroup() : base("BuiltInParameterGroup", "BuiltInParameterGroup", "Represents a Revit parameter group.", "Revit", "Parameter") { }
 
@@ -459,7 +459,6 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("5D331B12-DA6C-46A7-AA13-F463E42650D1");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("BPG");
 
     public BuiltInParameterGroups()
     {
@@ -484,7 +483,6 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("C1D96F56-F53C-4DFC-8090-EC2050BDBB66");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("K*");
 
     public BuiltInParameterByName()
     {
@@ -558,7 +556,6 @@ namespace RhinoInside.Revit.GH.Components
   public class ParameterKeyDecompose : GH_Component
   {
     public override Guid ComponentGuid => new Guid("A80F4919-2387-4C78-BE2B-2F35B2E60298");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("K{");
 
     public ParameterKeyDecompose()
     : base("ParameterKey.Decompose", "ParameterKey.Decompose", "Decompose a parameter definition", "Revit", "Parameter")
@@ -605,7 +602,6 @@ namespace RhinoInside.Revit.GH.Components
   public class ParameterValueDecompose : GH_Component
   {
     public override Guid ComponentGuid => new Guid("3BDE5890-FB80-4AF2-B9AC-373661756BDA");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("V{");
 
     public ParameterValueDecompose()
     : base("ParameterValue.Decompose", "ParameterValue.Decompose", "Decompose a parameter value", "Revit", "Parameter")
@@ -639,13 +635,12 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class AddParameterByName : GH_TransactionalComponentItem
+  public class ParameterByName : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("84AB6F3C-BB4B-48E4-9175-B7F40791BB7F");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("K");
 
-    public AddParameterByName() : base
+    public ParameterByName() : base
     (
       "AddParameterKey.ByName", "ByName",
       "Given its Name, it adds a Parameter definition to the active Revit document",

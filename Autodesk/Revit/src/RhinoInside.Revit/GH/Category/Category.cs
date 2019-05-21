@@ -167,7 +167,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("6722C7A5-EFD3-4119-A7FD-6C8BE892FD04");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("C");
+    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public Category() : base("Category", "Category", "Represents a Revit document category.", "Revit", "Category") { }
 
@@ -176,13 +176,12 @@ namespace RhinoInside.Revit.GH.Parameters
   }
 }
 
-namespace RhinoInside.Revit.GH.Components
+namespace RhinoInside.Revit.GH.Parameters
 {
   public class CategoryTypes : GH_ValueList
   {
     public override Guid ComponentGuid => new Guid("5FFB1339-8521-44A1-9075-2984637725E9");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("CT");
 
     public CategoryTypes()
     {
@@ -193,16 +192,18 @@ namespace RhinoInside.Revit.GH.Components
       Description = "Provides a picker of a CategoryType";
 
       ListItems.Clear();
-      ListItems.Add(new GH_ValueListItem("Model",      ((int) Autodesk.Revit.DB.CategoryType.Model).ToString()));
+      ListItems.Add(new GH_ValueListItem("Model", ((int) Autodesk.Revit.DB.CategoryType.Model).ToString()));
       ListItems.Add(new GH_ValueListItem("Annotation", ((int) Autodesk.Revit.DB.CategoryType.Annotation).ToString()));
       ListItems.Add(new GH_ValueListItem("Analytical", ((int) Autodesk.Revit.DB.CategoryType.AnalyticalModel).ToString()));
     }
   }
+}
 
+namespace RhinoInside.Revit.GH.Components
+{
   public class CategoryDecompose : GH_Component
   {
     public override Guid ComponentGuid => new Guid("D794361E-DE8C-4D0A-BC77-52293F27D3AA");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("C{");
 
     public CategoryDecompose()
     : base("Category.Decompose", "Category.Decompose", "Decompose a category", "Revit", "Category")
