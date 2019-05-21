@@ -1,39 +1,28 @@
 # Rhino Inside Revit
+
+[![Build status](https://ci.appveyor.com/api/projects/status/9ot0iyjqwb1jdn6m/branch/master?svg=true)](https://ci.appveyor.com/project/mcneel/rhino-inside/branch/master)
+
 The Rhino Inside® technology allows Rhino and Grasshopper to be embedded within other products.
 
 This folder contains a sample project that demonstrates:
 
-1. Starting Rhino and Grasshopper as a Revit Addon.
+1. Starting Rhino, Grasshopper and the Rhino.Python Editor as a Revit Addon.
 2. Call directly into the native Revit APIs from a Grasshopper or Rhino plugin.
-2. Grasshopper definitions can be opened and previewed in Rhino within the Revit process.
-3. Object can be natively created by Rhino or Grasshopper within Revit through the API.
+2. Grasshopper definitions can be opened within the Revit.
+3. Includes a Revit Toolbar in Grasshopper with Revit specific components
+3. Object can be natively created by Rhino or Grasshopper within Revit.
 
 [**Questions?** *Visit the discussion forum...*](https://discourse.mcneel.com/c/serengeti/inside)
 
 ## Getting started
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+Grab the [latest installer](https://ci.appveyor.com/api/projects/mcneel/rhino-inside/artifacts/Autodesk%2FRevit%2Fsrc%2FRhinoInside.Revit.Setup%2Fbin%2Fx64%2FRelease%2FRhinoInside.Revit.msi?branch=master) (requires [Rhino WIP](https://www.rhino3d.com/download/rhino/wip) and Revit 2017-2019)
 
-### Prerequisites
-* Git client. ([download](https://git-scm.com/downloads))
-* Visual Studio 2017 (15.9 or above) ([download](https://visualstudio.microsoft.com/downloads/))
-* .NET Framework 4.7 ([download](https://www.microsoft.com/net/download/visual-studio-sdks))
-* Rhino WIP ([download](https://www.rhino3d.com/download/rhino/wip))
-* Autodesk Revit 2017-2019 ([download](https://www.autodesk.com/products/revit/free-trial))
-* Add this link to your bookmarks ;) ([API docs](https://www.apidocs.co/apps/))
-
-### Getting Source & Build
-1. Clone the repository. At the command prompt, enter the following command:
-```
-git clone --recursive https://github.com/mcneel/rhino.inside.git rhino.inside
-```
-2. In Visual Studio: open _rhino.inside\Autodesk\Revit\RhinoInside.Revit.sln_.
-3. Set the Solution Configuration drop-down according the Revit version you have installed. This will properly link the correct Revit API libraries to the project.
-4. Navigate to _Build_ > _Build Solution_ to begin your build.
+If you are looking to contribute to or customize this project go to the [build from source instructions](build-source.md).
 
 ### Installing & Uninstalling
-The project is configured to copy .addon file as well as output files to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\RhinoInside.Revit\\"_ folder in order to make Revit load this addon next time it runs.
+The installer copies the necessary files to the _"%APPDATA%\\Autodesk\\Revit\\Addins\\<revit_version>\\"_ folder (for each supported version). Restart Revit to load the add-on.
 
-In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ command or just navigate to the folder _"%APPDATA%\\Autodesk\\Revit\\Addins\\%RevitVer%\\_ and remove the file _RhinoInside.Revit.addon_ and the folder _RhinoInside.Revit_.
+To uninstall, open _Programs and Features_, select "RhinoInside.Revit" and click "Uninstall".
 
 ## Using the samples
 * Once you launch Revit it will warn you this addon is not verified, please click on "Load always" or "Load once".
@@ -97,9 +86,7 @@ In order to uninstall it you can use Visual Studio _Build_ > _Clean Solution_ co
 ### Sample 7
 ![](doc/images/Sample7.png)
 
-1. Use the _Pyhton_ icon into the Add-Ins tab to open Rhino Python editor window.
+1. Use the _Python_ icon into the Add-Ins tab to open Rhino Python editor window.
 2. Load pyhthon script file called _"Sample7.py"_ there is in this folder.
 3. Click on the green play button you will found on the Pyhton script editor window.
 4. You should have an sphere in the Revil model.
-
-
