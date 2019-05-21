@@ -4,13 +4,16 @@ clr.AddReference('RhinoInside.Revit')
 clr.AddReference('RevitAPI') 
 clr.AddReference('RevitAPIUI')
 
-from System import Action, Func
 from System.Linq import Enumerable
 from Autodesk.Revit.DB import *
 from Rhino.Geometry import *
 from RhinoInside.Revit import Revit, Convert
 
-def CommitToDocument(doc):
+doc = Revit.ActiveDBDocument
+
+with Transaction(doc, "Sample7") as trans:
+    trans.Start()
+    
     sphere = Sphere(Point3d.Origin, 12 * Revit.ModelUnits)
     brep = sphere.ToBrep()
     meshes = Mesh.CreateFromBrep(brep, MeshingParameters.Default)
@@ -21,4 +24,4 @@ def CommitToDocument(doc):
     for geometry in Enumerable.ToList(Convert.ToHost(meshes)):
         ds.AppendShape(geometry)
 
-Revit.EnqueueAction(Action[Document](CommitToDocument))
+    trans.Commit()
