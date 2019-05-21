@@ -58,7 +58,7 @@ namespace RhinoInside.Revit.Samples
       }
 
       EventHandler<IdlingEventArgs> BuildDirectShapeCategoryList = null;
-      Revit.ActiveUIApplication.Idling += BuildDirectShapeCategoryList = (sender, args) =>
+      Revit.ApplicationUI.Idling += BuildDirectShapeCategoryList = (sender, args) =>
       {
         var doc = (sender as UIApplication)?.ActiveUIDocument.Document;
         if (doc == null)
@@ -83,7 +83,7 @@ namespace RhinoInside.Revit.Samples
           }
         }
 
-        Revit.ActiveUIApplication.Idling -= BuildDirectShapeCategoryList;
+        Revit.ApplicationUI.Idling -= BuildDirectShapeCategoryList;
       };
     }
 
