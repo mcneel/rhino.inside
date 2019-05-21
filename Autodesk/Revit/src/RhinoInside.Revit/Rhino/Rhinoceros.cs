@@ -250,7 +250,6 @@ namespace RhinoInside.Revit
 
     class ExposureSnapshot
     {
-      readonly bool Exposed                      = Rhinoceros.Exposed;
       readonly bool Visible                      = MainWindow.Visible;
       readonly Eto.Forms.WindowState WindowState = MainWindow.WindowState;
       public void Restore()
@@ -261,13 +260,13 @@ namespace RhinoInside.Revit
     }
     static ExposureSnapshot QuiescentExposure;
 
-    private static void BeginCommand(object sender, Rhino.Commands.CommandEventArgs e)
+    static void BeginCommand(object sender, Rhino.Commands.CommandEventArgs e)
     {
       // Capture Rhino Main Window exposure to restore it when user ends picking
       QuiescentExposure = new ExposureSnapshot();
     }
 
-    private static void EndCommand(object sender, Rhino.Commands.CommandEventArgs e)
+    static void EndCommand(object sender, Rhino.Commands.CommandEventArgs e)
     {
       // Restore Rhino Main Window exposure
       QuiescentExposure.Restore();
