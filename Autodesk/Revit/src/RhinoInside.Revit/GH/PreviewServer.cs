@@ -10,6 +10,7 @@ using Autodesk.Revit.DB.ExternalService;
 
 using Grasshopper;
 using Grasshopper.Kernel;
+using System.Threading;
 
 namespace RhinoInside.Revit.GH
 {
@@ -18,26 +19,7 @@ namespace RhinoInside.Revit.GH
     static GH_Document activeDefinition = null;
     List<ParamPrimitive> primitives = new List<ParamPrimitive>();
     Rhino.Geometry.BoundingBox primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
-
-    public override void Register()
-    {
-      base.Register();
-    }
-
-    public override void Unregister()
-    {
-      Clear();
-      base.Unregister();
-    }
-
-    public void Clear()
-    {
-      foreach (var buffer in primitives)
-        ((IDisposable) buffer).Dispose();
-      primitives.Clear();
-
-      primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
-    }
+    int RebuildPrimitives = 1;
 
     #region IExternalServer
     public override string GetName() => "Grasshopper";
@@ -65,7 +47,7 @@ namespace RhinoInside.Revit.GH
           GH_Document.DefaultPreviewColourChanged         -= Document_DefaultPreviewColourChanged;
         }
 
-        Clear();
+        RebuildPrimitives = 1;
         activeDefinition = definition;
 
         if (activeDefinition != null)
@@ -108,14 +90,14 @@ namespace RhinoInside.Revit.GH
     void ActiveDefinition_SettingsChanged(object sender, GH_DocSettingsEventArgs e)
     {
       if (e.Kind == GH_DocumentSettings.Properties)
-        Clear();
+        RebuildPrimitives = 1;
 
       Revit.RefreshActiveView();
     }
 
     void ActiveDefinition_SolutionEnd(object sender, GH_SolutionEventArgs e)
     {
-      Clear();
+      RebuildPrimitives = 1;
       Revit.RefreshActiveView();
     }
 
@@ -201,8 +183,18 @@ namespace RhinoInside.Revit.GH
 
     Rhino.Geometry.BoundingBox BuildScene(View dBView)
     {
-      if (!primitivesBoundingBox.IsValid)
+      if (Interlocked.Exchange(ref RebuildPrimitives, 0) != 0)
       {
+        primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
+
+        // Dispose previous primitives
+        {
+          foreach (var buffer in primitives)
+            ((IDisposable) buffer).Dispose();
+
+          primitives.Clear();
+        }
+
         var previewColour = activeDefinition.PreviewColour;
         var previewColourSelected = activeDefinition.PreviewColourSelected;
 
