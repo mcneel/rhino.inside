@@ -227,6 +227,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Resources\Rhino-logo.png" />
     <EmbeddedResource Include="Resources\Rhino.png" />
     <EmbeddedResource Include="Resources\Grasshopper.png" />
     <EmbeddedResource Include="Resources\Python.png" />
