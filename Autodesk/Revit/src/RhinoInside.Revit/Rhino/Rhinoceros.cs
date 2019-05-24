@@ -210,7 +210,11 @@ namespace RhinoInside.Revit
             var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
             {
               Title = guestInfo.Guest.Name,
+#if REVIT_2018
               MainIcon = TaskDialogIcon.TaskDialogIconError,
+#else
+              MainIcon = TaskDialogIcon.TaskDialogIconWarning,
+#endif
               TitleAutoPrefix = false,
               AllowCancellation = false,
               MainInstruction = $"{guestInfo.Guest.Name} failed to load",
@@ -238,9 +242,9 @@ namespace RhinoInside.Revit
         catch (Exception) { }
       }
     }
-    #endregion
+#endregion
 
-    #region Rhino Interface
+#region Rhino Interface
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     static extern bool ShowOwnedPopups(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool fShow);
@@ -498,6 +502,6 @@ namespace RhinoInside.Revit
 
       return Result.Cancelled;
     }
-    #endregion
+#endregion
   }
 }
