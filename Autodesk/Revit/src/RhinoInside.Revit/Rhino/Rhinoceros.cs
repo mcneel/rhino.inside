@@ -250,7 +250,13 @@ namespace RhinoInside.Revit
     static extern bool ShowOwnedPopups(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool fShow);
     public static bool ShowOwnedPopups(bool fShow) => ShowOwnedPopups(RhinoApp.MainWindowHandle(), fShow);
 
-    static System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer() { Interval = 50 };
+    public class PauseTimerScope : IDisposable
+    {
+      public PauseTimerScope() => timer.Stop();
+      void IDisposable.Dispose() => timer.Start();
+    }
+
+    static System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer() { Interval = 100 };
     static void Timer_Tick(object sender, EventArgs e)
     {
       if (!IsRunning)

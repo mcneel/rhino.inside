@@ -52,10 +52,13 @@ namespace RhinoInside.Revit.UI
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      if (!Rhino.RhinoApp.RunScript("!_-Grasshopper _W _S ENTER", false))
-        return Result.Failed;
+      using (new Rhinoceros.PauseTimerScope())
+      {
+        if (!Rhino.RhinoApp.RunScript("!_-Grasshopper _W _S ENTER", false))
+          return Result.Failed;
 
-      return Rhinoceros.RunModal(false);
+        return Rhinoceros.RunModal(false);
+      }
     }
   }
 }
