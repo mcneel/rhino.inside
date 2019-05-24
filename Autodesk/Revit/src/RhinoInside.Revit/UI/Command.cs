@@ -15,7 +15,7 @@ namespace RhinoInside.Revit.UI
     {
       var buttonData = new PushButtonData
       (
-        commandType.FullName,
+        commandType.Name,
         text ?? commandType.Name,
         commandType.Assembly.Location,
         commandType.FullName
@@ -37,7 +37,7 @@ namespace RhinoInside.Revit.UI
     {
       var buttonData = new PushButtonData
       (
-        commandType.FullName,
+        commandType.Name,
         text ?? commandType.Name,
         commandType.Assembly.Location,
         commandType.FullName
@@ -63,7 +63,7 @@ namespace RhinoInside.Revit.UI
     {
       return new PushButtonData
       (
-        typeof(CommandType).FullName,
+        typeof(CommandType).Name,
         text ?? typeof(CommandType).Name,
         typeof(CommandType).Assembly.Location,
         typeof(CommandType).FullName
@@ -75,7 +75,7 @@ namespace RhinoInside.Revit.UI
     {
       return new PushButtonData
       (
-        typeof(CommandType).FullName,
+        typeof(CommandType).Name,
         text ?? typeof(CommandType).Name,
         typeof(CommandType).Assembly.Location,
         typeof(CommandType).FullName

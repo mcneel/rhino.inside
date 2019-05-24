@@ -21,14 +21,7 @@ namespace RhinoInside.Revit.Samples
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var declaringType = MethodBase.GetCurrentMethod().DeclaringType;
-      var buttonData = new PushButtonData
-      (
-        declaringType.FullName, "Sample 1",
-        declaringType.Assembly.Location,
-        declaringType.FullName
-      );
+      var buttonData = NewPushButtonData<Sample1, Availability>("Sample 1");
 
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
