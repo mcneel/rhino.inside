@@ -24,6 +24,8 @@ namespace RhinoInside.Revit.UI
         Availability.Available = false;
         throw new Exception("Failed to startup Rhino");
       }
+
+      Rhinoceros.UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc, Revit.ActiveDBDocument);
     }
 
     public new class Availability : ExternalCommand.Availability
@@ -45,7 +47,7 @@ namespace RhinoInside.Revit.UI
       var buttonData =  NewPushButtonData<CommandRhino, Availability>("Rhino");
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
-        pushButton.ToolTip = "Toggle Rhino window visibility";
+        pushButton.ToolTip = "Shows Rhino window";
         pushButton.Image = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Rhino.png", true);
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Rhino.png");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://discourse.mcneel.com/"));
@@ -54,8 +56,7 @@ namespace RhinoInside.Revit.UI
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      Rhinoceros.Exposed = !Rhinoceros.Exposed;
-      return Result.Succeeded;
+      return Rhinoceros.RunModal(true);
     }
   }
 
@@ -96,7 +97,10 @@ namespace RhinoInside.Revit.UI
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      return Rhino.RhinoApp.RunScript("!_EditPythonScript", false) ? Result.Succeeded : Result.Failed;
+      if (!Rhino.RhinoApp.RunScript("!_EditPythonScript", false))
+        return Result.Failed;
+
+      return Rhinoceros.RunModal(false);
     }
   }
 }

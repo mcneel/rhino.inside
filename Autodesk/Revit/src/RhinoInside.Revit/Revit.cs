@@ -63,47 +63,7 @@ namespace RhinoInside.Revit
     static bool isRefreshActiveViewPending = false;
     public static void RefreshActiveView() => isRefreshActiveViewPending = true;
 
-    static void OnIdle(object sender, IdlingEventArgs args)
-    {
-      ActiveUIApplication = (sender as UIApplication);
-
-      // 1. Do Rhino pending Idle tasks
-      if(Rhinoceros.DoIdle())
-        args.SetRaiseWithoutDelay();
-
-      // Document dependant tasks need a document
-      if (ActiveDBDocument != null)
-      {
-        // 1. Do all document read actions
-        if (ProcessReadActions())
-        {
-          args.SetRaiseWithoutDelay();
-          return;
-        }
-
-        // 2. Do all document write actions
-        if (!ActiveDBDocument.IsReadOnly)
-          ProcessWriteActions();
-
-        // 3. Refresh Active View if necesary
-        bool regenComplete = DirectContext3DServer.RegenComplete();
-        if (isRefreshActiveViewPending || !regenComplete || GH.PreviewServer.PreviewChanged())
-        {
-          isRefreshActiveViewPending = false;
-
-          var RefreshTime = new Stopwatch();
-          RefreshTime.Start();
-          ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
-          RefreshTime.Stop();
-          DirectContext3DServer.RegenThreshold = Math.Min(RefreshTime.ElapsedMilliseconds, 200);
-        }
-
-        if (!regenComplete)
-          args.SetRaiseWithoutDelay();
-      }
-    }
-
-    static bool isCommitting = false;
+    static void OnIdle(object sender, IdlingEventArgs args) => ActiveUIApplication = (sender as UIApplication);
 
     public static event EventHandler<DocumentChangedEventArgs> DocumentChanged;
     private static void OnDocumentChanged(object sender, DocumentChangedEventArgs args)
@@ -205,7 +165,35 @@ namespace RhinoInside.Revit
     }
     #endregion
 
-    #region Document Actions
+    #region Actions
+    static bool isCommitting = false;
+    internal static void ProcessIdleActions()
+    {
+      // Document dependant tasks need a document
+      if (ActiveDBDocument != null)
+      {
+        // 1. Do all document read actions
+        ProcessReadActions();
+
+        // 2. Do all document write actions
+        if (!ActiveDBDocument.IsReadOnly)
+          ProcessWriteActions();
+
+        // 3. Refresh Active View if necesary
+        bool regenComplete = DirectContext3DServer.RegenComplete();
+        if (isRefreshActiveViewPending || !regenComplete || GH.PreviewServer.PreviewChanged())
+        {
+          isRefreshActiveViewPending = false;
+
+          var RefreshTime = new Stopwatch();
+          RefreshTime.Start();
+          ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
+          RefreshTime.Stop();
+          DirectContext3DServer.RegenThreshold = Math.Min(RefreshTime.ElapsedMilliseconds, 200);
+        }
+      }
+    }
+
     private static Queue<Action<Document>> docWriteActions = new Queue<Action<Document>>();
     public static void EnqueueAction(Action<Document> action)
     {

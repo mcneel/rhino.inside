@@ -42,7 +42,7 @@ namespace RhinoInside.Revit.UI
       var buttonData = NewPushButtonData<CommandGrasshopper, Availability>("Grasshopper");
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
-        pushButton.ToolTip = "Toggle Grasshopper window visibility";
+        pushButton.ToolTip = "Shows Grasshopper window";
         pushButton.Image = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png", true);
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://www.grasshopper3d.com/"));
@@ -52,7 +52,10 @@ namespace RhinoInside.Revit.UI
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      return Rhino.RhinoApp.RunScript("!_-Grasshopper _W _T ENTER", false) ? Result.Succeeded : Result.Failed;
+      if (!Rhino.RhinoApp.RunScript("!_-Grasshopper _W _S ENTER", false))
+        return Result.Failed;
+
+      return Rhinoceros.RunModal(false);
     }
   }
 }

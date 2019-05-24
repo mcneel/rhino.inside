@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -73,6 +74,7 @@ namespace RhinoInside.Revit
         Rhino.Commands.Command.EndCommand += EndCommand;
         RhinoApp.MainLoop += MainLoop;
         RhinoApp.Idle += OnIdle;
+        timer.Tick += Timer_Tick;
 
         // Reset document units
         UpdateDocumentUnits(RhinoDoc.ActiveDoc);
@@ -88,6 +90,7 @@ namespace RhinoInside.Revit
     {
       if (core != null)
       {
+        timer.Tick -= Timer_Tick;
         RhinoApp.Idle -= OnIdle;
         RhinoApp.MainLoop -= MainLoop;
         RhinoDoc.NewDocument -= OnNewDocument;
@@ -112,18 +115,29 @@ namespace RhinoInside.Revit
       return Result.Succeeded;
     }
 
-    internal static bool DoIdle() => core.DoIdle() | core.DoEvents();
+    static bool idlePending = true;
+    static bool Run()
+    {
+      if (idlePending)
+        idlePending = core.DoIdle();
+
+      var active = core.DoEvents();
+      if (active)
+        idlePending = true;
+
+      return active;
+    }
 
     internal static void OnApplicationClosing(object sender, ApplicationClosingEventArgs e)
     {
-      //var doc = Rhino.RhinoDoc.ActiveDoc;
+      //var doc = RhinoDoc.ActiveDoc;
       //if (doc?.Modified ?? false)
       //{
       //  string docTitle = doc.Name ?? "Untitled";
       //  switch (Eto.Forms.MessageBox.Show
       //  (
       //    "Save changes to " + docTitle + "?",
-      //    Rhino.RhinoApp.Name,
+      //    RhinoApp.Name,
       //    e.Cancellable ? Eto.Forms.MessageBoxButtons.YesNoCancel : Eto.Forms.MessageBoxButtons.YesNo,
       //    Eto.Forms.MessageBoxType.Question
       //  ))
@@ -227,24 +241,38 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Rhino Interface
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    static extern bool ShowOwnedPopups(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool fShow);
+    public static bool ShowOwnedPopups(bool fShow) => ShowOwnedPopups(RhinoApp.MainWindowHandle(), fShow);
+
+    static System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer() { Interval = 50 };
+    static void Timer_Tick(object sender, EventArgs e)
+    {
+      if (!IsRunning)
+      {
+        ShowOwnedPopups(false);
+        Exposed = false;
+      }
+    }
+
     static Eto.Forms.Window MainWindow => Rhino.UI.RhinoEtoApp.MainWindow;
     public static bool Exposed
     {
       get => MainWindow.Visible && MainWindow.WindowState != Eto.Forms.WindowState.Minimized;
       set
       {
-        if (Exposed == value)
-          return;
-
         if (value)
         {
+          MainWindow.Visible = true;
+
           if (MainWindow.WindowState == Eto.Forms.WindowState.Minimized)
             MainWindow.WindowState = Eto.Forms.WindowState.Normal;
-
-          MainWindow.Visible = true;
-          RhinoApp.SetFocusToMainWindow();
         }
-        else MainWindow.Visible = false;
+        else
+        {
+          MainWindow.Visible = false;
+        }
       }
     }
 
@@ -262,29 +290,50 @@ namespace RhinoInside.Revit
 
     static void BeginCommand(object sender, Rhino.Commands.CommandEventArgs e)
     {
-      // Capture Rhino Main Window exposure to restore it when user ends picking
-      QuiescentExposure = new ExposureSnapshot();
+      if (!Rhino.Commands.Command.InScriptRunnerCommand())
+      {
+        // Capture Rhino Main Window exposure to restore it when user ends picking
+        try { QuiescentExposure = new ExposureSnapshot(); }
+        catch (Exception) { }
+      }
     }
 
     static void EndCommand(object sender, Rhino.Commands.CommandEventArgs e)
     {
-      // Restore Rhino Main Window exposure
-      QuiescentExposure.Restore();
-      QuiescentExposure = null;
+      if (!Rhino.Commands.Command.InScriptRunnerCommand())
+      {
+        if (MainWindow.WindowState != Eto.Forms.WindowState.Maximized)
+        {
+          // Restore Rhino Main Window exposure
+          QuiescentExposure?.Restore();
+          QuiescentExposure = null;
+          RhinoApp.SetFocusToMainWindow();
+        }
+      }
     }
 
     static void MainLoop(object sender, EventArgs e)
     {
-      // Keep Rhino window exposed to user while in a get operation
-      if (RhinoGet.InGet(RhinoDoc.ActiveDoc))
+      if (!Rhino.Commands.Command.InScriptRunnerCommand())
       {
-        Exposed = true;
+        // Keep Rhino window exposed to user while in a get operation
+        if (RhinoGet.InGet(RhinoDoc.ActiveDoc))
+        {
+          // if there is no floating viewport visible...
+          if (!RhinoDoc.ActiveDoc.Views.Select(x => x.Floating).Any())
+          {
+            if (!Exposed)
+              Exposed = true;
+          }
+        }
       }
     }
 
     static void OnIdle(object sender, EventArgs e)
     {
       CheckInGuests();
+
+      Revit.ProcessIdleActions();
     }
 
     static void OnNewDocument(object sender, DocumentEventArgs e)
@@ -296,56 +345,60 @@ namespace RhinoInside.Revit
       UpdateDocumentUnits(e.Document, Revit.ActiveDBDocument);
     }
 
-    static void UpdateDocumentUnits(RhinoDoc rhinoDoc, Document revitDoc = null)
+    internal static void UpdateDocumentUnits(RhinoDoc rhinoDoc, Document revitDoc = null)
     {
       bool docModified = rhinoDoc.Modified;
-
-      if (revitDoc == null)
+      try
       {
-        rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.None;
-        rhinoDoc.ModelAbsoluteTolerance = Revit.VertexTolerance;
-        rhinoDoc.ModelAngleToleranceRadians = Revit.AngleTolerance;
-      }
-      else if (rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.None)
-      {
-        var units = revitDoc.GetUnits();
-        var lengthFormatoptions = units.GetFormatOptions(UnitType.UT_Length);
-        switch (lengthFormatoptions.DisplayUnits)
+        if (revitDoc == null)
         {
-          case DisplayUnitType.DUT_METERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Meters; break;
-          case DisplayUnitType.DUT_METERS_CENTIMETERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Meters; break;
-          case DisplayUnitType.DUT_DECIMETERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Decimeters; break;
-          case DisplayUnitType.DUT_CENTIMETERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Centimeters; break;
-          case DisplayUnitType.DUT_MILLIMETERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Millimeters; break;
-
-          case DisplayUnitType.DUT_FRACTIONAL_INCHES: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Inches; break;
-          case DisplayUnitType.DUT_DECIMAL_INCHES: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Inches; break;
-          case DisplayUnitType.DUT_FEET_FRACTIONAL_INCHES: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Feet; break;
-          case DisplayUnitType.DUT_DECIMAL_FEET: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Feet; break;
-          default: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.None; break;
+          rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.None;
+          rhinoDoc.ModelAbsoluteTolerance = Revit.VertexTolerance;
+          rhinoDoc.ModelAngleToleranceRadians = Revit.AngleTolerance;
         }
+        else if (rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.None)
+        {
+          var units = revitDoc.GetUnits();
+          var lengthFormatoptions = units.GetFormatOptions(UnitType.UT_Length);
+          switch (lengthFormatoptions.DisplayUnits)
+          {
+            case DisplayUnitType.DUT_METERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Meters; break;
+            case DisplayUnitType.DUT_METERS_CENTIMETERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Meters; break;
+            case DisplayUnitType.DUT_DECIMETERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Decimeters; break;
+            case DisplayUnitType.DUT_CENTIMETERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Centimeters; break;
+            case DisplayUnitType.DUT_MILLIMETERS: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Millimeters; break;
 
-        bool imperial = rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.Feet || rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.Inches;
+            case DisplayUnitType.DUT_FRACTIONAL_INCHES: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Inches; break;
+            case DisplayUnitType.DUT_DECIMAL_INCHES: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Inches; break;
+            case DisplayUnitType.DUT_FEET_FRACTIONAL_INCHES: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Feet; break;
+            case DisplayUnitType.DUT_DECIMAL_FEET: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.Feet; break;
+            default: rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.None; break;
+          }
 
-        rhinoDoc.ModelAngleToleranceRadians = Revit.AngleTolerance;
-        rhinoDoc.ModelDistanceDisplayPrecision = ((int) -Math.Log10(lengthFormatoptions.Accuracy)).Clamp(0, 7);
-        rhinoDoc.ModelAbsoluteTolerance = Revit.VertexTolerance * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Feet, rhinoDoc.ModelUnitSystem);
-        //switch (rhinoDoc.ModelUnitSystem)
-        //{
-        //  case Rhino.UnitSystem.None: break;
-        //  case Rhino.UnitSystem.Feet:
-        //  case Rhino.UnitSystem.Inches:
-        //    newDoc.ModelAbsoluteTolerance = (1.0 / 160.0) * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Inches, newDoc.ModelUnitSystem);
-        //    break;
-        //  default:
-        //    newDoc.ModelAbsoluteTolerance = 0.1 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Millimeters, newDoc.ModelUnitSystem);
-        //    break;
-        //}
+          bool imperial = rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.Feet || rhinoDoc.ModelUnitSystem == Rhino.UnitSystem.Inches;
 
-        UpdateViewConstructionPlanesFrom(rhinoDoc, revitDoc);
+          rhinoDoc.ModelAngleToleranceRadians = Revit.AngleTolerance;
+          rhinoDoc.ModelDistanceDisplayPrecision = ((int) -Math.Log10(lengthFormatoptions.Accuracy)).Clamp(0, 7);
+          rhinoDoc.ModelAbsoluteTolerance = Revit.VertexTolerance * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Feet, rhinoDoc.ModelUnitSystem);
+          //switch (rhinoDoc.ModelUnitSystem)
+          //{
+          //  case Rhino.UnitSystem.None: break;
+          //  case Rhino.UnitSystem.Feet:
+          //  case Rhino.UnitSystem.Inches:
+          //    newDoc.ModelAbsoluteTolerance = (1.0 / 160.0) * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Inches, newDoc.ModelUnitSystem);
+          //    break;
+          //  default:
+          //    newDoc.ModelAbsoluteTolerance = 0.1 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Millimeters, newDoc.ModelUnitSystem);
+          //    break;
+          //}
+
+          UpdateViewConstructionPlanesFrom(rhinoDoc, revitDoc);
+        }
       }
-
-      rhinoDoc.Modified = docModified;
+      finally
+      {
+        rhinoDoc.Modified = docModified;
+      }
     }
 
     static void UpdateViewConstructionPlanesFrom(RhinoDoc rhinoDoc, Document revitDoc)
@@ -396,22 +449,52 @@ namespace RhinoInside.Revit
       }
     }
 
+    // Visible in Rhino time
+    static bool Visible = false;
+    public static bool IsRunning { get; private set; }
+    public static Result RunModal(bool exposeMainWindow = true, bool restorePopups = false)
+    {
+      try
+      {
+        timer.Stop();
+        IsRunning = true;
+
+        if (exposeMainWindow)   Exposed = true;
+        else if (restorePopups) Exposed = Visible || MainWindow.WindowState == Eto.Forms.WindowState.Minimized;
+
+        if (restorePopups)
+          ShowOwnedPopups(true);
+
+        do
+        {
+          // Set focus to main Rhino window to keep the loop running
+          RhinoApp.SetFocusToMainWindow();
+
+          while (Run()) ;
+        }
+        // Keep window active while Maximized
+        while (MainWindow.Visible && MainWindow.WindowState == Eto.Forms.WindowState.Maximized);
+
+        return Result.Succeeded;
+      }
+      finally
+      {
+        Visible = Exposed;
+        ShowOwnedPopups(false);
+        Exposed = false;
+
+        IsRunning = false;
+        timer.Start();
+      }
+    }
+
     public static Result RunCommandAbout()
     {
       var docSerial = RhinoDoc.ActiveDoc.RuntimeSerialNumber;
       var result = RhinoApp.RunScript("!_About", false) ? Result.Succeeded : Result.Failed;
 
       if (result == Result.Succeeded && docSerial != RhinoDoc.ActiveDoc.RuntimeSerialNumber)
-      {
-        if (!MainWindow.Visible || MainWindow.WindowState != Eto.Forms.WindowState.Normal)
-        {
-          MainWindow.WindowState = Eto.Forms.WindowState.Normal;
-          MainWindow.Visible = true;
-        }
-
-        RhinoApp.SetFocusToMainWindow();
-        return Result.Succeeded;
-      }
+        return RunModal();
 
       return Result.Cancelled;
     }
