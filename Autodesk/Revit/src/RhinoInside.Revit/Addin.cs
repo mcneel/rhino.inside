@@ -195,15 +195,20 @@ namespace RhinoInside.Revit.UI
 
         // Register keyboard shortcut
         {
-          string keyboardShortcutsPath = Path.Combine(Revit.ApplicationUI.ControlledApplication.CurrentUsersDataFolderPath, "KeyboardShortcuts.xml");
+          string keyboardShortcutsPath = Path.Combine(Revit.CurrentUsersDataFolderPath, "KeyboardShortcuts.xml");
 
           if (!Revit.KeyboardShortcuts.LoadFrom(keyboardShortcutsPath, out var shortcuts))
             shortcuts = new Revit.KeyboardShortcuts.Shortcuts();
 
-          var shortcutItem = shortcuts.Where(x => x.CommandId == CommandId).First();
-          if (shortcutItem == null)
+          try
           {
-            shortcutItem = new Revit.KeyboardShortcuts.ShortcutItem()
+            var shortcutItem = shortcuts.Where(x => x.CommandId == CommandId).First();
+            if (shortcutItem.Shortcuts == null)
+              shortcutItem.Shortcuts = Shortcuts;
+          }
+          catch (InvalidOperationException)
+          {
+            var shortcutItem = new Revit.KeyboardShortcuts.ShortcutItem()
             {
               CommandName = CommandName,
               CommandId = CommandId,
@@ -211,11 +216,6 @@ namespace RhinoInside.Revit.UI
               Paths = $"Add-Ins>{ribbonPanel.Name}"
             };
             shortcuts.Add(shortcutItem);
-          }
-          else
-          {
-            if (shortcutItem.Shortcuts == null)
-              shortcutItem.Shortcuts = Shortcuts;
           }
 
           Revit.KeyboardShortcuts.SaveAs(shortcuts, keyboardShortcutsPath);

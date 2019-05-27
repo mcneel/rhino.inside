@@ -291,6 +291,18 @@ namespace RhinoInside.Revit
     #region Public Properties
     public static IntPtr MainWindowHandle { get; private set; }
 
+#if REVIT_2019
+    public static string CurrentUsersDataFolderPath => ApplicationUI.ControlledApplication.CurrentUsersDataFolderPath;
+#else
+    public static string CurrentUsersDataFolderPath => Path.Combine
+    (
+      Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+      "Autodesk",
+      "Revit",
+      ApplicationUI.ControlledApplication.VersionName
+    );
+#endif
+
     public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI => Addin.ApplicationUI;
     public static Autodesk.Revit.UI.UIApplication ActiveUIApplication { get; private set; }
     public static Autodesk.Revit.ApplicationServices.Application Services => ActiveUIApplication?.Application;
