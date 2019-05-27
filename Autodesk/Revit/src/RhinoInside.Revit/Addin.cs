@@ -226,58 +226,56 @@ namespace RhinoInside.Revit.UI
     public override Result Execute(ExternalCommandData data, ref string message, Autodesk.Revit.DB.ElementSet elements)
     {
       if (RhinoCommand.Availability.Available)
-        return Rhinoceros.RunModal(!Keyboard.IsKeyDown(Key.LeftCtrl), true);
+         return Rhinoceros.RunModal(Keyboard.IsKeyDown(Key.LeftCtrl), true);
 
       if (Addin.CheckSetup() is Result result && result != Result.Succeeded)
         return result;
 
+      string rhinoTab = Addin.RhinoVersionInfo?.ProductName ?? "Rhinoceros";
+
+      result = Revit.OnStartup(Revit.ApplicationUI);
+      if (RhinoCommand.Availability.Available = result == Result.Succeeded)
       {
-        string rhinoTab = Addin.RhinoVersionInfo?.ProductName ?? "Rhinoceros";
+        // Update Rhino button Tooltip
+        Button.ToolTip = $"Restores previously visible Rhino windows on top of Revit window";
+        Button.LongDescription = $"Use CTRL key to show Rhino window";
 
-        result = Revit.OnStartup(Revit.ApplicationUI);
-        if (RhinoCommand.Availability.Available = result == Result.Succeeded)
+        // Register UI on Revit
+        data.Application.CreateRibbonTab(rhinoTab);
+
+        var RhinocerosPanel = data.Application.CreateRibbonPanel(rhinoTab, "Rhinoceros");
+        HelpCommand.CreateUI(RhinocerosPanel);
+        RhinocerosPanel.AddSeparator();
+        CommandRhino.CreateUI(RhinocerosPanel);
+        CommandGrasshopper.CreateUI(RhinocerosPanel);
+        CommandPython.CreateUI(RhinocerosPanel);
+
+        var SamplesPanel = data.Application.CreateRibbonPanel(rhinoTab, "Samples");
+        Samples.Sample1.CreateUI(SamplesPanel);
+        Samples.Sample4.CreateUI(SamplesPanel);
+        Samples.Sample6.CreateUI(SamplesPanel);
+      }
+
+      // Show Rhinoceros Tab
+      if (result == Result.Succeeded)
+      {
+        var ribbon = Autodesk.Windows.ComponentManager.Ribbon;
+        foreach (var tab in ribbon.Tabs)
         {
-          // Update Rhino button Tooltip
-          Button.ToolTip = $"Shows all Rhino windows on top of Revit window";
-          Button.LongDescription = $"Use CTRL key to just retore tool windows but not Rhino itself";
-
-          // Register UI on Revit
-          data.Application.CreateRibbonTab(rhinoTab);
-
-          var RhinocerosPanel = data.Application.CreateRibbonPanel(rhinoTab, "Rhinoceros");
-          HelpCommand.CreateUI(RhinocerosPanel);
-          RhinocerosPanel.AddSeparator();
-          CommandRhino.CreateUI(RhinocerosPanel);
-          CommandGrasshopper.CreateUI(RhinocerosPanel);
-          CommandPython.CreateUI(RhinocerosPanel);
-
-          var SamplesPanel = data.Application.CreateRibbonPanel(rhinoTab, "Samples");
-          Samples.Sample1.CreateUI(SamplesPanel);
-          Samples.Sample4.CreateUI(SamplesPanel);
-          Samples.Sample6.CreateUI(SamplesPanel);
-        }
-
-        // Show Rhinoceros Tab
-        if (result == Result.Succeeded)
-        {
-          var ribbon = Autodesk.Windows.ComponentManager.Ribbon;
-          foreach (var tab in ribbon.Tabs)
+          if (tab.Name == rhinoTab)
           {
-            if (tab.Name == rhinoTab)
-            {
-              tab.IsActive = true;
-              break;
-            }
+            tab.IsActive = true;
+            break;
           }
         }
-        else
-        {
-          // No more loads in this session
-          Button.Enabled = false;
-        }
-
-        return result;
       }
+      else
+      {
+        // No more loads in this session
+        Button.Enabled = false;
+      }
+
+      return result;
     }
   }
 }

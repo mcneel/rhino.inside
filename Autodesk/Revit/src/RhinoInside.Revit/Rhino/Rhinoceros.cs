@@ -330,7 +330,7 @@ namespace RhinoInside.Revit
         if (RhinoGet.InGet(RhinoDoc.ActiveDoc))
         {
           // if there is no floating viewport visible...
-          if (!RhinoDoc.ActiveDoc.Views.Select(x => x.Floating).Any())
+          if (!RhinoDoc.ActiveDoc.Views.Where(x => x.Floating).Any())
           {
             if (!Exposed)
               Exposed = true;
