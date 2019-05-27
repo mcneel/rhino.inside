@@ -41,7 +41,7 @@ namespace RhinoInside.Revit
         }
         catch (FileNotFoundException)
         {
-          shortcuts = new Shortcuts();
+          shortcuts = null;
           return false;
         }
       }
