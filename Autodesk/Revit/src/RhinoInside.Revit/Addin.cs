@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Windows.Input;
 using Autodesk.Revit.Attributes;
@@ -159,7 +160,11 @@ namespace RhinoInside.Revit.UI
     static PushButton Button;
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
-      var buttonData = NewPushButtonData<CommandRhinoInside, AllwaysAvailable>("Rhino");
+      const string CommandName = "Rhino";
+      string CommandId = $"CustomCtrl_%CustomCtrl_%Add-Ins%{ribbonPanel.Name}%{typeof(CommandRhinoInside).Name}";
+      const string Shortcuts = "R#Ctrl+R";
+
+      var buttonData = NewPushButtonData<CommandRhinoInside, AllwaysAvailable>(CommandName);
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
         Button = pushButton;
@@ -187,6 +192,40 @@ namespace RhinoInside.Revit.UI
           }
           catch (Exception) { }
         }
+
+        // Register keyboard shortcut
+        {
+          string keyboardShortcutsPath = Path.Combine(Revit.ApplicationUI.ControlledApplication.CurrentUsersDataFolderPath, "KeyboardShortcuts.xml");
+
+          Revit.KeyboardShortcuts.ShortcutItem shortcutItem = null;
+          if (Revit.KeyboardShortcuts.LoadFrom(keyboardShortcutsPath, out var shortcuts))
+          {
+            foreach (var shortcut in shortcuts.Where(x => x.CommandId == CommandId))
+            {
+              shortcutItem = shortcut;
+              break;
+            }
+          }
+
+          if (shortcutItem == null)
+          {
+            var item = new Revit.KeyboardShortcuts.ShortcutItem()
+            {
+              CommandName = CommandName,
+              CommandId = CommandId,
+              Shortcuts = Shortcuts,
+              Paths = $"Add-Ins>{ribbonPanel.Name}"
+            };
+            shortcuts.Add(item);
+          }
+          else
+          {
+            if (shortcutItem.Shortcuts == null)
+              shortcutItem.Shortcuts = Shortcuts;
+          }
+
+          Revit.KeyboardShortcuts.SaveAs(shortcuts, keyboardShortcutsPath);
+        }
       }
     }
 
@@ -206,7 +245,7 @@ namespace RhinoInside.Revit.UI
         {
           // Update Rhino button Tooltip
           Button.ToolTip = $"Shows all Rhino windows on top of Revit window";
-          Button.LongDescription = $"Use CTRL key to just retore Rhino tool windows but not Rhino itself";
+          Button.LongDescription = $"Use CTRL key to just retore tool windows but not Rhino itself";
 
           // Register UI on Revit
           data.Application.CreateRibbonTab(rhinoTab);

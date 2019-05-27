@@ -242,9 +242,9 @@ namespace RhinoInside.Revit
         catch (Exception) { }
       }
     }
-#endregion
+    #endregion
 
-#region Rhino Interface
+    #region Rhino Interface
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     static extern bool ShowOwnedPopups(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool fShow);
@@ -508,6 +508,6 @@ namespace RhinoInside.Revit
 
       return Result.Cancelled;
     }
-#endregion
+    #endregion
   }
 }
