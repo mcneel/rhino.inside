@@ -11,6 +11,21 @@ namespace RhinoInside.Revit.UI
 {
   static class Extension
   {
+    public static bool ActivateRibbonTab(this UIApplication application, string tabName)
+    {
+      var ribbon = Autodesk.Windows.ComponentManager.Ribbon;
+      foreach (var tab in ribbon.Tabs)
+      {
+        if (tab.Name == tabName)
+        {
+          tab.IsActive = true;
+          return true;
+        }
+      }
+
+      return false;
+    }
+
     internal static PushButton AddPushButton(this RibbonPanel ribbonPanel, Type commandType, string text = null, string tooltip = null, Type availability = null)
     {
       var buttonData = new PushButtonData
