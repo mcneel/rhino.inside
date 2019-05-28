@@ -210,11 +210,7 @@ namespace RhinoInside.Revit
             var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
             {
               Title = guestInfo.Guest.Name,
-#if REVIT_2018
-              MainIcon = TaskDialogIcon.TaskDialogIconError,
-#else
-              MainIcon = TaskDialogIcon.TaskDialogIconWarning,
-#endif
+              MainIcon = TaskDialogIcons.IconError,
               TitleAutoPrefix = false,
               AllowCancellation = false,
               MainInstruction = $"{guestInfo.Guest.Name} failed to load",

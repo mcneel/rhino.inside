@@ -83,11 +83,7 @@ namespace RhinoInside.Revit
         var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
         {
           Title = "Days left",
-#if REVIT_2018
-          MainIcon = TaskDialogIcon.TaskDialogIconInformation,
-#else
-          MainIcon = TaskDialogIcon.TaskDialogIconWarning,
-#endif
+          MainIcon = TaskDialogIcons.IconInformation,
           TitleAutoPrefix = true,
           AllowCancellation = true,
           MainInstruction = DaysUntilExpiration < 1 ?
@@ -116,11 +112,7 @@ namespace RhinoInside.Revit
         var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
         {
           Title = "Update Rhino",
-#if REVIT_2018
-          MainIcon = TaskDialogIcon.TaskDialogIconInformation,
-#else
-          MainIcon = TaskDialogIcon.TaskDialogIconWarning,
-#endif
+          MainIcon = TaskDialogIcons.IconInformation,
           TitleAutoPrefix = true,
           AllowCancellation = true,
           MainInstruction = "Unsupported Rhino WIP version",
@@ -150,6 +142,21 @@ namespace RhinoInside.Revit
 
     internal static UIControlledApplication ApplicationUI { get; private set; }
   }
+
+  static class TaskDialogIcons
+  {
+    public const TaskDialogIcon IconNone = TaskDialogIcon.TaskDialogIconNone;
+#if REVIT_2018
+    public const TaskDialogIcon IconShield = TaskDialogIcon.TaskDialogIconShield;
+    public const TaskDialogIcon IconInformation = TaskDialogIcon.TaskDialogIconInformation;
+    public const TaskDialogIcon IconError = TaskDialogIcon.TaskDialogIconError;
+#else
+    public const TaskDialogIcon IconShield = TaskDialogIcon.TaskDialogIconWarning;
+    public const TaskDialogIcon IconInformation = TaskDialogIcon.TaskDialogIconWarning;
+    public const TaskDialogIcon IconError = TaskDialogIcon.TaskDialogIconWarning;
+#endif
+    public const TaskDialogIcon IconWarning = TaskDialogIcon.TaskDialogIconWarning;
+  }
 }
 
 namespace RhinoInside.Revit.UI
@@ -157,6 +164,36 @@ namespace RhinoInside.Revit.UI
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
   class CommandRhinoInside : ExternalCommand
   {
+    internal static void ShowShortcutHelp()
+    {
+      if(NewShortcutAssigned != default(char))
+      {
+        using
+        (
+          var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
+          {
+            Title = "New Shortcut",
+            MainIcon = TaskDialogIcons.IconInformation,
+            TitleAutoPrefix = true,
+            AllowCancellation = true,
+            MainInstruction = $"Keyboard shortcut '{NewShortcutAssigned}' is now assigned to Rhino",
+            MainContent = $"You can use {NewShortcutAssigned} key to restore previously visible Rhino windows over Revit window every time you need them.",
+            FooterText = "This is a one time message",
+          }
+        )
+        {
+          taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Customize keyboard shortcuts...");
+          if (taskDialog.Show() == TaskDialogResult.CommandLink1)
+          {
+            Revit.ActiveUIApplication.PostCommand(RevitCommandId.LookupPostableCommandId(PostableCommand.KeyboardShortcuts));
+          }
+        }
+
+        NewShortcutAssigned = default(char);
+      }
+    }
+
+    internal static char NewShortcutAssigned { get; private set; }
     static PushButton Button;
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
@@ -204,7 +241,10 @@ namespace RhinoInside.Revit.UI
           {
             var shortcutItem = shortcuts.Where(x => x.CommandId == CommandId).First();
             if (shortcutItem.Shortcuts == null)
+            {
               shortcutItem.Shortcuts = Shortcuts;
+              NewShortcutAssigned = 'R';
+            }
           }
           catch (InvalidOperationException)
           {
@@ -216,6 +256,7 @@ namespace RhinoInside.Revit.UI
               Paths = $"Add-Ins>{ribbonPanel.Name}"
             };
             shortcuts.Add(shortcutItem);
+            NewShortcutAssigned = 'R';
           }
 
           Revit.KeyboardShortcuts.SaveAs(shortcuts, keyboardShortcutsPath);
@@ -225,20 +266,33 @@ namespace RhinoInside.Revit.UI
 
     public override Result Execute(ExternalCommandData data, ref string message, Autodesk.Revit.DB.ElementSet elements)
     {
-      if (RhinoCommand.Availability.Available)
-         return Rhinoceros.RunModal(Keyboard.IsKeyDown(Key.LeftCtrl), true);
-
-      if (Addin.CheckSetup() is Result result && result != Result.Succeeded)
-        return result;
-
+      var result = Result.Failed;
       string rhinoTab = Addin.RhinoVersionInfo?.ProductName ?? "Rhinoceros";
+
+      if (RhinoCommand.Availability.Available)
+      {
+        if(Keyboard.IsKeyDown(Key.LeftCtrl))
+          return Rhinoceros.RunCommandAbout();
+
+        result = Rhinoceros.RunModal(false, true);
+
+        // If no windows are visible we show the Ribbon tab
+        if (result == Result.Cancelled)
+          result = data.Application.ActivateRibbonTab(rhinoTab) ? Result.Succeeded : Result.Failed;
+
+        return result;
+      }
+
+      result = Addin.CheckSetup();
+      if (result != Result.Succeeded)
+        return result;
 
       result = Revit.OnStartup(Revit.ApplicationUI);
       if (RhinoCommand.Availability.Available = result == Result.Succeeded)
       {
         // Update Rhino button Tooltip
         Button.ToolTip = $"Restores previously visible Rhino windows on top of Revit window";
-        Button.LongDescription = $"Use CTRL key to show Rhino window";
+        Button.LongDescription = $"Use CTRL key to open a Rhino model";
 
         // Register UI on Revit
         data.Application.CreateRibbonTab(rhinoTab);
@@ -256,18 +310,10 @@ namespace RhinoInside.Revit.UI
         Samples.Sample6.CreateUI(SamplesPanel);
       }
 
-      // Show Rhinoceros Tab
       if (result == Result.Succeeded)
       {
-        var ribbon = Autodesk.Windows.ComponentManager.Ribbon;
-        foreach (var tab in ribbon.Tabs)
-        {
-          if (tab.Name == rhinoTab)
-          {
-            tab.IsActive = true;
-            break;
-          }
-        }
+        // Activate Rhinoceros Tab
+        result = data.Application.ActivateRibbonTab(rhinoTab) ? Result.Succeeded : Result.Failed;
       }
       else
       {

@@ -106,11 +106,7 @@ namespace RhinoInside.Revit.UI
             var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
             {
               Title = "Updates",
-#if REVIT_2018
-              MainIcon = TaskDialogIcon.TaskDialogIconInformation,
-#else
-              MainIcon = TaskDialogIcon.TaskDialogIconWarning,
-#endif
+              MainIcon = TaskDialogIcons.IconInformation,
               TitleAutoPrefix = true,
               AllowCancellation = true,
               FooterText = Addin.SourceCodePath
@@ -132,11 +128,7 @@ namespace RhinoInside.Revit.UI
 
             if (forceFetch && powerShell.HadErrors)
             {
-#if REVIT_2018
-              taskDialog.MainIcon = TaskDialogIcon.TaskDialogIconError;
-#else
-              taskDialog.MainIcon = TaskDialogIcon.TaskDialogIconWarning;
-#endif
+              taskDialog.MainIcon = TaskDialogIcons.IconError;
               taskDialog.MainInstruction = "Failed to fetch changes from the repository";
 
               foreach (var f in powerShell.Streams.Error)
