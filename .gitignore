@@ -332,3 +332,4 @@ ASALocalRun/
 /CPython/build
 /CPython/rhinoinside.egg-info
 /CPython/rhinoinside/RhinoInsidePythonShim.dll
+/Autodesk/Revit/src/RhinoInside.Revit/RhinoInside.Revit.sln
