@@ -458,20 +458,23 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       try
       {
-        var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Edge, "Click on an edge near an end to select a vertex, TAB for alternates, ESC quit.");
-        if (reference != null)
+        using (new ModalForm.EditScope())
         {
-          var element = Revit.ActiveDBDocument.GetElement(reference);
-          var geometry = element?.GetGeometryObjectFromReference(reference);
-          if (geometry is Autodesk.Revit.DB.Edge edge)
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Edge, "Click on an edge near an end to select a vertex, TAB for alternates, ESC quit.");
+          if (reference != null)
           {
-            var curve = edge.AsCurve();
-            var result = curve.Project(reference.GlobalPoint);
-            var points = new XYZ[] { curve.GetEndPoint(0), curve.GetEndPoint(1) };
-            int index = result.XYZPoint.DistanceTo(points[0]) < result.XYZPoint.DistanceTo(points[1]) ? 0 : 1;
+            var element = Revit.ActiveDBDocument.GetElement(reference);
+            var geometry = element?.GetGeometryObjectFromReference(reference);
+            if (geometry is Autodesk.Revit.DB.Edge edge)
+            {
+              var curve = edge.AsCurve();
+              var result = curve.Project(reference.GlobalPoint);
+              var points = new XYZ[] { curve.GetEndPoint(0), curve.GetEndPoint(1) };
+              int index = result.XYZPoint.DistanceTo(points[0]) < result.XYZPoint.DistanceTo(points[1]) ? 0 : 1;
 
-            value = new Types.Vertex(index, reference, Revit.ActiveDBDocument);
-            return GH_GetterResult.success;
+              value = new Types.Vertex(index, reference, Revit.ActiveDBDocument);
+              return GH_GetterResult.success;
+            }
           }
         }
       }
@@ -493,11 +496,14 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       try
       {
-        var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Edge);
-        if (references?.Count > 0)
+        using (new ModalForm.EditScope())
         {
-          value = references.Select((x) => new Types.Edge(x, Revit.ActiveDBDocument)).ToList();
-          return GH_GetterResult.success;
+          var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Edge);
+          if (references?.Count > 0)
+          {
+            value = references.Select((x) => new Types.Edge(x, Revit.ActiveDBDocument)).ToList();
+            return GH_GetterResult.success;
+          }
         }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
@@ -508,11 +514,14 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       try
       {
-        var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Edge);
-        if (reference == null)
-          return GH_GetterResult.accept;
+        using (new ModalForm.EditScope())
+        {
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Edge);
+          if (reference == null)
+            return GH_GetterResult.accept;
 
-        value = new Types.Edge(reference, Revit.ActiveDBDocument);
+          value = new Types.Edge(reference, Revit.ActiveDBDocument);
+        }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
 
@@ -532,11 +541,14 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       try
       {
-        var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Face);
-        if (references?.Count > 0)
+        using (new ModalForm.EditScope())
         {
-          value = references.Select((x) => new Types.Face(x, Revit.ActiveDBDocument)).ToList();
-          return GH_GetterResult.success;
+          var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Face);
+          if (references?.Count > 0)
+          {
+            value = references.Select((x) => new Types.Face(x, Revit.ActiveDBDocument)).ToList();
+            return GH_GetterResult.success;
+          }
         }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
@@ -547,11 +559,14 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       try
       {
-        var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Face);
-        if (reference == null)
-          return GH_GetterResult.accept;
+        using (new ModalForm.EditScope())
+        {
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Face);
+          if (reference == null)
+            return GH_GetterResult.accept;
 
-        value = new Types.Face(reference, Revit.ActiveDBDocument);
+          value = new Types.Face(reference, Revit.ActiveDBDocument);
+        }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
 

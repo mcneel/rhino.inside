@@ -851,9 +851,12 @@ namespace RhinoInside.Revit.GH.Parameters
 
       try
       {
-        var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
-        if (reference != null)
-          element = Types.Element.Make(reference.ElementId);
+        using (new ModalForm.EditScope())
+        {
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
+          if (reference != null)
+            element = Types.Element.Make(reference.ElementId);
+        }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
 
@@ -873,9 +876,12 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         try
         {
-          var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element);
-          if (references != null)
-            elements = references.Select((x) => Types.Element.Make(x.ElementId)).ToList();
+          using (new ModalForm.EditScope())
+          {
+            var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element);
+            if (references != null)
+              elements = references.Select((x) => Types.Element.Make(x.ElementId)).ToList();
+          }
         }
         catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
       }
