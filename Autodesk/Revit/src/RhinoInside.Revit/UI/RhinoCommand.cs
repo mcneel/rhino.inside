@@ -48,6 +48,7 @@ namespace RhinoInside.Revit.UI
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
         pushButton.ToolTip = "Shows Rhino window";
+        pushButton.LongDescription = $"Use CTRL key to open only Rhino window without restoring other tool windows";
         pushButton.Image = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Rhino.png", true);
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Rhino.png");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://discourse.mcneel.com/"));
@@ -56,7 +57,10 @@ namespace RhinoInside.Revit.UI
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      return Rhinoceros.RunModal(true);
+      using (var modal = new Rhinoceros.ModalScope())
+      {
+        return modal.Run(true);
+      }
     }
   }
 
@@ -87,7 +91,8 @@ namespace RhinoInside.Revit.UI
       var buttonData = NewPushButtonData<CommandPython, Availability>("Python");
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
-        pushButton.ToolTip = "Shows Rhino Python editor window";
+        pushButton.ToolTip = "Shows Python editor window";
+        pushButton.LongDescription = $"Use CTRL key to open only Python editor window without restoring other tool windows";
         pushButton.Image = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Python.png", true);
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Python.png");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://developer.rhino3d.com/guides/rhinopython/"));
@@ -97,12 +102,12 @@ namespace RhinoInside.Revit.UI
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      using (new Rhinoceros.PauseTimerScope())
+      using (var modal = new Rhinoceros.ModalScope())
       {
         if (!Rhino.RhinoApp.RunScript("!_EditPythonScript", false))
           return Result.Failed;
 
-        return Rhinoceros.RunModal(false);
+        return modal.Run(false);
       }
     }
   }
