@@ -74,7 +74,6 @@ namespace RhinoInside.Revit
         Rhino.Commands.Command.EndCommand += EndCommand;
         RhinoApp.MainLoop += MainLoop;
         RhinoApp.Idle += OnIdle;
-        timer.Tick += Timer_Tick;
 
         // Reset document units
         UpdateDocumentUnits(RhinoDoc.ActiveDoc);
@@ -90,7 +89,6 @@ namespace RhinoInside.Revit
     {
       if (core != null)
       {
-        timer.Tick -= Timer_Tick;
         RhinoApp.Idle -= OnIdle;
         RhinoApp.MainLoop -= MainLoop;
         RhinoDoc.NewDocument -= OnNewDocument;
@@ -246,15 +244,6 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Rhino Interface
-    static System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer() { Interval = 100 };
-    static void Timer_Tick(object sender, EventArgs e)
-    {
-      if (ModalForm.ActiveForm == null)
-      {
-        ModalForm.ShowOwnedPopups(false);
-        Exposed = false;
-      }
-    }
 
     static Eto.Forms.Window MainWindow => Rhino.UI.RhinoEtoApp.MainWindow;
     public static bool Exposed
@@ -459,14 +448,12 @@ namespace RhinoInside.Revit
 
       public ModalScope()
       {
-        timer.Stop();
         form = new ModalForm();
       }
 
       void IDisposable.Dispose()
       {
         form.Dispose();
-        timer.Start();
       }
 
       public Result Run(bool exposeMainWindow = true)

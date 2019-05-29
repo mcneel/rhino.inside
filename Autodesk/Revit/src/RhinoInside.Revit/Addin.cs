@@ -18,7 +18,7 @@ namespace RhinoInside.Revit
     static readonly string SystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
     internal static readonly string RhinoExePath = Path.Combine(SystemDir, "Rhino.exe");
     internal static readonly FileVersionInfo RhinoVersionInfo = File.Exists(RhinoExePath) ? FileVersionInfo.GetVersionInfo(RhinoExePath) : null ;
-    static readonly Version MinimumRhinoVersion = new Version(7, 0, 19141);
+    static readonly Version MinimumRhinoVersion = new Version(7, 0, 19148);
     static readonly Version RhinoVersion = new Version
     (
       RhinoVersionInfo?.FileMajorPart ?? 0,
