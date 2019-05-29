@@ -14,16 +14,15 @@ using Grasshopper.Kernel.Special;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class MeshShapeByMesh : GH_TransactionalComponentItem
+  public class DirectShapeByMesh : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("5542506A-A09E-4EC9-92B4-F2B52417511C");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("M");
 
-    public MeshShapeByMesh() : base
+    public DirectShapeByMesh() : base
     (
-      "AddMeshShape.ByMesh", "ByMesh",
-      "Given a Mesh, it adds a Mesh element to the active Revit document",
+      "AddDirectShape.ByMesh", "ByMesh",
+      "Given a Mesh, it adds a Mesh shape to the active Revit document",
       "Revit", "Geometry"
     )
     { }
@@ -58,8 +57,16 @@ namespace RhinoInside.Revit.GH.Components
       var element = PreviousElement(doc, Iteration);
       try
       {
-        if (mesh == null || !mesh.IsValid)
-          throw new Exception(string.Format("Parameter '{0}' must be valid Mesh.", Params.Input[0].Name));
+        if (mesh == null)
+          throw new NullReferenceException($"Parameter '{Params.Input[0].Name}' not set to an instance of a Mesh.");
+
+        if (!mesh.IsValidWithLog(out var log))
+        {
+          foreach (var line in log.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, line);
+
+          throw new Exception($"Parameter '{Params.Input[0].Name}' not set to a valid Mesh.");
+        }
 
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)

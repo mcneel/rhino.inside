@@ -15,7 +15,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("0C642D7D-897B-479E-8668-91E09222D7B9");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("MF");
 
     public FamilyInstanceByPointAtHost() : base
     (

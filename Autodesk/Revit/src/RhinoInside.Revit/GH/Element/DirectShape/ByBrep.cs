@@ -14,16 +14,15 @@ using Grasshopper.Kernel.Special;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class BrepShapeByBrep : GH_TransactionalComponentItem
+  public class DirectShapeByBrep : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("5ADE9AE3-588C-4285-ABC5-09DEB92C6660");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("B");
 
-    public BrepShapeByBrep() : base
+    public DirectShapeByBrep() : base
     (
-      "AddBrepShape.ByBrep", "ByBrep",
-      "Given a Brep, it adds a Brep element to the active Revit document",
+      "AddDirectShape.ByBrep", "ByBrep",
+      "Given a Brep, it adds a Brep shape to the active Revit document",
       "Revit", "Geometry"
     )
     { }
@@ -58,8 +57,16 @@ namespace RhinoInside.Revit.GH.Components
       var element = PreviousElement(doc, Iteration);
       try
       {
-        if (brep == null || !brep.IsValid)
-          throw new Exception(string.Format("Parameter '{0}' must be valid Brep.", Params.Input[0].Name));
+        if (brep == null)
+          throw new NullReferenceException($"Parameter '{Params.Input[0].Name}' not set to an instance of a Brep.");
+
+        if (!brep.IsValidWithLog(out var log))
+        {
+          foreach (var line in log.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, line);
+
+          throw new Exception($"Parameter '{Params.Input[0].Name}' not set to a valid Brep.");
+        }
 
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)

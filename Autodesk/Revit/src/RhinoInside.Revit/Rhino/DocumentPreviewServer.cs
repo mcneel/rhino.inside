@@ -1,3 +1,4 @@
+#if REVIT_2018
 using System;
 using System.Diagnostics;
 using System.Reflection;
@@ -6,13 +7,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Color = System.Drawing.Color;
 
-using Autodesk.Revit.DB;
-#if REVIT_2018
 using Autodesk.Revit.DB.DirectContext3D;
+using Autodesk.Revit.DB.ExternalService;
+using View         = Autodesk.Revit.DB.View;
+using DisplayStyle = Autodesk.Revit.DB.DisplayStyle;
 
 using Rhino;
 using Rhino.Geometry;
-using Autodesk.Revit.DB.ExternalService;
+using Rhino.DocObjects;
+using Rhino.DocObjects.Tables;
 
 namespace RhinoInside.Revit
 {
@@ -35,7 +38,7 @@ namespace RhinoInside.Revit
         ActiveDocument = null;
     }
 
-    static void RhinoDoc_AddRhinoObject(object sender, Rhino.DocObjects.RhinoObjectEventArgs e)
+    static void RhinoDoc_AddRhinoObject(object sender, RhinoObjectEventArgs e)
     {
       if (e.TheObject.Document == ActiveDocument && ObjectPrimitive.IsSupportedObject(e.TheObject, true))
       {
@@ -44,7 +47,7 @@ namespace RhinoInside.Revit
       }
     }
 
-    static void RhinoDoc_DeleteRhinoObject(object sender, Rhino.DocObjects.RhinoObjectEventArgs e)
+    static void RhinoDoc_DeleteRhinoObject(object sender, RhinoObjectEventArgs e)
     {
       if (e.TheObject.Document == ActiveDocument && ObjectPrimitive.IsSupportedObject(e.TheObject, false))
       {
@@ -53,17 +56,17 @@ namespace RhinoInside.Revit
       }
     }
 
-    static void RhinoDoc_ModifyObjectAttributes(object sender, Rhino.DocObjects.RhinoModifyObjectAttributesEventArgs e)
+    static void RhinoDoc_ModifyObjectAttributes(object sender, RhinoModifyObjectAttributesEventArgs e)
     {
       if (e.Document == ActiveDocument) Revit.RefreshActiveView();
     }
 
-    static void RhinoDoc_MaterialTableEvent(object sender, Rhino.DocObjects.Tables.MaterialTableEventArgs e)
+    static void RhinoDoc_MaterialTableEvent(object sender, MaterialTableEventArgs e)
     {
       if (e.Document == ActiveDocument) Revit.RefreshActiveView();
     }
 
-    static void RhinoDoc_LayerTableEvent(object sender, Rhino.DocObjects.Tables.LayerTableEventArgs e)
+    static void RhinoDoc_LayerTableEvent(object sender, LayerTableEventArgs e)
     {
       if (e.Document == ActiveDocument) Revit.RefreshActiveView();
     }
@@ -89,8 +92,8 @@ namespace RhinoInside.Revit
     }
 
     static Dictionary<Guid, DocumentPreviewServer> objectPreviews;
-    readonly Rhino.DocObjects.RhinoObject rhinoObject;
-    DocumentPreviewServer(Rhino.DocObjects.RhinoObject o) { rhinoObject = o; }
+    readonly RhinoObject rhinoObject;
+    DocumentPreviewServer(RhinoObject o) { rhinoObject = o; }
 
     override public void Register()
     {
@@ -191,41 +194,42 @@ namespace RhinoInside.Revit
       return true;
     }
 
-    public override Outline GetBoundingBox(View dBView)
+    public override Autodesk.Revit.DB.Outline GetBoundingBox(View dBView)
     {
       var bbox = rhinoObject.Geometry.GetBoundingBox(false);
       bbox = bbox.Scale(1.0 / Revit.ModelUnits);
-      return new Outline(bbox.Min.ToHost(), bbox.Max.ToHost());
+      return new Autodesk.Revit.DB.Outline(bbox.Min.ToHost(), bbox.Max.ToHost());
     }
 
     class ObjectPrimitive : Primitive
     {
-      readonly Rhino.DocObjects.RhinoObject rhinoObject;
-      public ObjectPrimitive(Rhino.DocObjects.RhinoObject o, Rhino.Geometry.Point p) : base(p) { rhinoObject = o; }
-      public ObjectPrimitive(Rhino.DocObjects.RhinoObject o, Rhino.Geometry.PointCloud pc) : base(pc) { rhinoObject = o; }
-      public ObjectPrimitive(Rhino.DocObjects.RhinoObject o, Rhino.Geometry.PointCloud pc, Part p) : base(pc, p) { rhinoObject = o; }
-      public ObjectPrimitive(Rhino.DocObjects.RhinoObject o, Rhino.Geometry.Curve c) : base(c) { rhinoObject = o; }
-      public ObjectPrimitive(Rhino.DocObjects.RhinoObject o, Rhino.Geometry.Mesh m) : base(m) { rhinoObject = o; }
-      public ObjectPrimitive(Rhino.DocObjects.RhinoObject o, Rhino.Geometry.Mesh m, Part p) : base(m, p) { rhinoObject = o; }
+      readonly RhinoObject rhinoObject;
+      public ObjectPrimitive(RhinoObject o, Point p) : base(p) { rhinoObject = o; }
+      public ObjectPrimitive(RhinoObject o, PointCloud pc) : base(pc) { rhinoObject = o; }
+      public ObjectPrimitive(RhinoObject o, PointCloud pc, Part p) : base(pc, p) { rhinoObject = o; }
+      public ObjectPrimitive(RhinoObject o, Curve c) : base(c) { rhinoObject = o; }
+      public ObjectPrimitive(RhinoObject o, Mesh m) : base(m) { rhinoObject = o; }
+      public ObjectPrimitive(RhinoObject o, Mesh m, Part p) : base(m, p) { rhinoObject = o; }
 
-      public static bool IsSupportedObject(Rhino.DocObjects.RhinoObject rhinoObject, bool add)
+      public static bool IsSupportedObject(
+        RhinoObject rhinoObject, bool add)
       {
         if (add && !rhinoObject.IsValid)
           return false;
 
-        if (rhinoObject is Rhino.DocObjects.PointObject po)
+        if (rhinoObject is PointObject po)
           return !add || po.PointGeometry.IsValid;
 
-        if (rhinoObject is Rhino.DocObjects.PointCloudObject pco)
+        if (rhinoObject is PointCloudObject pco)
           return !add || pco.PointCloudGeometry.Count > 0;
 
-        if (rhinoObject is Rhino.DocObjects.CurveObject co)
+        if (rhinoObject is CurveObject co)
           return !add || co.CurveGeometry.GetLength() > Revit.ShortCurveTolerance * Revit.ModelUnits;
 
-        if (rhinoObject is Rhino.DocObjects.MeshObject mo)
+        if (rhinoObject is MeshObject mo)
           return !add || mo.MeshGeometry.Faces.Count > 0;
 
-        if (rhinoObject is Rhino.DocObjects.BrepObject bo)
+        if (rhinoObject is BrepObject bo)
           return !add || bo.BrepGeometry.Faces.Count > 0;
 
         if (rhinoObject.IsMeshable(MeshType.Render))
@@ -276,7 +280,7 @@ namespace RhinoInside.Revit
             hlr ?
             Color.White :
             useMaterials ?
-            Rhino.DocObjects.Material.DefaultMaterial.DiffuseColor :
+            Material.DefaultMaterial.DiffuseColor :
             rhinoObject.Attributes.DrawColor(ActiveDocument);
 
             if (drawColor == Color.Black)
@@ -293,7 +297,7 @@ namespace RhinoInside.Revit
                 emissive = material.EmissionColor;
                 if (material.Shine != 0.0)
                 {
-                  double s = material.Shine / Rhino.DocObjects.Material.MaxShine;
+                  double s = material.Shine / Material.MaxShine;
                   double _s = 1.0 - s;
                   specular = Color.FromArgb
                   (
@@ -339,7 +343,7 @@ namespace RhinoInside.Revit
 
     Primitive[] primitives;
 
-    void AddPointCloudPreviews(Rhino.Geometry.PointCloud previewCloud)
+    void AddPointCloudPreviews(PointCloud previewCloud)
     {
       int verticesCount = previewCloud.Count;
       if (verticesCount > VertexThreshold)
@@ -360,7 +364,7 @@ namespace RhinoInside.Revit
       else primitives = new Primitive[] { new ObjectPrimitive(rhinoObject, previewCloud) };
     }
 
-    void AddMeshPreviews(Rhino.Geometry.Mesh previewMesh)
+    void AddMeshPreviews(Mesh previewMesh)
     {
       int verticesCount = previewMesh.Vertices.Count;
       if (verticesCount > VertexThreshold || previewMesh.Faces.Count > VertexThreshold)
@@ -398,25 +402,25 @@ namespace RhinoInside.Revit
       else primitives = new Primitive[] { new ObjectPrimitive(rhinoObject, previewMesh) };
     }
 
-    public override void RenderScene(View dBView, DisplayStyle displayStyle)
+    public override void RenderScene(View dBView, Autodesk.Revit.DB.DisplayStyle displayStyle)
     {
       try
       {
         if (primitives == null)
         {
-          if (rhinoObject is Rhino.DocObjects.PointObject pointObject)
+          if (rhinoObject is PointObject pointObject)
           {
             primitives = new Primitive[] { new ObjectPrimitive(pointObject, pointObject.PointGeometry) };
           }
-          else if (rhinoObject is Rhino.DocObjects.PointCloudObject pointCloudObject)
+          else if (rhinoObject is PointCloudObject pointCloudObject)
           {
             AddPointCloudPreviews(pointCloudObject.PointCloudGeometry);
           }
-          else if (rhinoObject is Rhino.DocObjects.CurveObject curveObject)
+          else if (rhinoObject is CurveObject curveObject)
           {
             primitives = new Primitive[] { new ObjectPrimitive(curveObject, curveObject.CurveGeometry) };
           }
-          else if (rhinoObject is Rhino.DocObjects.MeshObject meshObject)
+          else if (rhinoObject is MeshObject meshObject)
           {
             AddMeshPreviews(meshObject.MeshGeometry);
           }
@@ -441,7 +445,7 @@ namespace RhinoInside.Revit
                 var previewMesh = renderMeshes.Length == 1 ? renderMeshes[0] : null;
                 if (previewMesh == null)
                 {
-                  previewMesh = new Rhino.Geometry.Mesh();
+                  previewMesh = new Mesh();
                   previewMesh.Append(renderMeshes);
                 }
 

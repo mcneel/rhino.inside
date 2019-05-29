@@ -552,10 +552,12 @@ namespace RhinoInside.Revit.GH.Types
           const int factor = 3;
 
           // Erased element
-          material = new Rhino.Display.DisplayMaterial(material);
-          material.Diffuse = System.Drawing.Color.FromArgb(20, 20, 20);
-          material.Emission = System.Drawing.Color.FromArgb(material.Emission.R / factor, material.Emission.G / factor, material.Emission.B / factor);
-          material.Shine = 0.0;
+          material = new Rhino.Display.DisplayMaterial(material)
+          {
+            Diffuse = System.Drawing.Color.FromArgb(20, 20, 20),
+            Emission = System.Drawing.Color.FromArgb(material.Emission.R / factor, material.Emission.G / factor, material.Emission.B / factor),
+            Shine = 0.0,
+          };
         }
         else if (!element.Pinned)
         {
@@ -573,11 +575,14 @@ namespace RhinoInside.Revit.GH.Types
             }
             else
             {
-              material = new Rhino.Display.DisplayMaterial(material);
-              material.Diffuse = element.Category != null ? element.Category.LineColor.ToRhino() : System.Drawing.Color.White;
+              material = new Rhino.Display.DisplayMaterial(material)
+              {
+                Diffuse = element.Category?.LineColor.ToRhino() ?? System.Drawing.Color.White,
+                Transparency = 0.0
+              };
+
               if (material.Diffuse == System.Drawing.Color.Black)
                 material.Diffuse = System.Drawing.Color.White;
-              material.Transparency = 0.0;
             }
           }
         }
@@ -837,7 +842,6 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("E");
 
     public Element() : base("Element", "Element", "Represents a Revit document element.", "Revit", "Element") { }
 
@@ -847,9 +851,12 @@ namespace RhinoInside.Revit.GH.Parameters
 
       try
       {
-        var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
-        if (reference != null)
-          element = Types.Element.Make(reference.ElementId);
+        using (new ModalForm.EditScope())
+        {
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
+          if (reference != null)
+            element = Types.Element.Make(reference.ElementId);
+        }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
 
@@ -869,9 +876,12 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         try
         {
-          var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element);
-          if (references != null)
-            elements = references.Select((x) => Types.Element.Make(x.ElementId)).ToList();
+          using (new ModalForm.EditScope())
+          {
+            var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element);
+            if (references != null)
+              elements = references.Select((x) => Types.Element.Make(x.ElementId)).ToList();
+          }
         }
         catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
       }
@@ -886,7 +896,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected static readonly Type ObjectType = typeof(Types.Element);
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon(ObjectType.Name.Substring(0, 1));
 
     protected ElementGetter(string propertyName)
       : base(ObjectType.Name + "." + propertyName, propertyName, "Get the " + propertyName + " of the specified " + ObjectType.Name, "Revit", ObjectType.Name)
@@ -902,7 +911,6 @@ namespace RhinoInside.Revit.GH.Components
   public class ElementIdentity : GH_Component
   {
     public override Guid ComponentGuid => new Guid("D3917D58-7183-4B3F-9D22-03F0FE93B956");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("ID");
 
     public ElementIdentity()
     : base("Element.Identity", "Element.Identity", "Query element identity information", "Revit", "Element")
@@ -938,7 +946,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("B7E6A82F-684F-4045-A634-A4AA9F7427A8");
     static readonly string PropertyName = "Geometry";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("G");
 
     public ElementGeometry() : base(PropertyName) { }
 
@@ -966,7 +973,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("A95C7B73-6F70-46CA-85FC-A4402A3B6971");
     static readonly string PropertyName = "Preview";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("P");
 
     public ElementPreview() : base(PropertyName) { }
 
@@ -1030,7 +1036,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("44515A6B-84EE-4DBD-8241-17EDBE07C5B6");
     static readonly string PropertyName = "Parameters";
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{}");
 
     public ElementParameters() : base(PropertyName) { }
 
@@ -1091,7 +1096,6 @@ namespace RhinoInside.Revit.GH.Components
   public class ElementDecompose : GH_Component, IGH_VariableParameterComponent
   {
     public override Guid ComponentGuid => new Guid("FAD33C4B-A7C3-479B-B309-8F5363B25599");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{");
     public ElementDecompose() : base("Element.Decompose", "Decompose", "Decomposes an Element into its parameters", "Revit", "Element") { }
 
     public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
@@ -1285,19 +1289,22 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override string HtmlHelp_Source()
     {
-      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this);
-      nTopic.Title = Name;
-      nTopic.Description =
-      @"<p>This component is a special interface object that allows for quick accessing to Revit Element parameters.</p>" +
-      @"<p>It's able to modify itself in order to show any parameter its input element parameter contains. " +
-      @"It also allows to remove some output parameters if are not connected to anything else.</p>" +
-      @"<p>Under the component contextual menu you would find these options:</p>" +
-      @"<dl>" +
-      @"<dt><b>Get common parameters</b></dt><dd>Populates the output parameters list with common parameters in all input elements</dd>" +
-      @"<dt><b>Get all parameters</b></dt><dd>Populates the output parameters list with all parameters found in all input elements</dd>" +
-      @"<dt><b>Remove unconnected parameters</b></dt><dd>Removes the output parameters that are not connected to anything else</dd>" +
-      @"</dl>";
-      nTopic.ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside";
+      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this)
+      {
+        Title = Name,
+        Description =
+        @"<p>This component is a special interface object that allows for quick accessing to Revit Element parameters.</p>" +
+        @"<p>It's able to modify itself in order to show any parameter its input element parameter contains. " +
+        @"It also allows to remove some output parameters if are not connected to anything else.</p>" +
+        @"<p>Under the component contextual menu you would find these options:</p>" +
+        @"<dl>" +
+        @"<dt><b>Get common parameters</b></dt><dd>Populates the output parameters list with common parameters in all input elements</dd>" +
+        @"<dt><b>Get all parameters</b></dt><dd>Populates the output parameters list with all parameters found in all input elements</dd>" +
+        @"<dt><b>Remove unconnected parameters</b></dt><dd>Removes the output parameters that are not connected to anything else</dd>" +
+        @"</dl>",
+        ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside"
+      };
+
       nTopic.AddRemark("SHIFT + Double click runs \"Get common parameters\"");
       nTopic.AddRemark("CTRL + Double click runs \"Remove unconnected parameters\".");
 
@@ -1309,7 +1316,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("D86050F2-C774-49B1-9973-FB3AB188DC94");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("GET");
 
     public ElementParameterGet()
     : base("Element.ParameterGet", "ParameterGet", "Gets the parameter value of a specified Revit Element", "Revit", "Element")
@@ -1396,7 +1402,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("8F1EE110-7FDA-49E0-BED4-E8E0227BC021");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("SET");
 
     public ElementParameterSet()
     : base("Element.ParameterSet", "ParameterSet", "Sets the parameter value of a specified Revit Element", "Revit", "Element")

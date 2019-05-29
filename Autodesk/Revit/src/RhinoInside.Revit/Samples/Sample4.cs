@@ -17,6 +17,8 @@ using Autodesk.Revit.UI.Selection;
 using Rhino.Geometry;
 using Rhino.PlugIns;
 using GH_IO.Serialization;
+
+using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
@@ -25,16 +27,14 @@ using Cursor = System.Windows.Forms.Cursor;
 using Cursors = System.Windows.Forms.Cursors;
 
 using RhinoInside.Revit.UI;
+using Autodesk.Revit.UI.Events;
 
 namespace RhinoInside.Revit.Samples
 {
-  public abstract class Sample4 : Command
+  public abstract class Sample4 : GrasshopperCommand
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-
       var items = ribbonPanel.AddStackedItems
       (
         new ComboBoxData("Category"),
@@ -54,39 +54,42 @@ namespace RhinoInside.Revit.Samples
         mruPullDownButton.Image = ImageBuilder.BuildImage("4");
         mruPullDownButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
 
-        mruPullDownButton.AddPushButton(typeof(Browse), "Browse...", "Browse for a Grasshopper definition to evaluate");
+        mruPullDownButton.AddPushButton(typeof(Browse), "Browse...", "Browse for a Grasshopper definition to evaluate", typeof(Availability));
       }
 
-      Revit.ApplicationUI.ViewActivated += ActiveUIApplication_ViewActivated;
+      EventHandler<IdlingEventArgs> BuildDirectShapeCategoryList = null;
+      Revit.ApplicationUI.Idling += BuildDirectShapeCategoryList = (sender, args) =>
+      {
+        var doc = (sender as UIApplication)?.ActiveUIDocument.Document;
+        if (doc == null)
+          return;
+
+        var directShapeCategories = Enum.GetValues(typeof(BuiltInCategory)).Cast<BuiltInCategory>().
+        Where(categoryId => DirectShape.IsValidCategoryId(new ElementId(categoryId), doc)).
+        Select(categoryId => Autodesk.Revit.DB.Category.GetCategory(doc, categoryId));
+
+        foreach (var group in directShapeCategories.GroupBy(x => x.CategoryType).OrderBy(x => x.Key.ToString()))
+        {
+          foreach (var category in group.OrderBy(x => x.Name))
+          {
+            var comboBoxMemberData = new ComboBoxMemberData(((BuiltInCategory) category.Id.IntegerValue).ToString(), category.Name)
+            {
+              GroupName = group.Key.ToString()
+            };
+            var item = categoriesComboBox.AddItem(comboBoxMemberData);
+
+            if ((BuiltInCategory) category.Id.IntegerValue == BuiltInCategory.OST_GenericModel)
+              categoriesComboBox.Current = item;
+          }
+        }
+
+        Revit.ApplicationUI.Idling -= BuildDirectShapeCategoryList;
+      };
     }
 
     static Autodesk.Revit.UI.ComboBox categoriesComboBox = null;
     static PulldownButton mruPullDownButton = null;
-    static Autodesk.Revit.UI.PushButton[] mruPushPuttons = null;
-
-    static void ActiveUIApplication_ViewActivated(object sender, Autodesk.Revit.UI.Events.ViewActivatedEventArgs e)
-    {
-      var directShapeCategories = Enum.GetValues(typeof(BuiltInCategory)).Cast<BuiltInCategory>().
-      Where(categoryId => DirectShape.IsValidCategoryId(new ElementId(categoryId), e.CurrentActiveView.Document)).
-      Select(categoryId => Autodesk.Revit.DB.Category.GetCategory(e.CurrentActiveView.Document, categoryId));
-
-      foreach (var group in directShapeCategories.GroupBy(x => x.CategoryType).OrderBy(x => x.Key.ToString()))
-      {
-        foreach (var category in group.OrderBy(x => x.Name))
-        {
-          var comboBoxMemberData = new ComboBoxMemberData(((BuiltInCategory) category.Id.IntegerValue).ToString(), category.Name)
-          {
-            GroupName = group.Key.ToString()
-          };
-          var item = categoriesComboBox.AddItem(comboBoxMemberData);
-
-          if((BuiltInCategory) category.Id.IntegerValue == BuiltInCategory.OST_GenericModel)
-            categoriesComboBox.Current = item;
-        }
-      }
-
-      Revit.ApplicationUI.ViewActivated -= ActiveUIApplication_ViewActivated;
-    }
+    static PushButton[] mruPushPuttons = null;
 
     const ObjectSnapTypes DefaultSnapTypes =
       ObjectSnapTypes.Endpoints |
@@ -289,14 +292,12 @@ namespace RhinoInside.Revit.Samples
       return true;
     }
 
-    Result BakeDefinition(UIApplication application, string filePath)
+    Result Execute(ExternalCommandData data, ref string message, ElementSet elements, string filePath)
     {
       if (!AddFileToMru(filePath))
         return Result.Failed;
 
-      // Load Grasshopper
-      PlugIn.LoadPlugIn(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF));
-
+      var application = data.Application;
       var transactionName = string.Empty;
       var outputs = new List<KeyValuePair<string, List<GeometryBase>>>();
 
@@ -510,26 +511,26 @@ namespace RhinoInside.Revit.Samples
           }
         }
 
-        return BakeDefinition(data.Application, filePath);
+        return Execute(data, ref message, elements, filePath);
       }
     }
 
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-    public class Mru0 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[0].ToolTip); }
+    public class Mru0 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => Execute(data, ref message, elements, mruPushPuttons[0].ToolTip); }
 
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-    public class Mru1 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[1].ToolTip); }
+    public class Mru1 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => Execute(data, ref message, elements, mruPushPuttons[1].ToolTip); }
 
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-    public class Mru2 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[2].ToolTip); }
+    public class Mru2 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => Execute(data, ref message, elements, mruPushPuttons[2].ToolTip); }
 
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-    public class Mru3 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[3].ToolTip); }
+    public class Mru3 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => Execute(data, ref message, elements, mruPushPuttons[3].ToolTip); }
 
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-    public class Mru4 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[4].ToolTip); }
+    public class Mru4 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => Execute(data, ref message, elements, mruPushPuttons[4].ToolTip); }
 
     [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-    public class Mru5 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => BakeDefinition(data.Application, mruPushPuttons[5].ToolTip); }
+    public class Mru5 : Sample4 { public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements) => Execute(data, ref message, elements, mruPushPuttons[5].ToolTip); }
   }
 }

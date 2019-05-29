@@ -10,77 +10,56 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Rhino.PlugIns;
 
+using Grasshopper;
+
 namespace RhinoInside.Revit.UI
 {
-  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class GrasshopperCommand : IExternalCommand
+  abstract public class GrasshopperCommand : RhinoCommand
   {
-    static readonly Guid GrasshopperGuid = new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF);
-    public static void CreateUI(RibbonPanel ribbonPanel)
+    protected static readonly Guid PluginId = new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF);
+    public GrasshopperCommand()
     {
-      if (!PlugIn.PlugInExists(GrasshopperGuid, out bool loaded, out bool loadProtected))
-        return;
-
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-
-      var buttonData = new PushButtonData
-      (
-        "cmdRhinoInside.Grasshopper", "Grasshopper",
-        thisAssembly.Location,
-        MethodBase.GetCurrentMethod().DeclaringType.FullName
-      );
-
-      if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
-      {
-        pushButton.ToolTip = "Toggle Grasshopper window visibility";
-        pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png");
-        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://www.grasshopper3d.com/"));
-        pushButton.Enabled = !loadProtected;
-      }
+      if (!PlugIn.LoadPlugIn(PluginId, true, true))
+        throw new Exception("Failed to startup Grasshopper");
     }
 
-    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    public new class Availability : RhinoCommand.Availability
     {
-      if (!PlugIn.LoadPlugIn(GrasshopperGuid))
-        return Result.Failed;
-
-      // Reset document units
-      UI.RhinoCommand.UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
-
-      return Rhino.RhinoApp.RunScript("!_-Grasshopper _W _T ENTER", false) ? Result.Succeeded : Result.Failed;
+      public override bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories)
+      {
+        return base.IsCommandAvailable(applicationData, selectedCategories) &&
+              (PlugIn.PlugInExists(PluginId, out bool loaded, out bool loadProtected) & (loaded | !loadProtected));
+      }
     }
   }
 
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class PythonCommand : IExternalCommand
+  class CommandGrasshopper : GrasshopperCommand
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
       // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-
-      var buttonData = new PushButtonData
-      (
-        "cmdRhinoInside.EditPythonScript", "Python",
-        thisAssembly.Location,
-        MethodBase.GetCurrentMethod().DeclaringType.FullName
-      );
-
+      var buttonData = NewPushButtonData<CommandGrasshopper, Availability>("Grasshopper");
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
-        pushButton.ToolTip = "Shows Rhino Python editor window";
-        pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Python.png");
-        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://developer.rhino3d.com/guides/rhinopython/"));
+        pushButton.ToolTip = "Shows Grasshopper window";
+        pushButton.LongDescription = $"Use CTRL key to open only Grasshopper window without restoring other tool windows";
+        pushButton.Image = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png", true);
+        pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png");
+        pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://www.grasshopper3d.com/"));
+        pushButton.Visible = PlugIn.PlugInExists(PluginId, out bool loaded, out bool loadProtected);
       }
     }
 
-    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      // Reset document units
-      UI.RhinoCommand.UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc, data.Application.ActiveUIDocument?.Document);
+      using (var modal = new Rhinoceros.ModalScope())
+      {
+        if (!Rhino.RhinoApp.RunScript("!_-Grasshopper _W _S ENTER", false))
+          return Result.Failed;
 
-      return Rhino.RhinoApp.RunScript("!_EditPythonScript", false) ? Result.Succeeded : Result.Failed;
+        return modal.Run(false);
+      }
     }
   }
 }

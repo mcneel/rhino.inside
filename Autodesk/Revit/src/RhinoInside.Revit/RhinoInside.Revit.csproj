@@ -1,7 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <RevitVersion>2017</RevitVersion>
   </PropertyGroup>
   <PropertyGroup Condition="$(Configuration.Contains('2018'))">
@@ -145,19 +145,22 @@
           <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\RevitAPIUI.dll</HintPath>
           <Private>False</Private>
         </Reference>
+        <Reference Include="AdWindows">
+          <HintPath>C:\Program Files\Autodesk\Revit $(RevitVersion)\AdWindows.dll</HintPath>
+          <Private>False</Private>
+        </Reference>
       </ItemGroup>
     </When>
     <Otherwise>
       <ItemGroup>
-        <PackageReference Include="RhinoCommon" Version="7.0.19127.13435-wip" IncludeAssets="compile; build" />
-        <PackageReference Include="Grasshopper" Version="7.0.19127.13435-wip" IncludeAssets="compile; build" />
-        <PackageReference Include="Revit.RevitApi.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" />
-        <PackageReference Include="Revit.RevitApiUI.x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" />
+        <PackageReference Include="RhinoCommon" Version="7.0.19148.11365-wip" IncludeAssets="compile; build" />
+        <PackageReference Include="Grasshopper" Version="7.0.19148.11365-wip" IncludeAssets="compile; build" />
+        <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).0.*" IncludeAssets="build; compile" />
       </ItemGroup>
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="GH\Addon.cs" />
+    <Compile Include="GH\Guest.cs" />
     <Compile Include="GH\ID.cs" />
     <Compile Include="GH\GeometryObject\GeometryObject.cs" />
     <Compile Include="GH\Category\Category.cs" />
@@ -187,11 +190,21 @@
     <Compile Include="GH\Element\Form\ByCurves.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
     <Compile Include="GH\PreviewServer.cs" />
+    <Compile Include="ModalForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Revit.KeyboardShortcuts.cs" />
+    <Compile Include="Rhino\DocumentPreviewServer.cs" />
+    <Compile Include="Rhino\Rhinoceros.cs" />
     <Compile Include="UI\Command.cs" />
     <Compile Include="UI\HelpCommands.cs" />
     <Compile Include="UI\GrasshopperCommand.cs" />
     <Compile Include="UI\RhinoCommand.cs" />
-    <Compile Include="DocumentPreviewServer.cs" />
     <Compile Include="DirectContext3DServer.cs" />
     <Compile Include="ImageBuilder.cs" />
     <Compile Include="Operator.cs" />
@@ -199,13 +212,9 @@
     <Compile Include="Convert.cs" />
     <Compile Include="Revit.cs" />
     <Compile Include="Revit.FailuresPreprocessor.cs" />
+    <Compile Include="Addin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="Properties\RhinoInside.Revit.addin" />
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
     <Compile Include="Samples\Sample1.cs" />
     <None Include="Samples\Sample2.ghx" />
     <None Include="Samples\Sample3.ghx" />
@@ -222,13 +231,62 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Resources\Rhino-logo.png" />
     <EmbeddedResource Include="Resources\Rhino.png" />
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Resources\Grasshopper.png" />
+    <EmbeddedResource Include="Resources\Python.png" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Python.png" />
+    <None Include="Resources\GH\BeamByCurve.png" />
+    <None Include="Resources\GH\BuildingPadByOutline.png" />
+    <None Include="Resources\GH\BuiltInParameterByName.png" />
+    <None Include="Resources\GH\BuiltInParameterGroup.png" />
+    <None Include="Resources\GH\BuiltInParameterGroups.png" />
+    <None Include="Resources\GH\Category.png" />
+    <None Include="Resources\GH\CategoryDecompose.png" />
+    <None Include="Resources\GH\CategoryTypes.png" />
+    <None Include="Resources\GH\DirectShapeByGeometry.png" />
+    <None Include="Resources\GH\DirectShapeByCurve.png" />
+    <None Include="Resources\GH\DirectShapeByMesh.png" />
+    <None Include="Resources\GH\DirectShapeByPoint.png" />
+    <None Include="Resources\GH\DirectShapeCategories.png" />
+    <None Include="Resources\GH\DocumentCategories.png" />
+    <None Include="Resources\GH\DocumentCategoriesPicker.png" />
+    <None Include="Resources\GH\DocumentElements.png" />
+    <None Include="Resources\GH\DocumentElementTypes.png" />
+    <None Include="Resources\GH\DocumentLevels.png" />
+    <None Include="Resources\GH\DocumentLevelsPicker.png" />
+    <None Include="Resources\GH\DocumentParameters.png" />
+    <None Include="Resources\GH\Edge.png" />
+    <None Include="Resources\GH\Element.png" />
+    <None Include="Resources\GH\ElementDecompose.png" />
+    <None Include="Resources\GH\ElementGeometry.png" />
+    <None Include="Resources\GH\ElementParameterGet.png" />
+    <None Include="Resources\GH\ElementParameters.png" />
+    <None Include="Resources\GH\ElementParametersSet.png" />
+    <None Include="Resources\GH\ElementPreview.png" />
+    <None Include="Resources\GH\DocumentFamiliesPicker.png" />
+    <None Include="Resources\GH\ElementType.png" />
+    <None Include="Resources\GH\ElementTypeByName.png" />
+    <None Include="Resources\GH\Face.png" />
+    <None Include="Resources\GH\FloorByOutline.png" />
+    <None Include="Resources\GH\FormByCurves.png" />
+    <None Include="Resources\GH\FormByGeometry.png" />
+    <None Include="Resources\GH\ModelLineByCurve.png" />
+    <None Include="Resources\GH\ParameterByName.png" />
+    <None Include="Resources\GH\ParameterKey.png" />
+    <None Include="Resources\GH\ParameterKeyDecompose.png" />
+    <None Include="Resources\GH\ParameterValueDecompose.png" />
+    <None Include="Resources\GH\SketchPlane.png" />
+    <None Include="Resources\GH\SketchPlaneByPlane.png" />
+    <None Include="Resources\GH\TopographyByPoints.png" />
+    <None Include="Resources\GH\Vertex.png" />
+    <None Include="Resources\GH\WallByCurve.png" />
+    <None Include="Resources\GH\RoofByOutline.png" />
+    <None Include="Resources\GH\FamilyInstanceByPointAtHost.png" />
+    <None Include="Resources\GH\ElementIdentity.png" />
+    <None Include="Resources\GH\ColumnByCurve.png" />
+    <None Include="Resources\GH\DirectShapeByBrep.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild" Condition="$(Configuration.Contains('Debug'))">

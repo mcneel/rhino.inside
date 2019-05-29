@@ -118,6 +118,12 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
+  public abstract class GH_ValueList : Grasshopper.Kernel.Special.GH_ValueList
+  {
+    protected override Bitmap Icon => ((Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
+                                       ImageBuilder.BuildIcon(GetType().Name.Substring(0, 1));
+  }
+
   public abstract class ValueListPicker : GH_ValueList, IGH_InitCodeAware
   {
     public override GH_ParamData DataType => GH_ParamData.remote;
@@ -236,20 +242,22 @@ namespace RhinoInside.Revit.GH.Parameters
 
     protected override string HtmlHelp_Source()
     {
-      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this);
-      nTopic.Title = Name;
-      nTopic.Description =
-      @"<p>Double click on it and use the name input box to enter a name, alternativelly you can enter a name patter. " +
-      @"If a pattern is used, this param list will be filled up with all the objects that match it.</p>" +
-      @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:</p>" +
-      @"<dl>" +
-      @"<dt><b>></b></dt><dd>Starts with</dd>" +
-      @"<dt><b><</b></dt><dd>Ends with</dd>" +
-      @"<dt><b>?</b></dt><dd>Contains, same as a regular search</dd>" +
-      @"<dt><b>:</b></dt><dd>Wildcards, see Microsoft.VisualBasic " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/like-operator#pattern-options\">LikeOperator</a></dd>" +
-      @"<dt><b>;</b></dt><dd>Regular expresion, see " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference\">here</a> as reference</dd>" +
-      @"</dl>";
-      nTopic.ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside";
+      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this)
+      {
+        Title = Name,
+        Description =
+        @"<p>Double click on it and use the name input box to enter a name, alternativelly you can enter a name patter. " +
+        @"If a pattern is used, this param list will be filled up with all the objects that match it.</p>" +
+        @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:</p>" +
+        @"<dl>" +
+        @"<dt><b>></b></dt><dd>Starts with</dd>" +
+        @"<dt><b><</b></dt><dd>Ends with</dd>" +
+        @"<dt><b>?</b></dt><dd>Contains, same as a regular search</dd>" +
+        @"<dt><b>:</b></dt><dd>Wildcards, see Microsoft.VisualBasic " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/like-operator#pattern-options\">LikeOperator</a></dd>" +
+        @"<dt><b>;</b></dt><dd>Regular expresion, see " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference\">here</a> as reference</dd>" +
+        @"</dl>",
+        ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside"
+      };
 
       return nTopic.HtmlFormat();
     }
@@ -265,6 +273,9 @@ namespace RhinoInside.Revit.GH.Components
 
     // Grasshopper default implementation has a bug, it checks inputs instead of outputs
     public override bool IsBakeCapable => Params?.Output.OfType<IGH_BakeAwareObject>().Where(x => x.IsBakeCapable).Any() ?? false;
+
+    protected override Bitmap Icon => ((Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
+                                      ImageBuilder.BuildIcon(GetType().Name.Substring(0, 1));
   }
 
   public abstract class GH_TransactionalComponent : GH_Component
@@ -366,6 +377,7 @@ namespace RhinoInside.Revit.GH.Components
 
       TrimExcess(list, begin);
     }
+
     protected static double LiteralLengthValue(double meters)
     {
       switch (Rhino.RhinoDoc.ActiveDoc?.ModelUnitSystem)

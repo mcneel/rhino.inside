@@ -40,7 +40,7 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("97DD546D-65C3-4D00-A609-3F5FBDA67142");
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("TYPE");
+    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Revit", "Element", GH_ParamAccess.item) { }
   }
@@ -49,7 +49,6 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("D3FB53D3-9118-4F11-A32D-AECB30AA418D");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("T*");
 
     public ElementTypeByName()
     {
@@ -228,21 +227,24 @@ namespace RhinoInside.Revit.GH.Parameters
 
     protected override string HtmlHelp_Source()
     {
-      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this);
-      nTopic.Title = Name;
-      nTopic.Description =
-      @"<p>This component is a special interface object that allows for quick picking a Revit ElementType object.</p>" +
-      @"<p>Double click on it and use the name input box to enter a family name, alternativelly you can enter a name patter. " +
-      @"If a pattern is used, this param list will be filled up with all the element types that match it.</p>" +
-      @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:</p>" +
-      @"<dl>" +
-      @"<dt><b>></b></dt><dd>Starts with</dd>" +
-      @"<dt><b><</b></dt><dd>Ends with</dd>" +
-      @"<dt><b>?</b></dt><dd>Contains, same as a regular search</dd>" +
-      @"<dt><b>:</b></dt><dd>Wildcards, see Microsoft.VisualBasic " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/like-operator#pattern-options\">LikeOperator</a></dd>" +
-      @"<dt><b>;</b></dt><dd>Regular expresion, see " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference\">here</a> as reference</dd>" +
-      @"</dl>";
-      nTopic.ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside";
+      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this)
+      {
+        Title = Name,
+        Description =
+        @"<p>This component is a special interface object that allows for quick picking a Revit ElementType object.</p>" +
+        @"<p>Double click on it and use the name input box to enter a family name, alternativelly you can enter a name patter. " +
+        @"If a pattern is used, this param list will be filled up with all the element types that match it.</p>" +
+        @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:</p>" +
+        @"<dl>" +
+        @"<dt><b>></b></dt><dd>Starts with</dd>" +
+        @"<dt><b><</b></dt><dd>Ends with</dd>" +
+        @"<dt><b>?</b></dt><dd>Contains, same as a regular search</dd>" +
+        @"<dt><b>:</b></dt><dd>Wildcards, see Microsoft.VisualBasic " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/like-operator#pattern-options\">LikeOperator</a></dd>" +
+        @"<dt><b>;</b></dt><dd>Regular expresion, see " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference\">here</a> as reference</dd>" +
+        @"</dl>",
+        ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside"
+      };
+
       nTopic.AddRemark(@"You can also connect a list of categories, families or types at left as an input and this component will be filled up with all types that belong to those objects.");
 
       return nTopic.HtmlFormat();

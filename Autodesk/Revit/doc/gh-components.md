@@ -16,19 +16,29 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
-    <td width="48px"><img src="GH/BeamByCurve.png" alt="BeamByCurve" width="32"></td>
-    <td>Beam By Curve</td>
+    <td width="48px"><img src="GH/BeamByCurve.png" alt="AddBeamByCurve" width="32"></td>
+    <td>Add Beam By Curve</td>
     <td>Create a Revit Beam Object using a 2d or 3d curve for an axis</td>
   </tr>
   <tr>
-    <td><img src="GH/FloorByOutline.png" alt="BeamByCurve" width="32"></td>
-    <td>Floor By Outline</td>
-    <td>Create a Revit Beam Object using a 2d or 3d curve for an axis</td>
-  </tr>
-  <tr>
-    <td><img src="GH/ColumnByCurve.png" alt="ColumnByCurve" width="32"></td>
-    <td>Column By Curve</td>
+    <td><img src="GH/ColumnByCurve.png" alt="AddColumnByCurve" width="32"></td>
+    <td>Add Column By Curve</td>
     <td>Create a Revit Column Object using an axial curve</td>
+  </tr>
+  <tr>
+    <td><img src="GH/FamilyInstanceByPointAtHost.png" alt="AddFamilyInstanceByPoint" width="32"></td>
+    <td>Add Family Instance by Point at Host</td>
+    <td>Given a position, add a FamilyInstance element to the active Revit document in a host element.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/FloorByOutline.png" alt="AddFloorByOutline" width="32"></td>
+    <td>Add Floor By Outline</td>
+    <td>Create a Revit Floor using a plan curve</td>
+  </tr>
+  <tr>
+    <td><img src="GH/RoofByOutline.png" alt="RoofByOutline" width="32"></td>
+    <td>Add Roof By Outline</td>
+    <td>Create a Revit Roof by using a boundary curve, type and level.</td>
   </tr>
   <tr>
     <td><img src="GH/WallByCurve.png" alt="ColumnByCurve" width="32"></td>
@@ -36,14 +46,14 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Create a Revit Wall Object using a plan curve</td>
   </tr>
   <tr>
-    <td><img src="GH/DirectShapeByGeometry.png" alt="ColumnByCurve" width="32"></td>
-    <td>DirectShape</td>
+    <td><img src="GH/DirectShapeByGeometry.png" alt="AddDirectShapeByGeometry" width="32"></td>
+    <td>Add DirectShape Geometry</td>
     <td>Create a Directshape Element using a plan curve. This is the most generic way to import Geometry.</td>
   </tr>
   <tr>
-    <td><img src="GH/DirectShapeCategories.png" alt="ColumnByCurve" width="32"></td>
-    <td>DirectShape Category</td>
-    <td>Create a Directshape category For using with the DirectShape Component</td>
+    <td><img src="GH/DirectShapeCategories.png" alt="DirectShapeCategories" width="32"></td>
+    <td>DirectShape Category Selector</td>
+    <td>Select a category for using with the DirectShape Component</td>
   </tr>
 </table>
 
@@ -145,7 +155,7 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Get Element's Parameter names attached to a specific Element</td>
   </tr>
   <tr>
-    <td><img src="GH/ElementParameterSet.png" alt="BeamByCurve" width="32"></td>
+    <td><img src="GH/ElementParametersSet.png" alt="BeamByCurve" width="32"></td>
     <td>Element Parameters Set</td>
     <td>Set an Element's Parameter Value by Element, Key and Value</td>
   </tr>
@@ -175,22 +185,22 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
-    <td width="48px"><img src="GH/BrepShapeByBrep.png" alt="BeamByCurve" width="32"></td>
+    <td width="48px"><img src="GH/DirectShapeByBrep.png" alt="DirectShapeByBrep" width="32"></td>
     <td>Add Brep by Shape</td>
     <td>Given a Brep, it adds a Brep element to the active Revit document</td>
   </tr>
   <tr>
-    <td><img src="GH/CurveShapeByCurve.png" alt="BeamByCurve" width="32"></td>
+    <td><img src="GH/DirectShapeByCurve.png" alt="DirectShapeByCurve" width="32"></td>
     <td>Add Curve Shape</td>
     <td>Given a Curve, it adds a Curve shape to the active Revit document</td>
   </tr>
   <tr>
-    <td><img src="GH/MeshShapeByMesh.png" alt="ColumnByCurve" width="32"></td>
+    <td><img src="GH/DirectShapeByMesh.png" alt="DirectShapeByMesh" width="32"></td>
     <td>Add Mesh Shape</td>
     <td>Given a Mesh, it adds a Mesh element to the active Revit document</td>
   </tr>
   <tr>
-    <td><img src="GH/PointShapeByCurve.png" alt="BeamByCurve" width="32"></td>
+    <td><img src="GH/DirectShapeByPoint.png" alt="DirectShapeByPoint" width="32"></td>
     <td>Add Point Shape</td>
     <td>Given a Point, it adds a Point element to the active Revit document</td>
   </tr>
@@ -303,7 +313,7 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
-    <td width="48px"><img src="GH/AddParameterByName.png" alt="BeamByCurve" width="32"></td>
+    <td width="48px"><img src="GH/ParameterByName.png" alt="BeamByCurve" width="32"></td>
     <td>Add Document Parameter by Name</td>
     <td>Given its Name, it adds a Parameter definition to the active Revit document</td>
   </tr>

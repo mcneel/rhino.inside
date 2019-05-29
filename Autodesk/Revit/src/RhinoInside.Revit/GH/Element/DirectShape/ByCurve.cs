@@ -14,15 +14,14 @@ using Grasshopper.Kernel.Special;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class CurveShapeByCurve : GH_TransactionalComponentItem
+  public class DirectShapeByCurve : GH_TransactionalComponentItem
   {
     public override Guid ComponentGuid => new Guid("77F4FBDD-8A05-44A3-AC54-E52A79CF3E5A");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("C");
 
-    public CurveShapeByCurve() : base
+    public DirectShapeByCurve() : base
     (
-      "AddCurveShape.ByCurve", "ByCurve",
+      "AddDirectShape.ByCurve", "ByCurve",
       "Given a Curve, it adds a Curve shape to the active Revit document",
       "Revit", "Geometry"
     )
@@ -58,8 +57,16 @@ namespace RhinoInside.Revit.GH.Components
       var element = PreviousElement(doc, Iteration);
       try
       {
-        if (curve == null || !curve.IsValid)
-          throw new Exception(string.Format("Parameter '{0}' must be valid Curve.", Params.Input[0].Name));
+        if (curve == null)
+          throw new NullReferenceException($"Parameter '{Params.Input[0].Name}' not set to an instance of a Curve.");
+
+        if (!curve.IsValidWithLog(out var log))
+        {
+          foreach (var line in log.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, line);
+
+          throw new Exception($"Parameter '{Params.Input[0].Name}' not set to a valid Curve.");
+        }
 
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)

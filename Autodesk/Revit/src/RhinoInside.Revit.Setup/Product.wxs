@@ -35,6 +35,9 @@
       
       <ComponentGroupRef Id="ProductComponents2019" />
       <ComponentGroupRef Id="ProductAddin2019" />
+
+      <ComponentGroupRef Id="ProductComponents2020" />
+      <ComponentGroupRef Id="ProductAddin2020" />
     </Feature>
   </Product>
 
@@ -52,6 +55,9 @@
               </Directory>
               <Directory Id="_2019Directory" Name="2019">
                 <Directory Id="INSTALLFOLDER2019" Name="RhinoInside.Revit"/>
+              </Directory>
+              <Directory Id="_2020Directory" Name="2020">
+                <Directory Id="INSTALLFOLDER2020" Name="RhinoInside.Revit"/>
               </Directory>
             </Directory>
           </Directory>
@@ -102,5 +108,21 @@
         <File Id="RhinoInside.Revit.2019.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
         <RemoveFile Id="RhinoInside.Revit.2019.addin" Name="RhinoInside.Revit.addin" On="both"/>
       </Component>
-    </ComponentGroup>  </Fragment>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents2020" Directory="INSTALLFOLDER2020">
+      <Component>
+        <File Id="RhinoInside.Revit.2020.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2020\RhinoInside.Revit.dll"/>
+        <RemoveFolder Id="INSTALLFOLDER2020" On="uninstall"/>
+      </Component>
+    </ComponentGroup>
+    <ComponentGroup Id="ProductAddin2020" Directory="_2020Directory">
+      <Component>
+        <File Id="RhinoInside.Revit.2020.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
+        <RemoveFile Id="RhinoInside.Revit.2020.addin" Name="RhinoInside.Revit.addin" On="both"/>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
 </Wix>

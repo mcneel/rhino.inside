@@ -11,180 +11,74 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 
 using Rhino;
-using Rhino.Runtime.InProcess;
-using Rhino.PlugIns;
 
 using Grasshopper;
 using Grasshopper.Kernel;
 
 namespace RhinoInside.Revit
 {
-  [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
-  [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]
-  [Autodesk.Revit.Attributes.Journaling(Autodesk.Revit.Attributes.JournalingMode.NoCommandData)]
-  public partial class Revit : IExternalApplication
+  public static partial class Revit
   {
-    #region Revit static constructor
-    static Revit()
+    internal static Result OnStartup(UIControlledApplication applicationUI)
     {
-      ResolveEventHandler OnRhinoCommonResolve = null;
-      AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
+      if (MainWindowHandle == IntPtr.Zero)
       {
-        const string rhinoCommonAssemblyName = "RhinoCommon";
-        var assemblyName = new AssemblyName(args.Name).Name;
-
-        if (assemblyName != rhinoCommonAssemblyName)
-          return null;
-
-        AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        var rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
-      };
-    }
-    #endregion
-
-    #region IExternalApplication Members
-    RhinoCore rhinoCore;
-    GH.Addon grasshopperAddon;
-
-    public Result OnStartup(UIControlledApplication applicationUI)
-    {
-      ApplicationUI = applicationUI;
-
 #if REVIT_2019
-      MainWindowHandle = ApplicationUI.MainWindowHandle;
+        MainWindowHandle = applicationUI.MainWindowHandle;
 #else
-      MainWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
+        MainWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
 #endif
 
-      // Load Rhino
-      try
-      {
-        var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '_');
-        rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Hidden, MainWindowHandle);
+        var result = Rhinoceros.Startup();
+        if (result != Result.Succeeded)
+        {
+          MainWindowHandle = IntPtr.Zero;
+          return result;
+        }
+
+        // Register some events
+        applicationUI.Idling += OnIdle;
+        applicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
       }
-      catch (Exception e)
-      {
-        Debug.Fail(e.Source, e.Message);
-        return Result.Failed;
-      }
-
-      // Reset document units
-      UI.RhinoCommand.UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc);
-
-      // Register UI on Revit
-      {
-        var ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
-
-        UI.RhinoCommand.CreateUI(ribbonPanel);
-        UI.GrasshopperCommand.CreateUI(ribbonPanel);
-        UI.PythonCommand.CreateUI(ribbonPanel);
-        ribbonPanel.AddSeparator();
-        Samples.Sample1.CreateUI(ribbonPanel);
-        Samples.Sample4.CreateUI(ribbonPanel);
-        Samples.Sample6.CreateUI(ribbonPanel);
-        ribbonPanel.AddSeparator();
-        UI.HelpCommand.CreateUI(ribbonPanel);
-      }
-
-      // Register some events
-      ApplicationUI.Idling += OnIdle;
-      ApplicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
-
-      // Initialice Grasshopper Addon
-      grasshopperAddon = new GH.Addon();
-      grasshopperAddon.OnStartup(applicationUI);
 
       return Result.Succeeded;
     }
 
-    public Result OnShutdown(UIControlledApplication applicationUI)
+    internal static Result OnShutdown(UIControlledApplication applicationUI)
     {
-      // Shutdown Grasshopper Addon
-      grasshopperAddon.OnShutdown(applicationUI);
-      grasshopperAddon = null;
-
-      // Unregister some events
-      ApplicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
-      ApplicationUI.Idling -= OnIdle;
-
-      // Unload Rhino
-      try
+      if (MainWindowHandle != IntPtr.Zero)
       {
-        rhinoCore.Dispose();
-      }
-      catch (Exception e)
-      {
-        Debug.Fail(e.Source, e.Message);
-        return Result.Failed;
+        // Unregister some events
+        applicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
+        applicationUI.Idling -= OnIdle;
+
+        Rhinoceros.Shutdown();
+
+        MainWindowHandle = IntPtr.Zero;
       }
 
-      ApplicationUI = null;
       return Result.Succeeded;
     }
 
-    static bool pendingRefreshActiveView = false;
-    public static void RefreshActiveView() { pendingRefreshActiveView = true; }
+    static bool isRefreshActiveViewPending = false;
+    public static void RefreshActiveView() => isRefreshActiveViewPending = true;
 
-    public static bool Committing = false;
+    static void OnIdle(object sender, IdlingEventArgs args) => ActiveUIApplication = (sender as UIApplication);
 
-    void OnIdle(object sender, IdlingEventArgs args)
+    public static event EventHandler<DocumentChangedEventArgs> DocumentChanged;
+    private static void OnDocumentChanged(object sender, DocumentChangedEventArgs args)
     {
-      ActiveUIApplication = (sender as UIApplication);
-      var mainWindowExtents = ActiveUIApplication.MainWindowExtents;
-      MainWindowBounds = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
-
-      // 1. Do Rhino pending OnIdle tasks
-      if (rhinoCore.DoIdle())
-        args.SetRaiseWithoutDelay();
-
-      // Document dependant tasks need a document
-      if (ActiveDBDocument != null)
-      {
-        // 1. Do all document read actions
-        if (ProcessReadActions())
-        {
-          args.SetRaiseWithoutDelay();
-          return;
-        }
-
-        // 2. Do all document write actions
-        if (!ActiveDBDocument.IsReadOnly)
-          ProcessWriteActions();
-
-        // 3. Refresh Active View if necesary
-        bool regenComplete = DirectContext3DServer.RegenComplete();
-        if (pendingRefreshActiveView || !regenComplete || GH.PreviewServer.PreviewChanged())
-        {
-          pendingRefreshActiveView = false;
-
-          var RefreshTime = new Stopwatch();
-          RefreshTime.Start();
-          ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
-          RefreshTime.Stop();
-          DirectContext3DServer.RegenThreshold = Math.Min(RefreshTime.ElapsedMilliseconds, 200);
-        }
-
-        if (!regenComplete)
-          args.SetRaiseWithoutDelay();
-      }
-    }
-
-    private void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
-    {
-      if (Committing)
+      if (isCommitting)
         return;
 
-      var document = e.GetDocument();
+      var document = args.GetDocument();
       if (!document.Equals(ActiveDBDocument))
         return;
 
       CancelReadActions();
 
-      grasshopperAddon.OnDocumentChanged(sender, e);
+      DocumentChanged(sender, args);
     }
-    #endregion
 
     #region Bake Recipe
     public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory categoryToBakeInto = BuiltInCategory.OST_GenericModel)
@@ -271,7 +165,43 @@ namespace RhinoInside.Revit
     }
     #endregion
 
-    #region Document Actions
+    #region Actions
+    static bool isCommitting = false;
+    internal static bool ProcessIdleActions()
+    {
+      bool pendingIdleActions = false;
+
+      // Document dependant tasks need a document
+      if (ActiveDBDocument != null)
+      {
+        // 1. Do all document read actions
+        if (ProcessReadActions())
+          pendingIdleActions = true;
+
+        // 2. Do all document write actions
+        if (!ActiveDBDocument.IsReadOnly)
+          ProcessWriteActions();
+
+        // 3. Refresh Active View if necesary
+        bool regenComplete = DirectContext3DServer.RegenComplete();
+        if (isRefreshActiveViewPending || !regenComplete || GH.PreviewServer.PreviewChanged())
+        {
+          isRefreshActiveViewPending = false;
+
+          var RefreshTime = new Stopwatch();
+          RefreshTime.Start();
+          ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
+          RefreshTime.Stop();
+          DirectContext3DServer.RegenThreshold = Math.Max(RefreshTime.ElapsedMilliseconds / 3, 100);
+        }
+
+        if (!regenComplete)
+          pendingIdleActions = true;
+      }
+
+      return pendingIdleActions;
+    }
+
     private static Queue<Action<Document>> docWriteActions = new Queue<Action<Document>>();
     public static void EnqueueAction(Action<Document> action)
     {
@@ -279,7 +209,7 @@ namespace RhinoInside.Revit
         docWriteActions.Enqueue(action);
     }
 
-    void ProcessWriteActions()
+    static void ProcessWriteActions()
     {
       lock (docWriteActions)
       {
@@ -289,7 +219,7 @@ namespace RhinoInside.Revit
           {
             try
             {
-              Committing = true;
+              isCommitting = true;
 
               if (trans.Start("RhinoInside") == TransactionStatus.Started)
               {
@@ -305,7 +235,7 @@ namespace RhinoInside.Revit
 
                 if (status == TransactionStatus.Committed)
                 {
-                  foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+                  foreach (GH_Document definition in Instances.DocumentServer)
                   {
                     if (definition.Enabled)
                       definition.NewSolution(false);
@@ -324,7 +254,7 @@ namespace RhinoInside.Revit
             }
             finally
             {
-              Committing = false;
+              isCommitting = false;
             }
           }
         }
@@ -367,17 +297,21 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Public Properties
-    static string CallerFilePath([System.Runtime.CompilerServices.CallerFilePath] string CallerFilePath = "") => CallerFilePath;
-    static public string SourceCodePath => Path.GetDirectoryName(CallerFilePath());
-
-    public static Version Version => Assembly.GetExecutingAssembly().GetName().Version;
-    public static DateTime BuildDate => new DateTime(2000, 1, 1).AddDays(Version.Build).AddSeconds(Version.Revision * 2);
-    public static string DisplayVersion => $"{Version} ({BuildDate})";
-
     public static IntPtr MainWindowHandle { get; private set; }
-    public static System.Drawing.Rectangle MainWindowBounds { get; private set; }
 
-    public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI { get; private set; }
+#if REVIT_2019
+    public static string CurrentUsersDataFolderPath => ApplicationUI.ControlledApplication.CurrentUsersDataFolderPath;
+#else
+    public static string CurrentUsersDataFolderPath => Path.Combine
+    (
+      Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+      "Autodesk",
+      "Revit",
+      ApplicationUI.ControlledApplication.VersionName
+    );
+#endif
+
+    public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI => Addin.ApplicationUI;
     public static Autodesk.Revit.UI.UIApplication ActiveUIApplication { get; private set; }
     public static Autodesk.Revit.ApplicationServices.Application Services => ActiveUIApplication?.Application;
 

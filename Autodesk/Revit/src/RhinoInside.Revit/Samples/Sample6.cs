@@ -12,19 +12,11 @@ using Autodesk.Revit.UI;
 namespace RhinoInside.Revit.Samples
 {
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  public class Sample6 : IExternalCommand
+  public class Sample6 : UI.RhinoCommand
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-
-      var buttonData = new PushButtonData
-      (
-        "cmdRhinoInsideSample6", "Sample 6",
-        thisAssembly.Location,
-        MethodBase.GetCurrentMethod().DeclaringType.FullName
-      );
+      var buttonData = NewPushButtonData<Sample6, Availability>("Sample 6");
 
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
@@ -33,12 +25,13 @@ namespace RhinoInside.Revit.Samples
 #else
         pushButton.ToolTip = "Toggle Rhino model preview visibility (Revit 2018 or above)";
 #endif
+        pushButton.Image = ImageBuilder.BuildImage("6");
         pushButton.LargeImage = ImageBuilder.BuildLargeImage("6");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-6"));
       }
     }
 
-    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
 #if REVIT_2018
       DocumentPreviewServer.Toggle();
