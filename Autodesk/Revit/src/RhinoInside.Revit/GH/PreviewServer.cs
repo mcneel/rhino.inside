@@ -184,8 +184,8 @@ namespace RhinoInside.Revit.GH
 
         // Dispose previous primitives
         {
-          foreach (var buffer in primitives)
-            ((IDisposable) buffer).Dispose();
+          foreach (var primitive in primitives)
+            ((IDisposable) primitive).Dispose();
 
           primitives.Clear();
         }
@@ -223,7 +223,7 @@ namespace RhinoInside.Revit.GH
 
     public override Outline GetBoundingBox(View dBView)
     {
-      var bbox = activeDefinition.PreviewBoundingBox.Scale(1.0 / Revit.ModelUnits);
+      var bbox = primitivesBoundingBox.Scale(1.0 / Revit.ModelUnits);
       return new Outline(bbox.Min.ToHost(), bbox.Max.ToHost());
     }
 
