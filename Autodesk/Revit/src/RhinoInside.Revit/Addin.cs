@@ -274,7 +274,8 @@ namespace RhinoInside.Revit.UI
         if(Keyboard.IsKeyDown(Key.LeftCtrl))
           return Rhinoceros.RunCommandAbout();
 
-        result = Rhinoceros.RunModal(false, true);
+        using(var modal = new Rhinoceros.ModalScope())
+          result = modal.Run(false, true);
 
         // If no windows are visible we show the Ribbon tab
         if (result == Result.Cancelled)

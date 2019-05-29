@@ -43,6 +43,7 @@ namespace RhinoInside.Revit.UI
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
         pushButton.ToolTip = "Shows Grasshopper window";
+        pushButton.LongDescription = $"Use CTRL key to open only Grasshopper window without restoring other tool windows";
         pushButton.Image = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png", true);
         pushButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.Grasshopper.png");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://www.grasshopper3d.com/"));
@@ -52,12 +53,12 @@ namespace RhinoInside.Revit.UI
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      using (new Rhinoceros.PauseTimerScope())
+      using (var modal = new Rhinoceros.ModalScope())
       {
         if (!Rhino.RhinoApp.RunScript("!_-Grasshopper _W _S ENTER", false))
           return Result.Failed;
 
-        return Rhinoceros.RunModal(false);
+        return modal.Run(false);
       }
     }
   }

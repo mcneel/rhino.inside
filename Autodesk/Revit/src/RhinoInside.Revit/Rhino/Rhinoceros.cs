@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
@@ -118,12 +118,17 @@ namespace RhinoInside.Revit
     static bool idlePending = true;
     static bool Run()
     {
+      CheckInGuests();
+
       if (idlePending)
         idlePending = core.DoIdle();
 
       var active = core.DoEvents();
       if (active)
         idlePending = true;
+
+      if (Revit.ProcessIdleActions())
+        core.RaiseIdle();
 
       return active;
     }
@@ -241,38 +246,12 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Rhino Interface
-    [DllImport("USER32", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    static extern bool ShowOwnedPopups(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool fShow);
-    public static bool ShowOwnedPopups(bool fShow) => ShowOwnedPopups(RhinoApp.MainWindowHandle(), fShow);
-
-    [DllImport("USER32", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    static extern bool EnableWindow(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool bEnable);
-
-    [DllImport("USER32", SetLastError = true)]
-    static extern IntPtr GetWindow(IntPtr hWnd, int uCmd);
-    static IntPtr GetEnabledPopup() => GetWindow(RhinoApp.MainWindowHandle(), 6 /*GW_ENABLEDPOPUP*/);
-
-    [DllImport("USER32", SetLastError = true)]
-    static extern IntPtr SetActiveWindow(IntPtr hWnd);
-
-    [DllImport("USER32", SetLastError = true)]
-    static extern IntPtr BringWindowToTop(IntPtr hWnd);
-
-
-    public class PauseTimerScope : IDisposable
-    {
-      public PauseTimerScope() => timer.Stop();
-      void IDisposable.Dispose() => timer.Start();
-    }
-
     static System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer() { Interval = 100 };
     static void Timer_Tick(object sender, EventArgs e)
     {
-      if (!IsRunning)
+      if (ModalForm.ActiveForm == null)
       {
-        ShowOwnedPopups(false);
+        ModalForm.ShowOwnedPopups(false);
         Exposed = false;
       }
     }
@@ -318,12 +297,7 @@ namespace RhinoInside.Revit
         catch (Exception) { }
 
         // Disable Revit Main Window while in Command
-        if (Modal != null)
-        {
-          EnableWindow(Revit.MainWindowHandle, false);
-          Modal.Enabled = false;
-          Modal.Opacity = 0.3;
-        }
+        ModalForm.ParentEnabled = false;
       }
     }
 
@@ -331,12 +305,8 @@ namespace RhinoInside.Revit
     {
       if (!Rhino.Commands.Command.InScriptRunnerCommand())
       {
-        if (Modal != null)
-        {
-          Modal.Opacity = 0.1;
-          Modal.Enabled = true;
-          EnableWindow(Revit.MainWindowHandle, true);
-        }
+        // Reenable Revit main window
+        ModalForm.ParentEnabled = true;
 
         if (MainWindow.WindowState != Eto.Forms.WindowState.Maximized)
         {
@@ -367,9 +337,6 @@ namespace RhinoInside.Revit
 
     static void OnIdle(object sender, EventArgs e)
     {
-      CheckInGuests();
-
-      Revit.ProcessIdleActions();
     }
 
     static void OnNewDocument(object sender, DocumentEventArgs e)
@@ -485,64 +452,41 @@ namespace RhinoInside.Revit
       }
     }
 
-
-    class ModalForm : System.Windows.Forms.Form
+    public class ModalScope : IDisposable
     {
-      public class RevitMainWindow : IWin32Window { IntPtr IWin32Window.Handle => Revit.MainWindowHandle; }
-      static IWin32Window MainWidow = new RevitMainWindow();
+      static bool WasExposed = false;
+      ModalForm form;
 
-      public ModalForm()
+      public ModalScope()
       {
-        BackColor = System.Drawing.Color.White;
-        Opacity = 0.1;
-        Show(MainWidow);
+        timer.Stop();
+        form = new ModalForm();
       }
 
-      protected override bool ShowWithoutActivation => true;
-      protected override CreateParams CreateParams
+      void IDisposable.Dispose()
       {
-        get
-        {
-          var createParams = base.CreateParams;
-          createParams.Style = 0x00000000;
-
-          using (var mainWindowExtents = Revit.ActiveUIApplication.MainWindowExtents)
-          {
-            createParams.X = mainWindowExtents.Left;
-            createParams.Y = mainWindowExtents.Top;
-            createParams.Width = mainWindowExtents.Right - mainWindowExtents.Left;
-            createParams.Height = mainWindowExtents.Bottom - mainWindowExtents.Top;
-            createParams.Parent = Revit.MainWindowHandle;
-          }
-
-          return createParams;
-        }
+        form.Dispose();
+        timer.Start();
       }
-    }
 
+      public Result Run(bool exposeMainWindow = true)
+      {
+        return Run(exposeMainWindow, !System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftCtrl));
+      }
 
-    // Visible in Rhino time
-    static bool Visible = false;
-    public static bool IsRunning { get; private set; }
-    static ModalForm Modal;
-    public static Result RunModal(bool exposeMainWindow = true, bool restorePopups = false)
-    {
-      using (Modal = new ModalForm())
+      public Result Run(bool exposeMainWindow, bool restorePopups)
       {
         try
         {
-          timer.Stop();
-          IsRunning = true;
-
           if (exposeMainWindow) Exposed = true;
-          else if (restorePopups) Exposed = Visible || MainWindow.WindowState == Eto.Forms.WindowState.Minimized;
+          else if (restorePopups) Exposed = WasExposed || MainWindow.WindowState == Eto.Forms.WindowState.Minimized;
 
           if (restorePopups)
-            ShowOwnedPopups(true);
+            ModalForm.ShowOwnedPopups(true);
 
           // Activate a Rhino window to keep the loop running
-          var activePopup = GetEnabledPopup();
-          if (activePopup == IntPtr.Zero)
+          var activePopup = ModalForm.GetEnabledPopup();
+          if (activePopup == IntPtr.Zero || exposeMainWindow)
           {
             if (!Exposed)
               return Result.Cancelled;
@@ -551,35 +495,37 @@ namespace RhinoInside.Revit
           }
           else
           {
-            BringWindowToTop(activePopup);
+            ModalForm.BringWindowToTop(activePopup);
           }
 
-          do
+          while (ModalForm.ActiveForm != null)
           {
-            while (Run())
+            while (Rhinoceros.Run())
             {
-              if (!Exposed && GetEnabledPopup() == IntPtr.Zero)
+              if (!Exposed && ModalForm.GetEnabledPopup() == IntPtr.Zero)
                 break;
+
+              // Disable Revit window if Rhino is maximized
+              ModalForm.ParentEnabled = !(MainWindow.Visible && MainWindow.WindowState == Eto.Forms.WindowState.Maximized);
             }
+
+            //Keep Rhino window active while Maximized
+            if (MainWindow.Visible && MainWindow.WindowState == Eto.Forms.WindowState.Maximized)
+              RhinoApp.SetFocusToMainWindow();
+            else
+              break;
           }
-          // Keep window active while Maximized
-          while (MainWindow.Visible && MainWindow.WindowState == Eto.Forms.WindowState.Maximized);
 
           return Result.Succeeded;
         }
         finally
         {
-          Visible = Exposed;
+          WasExposed = Exposed;
 
-          EnableWindow(Revit.MainWindowHandle, true);
-          SetActiveWindow(Revit.MainWindowHandle);
-          ShowOwnedPopups(false);
+          ModalForm.EnableWindow(Revit.MainWindowHandle, true);
+          ModalForm.SetActiveWindow(Revit.MainWindowHandle);
+          ModalForm.ShowOwnedPopups(false);
           Exposed = false;
-
-          Modal = null;
-
-          IsRunning = false;
-          timer.Start();
 
           UI.CommandRhinoInside.ShowShortcutHelp();
         }
@@ -588,13 +534,13 @@ namespace RhinoInside.Revit
 
     public static Result RunCommandAbout()
     {
-      using (new Rhinoceros.PauseTimerScope())
+      using (var modal = new Rhinoceros.ModalScope())
       {
         var docSerial = RhinoDoc.ActiveDoc.RuntimeSerialNumber;
         var result = RhinoApp.RunScript("!_About", false) ? Result.Succeeded : Result.Failed;
 
         if (result == Result.Succeeded && docSerial != RhinoDoc.ActiveDoc.RuntimeSerialNumber)
-          return RunModal();
+          return modal.Run(true, false);
 
         return Result.Cancelled;
       }

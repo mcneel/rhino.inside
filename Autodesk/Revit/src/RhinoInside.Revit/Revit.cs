@@ -167,13 +167,16 @@ namespace RhinoInside.Revit
 
     #region Actions
     static bool isCommitting = false;
-    internal static void ProcessIdleActions()
+    internal static bool ProcessIdleActions()
     {
+      bool pendingIdleActions = false;
+
       // Document dependant tasks need a document
       if (ActiveDBDocument != null)
       {
         // 1. Do all document read actions
-        ProcessReadActions();
+        if (ProcessReadActions())
+          pendingIdleActions = true;
 
         // 2. Do all document write actions
         if (!ActiveDBDocument.IsReadOnly)
@@ -189,9 +192,14 @@ namespace RhinoInside.Revit
           RefreshTime.Start();
           ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
           RefreshTime.Stop();
-          DirectContext3DServer.RegenThreshold = Math.Min(RefreshTime.ElapsedMilliseconds, 200);
+          DirectContext3DServer.RegenThreshold = Math.Max(RefreshTime.ElapsedMilliseconds / 3, 100);
         }
+
+        if (!regenComplete)
+          pendingIdleActions = true;
       }
+
+      return pendingIdleActions;
     }
 
     private static Queue<Action<Document>> docWriteActions = new Queue<Action<Document>>();
