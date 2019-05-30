@@ -87,6 +87,13 @@ namespace RhinoInside.Revit.Samples
       };
     }
 
+    public static BuiltInCategory ActiveBuiltInCategory
+    {
+      get => Enum.TryParse(categoriesComboBox.Current.Name, out BuiltInCategory builtInCategory) ?
+             builtInCategory :
+             BuiltInCategory.OST_GenericModel;
+    }
+
     static Autodesk.Revit.UI.ComboBox categoriesComboBox = null;
     static PulldownButton mruPullDownButton = null;
     static PushButton[] mruPushPuttons = null;
@@ -462,10 +469,7 @@ namespace RhinoInside.Revit.Samples
         {
           if (trans.Start(MethodBase.GetCurrentMethod().DeclaringType.Name) == TransactionStatus.Started)
           {
-            if (!Enum.TryParse(categoriesComboBox.Current.Name, out BuiltInCategory builtInCategory))
-              builtInCategory = BuiltInCategory.OST_GenericModel;
-
-            var categoryId = new ElementId(builtInCategory);
+            var categoryId = new ElementId(ActiveBuiltInCategory);
 
             foreach (var output in outputs)
             {
@@ -503,7 +507,7 @@ namespace RhinoInside.Revit.Samples
 #endif
           openFileDialog.RestoreDirectory = true;
 
-          switch (openFileDialog.ShowDialog())
+          switch (openFileDialog.ShowDialog(ModalForm.OwnerWindow))
           {
             case DialogResult.OK: filePath = openFileDialog.FileName; break;
             case DialogResult.Cancel: return Result.Cancelled;

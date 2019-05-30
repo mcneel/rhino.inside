@@ -310,6 +310,7 @@ namespace RhinoInside.Revit.UI
         Samples.Sample1.CreateUI(SamplesPanel);
         Samples.Sample4.CreateUI(SamplesPanel);
         Samples.Sample6.CreateUI(SamplesPanel);
+        Samples.Sample8.CreateUI(SamplesPanel);
       }
 
       if (result == Result.Succeeded)
@@ -321,6 +322,7 @@ namespace RhinoInside.Revit.UI
       {
         // No more loads in this session
         Button.Enabled = false;
+        Button.ToolTip = "Failed to load.";
       }
 
       return result;
