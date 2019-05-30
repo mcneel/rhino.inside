@@ -4,10 +4,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-
+using System.Windows.Input;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI;
@@ -73,7 +72,6 @@ namespace RhinoInside.Revit
         Rhino.Commands.Command.BeginCommand += BeginCommand;
         Rhino.Commands.Command.EndCommand += EndCommand;
         RhinoApp.MainLoop += MainLoop;
-        RhinoApp.Idle += OnIdle;
 
         // Reset document units
         UpdateDocumentUnits(RhinoDoc.ActiveDoc);
@@ -89,7 +87,6 @@ namespace RhinoInside.Revit
     {
       if (core != null)
       {
-        RhinoApp.Idle -= OnIdle;
         RhinoApp.MainLoop -= MainLoop;
         RhinoDoc.NewDocument -= OnNewDocument;
         Revit.ApplicationUI.ApplicationClosing -= OnApplicationClosing;
@@ -244,7 +241,6 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Rhino Interface
-
     static Eto.Forms.Window MainWindow => Rhino.UI.RhinoEtoApp.MainWindow;
     public static bool Exposed
     {
@@ -322,10 +318,6 @@ namespace RhinoInside.Revit
           }
         }
       }
-    }
-
-    static void OnIdle(object sender, EventArgs e)
-    {
     }
 
     static void OnNewDocument(object sender, DocumentEventArgs e)
@@ -443,22 +435,35 @@ namespace RhinoInside.Revit
 
     public class ModalScope : IDisposable
     {
-      static bool WasExposed = false;
+      static bool wasExposed = false;
       ModalForm form;
+
+      static event EventHandler enter;
+      public static event EventHandler Enter
+      {
+        add => enter += value; remove => enter -= value;
+      }
+      static event EventHandler exit;
+      public static event EventHandler Exit
+      {
+        add => exit = value + exit; remove => exit -= value;
+      }
 
       public ModalScope()
       {
+        enter?.Invoke(this, EventArgs.Empty);
         form = new ModalForm();
       }
 
       void IDisposable.Dispose()
       {
         form.Dispose();
+        exit?.Invoke(this, EventArgs.Empty);
       }
 
       public Result Run(bool exposeMainWindow = true)
       {
-        return Run(exposeMainWindow, !System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftCtrl));
+        return Run(exposeMainWindow, !Keyboard.IsKeyDown(Key.LeftCtrl));
       }
 
       public Result Run(bool exposeMainWindow, bool restorePopups)
@@ -466,7 +471,7 @@ namespace RhinoInside.Revit
         try
         {
           if (exposeMainWindow) Exposed = true;
-          else if (restorePopups) Exposed = WasExposed || MainWindow.WindowState == Eto.Forms.WindowState.Minimized;
+          else if (restorePopups) Exposed = wasExposed || MainWindow.WindowState == Eto.Forms.WindowState.Minimized;
 
           if (restorePopups)
             ModalForm.ShowOwnedPopups(true);
@@ -507,14 +512,12 @@ namespace RhinoInside.Revit
         }
         finally
         {
-          WasExposed = Exposed;
+          wasExposed = Exposed;
 
           ModalForm.EnableWindow(Revit.MainWindowHandle, true);
           ModalForm.SetActiveWindow(Revit.MainWindowHandle);
           ModalForm.ShowOwnedPopups(false);
           Exposed = false;
-
-          UI.CommandRhinoInside.ShowShortcutHelp();
         }
       }
     }

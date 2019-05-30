@@ -191,7 +191,7 @@ namespace RhinoInside.Revit
       if (!rhinoObject.Visible)
         return false;
 
-      return true;
+      return IsModelView(dBView);
     }
 
     public override Autodesk.Revit.DB.Outline GetBoundingBox(View dBView)
