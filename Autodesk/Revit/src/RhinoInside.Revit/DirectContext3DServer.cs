@@ -55,6 +55,21 @@ namespace RhinoInside.Revit
       }
     }
 
+    protected static bool IsModelView(View dBView)
+    {
+      if
+      (
+        dBView.ViewType == ViewType.FloorPlan ||
+        dBView.ViewType == ViewType.CeilingPlan ||
+        dBView.ViewType == ViewType.Elevation ||
+        dBView.ViewType == ViewType.Section ||
+        dBView.ViewType == ViewType.ThreeD
+      )
+        return true;
+
+      return false;
+    }
+
     public const int VertexThreshold = ushort.MaxValue + 1;
 
     static IndexBuffer indexPointsBuffer;

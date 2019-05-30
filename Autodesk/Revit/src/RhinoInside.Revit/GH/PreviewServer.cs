@@ -59,6 +59,7 @@ namespace RhinoInside.Revit.GH
       }
 
       return
+      IsModelView(dBView) &&
       activeDefinition != null &&
       ((definition?.PreviewMode ?? GH_PreviewMode.Disabled) != GH_PreviewMode.Disabled);
     }
