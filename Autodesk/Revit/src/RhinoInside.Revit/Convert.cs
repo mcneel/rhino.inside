@@ -1355,57 +1355,56 @@ namespace RhinoInside.Revit
       return objects;
     }
 
+    public static IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.GeometryBase geometry, double scaleFactor = 1.0)
+    {
+      switch (geometry)
+      {
+        case Rhino.Geometry.Point point:
+          point = (Rhino.Geometry.Point) point.DuplicateShallow();
+
+          if (scaleFactor != 1.0)
+            point.Scale(scaleFactor);
+
+          return Enumerable.Repeat(point.ToHost(), 1).Cast<GeometryObject>();
+        case Rhino.Geometry.PointCloud pointCloud:
+          pointCloud = (Rhino.Geometry.PointCloud) pointCloud.DuplicateShallow();
+
+          if (scaleFactor != 1.0)
+            pointCloud.Scale(scaleFactor);
+
+          return pointCloud.ToHost().Cast<GeometryObject>();
+        case Rhino.Geometry.Curve curve:
+          curve = (Rhino.Geometry.Curve) curve.DuplicateShallow();
+
+          if (scaleFactor != 1.0)
+            curve.Scale(scaleFactor);
+
+          return curve.ToHost().Cast<GeometryObject>();
+        case Rhino.Geometry.Brep brep:
+          brep = (Rhino.Geometry.Brep) brep.DuplicateShallow();
+
+          if (scaleFactor != 1.0)
+            brep.Scale(scaleFactor);
+
+          return brep.ToHost().Cast<GeometryObject>();
+        case Rhino.Geometry.Mesh mesh:
+          mesh = (Rhino.Geometry.Mesh) mesh.DuplicateShallow();
+
+          if (scaleFactor != 1.0)
+            mesh.Scale(scaleFactor);
+
+          while (mesh.CollapseFacesByEdgeLength(false, Revit.VertexTolerance) > 0) ;
+
+          return mesh.ToHost().Cast<GeometryObject>();
+        default:
+          return Enumerable.Empty<GeometryObject>();
+      }
+    }
+
     public static IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      foreach (var geometry in geometries)
-      {
-        switch (geometry)
-        {
-          case Rhino.Geometry.Point point:
-            point = (Rhino.Geometry.Point) point.DuplicateShallow();
-
-            if (scaleFactor != 1.0)
-              point.Scale(scaleFactor);
-
-            yield return Enumerable.Repeat(point.ToHost(), 1).Cast<GeometryObject>().ToList();
-            break;
-          case Rhino.Geometry.PointCloud pointCloud:
-            pointCloud = (Rhino.Geometry.PointCloud) pointCloud.DuplicateShallow();
-
-            if (scaleFactor != 1.0)
-              pointCloud.Scale(scaleFactor);
-
-            yield return pointCloud.ToHost().Cast<GeometryObject>().ToList();
-            break;
-          case Rhino.Geometry.Curve curve:
-            curve = (Rhino.Geometry.Curve) curve.DuplicateShallow();
-
-            if (scaleFactor != 1.0)
-              curve.Scale(scaleFactor);
-
-            yield return curve.ToHost().Cast<GeometryObject>().ToList();
-            break;
-          case Rhino.Geometry.Brep brep:
-            brep = (Rhino.Geometry.Brep) brep.DuplicateShallow();
-
-            if (scaleFactor != 1.0)
-              brep.Scale(scaleFactor);
-
-            yield return brep.ToHost().Cast<GeometryObject>().ToList();
-            break;
-          case Rhino.Geometry.Mesh mesh:
-            mesh = (Rhino.Geometry.Mesh) mesh.DuplicateShallow();
-
-            if (scaleFactor != 1.0)
-              mesh.Scale(scaleFactor);
-
-            while (mesh.CollapseFacesByEdgeLength(false, Revit.VertexTolerance) > 0) ;
-
-            yield return mesh.ToHost().Cast<GeometryObject>().ToList();
-            break;
-        }
-      }
+      return geometries.Select(x => x.ToHost(scaleFactor)).Where(x => x.Any()).Select(x => x.ToList());
     }
     #endregion
 

@@ -161,6 +161,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="GH\Guest.cs" />
+    <Compile Include="GH\PreviewServer.cs" />
     <Compile Include="GH\ID.cs" />
     <Compile Include="GH\GeometryObject\GeometryObject.cs" />
     <Compile Include="GH\Category\Category.cs" />
@@ -189,7 +190,8 @@
     <Compile Include="GH\Element\Form\ByGeometry.cs" />
     <Compile Include="GH\Element\Form\ByCurves.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
-    <Compile Include="GH\PreviewServer.cs" />
+    <Compile Include="Rhino\Rhinoceros.cs" />
+    <Compile Include="Rhino\DocumentPreviewServer.cs" />
     <Compile Include="ModalForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -198,9 +200,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Revit.KeyboardShortcuts.cs" />
-    <Compile Include="Rhino\DocumentPreviewServer.cs" />
-    <Compile Include="Rhino\Rhinoceros.cs" />
     <Compile Include="UI\Command.cs" />
     <Compile Include="UI\HelpCommands.cs" />
     <Compile Include="UI\GrasshopperCommand.cs" />
@@ -211,6 +210,7 @@
     <Compile Include="State.cs" />
     <Compile Include="Convert.cs" />
     <Compile Include="Revit.cs" />
+    <Compile Include="Revit.KeyboardShortcuts.cs" />
     <Compile Include="Revit.FailuresPreprocessor.cs" />
     <Compile Include="Addin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -222,6 +222,7 @@
     <Compile Include="Samples\Sample4.cs" />
     <Compile Include="Samples\Sample6.cs" />
     <None Include="Samples\Sample7.py" />
+    <Compile Include="Samples\Sample8.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
