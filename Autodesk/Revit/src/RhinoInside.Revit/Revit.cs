@@ -77,7 +77,7 @@ namespace RhinoInside.Revit
 
       CancelReadActions();
 
-      DocumentChanged(sender, args);
+      DocumentChanged?.Invoke(sender, args);
     }
 
     #region Bake Recipe

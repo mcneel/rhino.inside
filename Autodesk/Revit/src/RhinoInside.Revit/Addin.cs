@@ -164,36 +164,7 @@ namespace RhinoInside.Revit.UI
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
   class CommandRhinoInside : ExternalCommand
   {
-    internal static void ShowShortcutHelp()
-    {
-      if(NewShortcutAssigned != default(char))
-      {
-        using
-        (
-          var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
-          {
-            Title = "New Shortcut",
-            MainIcon = TaskDialogIcons.IconInformation,
-            TitleAutoPrefix = true,
-            AllowCancellation = true,
-            MainInstruction = $"Keyboard shortcut '{NewShortcutAssigned}' is now assigned to Rhino",
-            MainContent = $"You can use {NewShortcutAssigned} key to restore previously visible Rhino windows over Revit window every time you need them.",
-            FooterText = "This is a one time message",
-          }
-        )
-        {
-          taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Customize keyboard shortcuts...");
-          if (taskDialog.Show() == TaskDialogResult.CommandLink1)
-          {
-            Revit.ActiveUIApplication.PostCommand(RevitCommandId.LookupPostableCommandId(PostableCommand.KeyboardShortcuts));
-          }
-        }
-
-        NewShortcutAssigned = default(char);
-      }
-    }
-
-    internal static char NewShortcutAssigned { get; private set; }
+    const char ShortcutAssigned = 'R';
     static PushButton Button;
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
@@ -243,7 +214,7 @@ namespace RhinoInside.Revit.UI
             if (shortcutItem.Shortcuts == null)
             {
               shortcutItem.Shortcuts = Shortcuts;
-              NewShortcutAssigned = 'R';
+              Rhinoceros.ModalScope.Exit += ModalScope_Exit;
             }
           }
           catch (InvalidOperationException)
@@ -256,12 +227,42 @@ namespace RhinoInside.Revit.UI
               Paths = $"Add-Ins>{ribbonPanel.Name}"
             };
             shortcuts.Add(shortcutItem);
-            NewShortcutAssigned = 'R';
+            Rhinoceros.ModalScope.Exit += ModalScope_Exit;
           }
 
           Revit.KeyboardShortcuts.SaveAs(shortcuts, keyboardShortcutsPath);
         }
       }
+    }
+
+    static void ShowShortcutHelp()
+    {
+      using
+      (
+        var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
+        {
+          Title = "New Shortcut",
+          MainIcon = TaskDialogIcons.IconInformation,
+          TitleAutoPrefix = true,
+          AllowCancellation = true,
+          MainInstruction = $"Keyboard shortcut '{ShortcutAssigned}' is now assigned to Rhino",
+          MainContent = $"You can use {ShortcutAssigned} key to restore previously visible Rhino windows over Revit window every time you need them.",
+          FooterText = "This is a one time message",
+        }
+      )
+      {
+        taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Customize keyboard shortcuts...");
+        if (taskDialog.Show() == TaskDialogResult.CommandLink1)
+        {
+          Revit.ActiveUIApplication.PostCommand(RevitCommandId.LookupPostableCommandId(PostableCommand.KeyboardShortcuts));
+        }
+      }
+    }
+
+    static void ModalScope_Exit(object sender, EventArgs e)
+    {
+      Rhinoceros.ModalScope.Exit -= ModalScope_Exit;
+      ShowShortcutHelp();
     }
 
     public override Result Execute(ExternalCommandData data, ref string message, Autodesk.Revit.DB.ElementSet elements)
