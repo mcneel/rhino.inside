@@ -15,7 +15,7 @@ This folder contains a sample project that demonstrates:
 [**Questions?** *Visit the discussion forum...*](https://discourse.mcneel.com/c/serengeti/inside)
 
 ## Getting started
-Grab the [latest installer](https://ci.appveyor.com/api/projects/mcneel/rhino-inside/artifacts/Autodesk%2FRevit%2Fsrc%2FRhinoInside.Revit.Setup%2Fbin%2Fx64%2FRelease%2FRhinoInside.Revit.msi?branch=master) (requires [Rhino WIP](https://www.rhino3d.com/download/rhino/wip) and Revit 2017-2019)
+Grab the [latest installer](https://ci.appveyor.com/api/projects/mcneel/rhino-inside/artifacts/RhinoInside.Revit.msi?branch=master) (requires [Rhino WIP](https://www.rhino3d.com/download/rhino/wip) and Revit 2017-2020)
 
 If you are looking to contribute to or customize this project go to the [build from source instructions](build-source.md).
 
