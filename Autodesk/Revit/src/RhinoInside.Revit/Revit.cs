@@ -63,7 +63,13 @@ namespace RhinoInside.Revit
     static bool isRefreshActiveViewPending = false;
     public static void RefreshActiveView() => isRefreshActiveViewPending = true;
 
-    static void OnIdle(object sender, IdlingEventArgs args) => ActiveUIApplication = (sender as UIApplication);
+    static void OnIdle(object sender, IdlingEventArgs args)
+    {
+      ActiveUIApplication = (sender as UIApplication);
+
+      if (ProcessIdleActions())
+        args.SetRaiseWithoutDelay();
+    }
 
     public static event EventHandler<DocumentChangedEventArgs> DocumentChanged;
     private static void OnDocumentChanged(object sender, DocumentChangedEventArgs args)
