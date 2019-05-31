@@ -951,10 +951,14 @@ namespace RhinoInside.Revit
         yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));
     }
 
-    public static IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve, double curveTolerance = double.PositiveInfinity)
+    public static IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve)
     {
-      curveTolerance = Math.Min(Revit.ShortCurveTolerance, Math.Abs(curveTolerance));
-      Debug.Assert(!curve.IsShort(curveTolerance));
+      var curveTolerance = Revit.ShortCurveTolerance;
+      if (curve.IsShort(curveTolerance))
+      {
+        Debug.WriteLine($"Ignoring short {curve.GetType().Name} (Length = {curve.GetLength()})", "RhinoInside.Revit.Convert");
+        yield break;
+      }
 
       switch (curve)
       {
@@ -1208,6 +1212,8 @@ namespace RhinoInside.Revit
         {
           brep = splittedBrep;
 
+          var brepBuilderOutcome = BRepBuilderOutcome.Failure;
+
           try
           {
             var brepType = BRepType.OpenShell;
@@ -1267,8 +1273,8 @@ namespace RhinoInside.Revit
 
               builder.FinishFace(faceId);
             }
-            builder.Finish();
 
+            brepBuilderOutcome = builder.Finish();
             if (builder.IsResultAvailable())
               solid = builder.GetResult();
           }
@@ -1277,6 +1283,19 @@ namespace RhinoInside.Revit
             // TODO: Fix cases with singularities and uncomment this line
             //Debug.Fail(e.Source, e.Message);
             Debug.WriteLine(e.Message, e.Source);
+          }
+
+          if (brepBuilderOutcome == BRepBuilderOutcome.Failure)
+          {
+            Debug.WriteLine("Try exploding the brep and converting face by face.", "RhinoInside.Revit.Convert");
+            if (brep.Faces.Count > 1)
+            {
+              var breps = brep.UnjoinEdges(brep.Edges.Select(x => x.EdgeIndex));
+              foreach (var face in breps.SelectMany(x => x.ToHost()))
+                yield return face;
+
+              yield break;
+            }
           }
         }
         else
@@ -1309,50 +1328,56 @@ namespace RhinoInside.Revit
     {
       var faceVertices = new List<XYZ>(4);
 
-      var builder = new TessellatedShapeBuilder()
-      {
-        Target = TessellatedShapeBuilderTarget.Mesh,
-        Fallback = TessellatedShapeBuilderFallback.Salvage
-      };
-
-      var pieces = mesh.DisjointMeshCount > 1 ?
-                   mesh.SplitDisjointPieces() :
-                   new Rhino.Geometry.Mesh[] { mesh };
-
-      foreach (var piece in pieces)
-      {
-        piece.Faces.ConvertNonPlanarQuadsToTriangles(Revit.VertexTolerance, RhinoMath.UnsetValue, 5);
-
-        var vertices = piece.Vertices.ToPoint3dArray();
-
-        builder.OpenConnectedFaceSet(piece.SolidOrientation() != -1);
-        foreach (var face in piece.Faces)
-        {
-          faceVertices.Add(vertices[face.A].ToHost());
-          faceVertices.Add(vertices[face.B].ToHost());
-          faceVertices.Add(vertices[face.C].ToHost());
-          if (face.IsQuad)
-            faceVertices.Add(vertices[face.D].ToHost());
-
-          builder.AddFace(new TessellatedFace(faceVertices, GraphicAttributes.Peek.MaterialId));
-          faceVertices.Clear();
-        }
-        builder.CloseConnectedFaceSet();
-      }
-
-      IList<GeometryObject> objects = null;
       try
       {
-        builder.Build();
-        objects = builder.GetBuildResult().GetGeometricalObjects();
+        using
+        (
+          var builder = new TessellatedShapeBuilder()
+          {
+            Target = TessellatedShapeBuilderTarget.Mesh,
+            Fallback = TessellatedShapeBuilderFallback.Salvage
+          }
+        )
+        {
+          var pieces = mesh.DisjointMeshCount > 1 ?
+                       mesh.SplitDisjointPieces() :
+                       new Rhino.Geometry.Mesh[] { mesh };
+
+          foreach (var piece in pieces)
+          {
+            piece.Faces.ConvertNonPlanarQuadsToTriangles(Revit.VertexTolerance, RhinoMath.UnsetValue, 5);
+
+            var vertices = piece.Vertices.ToPoint3dArray();
+
+            builder.OpenConnectedFaceSet(piece.SolidOrientation() != -1);
+            foreach (var face in piece.Faces)
+            {
+              faceVertices.Add(vertices[face.A].ToHost());
+              faceVertices.Add(vertices[face.B].ToHost());
+              faceVertices.Add(vertices[face.C].ToHost());
+              if (face.IsQuad)
+                faceVertices.Add(vertices[face.D].ToHost());
+
+              builder.AddFace(new TessellatedFace(faceVertices, GraphicAttributes.Peek.MaterialId));
+              faceVertices.Clear();
+            }
+            builder.CloseConnectedFaceSet();
+          }
+
+          builder.Build();
+          using (var result = builder.GetBuildResult())
+          {
+            if (result.Outcome != TessellatedShapeBuilderOutcome.Nothing)
+              return result.GetGeometricalObjects();
+          }
+        }
       }
       catch (Autodesk.Revit.Exceptions.ApplicationException e)
       {
         Debug.Fail(e.Source, e.Message);
-        objects = new List<GeometryObject>();
       }
 
-      return objects;
+      return Enumerable.Empty<GeometryObject>();
     }
 
     public static IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.GeometryBase geometry, double scaleFactor = 1.0)
