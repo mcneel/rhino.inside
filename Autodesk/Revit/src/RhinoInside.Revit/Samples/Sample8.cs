@@ -83,6 +83,12 @@ namespace RhinoInside.Revit.Samples
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
+      if(!DirectShape.IsSupportedDocument(data.Application.ActiveUIDocument.Document))
+      {
+        message = "Active document can't support DirectShape functionality.";
+        return Result.Failed;
+      }
+
       using
       (
         var openFileDialog = new OpenFileDialog()
