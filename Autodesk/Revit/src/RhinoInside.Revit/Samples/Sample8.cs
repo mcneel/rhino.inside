@@ -57,6 +57,13 @@ namespace RhinoInside.Revit.Samples
 
             foreach (var obj in model.Objects)
             {
+              if (!obj.Attributes.Visible)
+                continue;
+
+              var layer = model.AllLayers.FindIndex(obj.Attributes.LayerIndex);
+              if (layer?.IsVisible != true)
+                continue;
+
               var geometryList = ImportObject(obj.Geometry, obj.Attributes, scaleFactor);
               if (geometryList == null)
                 continue;
