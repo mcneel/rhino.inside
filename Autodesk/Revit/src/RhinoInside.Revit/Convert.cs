@@ -1438,13 +1438,14 @@ namespace RhinoInside.Revit
     {
       switch (geometry)
       {
-        case Autodesk.Revit.DB.Point p: yield return p; yield break;
+        case Autodesk.Revit.DB.Point p:            yield return p; yield break;
         case Autodesk.Revit.DB.Curve c:
           foreach (var unbounded in ToBoundedCurves(c))
             yield return unbounded;
           yield break;
-        case Autodesk.Revit.DB.Solid s: yield return s; yield break;
-        case Autodesk.Revit.DB.Mesh m: yield return m; yield break;
+        case Autodesk.Revit.DB.Solid s:            yield return s; yield break;
+        case Autodesk.Revit.DB.Mesh m:             yield return m; yield break;
+        case Autodesk.Revit.DB.GeometryInstance i: yield return i; yield break;
       }
     }
 
