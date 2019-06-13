@@ -15,7 +15,7 @@ This folder contains a sample project that demonstrates:
 [**Questions?** *Visit the discussion forum...*](https://discourse.mcneel.com/c/serengeti/inside)
 
 ## Getting started
-Grab the [latest installer](https://www.rhino3d.com/download/rhino.inside-revit/7/wip) (requires [Rhino WIP](https://www.rhino3d.com/download/rhino/wip) and Revit 2017-2020)
+Grab the **[latest installer](https://www.rhino3d.com/download/rhino.inside-revit/7/wip)** (requires [Rhino WIP](https://www.rhino3d.com/download/rhino/wip) and Revit 2017-2020)
 
 If you are looking to contribute to or customize this project go to the [build from source instructions](build-source.md).
 
