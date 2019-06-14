@@ -172,6 +172,8 @@
     <Compile Include="GH\Document\Parameters.cs" />
     <Compile Include="GH\ElementType\ElementType.cs" />
     <Compile Include="GH\Element\Element.cs" />
+    <Compile Include="GH\Element\Grid\ByCurve.cs" />
+    <Compile Include="GH\Element\Level\ByElevation.cs" />
     <Compile Include="GH\Element\Beam\ByCurve.cs" />
     <Compile Include="GH\Element\ModelLine\ByCurve.cs" />
     <Compile Include="GH\Element\Column\ByCurve.cs" />
