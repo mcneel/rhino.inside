@@ -5,17 +5,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 
+using Rhino;
 using Rhino.Geometry;
-
-using RhinoInside.Revit.UI;
-using System.Windows.Forms;
 using Rhino.FileIO;
 using Rhino.DocObjects;
+using RhinoInside.Revit.UI;
 
 namespace RhinoInside.Revit.Samples
 {
@@ -40,13 +40,13 @@ namespace RhinoInside.Revit.Samples
       return geometry.ToHost(scaleFactor).ToList();
     }
 
-    public static Result Import3dm(string filePath, Document doc, BuiltInCategory builtInCategory)
+    public static Result Import3DMFile(string filePath, Document doc, BuiltInCategory builtInCategory)
     {
       using (var model = File3dm.Read(filePath))
       {
-        var scaleFactor = Rhino.RhinoMath.UnitScale(model.Settings.ModelUnitSystem, Revit.ModelUnitSystem);
+        var scaleFactor = RhinoMath.UnitScale(model.Settings.ModelUnitSystem, Revit.ModelUnitSystem);
 
-        using (var trans = new Transaction(doc, "Import Rhino model"))
+        using (var trans = new Transaction(doc, "Import 3D Model"))
         {
           if (trans.Start() == TransactionStatus.Started)
           {
@@ -73,7 +73,13 @@ namespace RhinoInside.Revit.Samples
             }
 
             if (trans.Commit() == TransactionStatus.Committed)
+            {
+              var elements = new ElementId[] { ds.Id };
+              Revit.ActiveUIDocument.Selection.SetElementIds(elements);
+              Revit.ActiveUIDocument.ShowElements(elements);
+
               return Result.Succeeded;
+            }
           }
         }
       }
@@ -83,6 +89,12 @@ namespace RhinoInside.Revit.Samples
 
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
+      if(!DirectShape.IsSupportedDocument(data.Application.ActiveUIDocument.Document))
+      {
+        message = "Active document can't support DirectShape functionality.";
+        return Result.Failed;
+      }
+
       using
       (
         var openFileDialog = new OpenFileDialog()
@@ -96,7 +108,7 @@ namespace RhinoInside.Revit.Samples
         switch (openFileDialog.ShowDialog(ModalForm.OwnerWindow))
         {
           case DialogResult.OK:
-            return Import3dm
+            return Import3DMFile
             (
               openFileDialog.FileName,
               data.Application.ActiveUIDocument.Document,
