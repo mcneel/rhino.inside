@@ -12,6 +12,9 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
+# Rhino sepcific ignores
+*.3dmbak
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
