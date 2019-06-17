@@ -29,6 +29,7 @@ To uninstall, open _Programs and Features_, select "RhinoInside.Revit" and click
 * Create a new project or open an existing one.
 * Now in the Add-ins Ribbon tab you have a _Rhinoceros_ section.
 * Be careful about your model units in Rhino
+* The source for all the developer samples can be found here:  https://github.com/mcneel/rhino.inside/tree/master/Autodesk/Revit/src/RhinoInside.Revit/Samples
 
 ### Sample 1
 1. Open the ribbon tab called _Add-Ins_.
