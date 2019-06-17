@@ -3,7 +3,7 @@ This sample shows how to take normal Rhino curve and create a set of Revit syste
 
 This demonstration is meant to show that true native Revit objects can be created from simple Rhino geometry.  Editing the curve in Rhino will update the walls in Revit.
 
-![Creating system family walls in Revit](create_walls_in_revit.jpg)
+![Creating system family walls in Revit](create-walls-in-revit.jpg)
 
 
 Open Sample files:
@@ -20,5 +20,5 @@ The component necessary:
 1. Level Input Selector
 1. Slider for Wall Height
 
-![Create Revit walls as system Families](create_walls_grasshopper_canvas.png)
+![Create Revit walls as system Families](create-walls-grasshopper-canvas.png)
 After selecting the curve(s) in Rhino and the typical Wall in Revit for the wall family type, Grasshopper will generate the system family wall types  in Revit.
