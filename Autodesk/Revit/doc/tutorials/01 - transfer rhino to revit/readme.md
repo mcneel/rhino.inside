@@ -9,8 +9,8 @@ There are a lot of ways to bring in the Rhino geometry, but in this case we will
 Rhino surfaces and brep solids can be imported into Revit as a categorized DirectShape.
 
 Open Sample files:
-1. Open the [Rhino to Revit.rvt](/rhino to revit.rvt) in Revit.
-1. Start Rhino inside Revit and open the [Rhino office.3dm](/rhino office.3dm) file.
+1. Open the [Rhino to Revit.rvt](\rhino to revit.rvt) in Revit.
+1. Start Rhino inside Revit and open the [Rhino office.3dm](\rhino office.3dm) file.
 1. Start Grasshopper within Rhino.
 
 The component necessary:
