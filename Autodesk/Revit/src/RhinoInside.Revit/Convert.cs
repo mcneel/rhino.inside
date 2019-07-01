@@ -251,6 +251,11 @@ namespace RhinoInside.Revit
       return value;
     }
 
+    public static Rhino.Geometry.Point ToRhino(this Autodesk.Revit.DB.Point point)
+    {
+      return new Rhino.Geometry.Point(point.Coord.ToRhino());
+    }
+
     public static Rhino.Geometry.Plane ToRhino(this Autodesk.Revit.DB.Plane plane)
     {
       return new Rhino.Geometry.Plane(plane.Origin.ToRhino(), (Vector3d) plane.XVec.ToRhino(), (Vector3d) plane.YVec.ToRhino());
@@ -951,6 +956,19 @@ namespace RhinoInside.Revit
         yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));
     }
 
+    public static Autodesk.Revit.DB.Line ToHost(this Rhino.Geometry.LineCurve line)
+    {
+      return Autodesk.Revit.DB.Line.CreateBound(line.PointAtStart.ToHost(), line.PointAtEnd.ToHost());
+    }
+
+    public static Autodesk.Revit.DB.Arc ToHost(this Rhino.Geometry.ArcCurve arc)
+    {
+      if (arc.IsClosed)
+        return Autodesk.Revit.DB.Arc.Create(arc.Arc.Plane.ToHost(), arc.Arc.Radius, 0.0, 2.0 * Math.PI);
+      else
+        return Autodesk.Revit.DB.Arc.Create(arc.Arc.StartPoint.ToHost(), arc.Arc.EndPoint.ToHost(), arc.Arc.MidPoint.ToHost());
+    }
+
     public static IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve)
     {
       var curveTolerance = Revit.ShortCurveTolerance;
@@ -964,7 +982,7 @@ namespace RhinoInside.Revit
       {
         case Rhino.Geometry.LineCurve line:
 
-          yield return Autodesk.Revit.DB.Line.CreateBound(line.PointAtStart.ToHost(), line.PointAtEnd.ToHost());
+          yield return line.ToHost();
           break;
 
         case Rhino.Geometry.PolylineCurve polyline:
@@ -975,10 +993,7 @@ namespace RhinoInside.Revit
 
         case Rhino.Geometry.ArcCurve arc:
 
-          if (arc.IsClosed)
-            yield return Autodesk.Revit.DB.Arc.Create(arc.Arc.Plane.ToHost(), arc.Arc.Radius, 0.0, 2.0 * Math.PI);
-          else
-            yield return Autodesk.Revit.DB.Arc.Create(arc.Arc.StartPoint.ToHost(), arc.Arc.EndPoint.ToHost(), arc.Arc.MidPoint.ToHost());
+          yield return arc.ToHost();
           break;
 
         case Rhino.Geometry.PolyCurve polyCurve:
@@ -1438,13 +1453,14 @@ namespace RhinoInside.Revit
     {
       switch (geometry)
       {
-        case Autodesk.Revit.DB.Point p: yield return p; yield break;
+        case Autodesk.Revit.DB.Point p:            yield return p; yield break;
         case Autodesk.Revit.DB.Curve c:
           foreach (var unbounded in ToBoundedCurves(c))
             yield return unbounded;
           yield break;
-        case Autodesk.Revit.DB.Solid s: yield return s; yield break;
-        case Autodesk.Revit.DB.Mesh m: yield return m; yield break;
+        case Autodesk.Revit.DB.Solid s:            yield return s; yield break;
+        case Autodesk.Revit.DB.Mesh m:             yield return m; yield break;
+        case Autodesk.Revit.DB.GeometryInstance i: yield return i; yield break;
       }
     }
 
@@ -1488,6 +1504,14 @@ namespace RhinoInside.Revit
       return curveArray;
     }
 
+    public static Autodesk.Revit.DB.CurveLoop ToCurveLoop(this IEnumerable<Autodesk.Revit.DB.Curve> curves)
+    {
+      var curveLoop = new CurveLoop();
+      foreach (var curve in curves)
+        curveLoop.Append(curve);
+
+      return curveLoop;
+    }
     #endregion
 
     #region TryGetExtrusion
