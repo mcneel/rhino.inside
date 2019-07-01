@@ -204,9 +204,35 @@ namespace RhinoInside.Revit.UI
         // Register keyboard shortcut
         {
           string keyboardShortcutsPath = Path.Combine(Revit.CurrentUsersDataFolderPath, "KeyboardShortcuts.xml");
+          if (!File.Exists(keyboardShortcutsPath))
+            keyboardShortcutsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Autodesk", $"RVT {Revit.ApplicationUI.ControlledApplication.VersionNumber}", "UserDataCache", "KeyboardShortcuts.xml");
 
           if (!Revit.KeyboardShortcuts.LoadFrom(keyboardShortcutsPath, out var shortcuts))
-            shortcuts = new Revit.KeyboardShortcuts.Shortcuts();
+            Revit.KeyboardShortcuts.LoadFromResources($"RhinoInside.Resources.RVT{Revit.ApplicationUI.ControlledApplication.VersionNumber}.KeyboardShortcuts.xml", out shortcuts);
+
+#if DEBUG
+          // Those lines generate the KeyboardShortcuts.xml template file when new Revit version is supported
+          string keyboardShortcutsTemplatePath = Path.Combine(Addin.SourceCodePath, "Resources", $"RVT{Revit.ApplicationUI.ControlledApplication.VersionNumber}", "KeyboardShortcuts.xml");
+          var info = new FileInfo(keyboardShortcutsTemplatePath);
+          if (info.Length == 0)
+          {
+            var shortcutsSummary = new Revit.KeyboardShortcuts.Shortcuts();
+            foreach (var shortcut in shortcuts.OrderBy(x => x.CommandId))
+            {
+              if (!string.IsNullOrEmpty(shortcut.Shortcuts))
+              {
+                var shortcutDefinition = new Revit.KeyboardShortcuts.ShortcutItem
+                {
+                  CommandId = shortcut.CommandId,
+                  Shortcuts = shortcut.Shortcuts
+                };
+                shortcutsSummary.Add(shortcutDefinition);
+              }
+            }
+
+            Revit.KeyboardShortcuts.SaveAs(shortcutsSummary, keyboardShortcutsTemplatePath);
+          }
+#endif
 
           try
           {
