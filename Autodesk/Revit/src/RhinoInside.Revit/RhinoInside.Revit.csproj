@@ -289,6 +289,9 @@
     <None Include="Resources\GH\ColumnByCurve.png" />
     <None Include="Resources\GH\DirectShapeByBrep.png" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\RVT$(RevitVersion)\KeyboardShortcuts.xml"/>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild" Condition="$(Configuration.Contains('Debug'))">
     <Copy UseHardlinksIfPossible="true" SkipUnchangedFiles="true" SourceFiles="$(ProjectDir)$(OutDir)RhinoInside.Revit.dll" DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)\RhinoInside.Revit" />
