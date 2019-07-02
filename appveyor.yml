@@ -12,7 +12,11 @@ build_script:
     
     msbuild %sln% /t:restore;build /p:Configuration="Release 2019"
 
+    msbuild %sln% /t:restore;build /p:Configuration="Release 2020"
+
     msbuild Autodesk/Revit/src/RhinoInside.Revit.Setup.sln /p:Configuration=Release
 
+    copy Autodesk\Revit\src\RhinoInside.Revit.Setup\bin\x64\Release\RhinoInside.Revit.msi .
+
 artifacts:
-- path: Autodesk\Revit\src\RhinoInside.Revit.Setup\bin\x64\Release\RhinoInside.Revit.msi
+- path: RhinoInside.Revit.msi
