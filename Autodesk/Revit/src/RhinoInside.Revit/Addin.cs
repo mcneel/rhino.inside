@@ -256,7 +256,7 @@ namespace RhinoInside.Revit.UI
             Rhinoceros.ModalScope.Exit += ModalScope_Exit;
           }
 
-          Revit.KeyboardShortcuts.SaveAs(shortcuts, keyboardShortcutsPath);
+          Revit.KeyboardShortcuts.SaveAs(shortcuts, Path.Combine(Revit.CurrentUsersDataFolderPath, "KeyboardShortcuts.xml"));
         }
       }
     }
