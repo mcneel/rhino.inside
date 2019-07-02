@@ -490,21 +490,9 @@ namespace RhinoInside.Revit
             ModalForm.BringWindowToTop(activePopup);
           }
 
-          while (ModalForm.ActiveForm != null)
+          while (Rhinoceros.Run())
           {
-            while (Rhinoceros.Run())
-            {
-              if (!Exposed && ModalForm.GetEnabledPopup() == IntPtr.Zero)
-                break;
-
-              // Disable Revit window if Rhino is maximized
-              ModalForm.ParentEnabled = !(MainWindow.Visible && MainWindow.WindowState == Eto.Forms.WindowState.Maximized);
-            }
-
-            //Keep Rhino window active while Maximized
-            if (MainWindow.Visible && MainWindow.WindowState == Eto.Forms.WindowState.Maximized)
-              RhinoApp.SetFocusToMainWindow();
-            else
+            if (!Exposed && ModalForm.GetEnabledPopup() == IntPtr.Zero)
               break;
           }
 
