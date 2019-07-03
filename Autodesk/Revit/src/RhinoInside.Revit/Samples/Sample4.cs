@@ -211,12 +211,11 @@ namespace RhinoInside.Revit.Samples
         var reference = doc.Selection.PickObject(ObjectType.Face, prompt);
         if (reference != null)
         {
-          // TODO:
-          //var element = doc.Document.GetElement(reference);
-          //var face = element.GetGeometryObjectFromReference(reference) as Face;
-          //var surface = face.GetSurface().ToRhino();
-          //surface.Scale(Revit.ModelUnits);
-          //goo = new GH_Surface(surface);
+          var element = doc.Document.GetElement(reference);
+          var face = element.GetGeometryObjectFromReference(reference) as Face;
+          var surface = face.ToRhino();
+          surface.Scale(Revit.ModelUnits);
+          return new GH_Surface[] { new GH_Surface(surface) };
         }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
