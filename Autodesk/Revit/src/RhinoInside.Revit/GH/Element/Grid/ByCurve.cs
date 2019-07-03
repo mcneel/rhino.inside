@@ -18,7 +18,7 @@ namespace RhinoInside.Revit.GH.Components
 
     public GridByCurve() : base
     (
-      "AddGrid.ByElevation", "ByCurve",
+      "AddGrid.ByCurve", "ByCurve",
       "Given its Axis, it adds a Grid element to the active Revit document",
       "Revit", "Datum"
     )
