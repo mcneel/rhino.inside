@@ -18,7 +18,7 @@ namespace RhinoInside.Revit.GH.Components
 
     public GridByCurve() : base
     (
-      "AddGrid.ByElevation", "ByCurve",
+      "AddGrid.ByCurve", "ByCurve",
       "Given its Axis, it adds a Grid element to the active Revit document",
       "Revit", "Datum"
     )
@@ -50,9 +50,6 @@ namespace RhinoInside.Revit.GH.Components
         DA.AbortComponentSolution();
         return;
       }
-
-      string name = null;
-      DA.GetData("Name", ref name);
 
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;
