@@ -130,6 +130,11 @@ namespace RhinoInside.Revit.GH.Components
 
         var axisList = curve.ToHost().ToList();
         Debug.Assert(axisList.Count == 1);
+        var axis = axisList[0];
+        double offsetDist = wallType.GetCompoundStructure().GetOffsetForLocationLine(locationLine);
+
+        if(offsetDist != 0.0)
+          axis = axis.CreateOffset(offsetDist, XYZ.BasisZ);
 
         if (element != null && wallType.Id != element.GetTypeId())
         {
@@ -143,51 +148,17 @@ namespace RhinoInside.Revit.GH.Components
 
         if (element is Wall wall && element?.Location is LocationCurve locationCurve && axisList[0].IsSameKindAs(locationCurve.Curve))
         {
-          locationCurve.Curve = axisList[0];
+          locationCurve.Curve = axis;
           wall.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT).Set(level.Id);
           wall.get_Parameter(BuiltInParameter.WALL_BASE_OFFSET).Set(0.0);
           wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
         }
         else
         {
-          element = CopyParametersFrom(Wall.Create(doc, axisList[0], wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural), element);
+          element = CopyParametersFrom(Wall.Create(doc, axis, wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural), element);
         }
 
-        if (element != null)
-        {
-          var WALL_KEY_REF_PARAM = element.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
-          if (WALL_KEY_REF_PARAM.AsInteger() != (int) locationLine)
-          {
-            var similarType = wallType.GetSimilarTypes().
-                Select(x => doc.GetElement(x)).
-                OfType<WallType>().
-                Where(x => x.Kind == wallType.Kind).
-                Select(x => x.Id).
-                DefaultIfEmpty().
-                First();
-
-            if (similarType != ElementId.InvalidElementId)
-            {
-              WALL_KEY_REF_PARAM.Set((int) locationLine);
-
-              {
-                var newElmentId = element.ChangeTypeId(similarType);
-                if (newElmentId != ElementId.InvalidElementId)
-                  element = doc.GetElement(newElmentId);
-              }
-
-              {
-                var newElmentId = element.ChangeTypeId(wallType.Id);
-                if (newElmentId != ElementId.InvalidElementId)
-                  element = doc.GetElement(newElmentId);
-              }
-            }
-            else
-            {
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Unable to apply '{Params.Input[5].Name}'");
-            }
-          }
-        }
+        element?.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) locationLine);
 
         ReplaceElement(doc, DA, Iteration, element);
       }
