@@ -31,6 +31,13 @@ namespace RhinoInside.Revit.GH.Components
       manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager.AddBooleanParameter("Structural", "S", string.Empty, GH_ParamAccess.item, true);
       manager[manager.AddNumberParameter("Height", "H", string.Empty, GH_ParamAccess.item)].Optional = true;
+
+      var location = manager[manager.AddIntegerParameter("LocationLine", "LL", string.Empty, GH_ParamAccess.item)] as Grasshopper.Kernel.Parameters.Param_Integer;
+      location.Optional = true;
+
+      foreach (var e in Enum.GetValues(typeof(WallLocationLine)))
+        location.AddNamedValue(Enum.GetName(typeof(WallLocationLine), e), (int) (WallLocationLine) e);
+
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -61,9 +68,22 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Height", ref height))
         height = LiteralLengthValue(3.0);
 
+      var locationLine = WallLocationLine.WallCenterline;
+      int locationLineValue = (int) locationLine;
+      if (DA.GetData("LocationLine", ref locationLineValue))
+      {
+        if ((int) WallLocationLine.WallCenterline > locationLineValue || locationLineValue > (int) WallLocationLine.CoreInterior)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' range is [0, 5].", Params.Input[5].Name));
+          return;
+        }
+
+        locationLine = (WallLocationLine) locationLineValue;
+      }
+
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, axis, wallType, level, structural, height));
+      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, axis, wallType, level, structural, height, locationLine));
     }
 
     void CommitInstance
@@ -73,7 +93,8 @@ namespace RhinoInside.Revit.GH.Components
       Autodesk.Revit.DB.WallType wallType,
       Autodesk.Revit.DB.Level level,
       bool structural,
-      double height
+      double height,
+      WallLocationLine locationLine
     )
     {
       var element = PreviousElement(doc, Iteration);
@@ -130,6 +151,32 @@ namespace RhinoInside.Revit.GH.Components
         else
         {
           element = CopyParametersFrom(Wall.Create(doc, axisList[0], wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural), element);
+        }
+
+        if (element != null)
+        {
+          var WALL_KEY_REF_PARAM = element.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
+          var similarType = wallType.GetSimilarTypes().DefaultIfEmpty().First();
+          if (similarType != ElementId.InvalidElementId)
+          {
+            WALL_KEY_REF_PARAM.Set((int) locationLine);
+
+            {
+              var newElmentId = element.ChangeTypeId(similarType);
+              if (newElmentId != ElementId.InvalidElementId)
+                element = doc.GetElement(newElmentId);
+            }
+
+            {
+              var newElmentId = element.ChangeTypeId(wallType.Id);
+              if (newElmentId != ElementId.InvalidElementId)
+                element = doc.GetElement(newElmentId);
+            }
+          }
+          else
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Unable to apply '{Params.Input[5].Name}'");
+          }
         }
 
         ReplaceElement(doc, DA, Iteration, element);
