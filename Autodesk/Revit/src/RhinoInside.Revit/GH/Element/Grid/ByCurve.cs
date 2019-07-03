@@ -51,9 +51,6 @@ namespace RhinoInside.Revit.GH.Components
         return;
       }
 
-      string name = null;
-      DA.GetData("Name", ref name);
-
       DA.DisableGapLogic();
       int Iteration = DA.Iteration;
       Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, axis, gridType));
