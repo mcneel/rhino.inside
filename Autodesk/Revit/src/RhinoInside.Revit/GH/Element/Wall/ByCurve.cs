@@ -156,26 +156,36 @@ namespace RhinoInside.Revit.GH.Components
         if (element != null)
         {
           var WALL_KEY_REF_PARAM = element.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM);
-          var similarType = wallType.GetSimilarTypes().DefaultIfEmpty().First();
-          if (similarType != ElementId.InvalidElementId)
+          if (WALL_KEY_REF_PARAM.AsInteger() != (int) locationLine)
           {
-            WALL_KEY_REF_PARAM.Set((int) locationLine);
+            var similarType = wallType.GetSimilarTypes().
+                Select(x => doc.GetElement(x)).
+                OfType<WallType>().
+                Where(x => x.Kind == wallType.Kind).
+                Select(x => x.Id).
+                DefaultIfEmpty().
+                First();
 
+            if (similarType != ElementId.InvalidElementId)
             {
-              var newElmentId = element.ChangeTypeId(similarType);
-              if (newElmentId != ElementId.InvalidElementId)
-                element = doc.GetElement(newElmentId);
-            }
+              WALL_KEY_REF_PARAM.Set((int) locationLine);
 
-            {
-              var newElmentId = element.ChangeTypeId(wallType.Id);
-              if (newElmentId != ElementId.InvalidElementId)
-                element = doc.GetElement(newElmentId);
+              {
+                var newElmentId = element.ChangeTypeId(similarType);
+                if (newElmentId != ElementId.InvalidElementId)
+                  element = doc.GetElement(newElmentId);
+              }
+
+              {
+                var newElmentId = element.ChangeTypeId(wallType.Id);
+                if (newElmentId != ElementId.InvalidElementId)
+                  element = doc.GetElement(newElmentId);
+              }
             }
-          }
-          else
-          {
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Unable to apply '{Params.Input[5].Name}'");
+            else
+            {
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Unable to apply '{Params.Input[5].Name}'");
+            }
           }
         }
 
