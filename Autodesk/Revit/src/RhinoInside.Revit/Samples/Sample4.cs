@@ -51,7 +51,8 @@ namespace RhinoInside.Revit.Samples
       if (mruPullDownButton != null)
       {
         mruPullDownButton.ToolTip = "Loads and evals a Grasshopper definition";
-        mruPullDownButton.Image = ImageBuilder.BuildImage("4");
+        mruPullDownButton.Image = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.GrasshopperPlayer.png", true);
+        mruPullDownButton.LargeImage = ImageBuilder.LoadBitmapImage("RhinoInside.Resources.GrasshopperPlayer.png");
         mruPullDownButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
 
         mruPullDownButton.AddPushButton(typeof(Browse), "Browse...", "Browse for a Grasshopper definition to evaluate", typeof(Availability));

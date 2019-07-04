@@ -237,6 +237,7 @@
     <EmbeddedResource Include="Resources\Rhino-logo.png" />
     <EmbeddedResource Include="Resources\Rhino.png" />
     <EmbeddedResource Include="Resources\Grasshopper.png" />
+    <EmbeddedResource Include="Resources\GrasshopperPlayer.png" />
     <EmbeddedResource Include="Resources\Python.png" />
   </ItemGroup>
   <ItemGroup>
@@ -292,7 +293,7 @@
     <None Include="Resources\GH\DirectShapeByBrep.png" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\RVT$(RevitVersion)\KeyboardShortcuts.xml"/>
+    <EmbeddedResource Include="Resources\RVT$(RevitVersion)\KeyboardShortcuts.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild" Condition="$(Configuration.Contains('Debug'))">
