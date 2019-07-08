@@ -49,9 +49,6 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Type", ref familySymbol) && Params.Input[1].Sources.Count == 0)
         familySymbol = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultFamilyTypeId(new ElementId(BuiltInCategory.OST_StructuralColumns))) as FamilySymbol;
 
-      if (!familySymbol.IsActive)
-        familySymbol.Activate();
-
       Autodesk.Revit.DB.Level level = null;
       DA.GetData("Level", ref level);
       if (level == null)
@@ -79,6 +76,9 @@ namespace RhinoInside.Revit.GH.Components
       }
       else try
       {
+        if (!familySymbol.IsActive)
+          familySymbol.Activate();
+
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)
           line = line.Scale(scaleFactor);
@@ -100,11 +100,6 @@ namespace RhinoInside.Revit.GH.Components
           locationCurve.Curve = line.ToHost();
         else
           element = CopyParametersFrom(doc.Create.NewFamilyInstance(line.ToHost(), familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Column), element);
-
-        if (line.Direction.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0)
-          element.get_Parameter(BuiltInParameter.SLANTED_COLUMN_TYPE_PARAM).Set((int) SlantedOrVerticalColumnType.CT_EndPoint);
-        else
-          element.get_Parameter(BuiltInParameter.SLANTED_COLUMN_TYPE_PARAM).Set((int) SlantedOrVerticalColumnType.CT_Vertical);
 
         ReplaceElement(doc, DA, Iteration, element);
       }

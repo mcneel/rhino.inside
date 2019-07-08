@@ -52,9 +52,6 @@ namespace RhinoInside.Revit.GH.Components
         return;
       }
 
-      if (!familySymbol.IsActive)
-        familySymbol.Activate();
-
       Autodesk.Revit.DB.Level level = null;
       DA.GetData("Level", ref level);
 
@@ -78,6 +75,9 @@ namespace RhinoInside.Revit.GH.Components
       }
       else try
       {
+        if (!familySymbol.IsActive)
+          familySymbol.Activate();
+
         var scaleFactor = 1.0 / Revit.ModelUnits;
         if (scaleFactor != 1.0)
         {
