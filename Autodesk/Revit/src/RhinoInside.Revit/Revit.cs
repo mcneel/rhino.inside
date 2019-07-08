@@ -233,9 +233,11 @@ namespace RhinoInside.Revit
                   docWriteActions.Dequeue().Invoke(ActiveDBDocument);
 
                 var options = trans.GetFailureHandlingOptions();
+#if !DEBUG
                 options = options.SetClearAfterRollback(true);
+#endif
                 options = options.SetDelayedMiniWarnings(true);
-                options = options.SetForcedModalHandling(false);
+                options = options.SetForcedModalHandling(true);
                 options = options.SetFailuresPreprocessor(new FailuresPreprocessor());
                 var status = trans.Commit(options);
 
@@ -252,11 +254,7 @@ namespace RhinoInside.Revit
             catch (Exception e)
             {
               Debug.Fail(e.Source, e.Message);
-
               docWriteActions.Clear();
-
-              if (trans.HasStarted())
-                trans.RollBack();
             }
             finally
             {
@@ -300,9 +298,9 @@ namespace RhinoInside.Revit
       // there is no more work to do
       return false;
     }
-    #endregion
+#endregion
 
-    #region Public Properties
+#region Public Properties
     public static IntPtr MainWindowHandle { get; private set; }
 
 #if REVIT_2019
@@ -330,6 +328,6 @@ namespace RhinoInside.Revit
     public static double VertexTolerance => Services != null ? Services.VertexTolerance : AbsoluteTolerance / 10.0;
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
     public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
-    #endregion
+#endregion
   }
 }
