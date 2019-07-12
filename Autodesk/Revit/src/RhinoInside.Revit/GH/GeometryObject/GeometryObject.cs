@@ -328,9 +328,9 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       var elements = VolatileData.AllData(true).
                      OfType<Types.IGH_GeometricGoo>().
-                     SkipWhile((x) => !x.IsReferencedGeometry).
+                     Where((x) => x.IsReferencedGeometry).
                      Select((x) => x.Reference).
-                     SkipWhile((x) => x == null).
+                     Where((x) => x != null).
                      Select((x) => x.ElementId).
                      ToArray();
 
