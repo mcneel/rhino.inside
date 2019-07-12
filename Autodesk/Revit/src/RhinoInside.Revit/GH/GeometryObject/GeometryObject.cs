@@ -314,60 +314,8 @@ namespace RhinoInside.Revit.GH.Parameters
     protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     #region UI methods
-    struct Prompt
-    {
-      bool mainWindowVisible;
-      bool mainWindowEnabled;
-
-      public void PrepareForPrompt()
-      {
-        mainWindowEnabled = Rhino.UI.RhinoEtoApp.MainWindow.Enabled;
-        mainWindowVisible = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
-
-        var mainWindowExtents = Revit.ActiveUIApplication.MainWindowExtents;
-        var mainWindowRectangle = new System.Drawing.Rectangle(mainWindowExtents.Left, mainWindowExtents.Top, mainWindowExtents.Right - mainWindowExtents.Left, mainWindowExtents.Bottom - mainWindowExtents.Top);
-        mainWindowRectangle.Inflate(-64, -64);
-
-        // Grasshopper Window
-        {
-          Instances.DocumentEditor.Enabled = false;
-          if (Instances.DocumentEditor.DesktopBounds.IntersectsWith(mainWindowRectangle))
-            Instances.DocumentEditor.Hide();
-        }
-
-        // Rhino Window
-        {
-          var rhinoWindowBounds = Rhino.UI.RhinoEtoApp.MainWindow.Bounds;
-          var rhinoWindowRectangle = new System.Drawing.Rectangle(rhinoWindowBounds.Left, rhinoWindowBounds.Top, rhinoWindowBounds.Width, rhinoWindowBounds.Height);
-
-          Rhino.UI.RhinoEtoApp.MainWindow.Enabled = false;
-          if (rhinoWindowRectangle.IntersectsWith(mainWindowRectangle))
-            Rhino.UI.RhinoEtoApp.MainWindow.Visible = false;
-        }
-      }
-
-      public void RecoverFromPrompt()
-      {
-        // Rhino Window
-        {
-          Rhino.UI.RhinoEtoApp.MainWindow.Visible = mainWindowVisible;
-          Rhino.UI.RhinoEtoApp.MainWindow.Enabled = mainWindowEnabled;
-          mainWindowVisible = false;
-          mainWindowEnabled = false;
-        }
-
-        // Grasshopper Window
-        {
-          Instances.DocumentEditor.Show();
-          Instances.DocumentEditor.Enabled = true;
-        }
-
-        Revit.RefreshActiveView();
-      }
-    }
-    Prompt prompt;
-    protected override void PrepareForPrompt()  { try { prompt.PrepareForPrompt();  } catch (Exception) { }; }
-    protected override void RecoverFromPrompt() { try { prompt.RecoverFromPrompt(); } catch (Exception) { }; }
+    protected override void PrepareForPrompt()  { }
+    protected override void RecoverFromPrompt() { }
 
     public override void AppendAdditionalMenuItems(System.Windows.Forms.ToolStripDropDown menu)
     {
