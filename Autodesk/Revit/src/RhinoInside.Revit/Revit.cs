@@ -239,9 +239,31 @@ namespace RhinoInside.Revit
                 options = options.SetDelayedMiniWarnings(true);
                 options = options.SetForcedModalHandling(true);
                 options = options.SetFailuresPreprocessor(new FailuresPreprocessor());
-                var status = trans.Commit(options);
 
-                if (status == TransactionStatus.Committed)
+                // Hide Rhino UI in case any warning-error dialog popups
+                {
+                  ModalForm.EditScope editScope = null;
+                  EventHandler<DialogBoxShowingEventArgs> _ = null;
+                  try
+                  {
+                    ApplicationUI.DialogBoxShowing += _ = (sender, args) =>
+                    {
+                      if (editScope == null)
+                        editScope = new ModalForm.EditScope();
+                    };
+
+                    trans.Commit(options);
+                  }
+                  finally
+                  {
+                    ApplicationUI.DialogBoxShowing -= _;
+
+                    if(editScope is IDisposable disposable)
+                      disposable.Dispose();
+                  }
+                }
+
+                if (trans.GetStatus() == TransactionStatus.Committed)
                 {
                   foreach (GH_Document definition in Instances.DocumentServer)
                   {
@@ -300,7 +322,7 @@ namespace RhinoInside.Revit
     }
 #endregion
 
-#region Public Properties
+    #region Public Properties
     public static IntPtr MainWindowHandle { get; private set; }
 
 #if REVIT_2019
@@ -328,6 +350,6 @@ namespace RhinoInside.Revit
     public static double VertexTolerance => Services != null ? Services.VertexTolerance : AbsoluteTolerance / 10.0;
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
     public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
-#endregion
+    #endregion
   }
 }
