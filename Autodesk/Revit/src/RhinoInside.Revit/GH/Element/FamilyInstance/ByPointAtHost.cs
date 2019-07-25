@@ -32,7 +32,7 @@ namespace RhinoInside.Revit.GH.Components
       Document doc,
       ref Autodesk.Revit.DB.Element element,
 
-      Rhino.Geometry.Plane position,
+      Rhino.Geometry.Plane location,
       Autodesk.Revit.DB.FamilySymbol type,
       Optional<Autodesk.Revit.DB.Level> level,
       [Optional] Autodesk.Revit.DB.Element host
@@ -41,13 +41,13 @@ namespace RhinoInside.Revit.GH.Components
       var scaleFactor = 1.0 / Revit.ModelUnits;
       if (scaleFactor != 1.0)
       {
-        position = position.Scale(scaleFactor);
+        location = location.Scale(scaleFactor);
       }
 
-      if (!position.IsValid)
-        ThrowArgumentException(nameof(position), "Should be a valid point or plane.");
+      if (!location.IsValid)
+        ThrowArgumentException(nameof(location), "Should be a valid point or plane.");
 
-      SolveOptionalLevel(ref level, doc, position.Origin.Z, nameof(level));
+      SolveOptionalLevel(ref level, doc, location.Origin.Z, nameof(level));
 
       if (host == null && type.Family.FamilyPlacementType == FamilyPlacementType.OneLevelBasedHosted)
         ThrowArgumentNullException(nameof(host), $"This family requires a host.");
@@ -87,7 +87,7 @@ namespace RhinoInside.Revit.GH.Components
           }
         }
 
-        var newOrigin = position.Origin.ToHost();
+        var newOrigin = location.Origin.ToHost();
         if (!newOrigin.IsAlmostEqualTo(locationPoint.Point))
         {
           element.Pinned = false;
@@ -99,7 +99,7 @@ namespace RhinoInside.Revit.GH.Components
       {
         var creationDataList = new List<Autodesk.Revit.Creation.FamilyInstanceCreationData>()
         {
-          new Autodesk.Revit.Creation.FamilyInstanceCreationData(position.Origin.ToHost(), type, host, level.Value, Autodesk.Revit.DB.Structure.StructuralType.NonStructural)
+          new Autodesk.Revit.Creation.FamilyInstanceCreationData(location.Origin.ToHost(), type, host, level.Value, Autodesk.Revit.DB.Structure.StructuralType.NonStructural)
         };
 
         ICollection<ElementId> newElementIds = null;
@@ -129,7 +129,7 @@ namespace RhinoInside.Revit.GH.Components
       if (element is FamilyInstance instance && instance.Host == null)
       {
         element.Pinned = false;
-        SetTransform(instance, position.Origin.ToHost(), position.XAxis.ToHost(), position.YAxis.ToHost());
+        SetTransform(instance, location.Origin.ToHost(), location.XAxis.ToHost(), location.YAxis.ToHost());
         element.Pinned = true;
       }
     }
@@ -157,11 +157,11 @@ namespace RhinoInside.Revit.GH.Components
             ElementTransformUtils.RotateElement(element.Document, element.Id, axis, angle);
         }
 
-        //{
-        //  var trans = (newOrigin / Revit.ModelUnits) - (current.Origin / Revit.ModelUnits);
-        //  if (!trans.IsZeroLength())
-        //    ElementTransformUtils.MoveElement(element.Document, element.Id, trans);
-        //}
+        {
+          var trans = (newOrigin / Revit.ModelUnits) - (current.Origin / Revit.ModelUnits);
+          if (!trans.IsZeroLength())
+            ElementTransformUtils.MoveElement(element.Document, element.Id, trans);
+        }
       }
     }
   }
