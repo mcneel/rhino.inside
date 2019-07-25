@@ -240,7 +240,7 @@ namespace RhinoInside.Revit
     }
     #endregion
 
-    #region Rhino Interface
+    #region Rhino UI
     static Eto.Forms.Window MainWindow => Rhino.UI.RhinoEtoApp.MainWindow;
     public static bool Exposed
     {
@@ -433,21 +433,28 @@ namespace RhinoInside.Revit
       }
     }
 
+    /// <summary>
+    /// Represents a Pseudo-modal loop
+    /// This class implements IDisposable, it's been designed to be used in a using statement.
+    /// </summary>
     public class ModalScope : IDisposable
     {
+      static event EventHandler enter;
+      /// <summary>
+      /// It will be fired before a ModelScope starts
+      /// Enter event handlers will be called in FIFO order
+      /// </summary>
+      public static event EventHandler Enter { add => enter += value; remove => enter -= value; }
+
+      static event EventHandler exit;
+      /// <summary>
+      /// It will be fired after a ModelScope ends
+      /// Exit event handlers will be called in LIFO order
+      /// </summary>
+      public static event EventHandler Exit { add => exit = value + exit; remove => exit -= value; }
+
       static bool wasExposed = false;
       ModalForm form;
-
-      static event EventHandler enter;
-      public static event EventHandler Enter
-      {
-        add => enter += value; remove => enter -= value;
-      }
-      static event EventHandler exit;
-      public static event EventHandler Exit
-      {
-        add => exit = value + exit; remove => exit -= value;
-      }
 
       public ModalScope()
       {
@@ -490,10 +497,15 @@ namespace RhinoInside.Revit
             ModalForm.BringWindowToTop(activePopup);
           }
 
-          while (Rhinoceros.Run())
+          while (ModalForm.ActiveForm != null)
           {
-            if (!Exposed && ModalForm.GetEnabledPopup() == IntPtr.Zero)
-              break;
+            while (Rhinoceros.Run())
+            {
+              if (!Exposed && ModalForm.GetEnabledPopup() == IntPtr.Zero)
+                break;
+            }
+
+            break;
           }
 
           return Result.Succeeded;
