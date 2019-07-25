@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Diagnostics;
 using System.Windows.Forms;
@@ -12,7 +13,6 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI;
 
 using Autodesk.Revit.DB;
-using System.ComponentModel;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -292,18 +292,23 @@ namespace RhinoInside.Revit.GH.Types
         var element = (Autodesk.Revit.DB.Element) this;
         if (element != null)
         {
-          var str = "Revit " + element.GetType().Name;
+          var ToolTip = string.Empty;
+          if(element.Category != null)
+            ToolTip += $"{element.Category.Name} : ";
 
-          var ToolTip = element.Category?.Name ?? string.Empty;
-          if (string.IsNullOrEmpty(ToolTip))
-            ToolTip = element.Name;
-          else if(!string.IsNullOrEmpty(element.Name))
-            ToolTip += " : " + element.Name;
+          if (element.Document.GetElement(element.GetTypeId()) is Autodesk.Revit.DB.ElementType elementType)
+          {
+            if(!string.IsNullOrEmpty(elementType.FamilyName))
+              ToolTip += $"{elementType.FamilyName} : ";
 
-          if(!string.IsNullOrEmpty(ToolTip))
-            str += " \"" + ToolTip + "\"";
+            ToolTip += $"{elementType.Name} : ";
+          }
+          else if (!string.IsNullOrEmpty(element.Name))
+          {
+            ToolTip += $"{element.Name} : ";
+          }
 
-          return str;
+          return $"{ToolTip}id {element.Id}";
         }
       }
 
