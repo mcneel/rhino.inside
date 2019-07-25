@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Windows.Input;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI;
+using Microsoft.Win32;
 
 namespace RhinoInside.Revit
 {
@@ -15,7 +16,11 @@ namespace RhinoInside.Revit
   public class Addin : IExternalApplication
   {
     #region Static constructor
-    static readonly string SystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+    static readonly string SystemDir = (string) Registry.GetValue
+    (
+      @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+    );
     internal static readonly string RhinoExePath = Path.Combine(SystemDir, "Rhino.exe");
     internal static readonly FileVersionInfo RhinoVersionInfo = File.Exists(RhinoExePath) ? FileVersionInfo.GetVersionInfo(RhinoExePath) : null ;
     static readonly Version MinimumRhinoVersion = new Version(7, 0, 19183);
