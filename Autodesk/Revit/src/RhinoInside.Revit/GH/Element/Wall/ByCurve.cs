@@ -1,171 +1,215 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
-
-using Grasshopper.Kernel;
-
+using System.Linq;
+using System.Runtime.InteropServices;
 using Autodesk.Revit.DB;
+using Grasshopper.Kernel;
+using RhinoInside.Runtime.InteropServices;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class WallByCurve : GH_TransactionalComponentItem
+  public class WallByCurve : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("37A8C46F-CB5B-49FD-A483-B03D1FE14A22");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public WallByCurve() : base
     (
       "AddWall.ByCurve", "ByCurve",
-      "Given its Axis, it adds a Wall element to the active Revit document",
+      "Given a curve, it adds a Wall element to the active Revit document",
       "Revit", "Build"
     )
     { }
-
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddCurveParameter("Axis", "A", string.Empty, GH_ParamAccess.item);
-      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "T", string.Empty, GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
-      manager.AddBooleanParameter("Structural", "S", string.Empty, GH_ParamAccess.item, true);
-      manager[manager.AddNumberParameter("Height", "H", string.Empty, GH_ParamAccess.item)].Optional = true;
-
-      var location = manager[manager.AddIntegerParameter("LocationLine", "LL", string.Empty, GH_ParamAccess.item)] as Grasshopper.Kernel.Parameters.Param_Integer;
-      location.Optional = true;
-
-      foreach (var e in Enum.GetValues(typeof(WallLocationLine)))
-        location.AddNamedValue(Enum.GetName(typeof(WallLocationLine), e), (int) (WallLocationLine) e);
-
-    }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddParameter(new Parameters.Element(), "Wall", "W", "New Wall", GH_ParamAccess.item);
     }
 
-    protected override void SolveInstance(IGH_DataAccess DA)
+    protected override void OnAfterStart(Document document, string strTransactionName)
     {
-      Rhino.Geometry.Curve axis = null;
-      DA.GetData("Axis", ref axis);
+      base.OnAfterStart(document, strTransactionName);
 
-      WallType wallType = null;
-      if (!DA.GetData("Type", ref wallType) && Params.Input[1].Sources.Count == 0)
-        wallType = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultElementTypeId(ElementTypeGroup.WallType)) as WallType;
-
-      Autodesk.Revit.DB.Level level = null;
-      DA.GetData("Level", ref level);
-      if (level == null && axis != null)
+      // Disable all previous walls joins
+      if (PreviousStructure != null)
       {
-        level = Revit.ActiveDBDocument.FindLevelByElevation(axis.PointAtStart.Z / Revit.ModelUnits);
-      }
-
-      bool structural = true;
-      DA.GetData("Structural", ref structural);
-
-      double height = 0.0;
-      if (!DA.GetData("Height", ref height))
-        height = LiteralLengthValue(3.0);
-
-      var locationLine = WallLocationLine.WallCenterline;
-      int locationLineValue = (int) locationLine;
-      if (DA.GetData("LocationLine", ref locationLineValue))
-      {
-        if ((int) WallLocationLine.WallCenterline > locationLineValue || locationLineValue > (int) WallLocationLine.CoreInterior)
+        foreach
+        (
+          var unjoinedWall in PreviousStructure.OfType<Types.Element>().
+                              Select(x => document.GetElement(x)).
+                              OfType<Wall>().
+                              Where(x => x.Pinned)
+        )
         {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' range is [0, 5].", Params.Input[5].Name));
-          return;
+          WallUtils.DisallowWallJoinAtEnd(unjoinedWall, 0);
+          WallUtils.DisallowWallJoinAtEnd(unjoinedWall, 1);
         }
 
-        locationLine = (WallLocationLine) locationLineValue;
+        document.Regenerate();
       }
-
-      DA.DisableGapLogic();
-      int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, axis, wallType, level, structural, height, locationLine));
     }
 
-    void CommitInstance
+    List<Wall> joinedWalls = new List<Wall>();
+    protected override void OnBeforeCommit(Document document, string strTransactionName)
+    {
+      base.OnBeforeCommit(document, strTransactionName);
+
+      // Reenable new joined walls
+      foreach (var wallToJoin in joinedWalls)
+      {
+        WallUtils.AllowWallJoinAtEnd(wallToJoin, 0);
+        WallUtils.AllowWallJoinAtEnd(wallToJoin, 1);
+      }
+
+      joinedWalls = new List<Wall>();
+    }
+
+    static readonly FailureDefinitionId[] failureDefinitionIdsToFix = new FailureDefinitionId[]
+    {
+      BuiltInFailures.CreationFailures.CannotDrawWallsError,
+      BuiltInFailures.JoinElementsFailures.CannotJoinElementsError,
+    };
+    protected override IEnumerable<FailureDefinitionId> FailureDefinitionIdsToFix => failureDefinitionIdsToFix;
+
+    void ReconstructWallByCurve
     (
-      Document doc, IGH_DataAccess DA, int Iteration,
+      Document doc,
+      ref Autodesk.Revit.DB.Element element,
+
       Rhino.Geometry.Curve curve,
-      Autodesk.Revit.DB.WallType wallType,
-      Autodesk.Revit.DB.Level level,
-      bool structural,
-      double height,
-      WallLocationLine locationLine
+      Optional<Autodesk.Revit.DB.WallType> type,
+      Optional<Autodesk.Revit.DB.Level> level,
+      [Optional] bool structural,
+      [Optional] double height,
+      [Optional] WallLocationLine locationLine,
+      [Optional] bool flipped,
+      [Optional, NickName("J")] bool allowJoins
     )
     {
-      var element = PreviousElement(doc, Iteration);
+      var scaleFactor = 1.0 / Revit.ModelUnits;
 
-      if (!element?.Pinned ?? false)
+      if
+      (
+        scaleFactor != 1.0 ? !curve.Scale(scaleFactor) : true &&
+        curve.IsShort(Revit.ShortCurveTolerance) ||
+        !(curve.IsLinear(Revit.VertexTolerance) || curve.IsArc(Revit.VertexTolerance)) ||
+        !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
+        axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+      )
+        ThrowArgumentException(nameof(curve), "Curve must be a horizontal line or arc curve");
+
+      SolveOptionalType(ref type, doc, ElementTypeGroup.WallType, nameof(type));
+
+      double axisMinZ = Math.Min(curve.PointAtStart.Z, curve.PointAtEnd.Z);
+      bool levelIsEmpty = SolveOptionalLevel(ref level, doc, curve, nameof(level));
+
+      height *= scaleFactor;
+      if (height < Revit.VertexTolerance)
+        height = (type.HasValue ? type.Value : null)?.GetCompoundStructure()?.SampleHeight ?? LiteralLengthValue(6.0) / Revit.ModelUnits;
+
+      // Axis
+      var levelPlane = new Rhino.Geometry.Plane(new Rhino.Geometry.Point3d(0.0, 0.0, level.Value.Elevation), Rhino.Geometry.Vector3d.ZAxis);
+      curve = Rhino.Geometry.Curve.ProjectToPlane(curve, levelPlane);
+
+      var curves = curve.ToHost().ToArray();
+      Debug.Assert(curves.Length == 1);
+      var centerLine = curves[0];
+
+      // LocationLine
+      if (locationLine != WallLocationLine.WallCenterline)
       {
-        ReplaceElement(doc, DA, Iteration, element);
-      }
-      else try
-      {
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
+        double offsetDist = 0.0;
+        var compoundStructure = type.Value.GetCompoundStructure();
+        if (compoundStructure == null)
         {
-          height *= scaleFactor;
-          curve?.Scale(scaleFactor);
-        }
-
-        if
-        (
-          curve == null ||
-          curve.IsShort(Revit.ShortCurveTolerance) ||
-          !(curve.IsArc(Revit.VertexTolerance) || curve.IsLinear(Revit.VertexTolerance)) ||
-          !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-          axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
-        )
-          throw new Exception(string.Format("Parameter '{0}' must be a horizontal line or arc curve.", Params.Input[0].Name));
-
-        if (level == null)
-          throw new Exception(string.Format("Parameter '{0}' no suitable level is been found.", Params.Input[2].Name));
-
-        if (height < Revit.VertexTolerance)
-          throw new Exception(string.Format("Parameter '{0}' is too small.", Params.Input[4].Name));
-
-        var axisList = curve.ToHost().ToList();
-        Debug.Assert(axisList.Count == 1);
-        var axis = axisList[0];
-        double offsetDist = wallType.GetCompoundStructure().GetOffsetForLocationLine(locationLine);
-
-        if(offsetDist != 0.0)
-          axis = axis.CreateOffset(offsetDist, XYZ.BasisZ);
-
-        if (element != null && wallType.Id != element.GetTypeId())
-        {
-          var newElmentId = element.ChangeTypeId(wallType.Id);
-          if (newElmentId != ElementId.InvalidElementId)
+          switch (locationLine)
           {
-            element = doc.GetElement(newElmentId);
-            ReplaceElement(doc, DA, Iteration, element);
+            case WallLocationLine.WallCenterline:
+            case WallLocationLine.CoreCenterline:
+              break;
+            case WallLocationLine.FinishFaceExterior:
+            case WallLocationLine.CoreExterior:
+              offsetDist = type.Value.Width / +2.0;
+              break;
+            case WallLocationLine.FinishFaceInterior:
+            case WallLocationLine.CoreInterior:
+              offsetDist = type.Value.Width / -2.0;
+              break;
           }
-        }
-
-        if (element is Wall wall && element?.Location is LocationCurve locationCurve && axisList[0].IsSameKindAs(locationCurve.Curve))
-        {
-          locationCurve.Curve = axis;
-          wall.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT).Set(level.Id);
-          wall.get_Parameter(BuiltInParameter.WALL_BASE_OFFSET).Set(0.0);
-          wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
         }
         else
         {
-          element = CopyParametersFrom(Wall.Create(doc, axis, wallType.Id, level.Id, height, axisPlane.Origin.Z - level.Elevation, false, structural), element);
+          if (!compoundStructure.IsVerticallyHomogeneous())
+            compoundStructure = CompoundStructure.CreateSimpleCompoundStructure(compoundStructure.GetLayers());
+
+          offsetDist = compoundStructure.GetOffsetForLocationLine(locationLine);
         }
 
-        element?.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) locationLine);
-
-        ReplaceElement(doc, DA, Iteration, element);
+        if (offsetDist != 0.0)
+          centerLine = centerLine.CreateOffset(flipped ? -offsetDist : offsetDist, XYZ.BasisZ);
       }
-      catch (Exception e)
+
+      // Type
+      ChangeElementTypeId(ref element, type.Value.Id);
+
+      Wall newWall = null;
+      if (element is Wall previousWall && previousWall.Location is LocationCurve locationCurve && centerLine.IsSameKindAs(locationCurve.Curve))
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-        ReplaceElement(doc, DA, Iteration, null);
+        newWall = previousWall;
+
+        locationCurve.Curve = centerLine;
+      }
+      else
+      {
+        newWall = Wall.Create
+        (
+          doc,
+          centerLine,
+          type.Value.Id,
+          level.Value.Id,
+          height,
+          levelIsEmpty ? axisMinZ - level.Value.Elevation : 0.0,
+          flipped,
+          structural
+        );
+
+        var parametersMask = new BuiltInParameter[]
+        {
+          BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+          BuiltInParameter.ELEM_FAMILY_PARAM,
+          BuiltInParameter.ELEM_TYPE_PARAM,
+          BuiltInParameter.WALL_BASE_CONSTRAINT,
+          BuiltInParameter.WALL_USER_HEIGHT_PARAM,
+          BuiltInParameter.WALL_BASE_OFFSET,
+          BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT,
+          BuiltInParameter.WALL_KEY_REF_PARAM
+        };
+
+        WallUtils.DisallowWallJoinAtEnd(newWall, 0);
+        WallUtils.DisallowWallJoinAtEnd(newWall, 1);
+
+        // Walls are created with the last LocationLine used in the Revit editor.
+        //newWall.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) WallLocationLine.WallCenterline);
+
+        ReplaceElement(ref element, newWall);
+      }
+
+      if (newWall != null)
+      {
+        newWall.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT).Set(level.Value.Id);
+        newWall.get_Parameter(BuiltInParameter.WALL_BASE_OFFSET).Set(levelIsEmpty ? axisMinZ - level.Value.Elevation : 0.0);
+        newWall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
+        newWall.get_Parameter(BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT).Set(structural ? 1 : 0);
+        newWall.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) locationLine);
+
+        if (newWall.Flipped != flipped)
+          newWall.Flip();
+
+        // Setup joins in a last step
+        if (allowJoins)
+          joinedWalls.Add(newWall);
       }
     }
   }

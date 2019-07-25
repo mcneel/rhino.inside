@@ -1,23 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
-using System.Diagnostics;
-
-using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
-
 using Autodesk.Revit.DB;
-using Grasshopper.Kernel.Special;
+using Grasshopper.Kernel;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DirectShapeByMesh : GH_TransactionalComponentItem
+  public class DirectShapeByMesh : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("5542506A-A09E-4EC9-92B4-F2B52417511C");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public DirectShapeByMesh() : base
     (
@@ -27,76 +19,33 @@ namespace RhinoInside.Revit.GH.Components
     )
     { }
 
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddMeshParameter("Mesh", "M", string.Empty, GH_ParamAccess.item);
-    }
-
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddParameter(new Parameters.Element(), "Mesh", "M", "New MeshShape", GH_ParamAccess.item);
     }
 
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      Rhino.Geometry.Mesh mesh = null;
-      if (!DA.GetData("Mesh", ref mesh))
-        return;
-
-      DA.DisableGapLogic();
-      int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, (Rhino.Geometry.Mesh) mesh?.DuplicateShallow()));
-    }
-
-    void CommitInstance
+    void ReconstructDirectShapeByMesh
     (
-      Document doc, IGH_DataAccess DA, int Iteration,
+      Document doc,
+      ref Autodesk.Revit.DB.Element element,
+
       Rhino.Geometry.Mesh mesh
     )
     {
-      var element = PreviousElement(doc, Iteration);
-      try
-      {
-        if (mesh == null)
-          throw new NullReferenceException($"Parameter '{Params.Input[0].Name}' not set to an instance of a Mesh.");
+      var scaleFactor = 1.0 / Revit.ModelUnits;
 
-        if (!mesh.IsValidWithLog(out var log))
-        {
-          foreach (var line in log.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries))
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, line);
+      ThrowIfNotValid(nameof(mesh), mesh);
 
-          throw new Exception($"Parameter '{Params.Input[0].Name}' not set to a valid Mesh.");
-        }
+      if (element is DirectShape ds) { }
+      else ds = DirectShape.CreateElement(doc, new ElementId(BuiltInCategory.OST_GenericModel));
 
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
-          mesh.Scale(scaleFactor);
+      var shape = mesh.
+                  ToHost(scaleFactor).
+                  SelectMany(x => x.ToDirectShapeGeometry());
 
-        var shape = new List<GeometryObject>();
+      ds.SetShape(shape.ToList());
 
-        foreach (var geometry in mesh.ToHost().SelectMany(x => x.ToDirectShapeGeometry()))
-        {
-          // DirectShape only accepts those types and no nulls
-          switch (geometry)
-          {
-            case Point p: shape.Add(p); break;
-            case Curve c: shape.Add(c); break;
-            case Solid s: shape.Add(s); break;
-            case Mesh m: shape.Add(m); break;
-          }
-        }
-
-        var ds = element as DirectShape ?? CopyParametersFrom(DirectShape.CreateElement(doc, new ElementId(BuiltInCategory.OST_GenericModel)), element);
-        ds.SetShape(shape);
-        element = ds;
-
-        ReplaceElement(doc, DA, Iteration, element);
-      }
-      catch (Exception e)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-        ReplaceElement(doc, DA, Iteration, null);
-      }
+      ReplaceElement(ref element, ds);
     }
   }
 }
