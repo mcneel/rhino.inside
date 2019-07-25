@@ -1,18 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
-
+using Autodesk.Revit.DB;
 using GH_IO.Serialization;
-using Grasshopper.Kernel;
-using Grasshopper.Kernel.Data;
-using Grasshopper.Kernel.Types;
-using Grasshopper.Kernel.Special;
 using Grasshopper.GUI;
 using Grasshopper.GUI.Canvas;
-
-using Autodesk.Revit.DB;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Data;
+using Grasshopper.Kernel.Special;
+using Grasshopper.Kernel.Types;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -97,9 +95,9 @@ namespace RhinoInside.Revit.GH.Types
     public override string ToString()
     {
       if (!IsValid)
-        return "Null " + TypeName;
+        return $"Null {TypeName}";
 
-      return string.Format("{0} {1}", TypeName, Value.IntegerValue);
+      return $"{TypeName} : id {Value.IntegerValue}";
     }
 
     public override sealed bool Read(GH_IReader reader)
@@ -276,215 +274,5 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override Bitmap Icon => ((Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
                                       ImageBuilder.BuildIcon(GetType().Name.Substring(0, 1));
-  }
-
-  public abstract class GH_TransactionalComponent : GH_Component
-  {
-    protected GH_TransactionalComponent(string name, string nickname, string description, string category, string subCategory)
-    : base(name, nickname, description, category, subCategory) { }
-
-    public override Rhino.Geometry.BoundingBox ClippingBox
-    {
-      get
-      {
-        var clippingBox = Rhino.Geometry.BoundingBox.Empty;
-
-        foreach (var param in Params)
-        {
-          if (param.SourceCount > 0)
-            continue;
-
-          if (param is IGH_PreviewObject previewObject)
-          {
-            if (!previewObject.Hidden && previewObject.IsPreviewCapable)
-              clippingBox.Union(previewObject.ClippingBox);
-          }
-        }
-
-        return clippingBox;
-      }
-    }
-
-    static protected T CopyParametersFrom<T>(T to, Element from) where T : Element
-    {
-      if (from != null && to != null)
-      {
-        foreach (var previousParameter in from.GetParameters(Extension.ParameterSource.Any))
-        using (previousParameter)
-        using (var param = to.get_Parameter(previousParameter.Definition))
-        {
-          if (param == null || param.IsReadOnly)
-            continue;
-
-          switch (previousParameter.StorageType)
-          {
-            case StorageType.Integer:   param.Set(previousParameter.AsInteger());   break;
-            case StorageType.Double:    param.Set(previousParameter.AsDouble());    break;
-            case StorageType.String:    param.Set(previousParameter.AsString());    break;
-            case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
-          }
-        }
-      }
-
-      return to;
-    }
-
-    static protected void ReplaceElement(Document doc, List<ElementId> list, int index, Element element)
-    {
-      var id = element?.Id ?? ElementId.InvalidElementId;
-
-      if (index < list.Count)
-      {
-        if (id != list[index])
-        {
-          if (doc.GetElement(list[index]) != null)
-            doc.Delete(list[index]);
-
-          list[index] = id;
-          if (element != null) element.Pinned = true;
-        }
-      }
-      else
-      {
-        for (int e = list.Count; e <= index; e++)
-          list.Add(ElementId.InvalidElementId);
-
-        list[index] = id;
-        if (null != element) element.Pinned = true;
-      }
-    }
-
-    static protected void TrimExcess<T>(List<T> list, int begin = 0)
-    {
-      int end = list.Count;
-      if (begin < end)
-      {
-        list.RemoveRange(begin, end - begin);
-        list.TrimExcess();
-      }
-    }
-
-    static protected void TrimExcess(Document doc, List<ElementId> list, int begin = 0)
-    {
-      foreach(var id in list.Skip(begin))
-      {
-        if (doc.GetElement(id) != null)
-        {
-          try { doc.Delete(id); }
-          catch (Autodesk.Revit.Exceptions.ApplicationException) { }
-        }
-      }
-
-      TrimExcess(list, begin);
-    }
-
-    protected static double LiteralLengthValue(double meters)
-    {
-      switch (Rhino.RhinoDoc.ActiveDoc?.ModelUnitSystem)
-      {
-        case Rhino.UnitSystem.None:
-        case Rhino.UnitSystem.Inches:
-        case Rhino.UnitSystem.Feet:
-          return Math.Round(meters * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Meters, Rhino.UnitSystem.Feet))
-                 * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Feet, Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem);
-        default:
-          return meters * Rhino.RhinoMath.UnitScale(Rhino.UnitSystem.Meters, Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem);
-      }
-    }
-  }
-
-  public abstract class GH_TransactionalComponentItem : GH_TransactionalComponent
-  {
-    protected GH_TransactionalComponentItem(string name, string nickname, string description, string category, string subCategory)
-    : base(name, nickname, description, category, subCategory) { }
-
-    List<ElementId> PreviousElementValues = new List<ElementId>();
-    protected Element PreviousElement(Document doc, int Iteration)
-    {
-      if (Iteration < PreviousElementValues.Count)
-        return doc.GetElement(PreviousElementValues[Iteration]);
-
-      return null;
-    }
-
-    protected void ReplaceElement(Document doc, IGH_DataAccess DA, int Iteration, Element element)
-    {
-      DA.SetData(0, element, Iteration);
-      ReplaceElement(doc, PreviousElementValues, Iteration, element);
-
-      if (Iteration == DA.Iteration)
-      {
-        TrimExcess(doc, PreviousElementValues, Iteration + 1);
-
-        // Notify Grasshopper continue evaluating the definition from this component
-        if (RuntimeMessageLevel < GH_RuntimeMessageLevel.Error)
-        {
-          foreach (var param in Params.Output)
-          {
-            foreach (var recipient in param.Recipients)
-              recipient.ExpireSolution(false);
-          }
-        }
-      }
-    }
-  }
-
-  public abstract class GH_TransactionalComponentList : GH_TransactionalComponent
-  {
-    protected GH_TransactionalComponentList(string name, string nickname, string description, string category, string subCategory)
-    : base(name, nickname, description, category, subCategory) { }
-
-    List<List<ElementId>> PreviousElementValues = new List<List<ElementId>>();
-    protected IEnumerable<Element> PreviousElements(Document doc, int Iteration)
-    {
-      if (Iteration < PreviousElementValues.Count)
-      {
-        foreach (var id in PreviousElementValues[Iteration])
-          yield return doc.GetElement(id);
-      }
-    }
-
-    protected void ReplaceElements(Document doc, IGH_DataAccess DA, int Iteration, IEnumerable<Element> elements)
-    {
-      DA.SetDataList(0, elements, Iteration);
-
-      // Update PreviousElementValues
-      {
-        for (int e = PreviousElementValues.Count; e <= Iteration; e++)
-          PreviousElementValues.Add(null);
-
-        var previousElementValues = PreviousElementValues[Iteration];
-        if (previousElementValues == null)
-          previousElementValues = PreviousElementValues[Iteration] = new List<ElementId>();
-
-        int index = 0;
-        if (elements != null)
-        {
-          foreach (var element in elements)
-            ReplaceElement(doc, previousElementValues, index++, element);
-        }
-
-        // Remove extra elements in PreviousElementValues
-        TrimExcess(doc, previousElementValues, index);
-      }
-
-      if (Iteration == DA.Iteration)
-      {
-        foreach (var list in PreviousElementValues.Skip(Iteration + 1))
-          TrimExcess(doc, list);
-
-        TrimExcess(PreviousElementValues, Iteration + 1);
-
-        // Notify Grasshopper continue evaluating the definition from this component
-        if (RuntimeMessageLevel < GH_RuntimeMessageLevel.Error)
-        {
-          foreach (var param in Params.Output)
-          {
-            foreach (var recipient in param.Recipients)
-              recipient.ExpireSolution(false);
-          }
-        }
-      }
-    }
   }
 }

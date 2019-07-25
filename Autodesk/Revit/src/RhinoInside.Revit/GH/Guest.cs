@@ -104,6 +104,9 @@ namespace RhinoInside.Revit.GH
 
         foreach (GH_Document definition in Instances.DocumentServer)
         {
+          bool expireNow = definition.SolutionState == GH_ProcessStep.PreProcess &&
+                           Instances.ActiveCanvas.Document == definition;
+
           foreach (var obj in definition.Objects)
           {
             if (obj is IGH_Param param)
@@ -117,14 +120,22 @@ namespace RhinoInside.Revit.GH
               if (obj is Parameters.IGH_PersistentGeometryParam persistent)
               {
                 if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                  param.ExpireSolution(false);
+                {
+                  if (expireNow)
+                    param.ExpireSolution(false);
+                  else
+                    param.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "This parameter contains expired elements.");
+                }
               }
             }
             else if (obj is IGH_Component component)
             {
               if (component is Components.DocumentElements)
               {
-                component.ExpireSolution(false);
+                if (expireNow)
+                  component.ExpireSolution(false);
+                else
+                  component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Document has been changed since the last solution.");
               }
               else
               {
@@ -147,31 +158,18 @@ namespace RhinoInside.Revit.GH
                   }
                 }
 
-                if (needsToBeExpired) component.ExpireSolution(true);
-                else foreach (var outParam in component.Params.Output)
-                  {
-                    if (outParam is Parameters.IGH_PersistentGeometryParam persistent)
-                    {
-                      if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                      {
-                        foreach (var r in outParam.Recipients)
-                          r.ExpireSolution(false);
-                      }
-                      else if (materialsChanged)
-                      {
-                        foreach (var goo in outParam.VolatileData.AllData(true))
-                        {
-                          if (goo is IGH_PreviewMeshData previewMeshData)
-                            previewMeshData.DestroyPreviewMeshes();
-                        }
-                      }
-                    }
-                  }
+                if (needsToBeExpired)
+                {
+                  if (expireNow)
+                    component.ExpireSolution(false);
+                  else
+                    component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Some input parameter contains expired elements.");
+                }
               }
             }
           }
 
-          if (definition.Enabled)
+          if (expireNow && definition.Enabled)
             definition.NewSolution(false);
         }
       }

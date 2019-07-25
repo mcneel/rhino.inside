@@ -233,13 +233,37 @@ namespace RhinoInside.Revit
                   docWriteActions.Dequeue().Invoke(ActiveDBDocument);
 
                 var options = trans.GetFailureHandlingOptions();
+#if !DEBUG
                 options = options.SetClearAfterRollback(true);
+#endif
                 options = options.SetDelayedMiniWarnings(true);
-                options = options.SetForcedModalHandling(false);
+                options = options.SetForcedModalHandling(true);
                 options = options.SetFailuresPreprocessor(new FailuresPreprocessor());
-                var status = trans.Commit(options);
 
-                if (status == TransactionStatus.Committed)
+                // Hide Rhino UI in case any warning-error dialog popups
+                {
+                  ModalForm.EditScope editScope = null;
+                  EventHandler<DialogBoxShowingEventArgs> _ = null;
+                  try
+                  {
+                    ApplicationUI.DialogBoxShowing += _ = (sender, args) =>
+                    {
+                      if (editScope == null)
+                        editScope = new ModalForm.EditScope();
+                    };
+
+                    trans.Commit(options);
+                  }
+                  finally
+                  {
+                    ApplicationUI.DialogBoxShowing -= _;
+
+                    if(editScope is IDisposable disposable)
+                      disposable.Dispose();
+                  }
+                }
+
+                if (trans.GetStatus() == TransactionStatus.Committed)
                 {
                   foreach (GH_Document definition in Instances.DocumentServer)
                   {
@@ -252,11 +276,7 @@ namespace RhinoInside.Revit
             catch (Exception e)
             {
               Debug.Fail(e.Source, e.Message);
-
               docWriteActions.Clear();
-
-              if (trans.HasStarted())
-                trans.RollBack();
             }
             finally
             {
@@ -300,7 +320,7 @@ namespace RhinoInside.Revit
       // there is no more work to do
       return false;
     }
-    #endregion
+#endregion
 
     #region Public Properties
     public static IntPtr MainWindowHandle { get; private set; }

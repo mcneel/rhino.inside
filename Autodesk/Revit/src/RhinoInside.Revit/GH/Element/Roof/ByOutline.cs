@@ -1,20 +1,15 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-
-using Grasshopper.Kernel;
-
 using Autodesk.Revit.DB;
+using Grasshopper.Kernel;
+using RhinoInside.Runtime.InteropServices;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class RoofByOutline : GH_TransactionalComponentItem
+  public class RoofByOutline : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("198E152B-6636-4D90-9443-AE77B8B1475E");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public RoofByOutline() : base
     (
@@ -24,90 +19,56 @@ namespace RhinoInside.Revit.GH.Components
     )
     { }
 
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddCurveParameter("Boundary", "B", string.Empty, GH_ParamAccess.item);
-      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "FT", string.Empty, GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
-    }
-
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddParameter(new Parameters.Element(), "Roof", "R", "New Roof", GH_ParamAccess.item);
     }
 
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      Rhino.Geometry.Curve boundary = null;
-      DA.GetData("Boundary", ref boundary);
-
-      Autodesk.Revit.DB.RoofType roofType = null;
-      if (!DA.GetData("Type", ref roofType) && Params.Input[1].Sources.Count == 0)
-        roofType = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultElementTypeId(ElementTypeGroup.RoofType)) as RoofType;
-
-      Autodesk.Revit.DB.Level level = null;
-      DA.GetData("Level", ref level);
-      if (level == null && boundary != null)
-      {
-        var boundaryBBox = boundary.GetBoundingBox(true);
-        level = Revit.ActiveDBDocument.FindLevelByElevation(boundaryBBox.Min.Z / Revit.ModelUnits);
-      }
-
-      DA.DisableGapLogic();
-      int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, boundary, roofType, level));
-    }
-
-    void CommitInstance
+    void ReconstructRoofByOutline
     (
-      Document doc, IGH_DataAccess DA, int Iteration,
+      Document doc,
+      ref Autodesk.Revit.DB.Element element,
+
       Rhino.Geometry.Curve boundary,
-      Autodesk.Revit.DB.RoofType roofType,
-      Autodesk.Revit.DB.Level level
+      Optional<Autodesk.Revit.DB.RoofType> type,
+      Optional<Autodesk.Revit.DB.Level> level
     )
     {
-      var element = PreviousElement(doc, Iteration);
+      var scaleFactor = 1.0 / Revit.ModelUnits;
 
-      if (!element?.Pinned ?? false)
+      if
+      (
+        scaleFactor != 1.0 ? !boundary.Scale(scaleFactor) : true &&
+        boundary.IsShort(Revit.ShortCurveTolerance) ||
+        !boundary.IsClosed ||
+        !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
+        boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+      )
+        ThrowArgumentException(nameof(boundary), "Boundary must be an horizontal planar closed curve.");
+
+      SolveOptionalType(ref type, doc, ElementTypeGroup.RoofType, nameof(type));
+
+      double minZ = boundary.GetBoundingBox(true).Min.Z;
+      SolveOptionalLevel(ref level, doc, minZ, nameof(level));
+
+      var parametersMask = new BuiltInParameter[]
       {
-        ReplaceElement(doc, DA, Iteration, element);
+        BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+        BuiltInParameter.ELEM_FAMILY_PARAM,
+        BuiltInParameter.ELEM_TYPE_PARAM,
+        BuiltInParameter.LEVEL_PARAM,
+        BuiltInParameter.ROOF_LEVEL_OFFSET_PARAM
+      };
+
+      using (var curveArray = boundary.ToHost().ToCurveArray())
+      {
+        var modelCurveArray = new ModelCurveArray();
+        ReplaceElement(ref element, doc.Create.NewFootPrintRoof(curveArray, level.Value, type.Value, out modelCurveArray), parametersMask);
       }
-      else try
+
+      if (element != null)
       {
-
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
-        {
-          boundary?.Scale(scaleFactor);
-        }
-
-        if
-        (
-          boundary == null ||
-          boundary.IsShort(Revit.ShortCurveTolerance) ||
-          !boundary.IsClosed ||
-          !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
-          boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
-        )
-          throw new Exception(string.Format("Parameter '{0}' must be an horizontal planar closed curve.", Params.Input[0].Name));
-
-        var curveArray = boundary.ToHost().ToCurveArray();
-        var footPintToModelCurvesMapping = new ModelCurveArray();
-        element = CopyParametersFrom(doc.Create.NewFootPrintRoof(curveArray, level, roofType, out footPintToModelCurvesMapping), element);
-
-        if (element != null)
-        {
-          var boundaryBBox = boundary.GetBoundingBox(true);
-          element.get_Parameter(BuiltInParameter.ROOF_BASE_LEVEL_PARAM).Set(level.Id);
-          element.get_Parameter(BuiltInParameter.ROOF_LEVEL_OFFSET_PARAM).Set(boundaryBBox.Min.Z - level.Elevation);
-        }
-
-        ReplaceElement(doc, DA, Iteration, element);
-      }
-      catch (Exception e)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-        ReplaceElement(doc, DA, Iteration, null);
+        element.get_Parameter(BuiltInParameter.ROOF_LEVEL_OFFSET_PARAM).Set(minZ - level.Value.Elevation);
       }
     }
   }

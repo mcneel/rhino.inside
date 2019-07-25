@@ -1,16 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+using System.Runtime.InteropServices;
+using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
 using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Special;
-
-using Autodesk.Revit.DB;
-using System.IO;
+using Grasshopper.Kernel.Types;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -635,10 +633,11 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ParameterByName : GH_TransactionalComponentItem
+  public class ParameterByName : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("84AB6F3C-BB4B-48E4-9175-B7F40791BB7F");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public ParameterByName() : base
     (
@@ -648,37 +647,18 @@ namespace RhinoInside.Revit.GH.Components
     )
     { }
 
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddTextParameter("Name", "N", "Parameter Name", GH_ParamAccess.item);
-      manager.AddBooleanParameter("Overwrite", "K", "Overwrite Parameter definition if found", GH_ParamAccess.item, false);
-    }
-
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddParameter(new Parameters.ParameterKey(), "ParameterKey", "K", "New Parameter definition", GH_ParamAccess.item);
     }
 
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      string parameterName = string.Empty;
-      if (!DA.GetData("Name", ref parameterName))
-        return;
-
-      bool overwrite = false;
-      if (!DA.GetData("Overwrite", ref overwrite))
-        return;
-
-      DA.DisableGapLogic();
-      int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, parameterName, overwrite));
-    }
-
-    void CommitInstance
+    void ReconstructParameterByName
     (
-      Document doc, IGH_DataAccess DA, int Iteration,
-      string parameterName,
-      bool overwrite
+      Document doc,
+      ref Autodesk.Revit.DB.Element element,
+
+      [Description("Parameter Name")] string name,
+      [Description("Overwrite Parameter definition if found"), Optional, DefaultValue(false)] bool overwrite
     )
     {
       var app = Revit.ActiveUIApplication.Application;
@@ -698,7 +678,7 @@ namespace RhinoInside.Revit.GH.Components
             {
               if
               (
-                def.Name == parameterName &&
+                def.Name == name &&
                 def.Visible == visible &&
                 def.ParameterType == parameterType &&
                 def.ParameterGroup == parameterGroup &&
@@ -706,9 +686,8 @@ namespace RhinoInside.Revit.GH.Components
               {
                 if (doc.GetElement(def.Id) is ParameterElement parameterElement)
                 {
-                  AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("A parameter called \"{0}\" is already in the document", parameterName));
-                  ReplaceElement(doc, DA, Iteration, parameterElement);
-                  return;
+                  ReplaceElement(ref element, parameterElement);
+                  throw new WarningException($"A parameter called \"{name}\" is already in the document");
                 }
               }
             }
@@ -716,7 +695,7 @@ namespace RhinoInside.Revit.GH.Components
         }
       }
 
-      using (var defOptions = new ExternalDefinitionCreationOptions(parameterName, parameterType) { Visible = visible })
+      using (var defOptions = new ExternalDefinitionCreationOptions(name, parameterType) { Visible = visible })
       {
         string sharedParametersFilename = app.SharedParametersFilename;
         string tempParametersFilename = Path.GetTempFileName() + ".txt";
@@ -748,13 +727,10 @@ namespace RhinoInside.Revit.GH.Components
           var binding = instance ? (ElementBinding) new InstanceBinding(categorySet) : (ElementBinding) new TypeBinding(categorySet);
 
           if (!doc.ParameterBindings.Insert(definition, binding, parameterGroup))
-          {
-            ReplaceElement(doc, DA, Iteration, null);
-            return;
-          }
+            throw new InvalidOperationException("Failed while creating the parameter binding.");
         }
 
-        ReplaceElement(doc, DA, Iteration, Autodesk.Revit.DB.SharedParameterElement.Lookup(doc, definition.GUID));
+        ReplaceElement(ref element, SharedParameterElement.Lookup(doc, definition.GUID));
       }
     }
   }
