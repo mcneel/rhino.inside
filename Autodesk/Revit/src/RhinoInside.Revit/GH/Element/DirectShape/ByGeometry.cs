@@ -83,7 +83,7 @@ namespace RhinoInside.Revit.GH.Components
         name = Rhino.RhinoDoc.ActiveDoc.Objects.FindId(geometry[0].ReferenceID)?.Name;
 
       if (element is DirectShape ds && ds.Category.Id == category.Value.Id) { }
-      else ds = DirectShape.CreateElement(doc, new ElementId(BuiltInCategory.OST_GenericModel));
+      else ds = DirectShape.CreateElement(doc, new ElementId((BuiltInCategory) category.Value.Id.IntegerValue));
 
       var shape = geometry.
                   Select(x => AsGeometryBase(x)).
