@@ -104,8 +104,11 @@ namespace RhinoInside.Revit.GH
 
         foreach (GH_Document definition in Instances.DocumentServer)
         {
-          bool expireNow = definition.SolutionState == GH_ProcessStep.PreProcess &&
-                           Instances.ActiveCanvas.Document == definition;
+          bool expireNow =
+          GH_Document.EnableSolutions &&
+          Instances.ActiveCanvas.Document == definition &&
+          definition.Enabled &&
+          definition.SolutionState != GH_ProcessStep.Process;
 
           foreach (var obj in definition.Objects)
           {
@@ -169,7 +172,7 @@ namespace RhinoInside.Revit.GH
             }
           }
 
-          if (expireNow && definition.Enabled)
+          if (expireNow)
             definition.NewSolution(false);
         }
       }
