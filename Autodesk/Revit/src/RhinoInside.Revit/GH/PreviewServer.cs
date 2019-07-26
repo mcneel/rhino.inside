@@ -21,6 +21,8 @@ namespace RhinoInside.Revit.GH
     Rhino.Geometry.BoundingBox primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
     int RebuildPrimitives = 1;
 
+    public static GH_PreviewMode PreviewMode = GH_PreviewMode.Disabled;
+
     #region IExternalServer
     public override string GetName() => "Grasshopper";
     public override string GetDescription() => "Grasshopper previews server";
@@ -28,7 +30,7 @@ namespace RhinoInside.Revit.GH
     #endregion
 
     #region IDirectContext3DServer
-    public override bool UseInTransparentPass(View dBView) => ((activeDefinition?.PreviewMode ?? GH_PreviewMode.Disabled) == GH_PreviewMode.Shaded);
+    public override bool UseInTransparentPass(View dBView) => ((activeDefinition != null ? PreviewMode : GH_PreviewMode.Disabled) == GH_PreviewMode.Shaded);
 
     public override bool CanExecute(View dBView)
     {
@@ -59,9 +61,9 @@ namespace RhinoInside.Revit.GH
       }
 
       return
+      PreviewMode != GH_PreviewMode.Disabled &&
       IsModelView(dBView) &&
-      activeDefinition != null &&
-      ((definition?.PreviewMode ?? GH_PreviewMode.Disabled) != GH_PreviewMode.Disabled);
+      activeDefinition != null;
     }
 
     static List<IGH_DocumentObject> lastSelection = new List<IGH_DocumentObject>();

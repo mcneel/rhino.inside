@@ -296,6 +296,11 @@
   <ItemGroup>
     <EmbeddedResource Include="Resources\RVT$(RevitVersion)\KeyboardShortcuts.xml" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\GH\Toolbar\Preview_Off_24x24.png" />
+    <EmbeddedResource Include="Resources\GH\Toolbar\Preview_Shaded_24x24.png" />
+    <EmbeddedResource Include="Resources\GH\Toolbar\Preview_Wireframe_24x24.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild" Condition="$(Configuration.Contains('Debug'))">
     <Copy UseHardlinksIfPossible="true" SkipUnchangedFiles="true" SourceFiles="$(ProjectDir)$(OutDir)RhinoInside.Revit.dll" DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)\RhinoInside.Revit" />
