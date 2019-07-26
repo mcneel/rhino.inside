@@ -233,11 +233,9 @@ namespace RhinoInside.Revit.Samples
         {
           var element = doc.Document.GetElement(reference);
 
-          using (var options = new Options { ComputeReferences = true })
-          {
-            var geometry = element.get_Geometry(options);
+          Options options = null;
+          using (var geometry = element.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
             return geometry.ToRhino().OfType<Brep>().Select((x) => new GH_Brep(x));
-          }
         }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
