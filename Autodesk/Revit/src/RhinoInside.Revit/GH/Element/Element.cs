@@ -858,7 +858,11 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         using (new ModalForm.EditScope())
         {
+#if REVIT_2018
           var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Subelement);
+#else
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
+#endif
           if (reference != null)
             element = Types.Element.Make(reference.ElementId);
         }
