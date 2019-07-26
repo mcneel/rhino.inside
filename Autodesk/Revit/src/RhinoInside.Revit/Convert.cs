@@ -27,6 +27,24 @@ namespace RhinoInside.Revit
     }
     #endregion
 
+    #region Geometry
+    public static Autodesk.Revit.DB.GeometryElement GetGeometry(this Autodesk.Revit.DB.Element element, ViewDetailLevel viewDetailLevel, out Options options)
+    {
+      options = new Options { ComputeReferences = true, DetailLevel = viewDetailLevel };
+      var geometry = element.get_Geometry(options);
+
+      if (!geometry.Any() && element is GenericForm form && !form.Combinations.IsEmpty)
+      {
+        geometry.Dispose();
+
+        options.IncludeNonVisibleObjects = true;
+        return element.get_Geometry(options);
+      }
+
+      return geometry;
+    }
+    #endregion
+
     #region Levels
     public static Autodesk.Revit.DB.Level FindLevelByElevation(this Autodesk.Revit.DB.Document doc, double elevation)
     {
