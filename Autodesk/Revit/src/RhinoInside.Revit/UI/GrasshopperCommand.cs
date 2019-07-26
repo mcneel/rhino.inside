@@ -67,6 +67,7 @@ namespace RhinoInside.Revit.UI
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
+#if REVIT_2018
       var radioData = new RadioButtonGroupData("GrasshopperPreview");
 
       if (ribbonPanel.AddItem(radioData) is RadioButtonGroup radioButton)
@@ -75,9 +76,11 @@ namespace RhinoInside.Revit.UI
         CommandGrasshopperPreviewWireframe.CreateUI(radioButton);
         CommandGrasshopperPreviewShaded.CreateUI(radioButton);
       }
+#endif
     }
   }
 
+#if REVIT_2018
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
   class CommandGrasshopperPreviewOff : GrasshopperCommand
   {
@@ -149,4 +152,5 @@ namespace RhinoInside.Revit.UI
       return Result.Succeeded;
     }
   }
+#endif
 }
