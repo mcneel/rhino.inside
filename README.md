@@ -31,5 +31,11 @@ This repository contains samples for:
 - [Console](ConsoleApps)
    - [A simple console application](ConsoleApps/HelloWorld)
    - [A simple console application for converting files to .obj](ConsoleApps/Convert)
+- [JavaScript](JavaScript)
+   - [Sample 1](JavaScript/Sample-1) A basic example showing how to run Rhino inside of Node.js via edge.js.
+   - [Sample 2](JavaScript/Sample-2) Extends Sample-1.
+   - [Sample 3](JavaScript/Sample-3) Sample of running Rhino inside Electron.
+   - [Sample 4](JavaScript/Sample-4) Sample of running Grasshopper inside Electron.
+   - [Sample 5](JavaScript/Sample-5) Sample of running Grasshopper inside Chromium Embedded Framework.
 
 **If you have any questions, [visit the discussion forum...](https://discourse.mcneel.com/c/serengeti/inside)**
