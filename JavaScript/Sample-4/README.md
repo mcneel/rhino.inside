@@ -12,13 +12,13 @@ There are three projects in this sample:
 - `InsideElectronApp` - The Electron app that provides a GUI and launches Rhino and Grasshopper from JavaScript.
 
 ### Dependencies
-- Rhino WIP (7.0.19127.235, 5/7/2019)
-- Node.js (8.11.2)
-- edge.js (^11.3.1)
-- Electron
-- Three.js
-- rhino3dm.js
-- Json.Net
+- [`Rhino 7 WIP`](https://www.rhino3d.com/download/rhino-for-windows/wip) (Installation)
+- [`Node.js (8.11.2 or higher)`](https://nodejs.org/en/) (Installation)
+- [`edge.js (^11.3.1)`](https://github.com/agracio/edge-js) (Referenced via npm)
+- [`Electron.js`](https://electronjs.org/) (Referenced via npm)
+- [`Json.NET`](https://www.newtonsoft.com/json) (Referenced via the NuGet package)
+- [`rhino3dm.js`](https://www.rhino3d.com/rhino3dm) (Referenced via URL)
+- [`three.js`](https://threejs.org/) (Referenced via URL)
 
 ### Running this sample
 This assumes you've installed Node.js for Windows.
