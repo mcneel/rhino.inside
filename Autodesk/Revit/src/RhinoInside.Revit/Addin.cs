@@ -334,8 +334,11 @@ namespace RhinoInside.Revit.UI
         HelpCommand.CreateUI(RhinocerosPanel);
         RhinocerosPanel.AddSeparator();
         CommandRhino.CreateUI(RhinocerosPanel);
-        CommandGrasshopper.CreateUI(RhinocerosPanel);
         CommandPython.CreateUI(RhinocerosPanel);
+
+        var GrasshopperPanel = data.Application.CreateRibbonPanel(rhinoTab, "Grasshopper");
+        CommandGrasshopper.CreateUI(GrasshopperPanel);
+        CommandGrasshopperPreview.CreateUI(GrasshopperPanel);
 
         var SamplesPanel = data.Application.CreateRibbonPanel(rhinoTab, "Samples");
         Samples.Sample1.CreateUI(SamplesPanel);
