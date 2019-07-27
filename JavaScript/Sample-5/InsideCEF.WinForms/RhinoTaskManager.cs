@@ -178,9 +178,7 @@ namespace InsideCEF
     private void Execute()
     {
       if (rhinoCore == null)
-      {
         StartRhino(null);
-      }
 
       rhinoCore.Run();
     }
