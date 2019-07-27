@@ -2,13 +2,15 @@
 ### Running Rhino and Grasshopper inside Chromium Embedded Framework (CEF) via CEFSharp
 
 This sample shows how to run Rhino.Inside the Chromium Embedded Framework. 
+
 This sample has two parts:
-1. `InsideCEF.WinForms`: A .NET .csproj which uses CEFSharp. Includes the code to initialize CEF inside a WinForms.Form window. Also includes code to start Rhino and Grasshopper, implemented in a custom `TaskScheduler`.
+1. `InsideCEF.WinForms`: A .NET .csproj which uses CEFSharp. Includes the code to initialize CEF inside a WinForms.Form window. Also includes code to start Rhino and Grasshopper, implemented in a custom [`TaskScheduler`](https://docs.microsoft.com/en-us/dotnet/api/system.threading.tasks.taskscheduler?view=netframework-4.5.2).
 2. `InsideCEF.WebApp`: An html / JavaScript app using rhino3dm.js to deserialize geometry and three.js to visualize geometry.
 
 ## Dependencies
 
 Beyond RhinoCommon and Grasshopper APIs, this project depends on the following libraries / frameworks:
+- [`Rhino 7 WIP`](https://www.rhino3d.com/download/rhino-for-windows/wip) (Required install)
 - [`CefSharp`](http://cefsharp.github.io/) (CefSharp.WinForms.dll, CefSharp.Core.dll, and CefSharp.dll referenced via the NuGet Package)
 - [`Json.NET`](https://www.newtonsoft.com/json) (Referenced via the NuGet package)
 - [`rhino3dm.js`](https://www.rhino3d.com/rhino3dm) (Referenced via URL)

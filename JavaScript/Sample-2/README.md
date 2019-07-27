@@ -11,12 +11,12 @@ There are two projects:
 - `InsideNodeApp` - Contains the Node.js code which calls the dotnet class library. Uses [edge.js](https://github.com/agracio/edge-js) to call into dotnet.
 
 ### Dependencies
-- Rhino WIP (7.0.19127.235, 5/7/2019)
-- Node.js (8.11.2)
-- edge.js (^11.3.1)
+- [`Rhino 7 WIP`](https://www.rhino3d.com/download/rhino-for-windows/wip) (Required install)
+- [`Node.js (8.11.2 or newer)`](https://nodejs.org/) (Required install)
+- [`edge.js (^11.3.1)`](https://github.com/agracio/edge-js) (Referenced via npm)
 
 ### Running this sample
-This assumes you've installed Node.js for Windows.
+This assumes you've already installed Rhino 7 WIP and Node.js for Windows, and have cloned the Rhino.Inside repository.
 1. Once you've cloned the Rhino.Inside repository, open the `insideNode.sln` in Visual Studio and build `insideNode.csproj`. This builds the .dll which is referenced in the Node.js project.
 2. Open a console from the `insideNodeApp` directory.
 3. Run `npm install` to install any dependencies.
