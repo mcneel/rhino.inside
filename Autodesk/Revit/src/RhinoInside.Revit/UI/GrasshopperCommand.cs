@@ -63,7 +63,7 @@ namespace RhinoInside.Revit.UI
     }
   }
 
-  static class CommandGrasshopperPreview
+  abstract class CommandGrasshopperPreview : GrasshopperCommand
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
@@ -78,11 +78,20 @@ namespace RhinoInside.Revit.UI
       }
 #endif
     }
+
+    public new class Availability : RhinoCommand.Availability
+    {
+      public override bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories)
+      {
+        return base.IsCommandAvailable(applicationData, selectedCategories) &&
+               !applicationData.ActiveUIDocument.Document.IsFamilyDocument;
+      }
+    }
   }
 
 #if REVIT_2018
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class CommandGrasshopperPreviewOff : GrasshopperCommand
+  class CommandGrasshopperPreviewOff : CommandGrasshopperPreview
   {
     public static void CreateUI(RadioButtonGroup radioButtonGroup)
     {
@@ -106,7 +115,7 @@ namespace RhinoInside.Revit.UI
   }
 
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class CommandGrasshopperPreviewWireframe : GrasshopperCommand
+  class CommandGrasshopperPreviewWireframe : CommandGrasshopperPreview
   {
     public static void CreateUI(RadioButtonGroup radioButtonGroup)
     {
@@ -130,7 +139,7 @@ namespace RhinoInside.Revit.UI
   }
 
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class CommandGrasshopperPreviewShaded : GrasshopperCommand
+  class CommandGrasshopperPreviewShaded : CommandGrasshopperPreview
   {
     public static void CreateUI(RadioButtonGroup radioButtonGroup)
     {
