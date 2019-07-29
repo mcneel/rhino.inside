@@ -33,7 +33,7 @@ namespace RhinoInside.Revit
       options = new Options { ComputeReferences = true, DetailLevel = viewDetailLevel };
       var geometry = element.get_Geometry(options);
 
-      if (!geometry.Any() && element is GenericForm form && !form.Combinations.IsEmpty)
+      if (!(geometry?.Any() ?? false) && element is GenericForm form && !form.Combinations.IsEmpty)
       {
         geometry.Dispose();
 
@@ -408,7 +408,7 @@ namespace RhinoInside.Revit
     public static Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.ConicalSurface surface, Interval interval)
     {
       var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
-      double height = interval.Min;
+      double height = interval.Max;
       var cone = new Rhino.Geometry.Cone(plane, height, Math.Tan(surface.HalfAngle) * height);
 
       return cone.ToRevSurface();
@@ -433,52 +433,6 @@ namespace RhinoInside.Revit
       var curve = surface.GetProfileCurveInWorldCoordinates().ToRhino();
       var axis = new Rhino.Geometry.Line(surface.Origin.ToRhino(), surface.Origin.ToRhino() + (Vector3d) surface.Axis.ToRhino());
       return Rhino.Geometry.RevSurface.Create(curve, axis);
-    }
-
-    public static Rhino.Geometry.Brep CreateTrimmedSurface(this Rhino.Geometry.BrepFace face, IEnumerable<Rhino.Geometry.Curve> curves, double tolerance)
-    {
-      var trimmedBrep = face.Split(curves, Revit.VertexTolerance);
-
-      if (trimmedBrep != null)
-      {
-        var nakedFaces = new List<int>();
-        foreach (var trimedFace in trimmedBrep.Faces)
-        {
-          foreach (var trim in trimedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence == EdgeAdjacency.Naked))
-          {
-            var midPoint = trim.Edge.PointAtNormalizedLength(0.5);
-            if (!curves.Where(curve => curve.ClosestPoint(midPoint, out var t, tolerance)).Any())
-            {
-              nakedFaces.Add(trimedFace.FaceIndex);
-              break;
-            }
-          }
-        }
-
-        foreach (var nakedFace in nakedFaces.OrderByDescending(x => x))
-          trimmedBrep.Faces.RemoveAt(nakedFace);
-      }
-
-      if (trimmedBrep != null)
-      {
-        var interiorFaces = new List<int>();
-        foreach (var trimedFace in trimmedBrep.Faces)
-        {
-          foreach (var trim in trimedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence == EdgeAdjacency.Interior))
-          {
-            if (trim.Loop.LoopType == BrepLoopType.Outer)
-            {
-              interiorFaces.Add(trimedFace.FaceIndex);
-              break;
-            }
-          }
-        }
-
-        foreach (var interiorFace in interiorFaces.OrderByDescending(x => x))
-          trimmedBrep.Faces.RemoveAt(interiorFace);
-      }
-
-      return trimmedBrep;
     }
 
 #if !REVIT_2018
@@ -611,7 +565,34 @@ namespace RhinoInside.Revit
 #if REVIT_2018
         brep.Faces[0].OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation;
 #endif
-        return brep.Faces[0].CreateTrimmedSurface(loops, Revit.VertexTolerance) ?? brep;
+
+        // Split surface by the edges and 
+        var trimmedBrep = brep.Faces[0].Split(loops, Revit.VertexTolerance);
+
+        foreach(var trimmedFace in trimmedBrep.Faces.OrderByDescending(x => x.FaceIndex))
+        {
+          // Remove holes, faces with only interior edges
+          if (!trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence != EdgeAdjacency.Interior).Any())
+          {
+            trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
+            continue;
+          }
+
+          // Remove ears, faces with edges not in the boundary
+          foreach (var trim in trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence == EdgeAdjacency.Naked))
+          {
+            var midPoint = trim.Edge.PointAt(trim.Edge.Domain.Mid);
+
+            var intersectionResult = face.Project(midPoint.ToHost());
+            if(intersectionResult == null || !face.IsInside(intersectionResult.UVPoint))
+            {
+              trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
+              break;
+            }
+          }
+        }
+
+        return trimmedBrep;
       }
     }
 
@@ -621,7 +602,7 @@ namespace RhinoInside.Revit
 
       foreach (var face in solid.Faces)
       {
-        if (hasNotImplementedFaces = !(face is PlanarFace /*|| face is ConicalFace*/ || face is CylindricalFace || face is RevolvedFace))
+        if (hasNotImplementedFaces = !(face is PlanarFace || face is ConicalFace || face is CylindricalFace || face is RevolvedFace))
           break;
       }
 
