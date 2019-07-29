@@ -41,9 +41,6 @@ namespace RhinoInside.Revit.GH.Components
       if (scaleFactor != 1.0)
         curve = curve.Scale(scaleFactor);
 
-      if (curve.Length < Revit.ShortCurveTolerance)
-        ThrowArgumentException(nameof(curve), "Curve is too short.");
-
       SolveOptionalType(ref type, doc, BuiltInCategory.OST_StructuralColumns, nameof(type));
 
       if (!type.Value.IsActive)

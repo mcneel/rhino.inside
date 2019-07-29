@@ -388,7 +388,7 @@ namespace RhinoInside.Revit.GH.Components
 
         try { return (bool) GetInputOptionalDataInfo.MakeGenericMethod(typeof(T).GetGenericArguments()[0]).Invoke(this, args); }
         catch (TargetInvocationException e) { throw e.InnerException; }
-        finally { value = (T) args[2]; }
+        finally { value = args[2] != null ? (T) args[2] : default(T); }
       }
       else
       {

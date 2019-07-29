@@ -44,11 +44,10 @@ namespace RhinoInside.Revit.GH.Components
       var plane = sketchPlane.GetPlane().ToRhino().Scale(scaleFactor);
       if
       (
-        (scaleFactor == 1.0 ? true : !curve.Scale(scaleFactor)) &&
-        ((curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane)) != null)/* ||
-        curve.IsShort(Revit.ShortCurveTolerance)*/
+        !(scaleFactor != 1.0 ? curve.Scale(scaleFactor) : true) ||
+        ((curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane)) != null)
       )
-        ThrowArgumentException(nameof(curve), "Failed to project curve in");
+        ThrowArgumentException(nameof(curve), "Failed to project curve in the sketchPlane.");
 
       var curves = curve.ToHost().ToArray();
       Debug.Assert(curves.Length == 1);

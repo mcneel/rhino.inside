@@ -92,13 +92,12 @@ namespace RhinoInside.Revit.GH.Components
 
       if
       (
-        scaleFactor != 1.0 ? !curve.Scale(scaleFactor) : true &&
-        curve.IsShort(Revit.ShortCurveTolerance) ||
+        !(scaleFactor != 1.0 ? curve.Scale(scaleFactor) : true) ||
         !(curve.IsLinear(Revit.VertexTolerance) || curve.IsArc(Revit.VertexTolerance)) ||
         !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
         axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
       )
-        ThrowArgumentException(nameof(curve), "Curve must be a horizontal line or arc curve");
+        ThrowArgumentException(nameof(curve), "Curve must be a horizontal line or arc curve.");
 
       SolveOptionalType(ref type, doc, ElementTypeGroup.WallType, nameof(type));
 
