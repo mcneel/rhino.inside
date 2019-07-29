@@ -40,8 +40,7 @@ namespace RhinoInside.Revit.GH.Components
 
       if
       (
-        scaleFactor != 1.0 ? !curve.Scale(scaleFactor) : true &&
-        curve.IsShort(Revit.ShortCurveTolerance) ||
+        !(scaleFactor != 1.0 ? curve.Scale(scaleFactor) : true) ||
         curve.IsClosed ||
         !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
         curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
