@@ -435,6 +435,55 @@ namespace RhinoInside.Revit
       return Rhino.Geometry.RevSurface.Create(curve, axis);
     }
 
+    static Rhino.Geometry.Brep TrimFaces(this Rhino.Geometry.Brep brep, IEnumerable<Rhino.Geometry.Curve> loops, Autodesk.Revit.DB.Face face)
+    {
+      IList<Brep> brepFaces = new List<Brep>();
+
+      foreach (var brepFace in brep?.Faces)
+      {
+#if REVIT_2018
+        brepFace.OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation; 
+#endif
+
+        var trimmedBrep = brepFace.Split(loops, Revit.VertexTolerance);
+
+        foreach (var trimmedFace in trimmedBrep.Faces.OrderByDescending(x => x.FaceIndex))
+        {
+          // Remove holes, faces with only interior edges
+          if (!trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence != EdgeAdjacency.Interior).Any())
+          {
+            trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
+            continue;
+          }
+
+          // Remove ears, faces with edges not in the boundary
+          foreach (var trim in trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence == EdgeAdjacency.Naked))
+          {
+            var midPoint = trim.Edge.PointAt(trim.Edge.Domain.Mid);
+
+            var intersectionResult = face.Project(midPoint.ToHost());
+            if (intersectionResult == null || !face.IsInside(intersectionResult.UVPoint))
+            {
+              trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
+              break;
+            }
+          }
+        }
+
+        brepFaces.Add(trimmedBrep);
+      }
+
+      if (brepFaces.Count == 1)
+        return brepFaces[0];
+
+      brepFaces = Brep.JoinBreps(brepFaces, Revit.VertexTolerance);
+
+      if (brepFaces.Count == 1)
+        return brepFaces[0];
+
+      return Brep.MergeBreps(brepFaces, Revit.VertexTolerance);
+    }
+
 #if !REVIT_2018
     internal static Autodesk.Revit.DB.Surface GetSurface(this Autodesk.Revit.DB.Face face)
     {
@@ -471,6 +520,12 @@ namespace RhinoInside.Revit
 
           return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(ECStoWCS.Origin, ECStoWCS.BasisX, ECStoWCS.BasisY, ECStoWCS.BasisZ), profileInWCS);
         }
+        case RuledFace ruledFace:
+        {
+          var profileCurve0 = ruledFace.get_Curve(0);
+          var profileCurve1 = ruledFace.get_Curve(1);
+          return Autodesk.Revit.DB.RuledSurface.Create(profileCurve0, profileCurve1);
+        }
       }
 
       return null;
@@ -501,98 +556,88 @@ namespace RhinoInside.Revit
         switch (surface)
         {
           case Autodesk.Revit.DB.Plane planeSurface:
+          {
+            var plane = new Rhino.Geometry.Plane(planeSurface.Origin.ToRhino(), (Vector3d) planeSurface.XVec.ToRhino(), (Vector3d) planeSurface.YVec.ToRhino());
+
+            var bbox = BoundingBox.Empty;
+            foreach (var loop in loops)
             {
-              var plane = new Rhino.Geometry.Plane(planeSurface.Origin.ToRhino(), (Vector3d) planeSurface.XVec.ToRhino(), (Vector3d) planeSurface.YVec.ToRhino());
-
-              var bbox = BoundingBox.Empty;
-              foreach (var loop in loops)
-              {
-                var edgeBoundingBox = loop.GetBoundingBox(plane);
-                bbox = BoundingBox.Union(bbox, edgeBoundingBox);
-              }
-
-              brep = Brep.CreateFromSurface(planeSurface.ToRhino(new Interval(bbox.Min.X, bbox.Max.X), new Interval(bbox.Min.Y, bbox.Max.Y)));
-              break;
+              var edgeBoundingBox = loop.GetBoundingBox(plane);
+              bbox = BoundingBox.Union(bbox, edgeBoundingBox);
             }
-          case ConicalSurface conicalSurface:
+
+            brep = Brep.CreateFromSurface(planeSurface.ToRhino(new Interval(bbox.Min.X, bbox.Max.X), new Interval(bbox.Min.Y, bbox.Max.Y)));
+            break;
+          }
+          case Autodesk.Revit.DB.ConicalSurface conicalSurface:
+          {
+            var plane = new Rhino.Geometry.Plane(conicalSurface.Origin.ToRhino(), (Vector3d) conicalSurface.XDir.ToRhino(), (Vector3d) conicalSurface.YDir.ToRhino());
+
+            var bbox = BoundingBox.Empty;
+            foreach (var loop in loops)
             {
-              var plane = new Rhino.Geometry.Plane(conicalSurface.Origin.ToRhino(), (Vector3d) conicalSurface.XDir.ToRhino(), (Vector3d) conicalSurface.YDir.ToRhino());
-
-              var bbox = BoundingBox.Empty;
-              foreach (var loop in loops)
-              {
-                var edgeBoundingBox = loop.GetBoundingBox(plane);
-                bbox = BoundingBox.Union(bbox, edgeBoundingBox);
-              }
-
-              brep = Rhino.Geometry.Brep.CreateFromRevSurface(conicalSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
-              break;
+              var edgeBoundingBox = loop.GetBoundingBox(plane);
+              bbox = BoundingBox.Union(bbox, edgeBoundingBox);
             }
-          case CylindricalSurface cylindricalSurface:
+
+            brep = Rhino.Geometry.Brep.CreateFromRevSurface(conicalSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
+            break;
+          }
+          case Autodesk.Revit.DB.CylindricalSurface cylindricalSurface:
+          {
+            var plane = new Rhino.Geometry.Plane(cylindricalSurface.Origin.ToRhino(), (Vector3d) cylindricalSurface.XDir.ToRhino(), (Vector3d) cylindricalSurface.YDir.ToRhino());
+
+            var bbox = BoundingBox.Empty;
+            foreach (var loop in loops)
             {
-              var plane = new Rhino.Geometry.Plane(cylindricalSurface.Origin.ToRhino(), (Vector3d) cylindricalSurface.XDir.ToRhino(), (Vector3d) cylindricalSurface.YDir.ToRhino());
-
-              var bbox = BoundingBox.Empty;
-              foreach (var loop in loops)
-              {
-                var edgeBoundingBox = loop.GetBoundingBox(plane);
-                bbox = BoundingBox.Union(bbox, edgeBoundingBox);
-              }
-
-              brep = Rhino.Geometry.Brep.CreateFromRevSurface(cylindricalSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
-              break;
+              var edgeBoundingBox = loop.GetBoundingBox(plane);
+              bbox = BoundingBox.Union(bbox, edgeBoundingBox);
             }
-          case RevolvedSurface revolvedSurface:
+
+            brep = Rhino.Geometry.Brep.CreateFromRevSurface(cylindricalSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
+            break;
+          }
+          case Autodesk.Revit.DB.RevolvedSurface revolvedSurface:
+          {
+            var plane = new Rhino.Geometry.Plane(revolvedSurface.Origin.ToRhino(), (Vector3d) revolvedSurface.XDir.ToRhino(), (Vector3d) revolvedSurface.YDir.ToRhino());
+
+            var bbox = BoundingBox.Empty;
+            foreach (var loop in loops)
             {
-              var plane = new Rhino.Geometry.Plane(revolvedSurface.Origin.ToRhino(), (Vector3d) revolvedSurface.XDir.ToRhino(), (Vector3d) revolvedSurface.YDir.ToRhino());
-
-              var bbox = BoundingBox.Empty;
-              foreach (var loop in loops)
-              {
-                var edgeBoundingBox = loop.GetBoundingBox(plane);
-                bbox = BoundingBox.Union(bbox, edgeBoundingBox);
-              }
-
-              brep = Rhino.Geometry.Brep.CreateFromRevSurface(revolvedSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
-              break;
+              var edgeBoundingBox = loop.GetBoundingBox(plane);
+              bbox = BoundingBox.Union(bbox, edgeBoundingBox);
             }
-          default:
-            return null;
+
+            brep = Rhino.Geometry.Brep.CreateFromRevSurface(revolvedSurface.ToRhino(new Interval(bbox.Min.Z, bbox.Max.Z)), false, false);
+            break;
+          }
+          case Autodesk.Revit.DB.RuledSurface ruledSurface:
+          {
+            var curves = new List<Rhino.Geometry.Curve>();
+            Rhino.Geometry.Point3d start = Rhino.Geometry.Point3d.Unset, end = Rhino.Geometry.Point3d.Unset;
+
+            if (ruledSurface.HasFirstProfilePoint())
+              start = ruledSurface.GetFirstProfilePoint().ToRhino();
+            else
+              curves.Add(ruledSurface.GetFirstProfileCurve().ToRhino());
+
+            if (ruledSurface.HasSecondProfilePoint())
+              end = ruledSurface.GetSecondProfilePoint().ToRhino();
+            else
+              curves.Add(ruledSurface.GetSecondProfileCurve().ToRhino());
+
+            var lofts = Rhino.Geometry.Brep.CreateFromLoft(curves, start, end, LoftType.Straight, false);
+            if (lofts.Length == 1)
+              brep = lofts[0];
+            else
+              brep = Rhino.Geometry.Brep.MergeBreps(lofts, Revit.VertexTolerance);
+            break;
+          }
+          default: throw new NotImplementedException();
         }
 
-        Debug.Assert(brep.Faces.Count == 1);
-
-#if REVIT_2018
-        brep.Faces[0].OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation;
-#endif
-
-        // Split surface by the edges and 
-        var trimmedBrep = brep.Faces[0].Split(loops, Revit.VertexTolerance);
-
-        foreach(var trimmedFace in trimmedBrep.Faces.OrderByDescending(x => x.FaceIndex))
-        {
-          // Remove holes, faces with only interior edges
-          if (!trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence != EdgeAdjacency.Interior).Any())
-          {
-            trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
-            continue;
-          }
-
-          // Remove ears, faces with edges not in the boundary
-          foreach (var trim in trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence == EdgeAdjacency.Naked))
-          {
-            var midPoint = trim.Edge.PointAt(trim.Edge.Domain.Mid);
-
-            var intersectionResult = face.Project(midPoint.ToHost());
-            if(intersectionResult == null || !face.IsInside(intersectionResult.UVPoint))
-            {
-              trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
-              break;
-            }
-          }
-        }
-
-        return trimmedBrep;
+        try { return brep?.TrimFaces(loops, face); }
+        finally { brep?.Dispose(); }
       }
     }
 
@@ -602,7 +647,7 @@ namespace RhinoInside.Revit
 
       foreach (var face in solid.Faces)
       {
-        if (hasNotImplementedFaces = !(face is PlanarFace || face is ConicalFace || face is CylindricalFace || face is RevolvedFace))
+        if (hasNotImplementedFaces = !(face is PlanarFace || face is ConicalFace || face is CylindricalFace || face is RevolvedFace || face is RuledFace))
           break;
       }
 
