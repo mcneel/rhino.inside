@@ -544,6 +544,16 @@ namespace RhinoInside.Revit
 
       return profileCurve.CreateTransformed(ECStoWCS);
     }
+
+    internal static bool HasFirstProfilePoint(this RuledSurface ruledSurface)
+    {
+      return ruledSurface.GetFirstProfilePoint() != null;
+    }
+
+    internal static bool HasSecondProfilePoint(this RuledSurface ruledSurface)
+    {
+      return ruledSurface.GetSecondProfilePoint() != null;
+    }
 #endif
 
     public static Rhino.Geometry.Brep ToRhino(this Autodesk.Revit.DB.Face face)
