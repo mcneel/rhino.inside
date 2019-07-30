@@ -97,17 +97,14 @@ namespace RhinoInside.Revit.GH.Components
       }
       else
       {
-        var creationDataList = new List<Autodesk.Revit.Creation.FamilyInstanceCreationData>()
+        var creationData = new List<Autodesk.Revit.Creation.FamilyInstanceCreationData>()
         {
           new Autodesk.Revit.Creation.FamilyInstanceCreationData(location.Origin.ToHost(), type, host, level.Value, Autodesk.Revit.DB.Structure.StructuralType.NonStructural)
         };
 
-        ICollection<ElementId> newElementIds = null;
-
-        if (doc.IsFamilyDocument)
-          newElementIds = doc.FamilyCreate.NewFamilyInstances2(creationDataList);
-        else
-          newElementIds = doc.Create.NewFamilyInstances2(creationDataList);
+        var newElementIds = doc.IsFamilyDocument ?
+                            doc.FamilyCreate.NewFamilyInstances2(creationData) :
+                            doc.Create.NewFamilyInstances2(creationData);
 
         if (newElementIds.Count != 1)
         {
