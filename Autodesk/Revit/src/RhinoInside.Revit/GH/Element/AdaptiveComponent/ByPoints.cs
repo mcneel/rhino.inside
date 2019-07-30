@@ -43,10 +43,19 @@ namespace RhinoInside.Revit.GH.Components
       // Type
       ChangeElementTypeId(ref element, type.Id);
 
-      //if (element is FamilyInstance)
-      //{
-      //}
-      //else
+      if (element is FamilyInstance instance && AdaptiveComponentInstanceUtils.IsAdaptiveComponentInstance(instance))
+      {
+        var adaptivePointIds = AdaptiveComponentInstanceUtils.GetInstancePlacementPointElementRefIds(instance);
+        if (adaptivePointIds.Count == adaptivePoints.Length)
+        {
+          int index = 0;
+          foreach (var vertex in adaptivePointIds.Select(id => doc.GetElement(id)).Cast<ReferencePoint>())
+            vertex.Position = adaptivePoints[index++];
+
+          return;
+        }
+      }
+
       {
         var creationData = new List<Autodesk.Revit.Creation.FamilyInstanceCreationData>
         {
