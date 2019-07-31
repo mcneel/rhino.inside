@@ -22,7 +22,7 @@ namespace RhinoInside.Revit.GH.Types
     bool LoadGeometry(Document doc);
   }
 
-  public abstract class GH_GeometricGoo<X> : Grasshopper.Kernel.Types.GH_GeometricGoo<X>, IGH_GeometricGoo where X : GeometryObject
+  public abstract class GH_GeometricGoo<X> : Grasshopper.Kernel.Types.GH_GeometricGoo<X>, IGH_GeometricGoo, IGH_PreviewMeshData where X : GeometryObject
   {
     public override string TypeName => "Revit GeometryObject";
     public override string TypeDescription => "Represents a Revit GeometryObject";
@@ -119,12 +119,27 @@ namespace RhinoInside.Revit.GH.Types
     }
     #endregion
 
+    #region IGH_PreviewMeshData
+    protected Rhino.Geometry.Point   point = null;
+    protected Rhino.Geometry.Curve[] wires = null;
+    protected Rhino.Geometry.Mesh[]  meshes = null;
+
+    void IGH_PreviewMeshData.DestroyPreviewMeshes()
+    {
+      point = null;
+      wires = null;
+      meshes = null;
+    }
+
+    Rhino.Geometry.Mesh[] IGH_PreviewMeshData.GetPreviewMeshes() => meshes;
+    #endregion
+
     protected GH_GeometricGoo() { }
     protected GH_GeometricGoo(X data) : base(data) { }
     protected GH_GeometricGoo(Reference reference, Document doc) { Reference = reference; UniqueID = reference.ConvertToStableRepresentation(doc); }
   }
 
-  public class Vertex : GH_GeometricGoo<Autodesk.Revit.DB.Point>
+  public class Vertex : GH_GeometricGoo<Autodesk.Revit.DB.Point>, IGH_PreviewData
   {
     public override string TypeName => "Revit Vertex";
     public override string TypeDescription => "Represents a Revit Vertex";
@@ -156,6 +171,37 @@ namespace RhinoInside.Revit.GH.Types
     public Vertex(Reference reference, Document doc) : base(reference, doc) { }
     public Vertex(int index, Reference reference, Document doc) : base(reference, doc) { VertexIndex = index; }
 
+    Rhino.Geometry.Point Point
+    {
+      get
+      {
+        if (point == null)
+        {
+          point = new Rhino.Geometry.Point(Value.Coord.ToRhino());
+          point.Scale(Revit.ModelUnits);
+
+          using
+          (
+            var element = Reference != null ?
+            Revit.ActiveDBDocument.GetElement(Reference) :
+            null
+          )
+          {
+            if (element is Instance instance)
+            {
+              var transform = instance.GetTransform();
+              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
+              var xform = transform.ToRhino();
+
+              point.Transform(xform);
+            }
+          }
+        }
+
+        return point;
+      }
+    }
+
     public override bool CastFrom(object source)
     {
       if (source is GH_Point point)
@@ -170,61 +216,16 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
-      {
-        var point = Value.Coord.ToRhino();
-        point = point.Scale(Revit.ModelUnits);
-        target = (Q) (object) new GH_Point(point);
-        return true;
-      }
-      else if (typeof(Q).IsAssignableFrom(typeof(Element)))
-      {
-        var reference = Reference.ParseFromStableRepresentation(Revit.ActiveDBDocument, UniqueID);
-        var element = Revit.ActiveDBDocument.GetElement(reference);
-        target = (Q) (object) Element.Make(element);
-        return true;
-      }
-
-      return base.CastTo<Q>(ref target);
-    }
-
-    public override BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform)
-    {
-      if (Value == null)
-        return BoundingBox.Empty;
-
-      bool IsIdentity = xform == Rhino.Geometry.Transform.Identity;
-      var point = new Rhino.Geometry.Point(Value.Coord.ToRhino());
-      point.Scale(Revit.ModelUnits);
-      var bbox = IsIdentity ? point.GetBoundingBox(true) : point.GetBoundingBox(xform);
-      return bbox;
-    }
-  }
-
-  public class Edge : GH_GeometricGoo<Autodesk.Revit.DB.Edge>
-  {
-    public override string TypeName => "Revit Edge";
-    public override string TypeDescription => "Represents a Revit Edge";
-
-    public Edge() { }
-    public Edge(Autodesk.Revit.DB.Edge edge) : base(edge) { }
-    public Edge(Reference reference, Document doc) : base(reference, doc) { }
-
-    public override bool CastTo<Q>(ref Q target)
-    {
       if (Value != null)
       {
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
         {
-          var curve = Value.AsCurve().ToRhino();
-          curve.Scale(Revit.ModelUnits);
-          target = (Q) (object) new GH_Curve(curve);
+          target = (Q) (object) new GH_Point(Point.Location);
           return true;
         }
-        else if (typeof(Q).IsAssignableFrom(typeof(Element)))
+        else if (Reference != null && typeof(Q).IsAssignableFrom(typeof(Element)))
         {
-          var reference = Reference.ParseFromStableRepresentation(Revit.ActiveDBDocument, UniqueID);
-          var element = Revit.ActiveDBDocument.GetElement(reference);
+          var element = Revit.ActiveDBDocument.GetElement(Reference);
           target = (Q) (object) Element.Make(element);
           return true;
         }
@@ -238,36 +239,80 @@ namespace RhinoInside.Revit.GH.Types
       if (Value == null)
         return BoundingBox.Empty;
 
-      bool IsIdentity = xform == Rhino.Geometry.Transform.Identity;
-      var curve = Value.AsCurve().ToRhino();
-      curve.Scale(Revit.ModelUnits);
-      var bbox = IsIdentity ? curve.GetBoundingBox(true) : curve.GetBoundingBox(xform);
-      return bbox;
+      return xform == Rhino.Geometry.Transform.Identity ?
+        Point.GetBoundingBox(true) :
+        Point.GetBoundingBox(xform);
     }
+
+    #region IGH_PreviewData
+    BoundingBox IGH_PreviewData.ClippingBox => GetBoundingBox(Rhino.Geometry.Transform.Identity);
+
+    void IGH_PreviewData.DrawViewportWires(GH_PreviewWireArgs args)
+    {
+      if (!IsValid)
+        return;
+
+      if (Point is Rhino.Geometry.Point point)
+        args.Pipeline.DrawPoint(point.Location, CentralSettings.PreviewPointStyle, CentralSettings.PreviewPointRadius, args.Color);
+    }
+
+    void IGH_PreviewData.DrawViewportMeshes(GH_PreviewMeshArgs args) { }
+    #endregion
   }
 
-  public class Face : GH_GeometricGoo<Autodesk.Revit.DB.Face>
+  public class Edge : GH_GeometricGoo<Autodesk.Revit.DB.Edge>, IGH_PreviewData
   {
-    public override string TypeName => "Revit Face";
-    public override string TypeDescription => "Represents a Revit Face";
+    public override string TypeName => "Revit Edge";
+    public override string TypeDescription => "Represents a Revit Edge";
 
-    public Face() { }
-    public Face(Autodesk.Revit.DB.Face face) : base(face) { }
-    public Face(Reference reference, Document doc) : base(reference, doc) { }
+    public Edge() { }
+    public Edge(Autodesk.Revit.DB.Edge edge) : base(edge) { }
+    public Edge(Reference reference, Document doc) : base(reference, doc) { }
+
+    Rhino.Geometry.Curve Curve
+    {
+      get
+      {
+        if (wires == null)
+        {
+          wires = Enumerable.Repeat(Value, 1).GetPreviewWires().ToArray();
+
+          using
+          (
+            var element = Reference != null ?
+            Revit.ActiveDBDocument.GetElement(Reference) :
+            null
+          )
+          {
+            if (element is Instance instance)
+            {
+              var transform = instance.GetTransform();
+              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
+              var xform = transform.ToRhino();
+
+              wires[0]?.Transform(xform);
+            }
+          }
+        }
+
+        return wires.FirstOrDefault();
+      }
+    }
 
     public override bool CastTo<Q>(ref Q target)
     {
       if (Value != null)
       {
-        if (Value.IsElementGeometry)
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
         {
-          if (typeof(Q).IsAssignableFrom(typeof(Element)))
-          {
-            var reference = Reference.ParseFromStableRepresentation(Revit.ActiveDBDocument, UniqueID);
-            var element = Revit.ActiveDBDocument.GetElement(reference);
-            target = (Q) (object) Element.Make(element);
-            return true;
-          }
+          target = (Q) (object) new GH_Curve(Curve);
+          return true;
+        }
+        else if (Reference != null && typeof(Q).IsAssignableFrom(typeof(Element)))
+        {
+          var element = Revit.ActiveDBDocument.GetElement(Reference);
+          target = (Q) (object) Element.Make(element);
+          return true;
         }
       }
 
@@ -279,20 +324,172 @@ namespace RhinoInside.Revit.GH.Types
       if (Value == null)
         return BoundingBox.Empty;
 
-      bool IsIdentity = xform == Rhino.Geometry.Transform.Identity;
-      var bbox = BoundingBox.Empty;
-      foreach(var loop in Value.EdgeLoops.OfType<Autodesk.Revit.DB.EdgeArray>())
+      return xform == Rhino.Geometry.Transform.Identity ?
+        Curve.GetBoundingBox(true) :
+        Curve.GetBoundingBox(xform);
+    }
+
+    #region IGH_PreviewData
+    BoundingBox IGH_PreviewData.ClippingBox => GetBoundingBox(Rhino.Geometry.Transform.Identity);
+
+    void IGH_PreviewData.DrawViewportWires(GH_PreviewWireArgs args)
+    {
+      if (!IsValid)
+        return;
+
+      if(Curve is Rhino.Geometry.Curve curve)
+        args.Pipeline.DrawCurve(curve, args.Color, args.Thickness);
+    }
+
+    void IGH_PreviewData.DrawViewportMeshes(GH_PreviewMeshArgs args) { }
+    #endregion
+  }
+
+  public class Face : GH_GeometricGoo<Autodesk.Revit.DB.Face>, IGH_PreviewData
+  {
+    public override string TypeName => "Revit Face";
+    public override string TypeDescription => "Represents a Revit Face";
+
+    public Face() { }
+    public Face(Autodesk.Revit.DB.Face face) : base(face) { }
+    public Face(Reference reference, Document doc) : base(reference, doc) { }
+
+    Rhino.Geometry.Curve[] Curves
+    {
+      get
       {
-        foreach (var edge in loop.OfType<Autodesk.Revit.DB.Edge>())
+        if (wires == null)
         {
-          var curve = edge.AsCurve().ToRhino();
-          curve.Scale(Revit.ModelUnits);
-          bbox.Union(IsIdentity ? curve.GetBoundingBox(true) : curve.GetBoundingBox(xform));
+          wires = Value.GetEdgesAsCurveLoops().SelectMany(x => x.GetPreviewWires()).ToArray();
+
+          using
+          (
+            var element = Reference != null ?
+            Revit.ActiveDBDocument.GetElement(Reference) :
+            null
+          )
+          {
+            if (element is Instance instance)
+            {
+              var transform = instance.GetTransform();
+              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
+              var xform = transform.ToRhino();
+
+              foreach(var wire in wires)
+                wire.Transform(xform);
+            }
+          }
         }
+
+        return wires;
+      }
+    }
+
+    public override bool CastTo<Q>(ref Q target)
+    {
+      if (Value != null)
+      {
+        var element = Reference != null ? Revit.ActiveDBDocument.GetElement(Reference) : null;
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Surface)))
+        {
+          var brep = Value.ToRhino(true);
+          if (element is Autodesk.Revit.DB.Instance instance)
+            brep.Transform(Rhino.Geometry.Transform.Scale(Point3d.Origin, Revit.ModelUnits) * instance.GetTransform().ToRhino());
+          else
+            brep.Scale(Revit.ModelUnits);
+
+          target = (Q) (object) new GH_Surface(brep);
+          return true;
+        }
+        else if (typeof(Q).IsAssignableFrom(typeof(GH_Brep)))
+        {
+          var brep = Value.ToRhino(false);
+          if (element is Autodesk.Revit.DB.Instance instance)
+            brep.Transform(Rhino.Geometry.Transform.Scale(Point3d.Origin, Revit.ModelUnits) * instance.GetTransform().ToRhino());
+          else
+            brep.Scale(Revit.ModelUnits);
+
+          target = (Q) (object) new GH_Brep(brep);
+          return true;
+        }
+        else if (element != null && typeof(Q).IsAssignableFrom(typeof(Element)))
+        {
+          target = (Q) (object) Element.Make(element);
+          return true;
+        }
+      }
+
+      return base.CastTo<Q>(ref target);
+    }
+
+    public override BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform)
+    {
+      if (Value == null)
+        return BoundingBox.Empty;
+
+      var bbox = BoundingBox.Empty;
+      if (xform == Rhino.Geometry.Transform.Identity)
+      {
+        foreach (var curve in Curves)
+          bbox.Union(curve.GetBoundingBox(true));
+      }
+      else
+      {
+        foreach (var curve in Curves)
+          bbox.Union(curve.GetBoundingBox(xform));
       }
 
       return bbox;
     }
+
+    #region IGH_PreviewData
+    BoundingBox IGH_PreviewData.ClippingBox => GetBoundingBox(Rhino.Geometry.Transform.Identity);
+
+    void IGH_PreviewData.DrawViewportWires(GH_PreviewWireArgs args)
+    {
+      if (!IsValid)
+        return;
+
+      foreach (var curve in Curves ?? Enumerable.Empty<Rhino.Geometry.Curve>())
+        args.Pipeline.DrawCurve(curve, args.Color, args.Thickness);
+    }
+
+    void IGH_PreviewData.DrawViewportMeshes(GH_PreviewMeshArgs args)
+    {
+      if (!IsValid)
+        return;
+
+      if (meshes == null)
+      {
+        using (var ga = Convert.GraphicAttributes.Push())
+        {
+          ga.MeshingParameters = args.MeshingParameters;
+          meshes = Enumerable.Repeat(Value, 1).GetPreviewMeshes().ToArray();
+
+          var element = Value.IsElementGeometry ?
+            Revit.ActiveDBDocument.GetElement(Reference.ParseFromStableRepresentation(Revit.ActiveDBDocument, UniqueID)) :
+            null;
+
+          if (element is Instance instance)
+          {
+            var transform = instance.GetTransform();
+            transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
+            var xform = transform.ToRhino();
+
+            foreach (var mesh in meshes)
+              mesh.Transform(xform);
+          }
+
+          foreach (var mesh in meshes)
+            mesh.Normals.ComputeNormals();
+        }
+      }
+
+      foreach (var mesh in meshes ?? Enumerable.Empty<Rhino.Geometry.Mesh>())
+        args.Pipeline.DrawMeshShaded(mesh, args.Material);
+    }
+    #endregion
   }
 }
 
