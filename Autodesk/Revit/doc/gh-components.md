@@ -15,10 +15,15 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th width="200">Name</th>
     <th>Description</th>
   </tr>
-  <tr>
+  <tr>    
+      <td width="48px"><img src="GH/AddAdaptiveComponent.png" alt="AddAdaptiveComponent" width="32"></td>    
+      <td>Add Adaptive Component by Points</td>    
+      <td>Adds an adaptive component instance using a list of points to Revit.  The points must be sorted in the same order as the adaptive component expects.</td>  
+    </tr>
+    <tr>
     <td width="48px"><img src="GH/BeamByCurve.png" alt="AddBeamByCurve" width="32"></td>
     <td>Add Beam By Curve</td>
-    <td>Create a Revit Beam Object using a 2d or 3d curve for an axis</td>
+    <td>Create a Revit Beam Object using a 2d or 3d curve for an axis/  Also assign a level.</td>
   </tr>
   <tr>
     <td><img src="GH/ColumnByCurve.png" alt="AddColumnByCurve" width="32"></td>
@@ -43,12 +48,12 @@ This guide documents the Grasshopper components that support Revit interaction.
   <tr>
     <td><img src="GH/WallByCurve.png" alt="ColumnByCurve" width="32"></td>
     <td>Wall By Curve</td>
-    <td>Create a Revit Wall Object using a plan curve</td>
+    <td>Create a Revit Wall Object using a plan curve. The Level, Type, Height and other properties can be specified. See the component help for options.</td>
   </tr>
   <tr>
     <td><img src="GH/DirectShapeByGeometry.png" alt="AddDirectShapeByGeometry" width="32"></td>
     <td>Add DirectShape Geometry</td>
-    <td>Create a Directshape Element using a plan curve. This is the most generic way to import Geometry.</td>
+    <td>Create a Directshape Element from a Rhino Geometry. This is the most flexible way to import Geometry.</td>
   </tr>
   <tr>
     <td><img src="GH/DirectShapeCategories.png" alt="DirectShapeCategories" width="32"></td>
@@ -81,6 +86,26 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td><img src="GH/CategoryTypes.png" alt="ColumnByCurve" width="32"></td>
     <td>Category Types</td>
     <td>A pick list of category types in Revit.</td>
+  </tr>
+</table>
+
+#### Datum Components
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/AddGridByLine.png" alt="AddGridByLine" width="32"></td>
+    <td>Add Grid by Line</td>
+    <td>Add a Revit Grid line through a Rhino curve.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/AddLevelByElevation.png" alt="AddLevelByElevation" width="32"></td>
+    <td>Add Level by Elevation</td>
+    <td>Add level by supplying an elevation height.</td>
   </tr>
 </table>
 
@@ -122,7 +147,6 @@ This guide documents the Grasshopper components that support Revit interaction.
 
 #### Elements Components
 
-
 <table style="width:100%">
   <tr>
     <th width="48px">Icon</th>
@@ -132,7 +156,7 @@ This guide documents the Grasshopper components that support Revit interaction.
   <tr>
     <td width="48px"><img src="GH/ElementDecompose.png" alt="BeamByCurve" width="32"></td>
     <td>Element Decompose</td>
-    <td>Decompose an Element into it's associated data including Constraints, Dimensions, Identity Data, Category, Family, Type, ID, etc...</td>
+    <td>Decompose an Element into it's associated data including Constraints, Dimensions, Identity Data, Category, Family, Type, ID, etc... Once the Elemnt is wired into this component, <code>Shift</code> double-click on the component to exapand to all Parameters of that component.  <code>Ctrl</code> double-click on the component then to collapse down to only used outputs.</td>
   </tr>
   <tr>
     <td><img src="GH/ElementGeometry.png" alt="BeamByCurve" width="32"></td>
@@ -173,6 +197,11 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td><img src="GH/ElementType.png" alt="ColumnByCurve" width="32"></td>
     <td>Element Type</td>
     <td>Get Element type from the Element(s) input</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ElementDelete.png" alt="DeleteElement" width="32"></td>
+    <td>Element Delete</td>
+    <td>Deletes the specified element out of Revit.</td>
   </tr>
 </table>
 
@@ -224,7 +253,6 @@ This guide documents the Grasshopper components that support Revit interaction.
 
 #### Revit Input Components
 
-
 <table style="width:100%">
   <tr>
     <th width="48px">Icon</th>
@@ -253,8 +281,8 @@ This guide documents the Grasshopper components that support Revit interaction.
   </tr>
   <tr>
     <td><img src="GH/ElementTypeByName.png" alt="ColumnByCurve" width="32"></td>
-    <td>Select an Element Type</td>
-    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Element Type from Revit</td>
+    <td>Select an Element Type by Name</td>
+    <td>Select a specific Element type by its name. This component will be blank unless connected in combination with the Select Document Category or the Select a Family component to select a specific element within a Family or Category. Use a checklist, dropdown, scroll sequence or cycle interface to select a Element Type from Revit <img src="images/element-select-alpha.png" alt="ColumnByCurve"></td>
   </tr>
 </table>
 

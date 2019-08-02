@@ -35,6 +35,10 @@ Once Rhino.inside is successfully loaded, a Rhinoceros toolbar will appear in Re
       <td><img src="images/Grasshopper.png" alt="Grasshopper Icon" width="48"></td>
       <td>Open the Grasshopper Canvas in Revit.</td>    
   </tr>
+    <tr>          
+      <td><img src="images/GrasshopperPlayer.png" alt="Grasshopper Player" width="48"></td>
+      <td>The Grasshopper Player will run any existing Grasshopper definition and immediately return to Revit.</td>
+    </tr>
   <tr>          
       <td><img src="images/Preview_Off_24x24.png" alt="Preview Off Icon" width="48"></td>
       <td>Turns off the real-time preview by Grasshopepr in Revit.</td>    
@@ -42,19 +46,31 @@ Once Rhino.inside is successfully loaded, a Rhinoceros toolbar will appear in Re
     <tr>          
       <td><img src="images/Preview_Wireframe_24x24.png" alt="Preview Wireframe Icon" width="48"></td>
       <td>Grasshopper will use a wireframe display for real-time preview of geometry in Revit.</td>    
-  </tr>
+    </tr>
     <tr>          
       <td><img src="images/Preview_Shaded_24x24.png" alt="Preview Shaded Icon" width="48"></td>
       <td>Grasshopper will use a shaded display mode for real-time preview of geometry in Revit.</td>
+    </tr>
+    <tr>          
+      <td><img src="images/Recompute_24x24.png" alt="Grasshopper Recompute" width="48"></td>
+      <td>Forces a recompute to the loaded Grasshopper definitions.</td>
+  </tr>
+    <tr>          
+      <td><img src="images/Bake_24x24.png" alt="Grasshopper Recompute" width="48"></td>
+      <td>Bakes the currently selected Rhino Geometry into the currently selected Category in Revit.</td>
   </tr>
     <tr>          
       <td><img src="images/Sample1.png" alt="Sample 1 Icon" width="48"></td>
       <td>Sample 1 will simply draw a Rhino sphere in Revit as a example for developers.</td>
-  </tr>
+    </tr>
     <tr>          
-      <td><img src="images/GrasshopperPlayer.png" alt="Grasshopper Player" width="48"></td>
-      <td>The Grasshopper Player will run any existing Grasshopper definition and immediately return to Revit.</td>
-  </tr>
+      <td><img src="images/Sample6.png" alt="Sample 6 Icon" width="48"></td>
+      <td>Sample 6 will toggle the visibility of Rhino geometry in Revit.</td>
+    </tr>
+    <tr>          
+      <td><img src="images/Sample8.png" alt="Sample 8 Icon" width="48"></td>
+      <td>Sample 8 will allow Revit to open Rhino .3DM files directly.</td>
+    </tr>
 </table>
 
 ## <img src="images/Rhino.png" width="35px"> Running Rhino in Revit
