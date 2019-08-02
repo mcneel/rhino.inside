@@ -558,7 +558,9 @@ namespace RhinoInside.Revit.GH.Parameters
               CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
               DefaultButton = TaskDialogResult.Yes,
               AllowCancellation = true,
+#if REVIT_2020
               EnableMarqueeProgressBar = true
+#endif
             }
           )
           {
@@ -613,17 +615,17 @@ namespace RhinoInside.Revit.GH.Parameters
         }
       }
     }
-    #endregion
+#endregion
 
-    #region IGH_PreviewObject
+#region IGH_PreviewObject
     bool IGH_PreviewObject.Hidden { get; set; }
     bool IGH_PreviewObject.IsPreviewCapable => !VolatileData.IsEmpty;
     Rhino.Geometry.BoundingBox IGH_PreviewObject.ClippingBox => Preview_ComputeClippingBox();
     void IGH_PreviewObject.DrawViewportMeshes(IGH_PreviewArgs args) => Preview_DrawMeshes(args);
     void IGH_PreviewObject.DrawViewportWires(IGH_PreviewArgs args) => Preview_DrawWires(args);
-    #endregion
+#endregion
 
-    #region IGH_PersistentGeometryParam
+#region IGH_PersistentGeometryParam
     bool IGH_PersistentGeometryParam.NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified)
     {
       foreach (var data in VolatileData.AllData(true).Cast<Types.IGH_GeometricGoo>())
@@ -644,7 +646,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return false;
     }
-    #endregion
+#endregion
   }
 
   public class Vertex : GH_PersistentGeometryParam<Types.Vertex>
@@ -653,7 +655,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("BC1B160A-DC04-4139-AB7D-1AECBDE7FF88");
 
-    #region UI methods
+#region UI methods
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Vertex> value)
     {
       try
@@ -703,7 +705,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.accept;
     }
-    #endregion
+#endregion
   }
 
   public class Edge : GH_PersistentGeometryParam<Types.Edge>
@@ -712,7 +714,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("B79FD0FD-63AE-4776-A0A7-6392A3A58B0D");
 
-    #region UI methods
+#region UI methods
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Edge> value)
     {
       try
@@ -748,7 +750,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.success;
     }
-    #endregion
+#endregion
   }
 
   public class Face : GH_PersistentGeometryParam<Types.Face>
@@ -757,7 +759,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("759700ED-BC79-4986-A6AB-84921A7C9293");
 
-    #region UI methods
+#region UI methods
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Face> value)
     {
       try
@@ -793,6 +795,6 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.success;
     }
-    #endregion
+#endregion
   }
 }
