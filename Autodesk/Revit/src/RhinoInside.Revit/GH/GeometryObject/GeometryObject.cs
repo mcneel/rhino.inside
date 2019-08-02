@@ -1,17 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+using System.Reflection;
 using Autodesk.Revit.DB;
-
-using Rhino.Geometry;
-
+using Autodesk.Revit.UI;
 using GH_IO.Serialization;
 using Grasshopper;
+using Grasshopper.GUI;
 using Grasshopper.Kernel;
+using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
+using Rhino.Geometry;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -519,22 +518,99 @@ namespace RhinoInside.Revit.GH.Parameters
       base.AppendAdditionalMenuItems(menu);
       Menu_AppendSeparator(menu);
       Menu_AppendItem(menu, "Highlight elements", Menu_HighlightElements, !VolatileData.IsEmpty, false);
+      Menu_AppendItem(menu, "Delete elements", Menu_DeleteElements, DataType != GH_ParamData.remote && !VolatileData.IsEmpty, false);
     }
+
+    static IEnumerable<ElementId> ToElementIds(IGH_Structure data) =>
+      data.AllData(true).
+      OfType<Types.IGH_GeometricGoo>().
+      Where(x => x.IsReferencedGeometry).
+      Select(x => x.Reference).
+      Where(x => x != null).
+      Select(x => x.ElementId);
 
     void Menu_HighlightElements(object sender, EventArgs e)
     {
-      var elements = VolatileData.AllData(true).
-                     OfType<Types.IGH_GeometricGoo>().
-                     Where((x) => x.IsReferencedGeometry).
-                     Select((x) => x.Reference).
-                     Where((x) => x != null).
-                     Select((x) => x.ElementId).
-                     ToArray();
-
-      if (elements?.Length > 0)
+      var elementIds = ToElementIds(VolatileData);
+      if (elementIds.Any())
       {
+        var elements = elementIds.ToArray();
         Revit.ActiveUIDocument.Selection.SetElementIds(elements);
         Revit.ActiveUIDocument.ShowElements(elements);
+      }
+    }
+
+    void Menu_DeleteElements(object sender, EventArgs e)
+    {
+      var elementIds = ToElementIds(VolatileData);
+      if (elementIds.Any())
+      {
+        using (new ModalForm.EditScope())
+        {
+          using
+          (
+            var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
+            {
+              MainIcon = TaskDialogIcons.IconWarning,
+              TitleAutoPrefix = false,
+              Title = "Delete Elements",
+              MainInstruction = "Are you sure you want to delete those elements?",
+              CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
+              DefaultButton = TaskDialogResult.Yes,
+              AllowCancellation = true,
+              EnableMarqueeProgressBar = true
+            }
+          )
+          {
+            taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Show elements");
+            taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Manage element collection");
+
+            var result = TaskDialogResult.None;
+            bool highlight = false;
+            do
+            {
+              var elements = elementIds.ToArray();
+              taskDialog.ExpandedContent = $"{elements.Length} elements and its depending elements will be deleted.";
+
+              if(highlight)
+                Revit.ActiveUIDocument.Selection.SetElementIds(elements);
+
+              switch (result = taskDialog.Show())
+              {
+                case TaskDialogResult.CommandLink1:
+                  Revit.ActiveUIDocument.ShowElements(elements);
+                  highlight = true;
+                  break;
+
+                case TaskDialogResult.CommandLink2:
+                  using (var dataManager = new GH_PersistentDataEditor())
+                  {
+                    var elementCollection = new GH_Structure<IGH_Goo>();
+                    elementCollection.AppendRange(elementIds.Select(x => Types.Element.Make(x)));
+                    dataManager.SetData(elementCollection, new Types.Element());
+
+                    GH_WindowsFormUtil.CenterFormOnCursor(dataManager, true);
+                    if (dataManager.ShowDialog(ModalForm.OwnerWindow) == System.Windows.Forms.DialogResult.OK)
+                      elementIds = dataManager.GetData<IGH_Goo>().AllData(true).OfType<Types.Element>().Select(x => x.Value);
+                  }
+                  break;
+
+                case TaskDialogResult.Yes:
+                  using (var transaction = new Transaction(Revit.ActiveDBDocument, "Delete elements"))
+                  {
+                    transaction.Start();
+                    Revit.ActiveDBDocument.Delete(elements);
+                    transaction.Commit();
+                  }
+
+                  ExpireDownStreamObjects();
+                  OnPingDocument().NewSolution(false);
+                  break;
+              }
+            }
+            while (result == TaskDialogResult.CommandLink1 || result == TaskDialogResult.CommandLink2);
+          }
+        }
       }
     }
     #endregion
