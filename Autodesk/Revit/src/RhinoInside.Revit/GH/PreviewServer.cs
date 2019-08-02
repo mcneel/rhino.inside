@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH
     Rhino.Geometry.BoundingBox primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
     int RebuildPrimitives = 1;
 
-    public static GH_PreviewMode PreviewMode = GH_PreviewMode.Disabled;
+    public static GH_PreviewMode PreviewMode = GH_PreviewMode.Shaded;
 
     #region IExternalServer
     public override string GetName() => "Grasshopper";

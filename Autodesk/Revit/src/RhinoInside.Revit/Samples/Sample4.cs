@@ -35,19 +35,7 @@ namespace RhinoInside.Revit.Samples
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
-      var items = ribbonPanel.AddStackedItems
-      (
-        new ComboBoxData("Category"),
-        new PulldownButtonData("cmdRhinoInside.GrasshopperPlayer", "Grasshopper Player")
-      );
-
-      categoriesComboBox = items[0] as Autodesk.Revit.UI.ComboBox;
-      if (categoriesComboBox != null)
-      {
-        categoriesComboBox.ToolTip = "Category where Grasshopper Player will place geometry.";
-      }
-
-      mruPullDownButton = items[1] as Autodesk.Revit.UI.PulldownButton;
+      mruPullDownButton = ribbonPanel.AddItem(new PulldownButtonData("cmdRhinoInside.GrasshopperPlayer", "Player")) as Autodesk.Revit.UI.PulldownButton;
       if (mruPullDownButton != null)
       {
         mruPullDownButton.ToolTip = "Loads and evals a Grasshopper definition";
@@ -57,45 +45,8 @@ namespace RhinoInside.Revit.Samples
 
         mruPullDownButton.AddPushButton(typeof(Browse), "Browse...", "Browse for a Grasshopper definition to evaluate", typeof(Availability));
       }
-
-      EventHandler<IdlingEventArgs> BuildDirectShapeCategoryList = null;
-      Revit.ApplicationUI.Idling += BuildDirectShapeCategoryList = (sender, args) =>
-      {
-        var doc = (sender as UIApplication)?.ActiveUIDocument.Document;
-        if (doc == null)
-          return;
-
-        var directShapeCategories = Enum.GetValues(typeof(BuiltInCategory)).Cast<BuiltInCategory>().
-        Where(categoryId => DirectShape.IsValidCategoryId(new ElementId(categoryId), doc)).
-        Select(categoryId => Autodesk.Revit.DB.Category.GetCategory(doc, categoryId));
-
-        foreach (var group in directShapeCategories.GroupBy(x => x.CategoryType).OrderBy(x => x.Key.ToString()))
-        {
-          foreach (var category in group.OrderBy(x => x.Name))
-          {
-            var comboBoxMemberData = new ComboBoxMemberData(((BuiltInCategory) category.Id.IntegerValue).ToString(), category.Name)
-            {
-              GroupName = group.Key.ToString()
-            };
-            var item = categoriesComboBox.AddItem(comboBoxMemberData);
-
-            if ((BuiltInCategory) category.Id.IntegerValue == BuiltInCategory.OST_GenericModel)
-              categoriesComboBox.Current = item;
-          }
-        }
-
-        Revit.ApplicationUI.Idling -= BuildDirectShapeCategoryList;
-      };
     }
 
-    public static BuiltInCategory ActiveBuiltInCategory
-    {
-      get => Enum.TryParse(categoriesComboBox.Current.Name, out BuiltInCategory builtInCategory) ?
-             builtInCategory :
-             BuiltInCategory.OST_GenericModel;
-    }
-
-    static Autodesk.Revit.UI.ComboBox categoriesComboBox = null;
     static PulldownButton mruPullDownButton = null;
     static PushButton[] mruPushPuttons = null;
 
@@ -467,7 +418,7 @@ namespace RhinoInside.Revit.Samples
         {
           if (trans.Start(MethodBase.GetCurrentMethod().DeclaringType.Name) == TransactionStatus.Started)
           {
-            var categoryId = new ElementId(ActiveBuiltInCategory);
+            var categoryId = new ElementId(CommandGrasshopperBake.ActiveBuiltInCategory);
 
             foreach (var output in outputs)
             {
