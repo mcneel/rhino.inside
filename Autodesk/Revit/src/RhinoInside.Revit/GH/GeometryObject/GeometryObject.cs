@@ -521,7 +521,7 @@ namespace RhinoInside.Revit.GH.Parameters
       Menu_AppendItem(menu, "Delete elements", Menu_DeleteElements, DataType != GH_ParamData.remote && !VolatileData.IsEmpty, false);
     }
 
-    static IEnumerable<ElementId> ToElementIds(IGH_Structure data) =>
+    internal static IEnumerable<ElementId> ToElementIds(IGH_Structure data) =>
       data.AllData(true).
       OfType<Types.IGH_GeometricGoo>().
       Where(x => x.IsReferencedGeometry).
