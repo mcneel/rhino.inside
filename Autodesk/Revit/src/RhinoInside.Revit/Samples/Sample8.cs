@@ -112,7 +112,7 @@ namespace RhinoInside.Revit.Samples
             (
               openFileDialog.FileName,
               data.Application.ActiveUIDocument.Document,
-              Sample4.ActiveBuiltInCategory
+              CommandGrasshopperBake.ActiveBuiltInCategory
             );
           case DialogResult.Cancel: return Result.Cancelled;
         }
