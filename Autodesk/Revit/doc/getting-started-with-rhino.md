@@ -8,8 +8,8 @@ Here is how to get started with Rhino/Grasshopper in Revit.
 
 After installing Rhino.Inside Revit, a toolbar will show up in Revit under Add-ons.  Press the Rhinoceros button to load Rhino.inside.
 
-<img src="images/rhino-button-addin.png" width="100" align="left">
-
+<img src="images/rhino-button-addin.png" width="100"></img>    
+  
 Once Rhino.inside is successfully loaded, a Rhinoceros toolbar will appear in Revit:
 
 <img src="images/revit-toolbar.png" width="100%" align="center">
