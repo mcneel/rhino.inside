@@ -1419,7 +1419,7 @@ namespace RhinoInside.Revit
                   if (edgeIds == null)
                   {
                     edgeIds = brepEdges[edge.EdgeIndex] = new List<BRepBuilderGeometryId>();
-                    foreach (var e in edge.ToHost())
+                    foreach (var e in edge.ToHost().SelectMany(x => x.ToBoundedCurves()))
                       edgeIds.Add(builder.AddEdge(BRepBuilderEdgeGeometry.Create(e)));
                   }
 
