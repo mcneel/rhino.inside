@@ -680,7 +680,7 @@ namespace RhinoInside.Revit
               var points = nurbsSurface.Points;
               for (int u = 0; u < controlPointCountU; u++)
               {
-                for (int v = 0; v < controlPointCountU; v++)
+                for (int v = 0; v < controlPointCountV; v++)
                 {
                   var pt = controlPoints[u + (v * controlPointCountU)];
                   if (nurbsData.IsRational)
