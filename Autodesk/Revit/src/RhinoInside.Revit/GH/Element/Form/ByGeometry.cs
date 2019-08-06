@@ -32,14 +32,14 @@ namespace RhinoInside.Revit.GH.Components
       Rhino.Geometry.Brep brep
     )
     {
-      if (!doc.IsFamilyDocument || !doc.OwnerFamily.IsConceptualMassFamily)
-        throw new InvalidOperationException("This component can only run in Conceptual Mass Family editor");
+      if (!doc.IsFamilyDocument)
+        throw new InvalidOperationException("Document is not a family document, nor a document editing an in-place family.");
 
-      var scaleFactor = 1.0 / Revit.ModelUnits;
+     var scaleFactor = 1.0 / Revit.ModelUnits;
       if (scaleFactor != 1.0)
         brep.Scale(scaleFactor);
 
-      if (brep.Faces.Count == 1 && brep.Faces[0].Loops.Count == 1 && brep.Faces[0].TryGetPlane(out var capPlane))
+      if (doc.OwnerFamily.IsConceptualMassFamily && brep.Faces.Count == 1 && brep.Faces[0].Loops.Count == 1 && brep.Faces[0].TryGetPlane(out var capPlane))
       {
         using (var sketchPlane = SketchPlane.Create(doc, capPlane.ToHost()))
         using (var referenceArray = new ReferenceArray())
@@ -60,7 +60,7 @@ namespace RhinoInside.Revit.GH.Components
           );
         }
       }
-      else if (brep.TryGetExtrusion(out var extrusion) && (extrusion.CapCount == 2 || !extrusion.IsClosed(0)))
+      else if (doc.OwnerFamily.IsConceptualMassFamily && brep.TryGetExtrusion(out var extrusion) && (extrusion.CapCount == 2 || !extrusion.IsClosed(0)))
       {
         using (var sketchPlane = SketchPlane.Create(doc, extrusion.GetProfilePlane(0.0).ToHost()))
         using (var referenceArray = new ReferenceArray())
@@ -91,7 +91,9 @@ namespace RhinoInside.Revit.GH.Components
           else
           {
             ReplaceElement(ref element, FreeFormElement.Create(doc, solid));
-            element.get_Parameter(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY).Set(new ElementId(BuiltInCategory.OST_MassForm));
+
+            if (doc.OwnerFamily.IsConceptualMassFamily)
+              element.get_Parameter(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY).Set(new ElementId(BuiltInCategory.OST_MassForm));
           }
 
           element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING)?.Set
