@@ -6,7 +6,7 @@
 
 This guide is about writing a custom Python component in Grasshopper while running Rhino.inside Revit.
 
-##<img src="images/Python.png" width="35px"> GH Python component
+## <img src="images/Python.png" width="35px"> GH Python component
 
 The GHpython component contains the inputs, outputs and a code editor.  To get started with the component go to the Math tab in Grasshopper and drag out the Python component. 
 
