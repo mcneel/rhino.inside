@@ -9,7 +9,7 @@ Here is how to get started with Rhino/Grasshopper in Revit.
 After installing Rhino.Inside Revit, a toolbar will show up in Revit under Add-ons.  Press the Rhinoceros button to load Rhino.inside.
 
 <img src="images/rhino-button-addin.png" width="100"></img>    
-  
+
 Once Rhino.inside is successfully loaded, a Rhinoceros toolbar will appear in Revit:
 
 <img src="images/revit-toolbar.png" width="100%" align="center">
@@ -91,7 +91,9 @@ Within the Grasshopper Revit Toolbar is the Directshape Component.  Along with t
 
 ## <img src="images/Grasshopper.png" width="35px"> Running Grasshopper in Revit
 
-Grasshopper can be started within Revit. Within Grasshopper there is a Revit toolbar of components which manage the interaction of Grasshopper and Revit.  To find out more about these tools, see the [Grasshopper Components in Revit Guide](gh-components.md)
+Grasshopper can be started within Revit. Within Grasshopper there is a Revit toolbar of components which manage the interaction of Grasshopper and Revit.  
+
+To find out more about these tools, see the [Grasshopper Components in Revit Guide](gh-components.md)
 
 
 ![Rhino sending geometry to Revit](images/gh-revit-roof.png)
@@ -99,6 +101,11 @@ Grasshopper can be started within Revit. Within Grasshopper there is a Revit too
 
 
 ## <img src="images/Python.png" width="35px"> Running Rhino.Python in Revit
+
+Both the Revit and Rhino APIs are available simultaneously with Rhino.inside.  There are two main ways Python is used.
+
+1. [Create custom Python components in Grasshopper that are Revit aware](ghpython-in-revit.md)
+2. Use the Rhino Python editor to create Python Scripts.
 
 The Rhino.Python editor can be called up from within Revit. By referencing the Revit.Python namespaces, both the Rhino and Revit Python scripts can be called from a single Python script.
 
