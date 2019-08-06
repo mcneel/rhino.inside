@@ -398,7 +398,7 @@ namespace RhinoInside.Revit
         var polycurve = new Rhino.Geometry.PolyCurve();
 
         foreach (var curve in loop)
-          polycurve.Append(curve.ToRhino());
+          polycurve.AppendSegment(curve.ToRhino());
 
         yield return polycurve;
       }
@@ -413,7 +413,7 @@ namespace RhinoInside.Revit
     public static Rhino.Geometry.RevSurface ToRhino(this Autodesk.Revit.DB.ConicalSurface surface, Interval interval)
     {
       var plane = new Rhino.Geometry.Plane(surface.Origin.ToRhino(), (Vector3d) surface.XDir.ToRhino(), (Vector3d) surface.YDir.ToRhino());
-      double height = interval.Max;
+      double height = Math.Abs(interval.Min) > Math.Abs(interval.Max) ? interval.Min : interval.Max;
       var cone = new Rhino.Geometry.Cone(plane, height, Math.Tan(surface.HalfAngle) * height);
 
       return cone.ToRevSurface();
@@ -680,12 +680,13 @@ namespace RhinoInside.Revit
               var points = nurbsSurface.Points;
               for (int u = 0; u < controlPointCountU; u++)
               {
+                int u_offset = u * controlPointCountV;
                 for (int v = 0; v < controlPointCountV; v++)
                 {
-                  var pt = controlPoints[u + (v * controlPointCountU)];
+                  var pt = controlPoints[u_offset + v];
                   if (nurbsData.IsRational)
                   {
-                    double w = weights[u + (v * controlPointCountU)];
+                    double w = weights[u_offset + v];
                     points.SetPoint(u, v, pt.X * w, pt.Y * w, pt.Z * w, w);
                   }
                   else
