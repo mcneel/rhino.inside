@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
@@ -183,16 +184,16 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class DirectShapeByPosition : ReconstructElementComponent
+  public class DirectShapeByLocation : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("A811EFA4-8DE2-46F3-9F88-3D4F13FE40BE");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
-    public DirectShapeByPosition() : base
+    public DirectShapeByLocation() : base
     (
-      "AddDirectShape.ByPosition", "ByPosition",
-      "Given its Position, it reconstructs a DirectShape to the active Revit document",
+      "AddDirectShape.ByLocation", "ByLocation",
+      "Given its location, it reconstructs a DirectShape into the active Revit document",
       "Revit", "Build"
     )
     { }
@@ -202,11 +203,12 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.Element(), "DirectShape", "DS", "New DirectShape", GH_ParamAccess.item);
     }
 
-    void ReconstructDirectShapeByPosition
+    void ReconstructDirectShapeByLocation
     (
       Document doc,
       ref Autodesk.Revit.DB.Element element,
 
+      [Description("Location where to place the element. Point or plane is accepted.")]
       Rhino.Geometry.Plane location,
       Autodesk.Revit.DB.DirectShapeType type
     )

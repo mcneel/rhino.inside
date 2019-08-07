@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Autodesk.Revit.DB;
@@ -8,16 +9,16 @@ using RhinoInside.Runtime.InteropServices;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class FamilyInstanceByPointAtHost : ReconstructElementComponent
+  public class FamilyInstanceByLocation : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("0C642D7D-897B-479E-8668-91E09222D7B9");
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
-    public FamilyInstanceByPointAtHost() : base
+    public FamilyInstanceByLocation () : base
     (
-      "AddFamilyInstance.ByPointAtHost", "ByPointAtHost",
-      "Given its Position, it adds a FamilyInstance element to the active Revit document in a host element",
+      "AddFamilyInstance.ByLocation", "ByLocation",
+      "Given its location, it reconstructs a FamilyInstance element into the active Revit document",
       "Revit", "Build"
     )
     { }
@@ -27,11 +28,12 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.Element(), "Element", "E", "New Instance Element", GH_ParamAccess.item);
     }
 
-    void ReconstructFamilyInstanceByPointAtHost
+    void ReconstructFamilyInstanceByLocation
     (
       Document doc,
       ref Autodesk.Revit.DB.Element element,
 
+      [Description("Location where to place the element. Point or plane is accepted.")]
       Rhino.Geometry.Plane location,
       Autodesk.Revit.DB.FamilySymbol type,
       Optional<Autodesk.Revit.DB.Level> level,

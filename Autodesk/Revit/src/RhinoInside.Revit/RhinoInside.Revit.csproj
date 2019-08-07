@@ -289,7 +289,7 @@
     <None Include="Resources\GH\Vertex.png" />
     <None Include="Resources\GH\WallByCurve.png" />
     <None Include="Resources\GH\RoofByOutline.png" />
-    <None Include="Resources\GH\FamilyInstanceByPointAtHost.png" />
+    <None Include="Resources\GH\FamilyInstanceByLocation.png" />
     <None Include="Resources\GH\ElementIdentity.png" />
     <None Include="Resources\GH\ColumnByCurve.png" />
     <None Include="Resources\GH\DirectShapeByBrep.png" />
