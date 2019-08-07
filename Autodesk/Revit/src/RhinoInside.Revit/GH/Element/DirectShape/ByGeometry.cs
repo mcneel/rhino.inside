@@ -17,9 +17,10 @@ namespace RhinoInside.Revit.GH.Parameters
     public DirectShapeCategories()
     {
       Category = "Revit";
-      SubCategory = "Build";
+      SubCategory = "Category";
       Name = "DirectShape.Categories";
       NickName = "Categories";
+      MutableNickName = false;
       Description = "Provides a picker of a valid DirectShape category";
 
       ListItems.Clear();
@@ -56,7 +57,7 @@ namespace RhinoInside.Revit.GH.Components
     (
       "AddDirectShape.ByGeometry", "ByGeometry",
       "Given its Geometry, it adds a DirectShape element to the active Revit document",
-      "Revit", "Build"
+      "Revit", "Geometry"
     )
     { }
 
@@ -83,7 +84,7 @@ namespace RhinoInside.Revit.GH.Components
         name = Rhino.RhinoDoc.ActiveDoc.Objects.FindId(geometry[0].ReferenceID)?.Name;
 
       if (element is DirectShape ds && ds.Category.Id == category.Value.Id) { }
-      else ds = DirectShape.CreateElement(doc, new ElementId((BuiltInCategory) category.Value.Id.IntegerValue));
+      else ds = DirectShape.CreateElement(doc, category.Value.Id);
 
       var shape = geometry.
                   Select(x => AsGeometryBase(x)).
@@ -113,6 +114,125 @@ namespace RhinoInside.Revit.GH.Components
       }
 
       return scriptVariable as Rhino.Geometry.GeometryBase;
+    }
+  }
+
+  public class DirectShapeTypeByGeometry : ReconstructElementComponent
+  {
+    public override Guid ComponentGuid => new Guid("25DCFE8E-5BE9-460C-80E8-51B7041D8FED");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
+
+    public DirectShapeTypeByGeometry() : base
+    (
+      "AddDirectShapeType.ByGeometry", "ByGeometry",
+      "Given its Geometry, it reconstructs a DirectShapeType to the active Revit document",
+      "Revit", "Type"
+    )
+    { }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ElementType(), "Type", "T", "New DirectShapeType", GH_ParamAccess.item);
+    }
+
+    void ReconstructDirectShapeTypeByGeometry
+    (
+      Document doc,
+      ref Autodesk.Revit.DB.ElementType elementType,
+
+      IList<IGH_GeometricGoo> geometry,
+      string name,
+      Optional<Autodesk.Revit.DB.Category> category
+    )
+    {
+      var scaleFactor = 1.0 / Revit.ModelUnits;
+
+      SolveOptionalCategory(ref category, doc, BuiltInCategory.OST_GenericModel, nameof(geometry));
+
+      if (elementType is DirectShapeType directShapeType && directShapeType.Category.Id == category.Value.Id) { }
+      else directShapeType = DirectShapeType.Create(doc, name, category.Value.Id);
+
+      var shape = geometry.
+                  Select(x => AsGeometryBase(x)).
+                  Select(x => { ThrowIfNotValid(nameof(geometry), x); return x; }).
+                  SelectMany(x => x.ToHost(scaleFactor)).
+                  SelectMany(x => x.ToDirectShapeGeometry());
+
+      directShapeType.SetShape(shape.ToList());
+      directShapeType.Name = name;
+
+      ReplaceElement(ref elementType, directShapeType);
+    }
+
+    Rhino.Geometry.GeometryBase AsGeometryBase(IGH_GeometricGoo obj)
+    {
+      var scriptVariable = obj.ScriptVariable();
+      switch (scriptVariable)
+      {
+        case Rhino.Geometry.Point3d point: return new Rhino.Geometry.Point(point);
+        case Rhino.Geometry.Line line: return new Rhino.Geometry.LineCurve(line);
+        case Rhino.Geometry.Rectangle3d rect: return rect.ToNurbsCurve();
+        case Rhino.Geometry.Arc arc: return new Rhino.Geometry.ArcCurve(arc);
+        case Rhino.Geometry.Circle circle: return new Rhino.Geometry.ArcCurve(circle);
+        case Rhino.Geometry.Ellipse ellipse: return ellipse.ToNurbsCurve();
+        case Rhino.Geometry.Box box: return box.ToBrep();
+      }
+
+      return scriptVariable as Rhino.Geometry.GeometryBase;
+    }
+  }
+
+  public class DirectShapeByPosition : ReconstructElementComponent
+  {
+    public override Guid ComponentGuid => new Guid("A811EFA4-8DE2-46F3-9F88-3D4F13FE40BE");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
+
+    public DirectShapeByPosition() : base
+    (
+      "AddDirectShape.ByPosition", "ByPosition",
+      "Given its Position, it reconstructs a DirectShape to the active Revit document",
+      "Revit", "Build"
+    )
+    { }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "DirectShape", "DS", "New DirectShape", GH_ParamAccess.item);
+    }
+
+    void ReconstructDirectShapeByPosition
+    (
+      Document doc,
+      ref Autodesk.Revit.DB.Element element,
+
+      Rhino.Geometry.Plane location,
+      Autodesk.Revit.DB.DirectShapeType type
+    )
+    {
+      var scaleFactor = 1.0 / Revit.ModelUnits;
+
+      if (element is DirectShape ds && ds.Category.Id == type.Category.Id) { }
+      else ds = DirectShape.CreateElement(doc, type.Category.Id);
+
+      ds.SetTypeId(type.Id);
+
+      var library = DirectShapeLibrary.GetDirectShapeLibrary(doc);
+      if (!library.ContainsType(type.UniqueId))
+        library.AddDefinitionType(type.UniqueId, type.Id);
+
+      var transform = Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, location.Scale(scaleFactor)).ToHost();
+      ds.SetShape(DirectShape.CreateGeometryInstance(doc, type.UniqueId, transform));
+
+      var parametersMask = new BuiltInParameter[]
+      {
+        BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+        BuiltInParameter.ELEM_FAMILY_PARAM,
+        BuiltInParameter.ELEM_TYPE_PARAM
+      };
+
+      ReplaceElement(ref element, ds, parametersMask);
     }
   }
 }
