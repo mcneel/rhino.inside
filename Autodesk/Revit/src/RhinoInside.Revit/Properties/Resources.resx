@@ -262,8 +262,8 @@
   <data name="DirectShapeCategories" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\gh\directshapecategories.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="FamilyInstanceByPointAtHost" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\GH\FamilyInstanceByPointAtHost.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="FamilyInstanceByLocation" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\FamilyInstanceByLocation.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="RoofByOutline" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\GH\RoofByOutline.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
