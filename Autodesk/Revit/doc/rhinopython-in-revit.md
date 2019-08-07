@@ -4,7 +4,7 @@
 
 # Writing Python in Rhino within Revit
 
-This guide is about writing a custom Python component in Grasshopper while running Rhino.inside Revit.
+This guide is about writing a custom Python component in Grasshopper while running Rhino.inside Revit. This sample component will create a sphere with Rhino and then draw it in Revit. 
 
 ##<img src="images/Python.png" width="35px"> Rhino.Python editor
 
@@ -20,27 +20,18 @@ Select the Python Icon <img src="images/Python.png" width="35px">  to bring up t
 
   
 
-For a detail guide on the GHPython component in Grasshopper, please review [Your First Python Script in Grasshopper Guide](https://developer.rhino3d.com/guides/rhinopython/your-first-python-script-in-grasshopper/)
+For a detail guide on the Python in Rhino see the guides on [Rhino.Python Developer Guides](https://developer.rhino3d.com/guides/rhinopython/)
 
-Double-click on the component to open the Python editor:
+By default, the Python opens like this:
 
-<img src="images/ghpython-revit-editor.png" width="100%" align="center">
+<img src="images/rhino-python-editor.png" width="100%" align="center">
 
-## Setting up the component
-
-This sample component will preview a sphere of an adjustable radius in Revit and Rhino.  It will pass that sphere onto other Grasshopper components through the `a` output.  And it will Bake (actually create) the sphere in Revit and Rhino if the `button` on `y` is pressed.
-
-<img src="images/sphere-sample-gh.png" width="60%" align="left">
-
-Use the Python component, a slider and a button to hook up this system.
 
 ## Including the Rhino.inside and Revit APIs
 
-There are a few libraries we need to reference in the Python component to allow access to both the Revit API and the Rhino.inside utilities:
+There are a few libraries we need to reference in the Python component to allow access to both the Revit API and the Rhino.inside utilities.  These lines will need to exist at the start of every Rhino.inside Revit script.
 
 ```python
-import rhinoscriptsyntax as rs # included in the existing template
-
 import clr
 clr.AddReference('System.Core')
 clr.AddReference('RhinoInside.Revit')
@@ -53,38 +44,17 @@ from Autodesk.Revit.DB import *
 from Rhino import Geometry as Rhino
 from RhinoInside.Revit import Revit, Convert
 ```
-
 Once this foundation is layed down, then we can continue to create the script.
 
 
-## Drawing a Sphere with a preview
-
-To show how geometry created in Grasshopper will preview in both Rhino and Revit dynamically we can create this script.  Here Grasshopper will create a sphere based on the x input value:
-
-```python
-sphere = Rhino.Sphere(Rhino.Point3d.Origin, x * Revit.ModelUnits)
-
-a = sphere #writes to output of component and previews the geometry
-```
-The Sphere method is from the Rhino.Geometry namespace.
-
-By setting the output to `a` then Grasshopper will preview the results in both Rhino and Revit.  It also allows the `preview` option on the component to be toggled and the sphere geometry to be passed down to the next component.
-
-Use the slider to adjust the radius.  Make sure the slider values are set bit enough.
-
-
-## Baking objects into Revit from Python
+## Creating Objects  into Revit from Python
 
 We can add a custom baking definition in this component.  This can serve as a template to almost an  unlimited number of ways and elements that one might want to create Revit objects from Grasshopper.
 
-Because baking objects to Revit can take a long time and many times only should be done once, this bake functions will only execute if the `y` intput is set to `TRUE` on the component. So use an input button, so if it is pressed Grasshopper will only bake the object once.
+Create a definition that can create geometry in Revit called CommitToDocument.  In this case we create a mesh, but other Gemetry types can be created in similiar ways.
 
-First, create a routine that can be called to bake.
-
-```python
+```
 def CommitToDocument(doc):
-
-    brep = sphere.ToBrep()
     meshes = Rhino.Mesh.CreateFromBrep(brep, Rhino.MeshingParameters.Default)
 
     category = ElementId(BuiltInCategory.OST_GenericModel)
@@ -93,23 +63,36 @@ def CommitToDocument(doc):
     for geometry in Enumerable.ToList(Convert.ToHost(meshes)):
         ds.AppendShape(geometry)
 ```
+## Creating a Sphere in memory
 
-Then call that `def` inside an `if` statement:
+THen we get to creating the sphere using Rhino geometry methods. Create a sphere with a radius of 12 units:
 
 ```python
-if y == True:
-    Revit.EnqueueAction(Action[Document](CommitToDocument))
+sphere = Rhino.Sphere(Rhino.Point3d.Origin, 12 * Revit.ModelUnits)
+```
+The Sphere method is from the Rhino.Geometry namespace.
+
+Converting that Sphere to a generic NURBS Brep is easy:
+
+```python
+brep = sphere.ToBrep()
+```
+And finally, use the CommitToDocument definition to push the sphere into Revit:
+
+```python
+Revit.EnqueueAction(Action[Document](CommitToDocument))
 ```
 
 ## Additional Resources
 
-Here are a few links to more resources about all the SDKs involved:
+Python scripts created for Revit can be organized and distributed using * [PyRevit for advanced Python in Revit](https://ein.sh/pyRevit/)
+
+Here are a few links additional resources about all the SDKs involved:
 
 * [API Docs for Revit, RhinoCommon, Grasshopper and Navisworks](https://apidocs.co/apps/)
 * [The Building Coder for expert guidance in BIM and Revit API](https://thebuildingcoder.typepad.com/)
 * [The Grasshopper IO project with the largest catalog of Grasshopper components available.](https://rhino.github.io/)
 * [Python guides and APi in Rhino](https://developer.rhino3d.com/guides/rhinopython/)
-* [PyRevit for advanced Python in Revit](https://ein.sh/pyRevit/)
 * [Data Hierarchy configuration in Revit](https://www.modelical.com/en/gdocs/revit-data-hierarchy/)
 
 ##  Completed Sample Code
@@ -126,6 +109,7 @@ from System.Linq import Enumerable
 from Autodesk.Revit.DB import *
 from Rhino import Geometry as Rhino
 from RhinoInside.Revit import Revit, Convert
+import json
 
 def CommitToDocument(doc):
     meshes = Rhino.Mesh.CreateFromBrep(brep, Rhino.MeshingParameters.Default)
@@ -141,6 +125,5 @@ sphere = Rhino.Sphere(Rhino.Point3d.Origin, 12 * Revit.ModelUnits)
 brep = sphere.ToBrep()
 
 Revit.EnqueueAction(Action[Document](CommitToDocument))
-
 ```
 
