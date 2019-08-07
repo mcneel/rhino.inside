@@ -286,7 +286,7 @@ namespace RhinoInside.Revit.UI
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       GH.PreviewServer.PreviewMode = GH_PreviewMode.Disabled;
-      Revit.RefreshActiveView();
+      data.Application.ActiveUIDocument.RefreshActiveView();
       return Result.Succeeded;
     }
   }
@@ -313,7 +313,7 @@ namespace RhinoInside.Revit.UI
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       GH.PreviewServer.PreviewMode = GH_PreviewMode.Wireframe;
-      Revit.RefreshActiveView();
+      data.Application.ActiveUIDocument.RefreshActiveView();
       return Result.Succeeded;
     }
   }
@@ -340,7 +340,7 @@ namespace RhinoInside.Revit.UI
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       GH.PreviewServer.PreviewMode = GH_PreviewMode.Shaded;
-      Revit.RefreshActiveView();
+      data.Application.ActiveUIDocument.RefreshActiveView();
       return Result.Succeeded;
     }
   }
