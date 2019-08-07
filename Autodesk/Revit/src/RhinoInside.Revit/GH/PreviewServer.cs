@@ -166,11 +166,14 @@ namespace RhinoInside.Revit.GH
               case Rhino.Geometry.Box box:          primitives.Add(new ParamPrimitive(docObject, Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1))); break;
               case Rhino.Geometry.Brep brep:
               {
-                var previewMesh = new Rhino.Geometry.Mesh();
-                previewMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters()));
-                //previewMesh.Weld(Rhino.RhinoMath.ToRadians(10.0));
+                var brepMeshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters());
+                if (brepMeshes != null)
+                {
+                  var previewMesh = new Rhino.Geometry.Mesh();
+                  previewMesh.Append(brepMeshes);
 
-                primitives.Add(new ParamPrimitive(docObject, previewMesh));
+                  primitives.Add(new ParamPrimitive(docObject, previewMesh));
+                }
               }
               break;
             }

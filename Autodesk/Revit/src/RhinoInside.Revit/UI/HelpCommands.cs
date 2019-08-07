@@ -24,6 +24,7 @@ namespace RhinoInside.Revit.UI
         helpButton.Image = ImageBuilder.BuildImage("?");
         helpButton.LargeImage = ImageBuilder.BuildLargeImage("?");
 
+        helpButton.AddPushButton(typeof(CommandSampleFiles),       "Sample files",      "Opens sample files folder",                   typeof(AllwaysAvailable));
         helpButton.AddPushButton(typeof(CommandAPIDocs),           "APIDocs",           "Opens apidocs.co website",                   typeof(AllwaysAvailable));
         helpButton.AddPushButton(typeof(CommandTheBuildingCoder),  "TheBuildingCoder",  "Opens thebuildingcoder.typepad.com website", typeof(AllwaysAvailable));
         helpButton.AddSeparator();
@@ -35,6 +36,22 @@ namespace RhinoInside.Revit.UI
       }
 
       CommandCheckForUpdates.CheckUpdates();
+    }
+  }
+
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  class CommandSampleFiles : HelpCommand
+  {
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    {
+#if DEBUG
+      var location = Path.Combine(Addin.SourceCodePath, "Samples");
+#else
+      var location = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+#endif
+      using (System.Diagnostics.Process.Start(location)) { }
+
+      return Result.Succeeded;
     }
   }
 
