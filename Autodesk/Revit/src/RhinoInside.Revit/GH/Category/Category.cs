@@ -166,10 +166,10 @@ namespace RhinoInside.Revit.GH.Parameters
   public class Category : GH_PersistentParam<Types.Category>
   {
     public override Guid ComponentGuid => new Guid("6722C7A5-EFD3-4119-A7FD-6C8BE892FD04");
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_Exposure Exposure => GH_Exposure.primary;
     protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
-    public Category() : base("Category", "Category", "Represents a Revit document category.", "Revit", "Category") { }
+    public Category() : base("Category", "Category", "Represents a Revit document category.", "Params", "Revit") { }
 
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Category> values) => GH_GetterResult.cancel;
     protected override GH_GetterResult Prompt_Singular(ref Types.Category value) => GH_GetterResult.cancel;

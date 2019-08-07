@@ -845,10 +845,10 @@ namespace RhinoInside.Revit.GH.Parameters
 {
   public class Element : GH_PersistentGeometryParam<Types.Element>
   {
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
 
-    public Element() : base("Element", "Element", "Represents a Revit document element.", "Revit", "Element") { }
+    public Element() : base("Element", "Element", "Represents a Revit document element.", "Params", "Revit") { }
 
     protected override GH_GetterResult Prompt_Singular(ref Types.Element element)
     {
@@ -927,15 +927,15 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to decompose", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to query for its identity", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddTextParameter("Name", "N", "Element name", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.Category(), "Category", "C", "Element category", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.ElementType(), "Type", "T", "Element type", GH_ParamAccess.item);
-      manager.AddTextParameter("UniqueID", "UUID", "Element UUID", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Category(), "Category", "C", "Category in which the Element resides", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.ElementType(), "Type", "T", "ElementType of the Element", GH_ParamAccess.item);
+      manager.AddTextParameter("Name", "N", "A human readable name for the Element", GH_ParamAccess.item);
+      manager.AddTextParameter("UniqueID", "UUID", "A stable unique identifier for the Element within the document", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -944,9 +944,9 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Element", ref element))
         return;
 
-      DA.SetData("Name", element?.Name);
       DA.SetData("Category", element?.Category);
       DA.SetData("Type", Revit.ActiveDBDocument.GetElement(element?.GetTypeId()));
+      DA.SetData("Name", element?.Name);
       DA.SetData("UniqueID", element?.UniqueId);
     }
   }
