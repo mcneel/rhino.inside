@@ -7,6 +7,52 @@ This guide documents the Grasshopper components that support Revit interaction.
 
 ## Components
 
+#### Parameter Components (Params tab)
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td><img src="GH/Category.png" alt="BeamByCurve" width="32"></td>
+    <td>Category</td>
+    <td>Revit Category Param used for selecting persistent Category (future)</td>
+  </tr>
+  <tr>
+    <td><img src="GH/Element.png" alt="BeamByCurve" width="32"></td>
+    <td>Element</td>
+    <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ElementType.png" alt="ColumnByCurve" width="32"></td>
+    <td>Element Type</td>
+    <td>Get Element type from the Element(s) input</td>
+  </tr>
+  <tr>
+    <td><img src="GH/Edge.png" alt="ColumnByCurve" width="32"></td>
+    <td>Edge Element</td>
+    <td>Select a Revit Element Edge(s)</td>
+  </tr>
+  <tr>
+    <td><img src="GH/Face.png" alt="BeamByCurve" width="32"></td>
+    <td>Face Element</td>
+    <td>Select a Revit Element Face(s)</td>
+  </tr>
+  <tr>
+    <td><img src="GH/Vertex.png" alt="ColumnByCurve" width="32"></td>
+    <td>Vertex Element</td>
+    <td>Select a Revit Element Vertex(s)</td>
+  </tr>
+  <tr>
+    <td><img src="GH/SketchPlane.png" alt="BeamByCurve" width="32"></td>
+    <td>Revit SketchPlane</td>
+    <td>Represents a Revit document sketch plane. (Selector in the future)</td>
+  </tr>
+</table>
+
+
 #### Build Components
 
 <table style="width:100%">
@@ -32,7 +78,7 @@ This guide documents the Grasshopper components that support Revit interaction.
   </tr>
   <tr>
     <td><img src="GH/FamilyInstanceByPointAtHost.png" alt="AddFamilyInstanceByPoint" width="32"></td>
-    <td>Add Family Instance by Point at Host</td>
+    <td>Add Family Instance by Location</td>
     <td>Given a position, add a FamilyInstance element to the active Revit document in a host element.</td>
   </tr>
   <tr>
@@ -51,14 +97,9 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Create a Revit Wall Object using a plan curve. The Level, Type, Height and other properties can be specified. See the component help for options.</td>
   </tr>
   <tr>
-    <td><img src="GH/DirectShapeByGeometry.png" alt="AddDirectShapeByGeometry" width="32"></td>
-    <td>Add DirectShape Geometry</td>
-    <td>Create a Directshape Element from a Rhino Geometry. This is the most flexible way to import Geometry.</td>
-  </tr>
-  <tr>
-    <td><img src="GH/DirectShapeCategories.png" alt="DirectShapeCategories" width="32"></td>
-    <td>DirectShape Category Selector</td>
-    <td>Select a category for using with the DirectShape Component</td>
+    <td><img src="GH/AddDirectShapeByLocation.png" alt="AddDirectShapeByLocation" width="32"></td>
+    <td>Add DirectShape By Location</td>
+    <td>Create a Directshape instance from a Directshape Type. Insert a specific DirectShape instance. The input for this component many times will the the Element Type By Name Component.</td>
   </tr>
 </table>
 
@@ -78,14 +119,14 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Break a Revit Category into its component parts.  Name, Parent, Line-Color, Material, Allow Bounds and Material Quantities</td>
   </tr>
   <tr>
-    <td><img src="GH/Category.png" alt="BeamByCurve" width="32"></td>
-    <td>Category</td>
-    <td>Revit Category Param used for selecting persistent Category (future)</td>
-  </tr>
-  <tr>
     <td><img src="GH/CategoryTypes.png" alt="ColumnByCurve" width="32"></td>
     <td>Category Types</td>
     <td>A pick list of category types in Revit.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/DirectShapeCategories.png" alt="DirectShapeCategories" width="32"></td>
+    <td>DirectShape Category Selector</td>
+    <td>Select a category for using with the DirectShape Component</td>
   </tr>
 </table>
 
@@ -189,16 +230,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Create a mesh from an Element using the LOD and the Mesh quality settings</td>
   </tr>
   <tr>
-    <td><img src="GH/Element.png" alt="BeamByCurve" width="32"></td>
-    <td>Element</td>
-    <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
-  </tr>
-  <tr>
-    <td><img src="GH/ElementType.png" alt="ColumnByCurve" width="32"></td>
-    <td>Element Type</td>
-    <td>Get Element type from the Element(s) input</td>
-  </tr>
-  <tr>
     <td><img src="GH/ElementDelete.png" alt="DeleteElement" width="32"></td>
     <td>Element Delete</td>
     <td>Deletes the specified element out of Revit.</td>
@@ -234,20 +265,8 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Given a Point, it adds a Point element to the active Revit document</td>
   </tr>
   <tr>
-    <td><img src="GH/Edge.png" alt="ColumnByCurve" width="32"></td>
-    <td>Edge Element</td>
-    <td>Select a Revit Element Edge(s)</td>
-  </tr>
-  <tr>
-    <td><img src="GH/Face.png" alt="BeamByCurve" width="32"></td>
-    <td>Face Element</td>
-    <td>Select a Revit Element Face(s)</td>
-  </tr>
-  <tr>
-    <td><img src="GH/Vertex.png" alt="ColumnByCurve" width="32"></td>
-    <td>Vertex Element</td>
-    <td>Select a Revit Element Vertex(s)</td>
-  </tr>
+      <td><img src="GH/DirectShapeByGeometry.png" alt="AddDirectShapeByGeometry" width="32"></td>    <td>Add DirectShape Geometry</td>    <td>Create a Directshape Element from a Rhino Geometry. This is the most flexible way to import Geometry.</td>  
+    </tr>
 </table>
 
 
@@ -325,11 +344,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Add Sketchplane by Plane</td>
     <td>Given a Rhino Plane, it adds a SketchPlane element to the active Revit document</td>
   </tr>
-  <tr>
-    <td><img src="GH/SketchPlane.png" alt="BeamByCurve" width="32"></td>
-    <td>Revit SketchPlane</td>
-    <td>Represents a Revit document sketch plane. (Selector in the future)</td>
-  </tr>
 </table>
 
 #### Parameter Components
@@ -392,3 +406,35 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Given a set of Points, it adds a Topography surface to the active Revit document</td>
   </tr>
 </table>
+
+#### Type Components
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/ElementTypeDuplicate.png" alt="ElementTypeDuplicate" width="32"></td>
+    <td>Duplicate an Element Type.</td>
+    <td>Given a Name, it duplicates an ElementType into the active Revit document</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ElementTypeIdentity.png" alt="ElementTypeIdentity" width="32"></td>
+    <td>Get the Element Type Identification</td>
+    <td>Query type identity information to return Category, Family Name, Name and UUID.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ElementTypeSimiliar.png" alt="ElementTypeSimiliar" width="32"></td>
+    <td>Select Similiar Types</td>
+      <td> Selects the types that are Similiar to the input Type.</td>
+    </tr>
+  <tr>
+    <td><img src="GH/AddDirectShapeByType.png" alt="AddDirectShapeType" width="32"></td>
+    <td>Create a DirectShape Type</td>
+    <td>Given its Geometry, it reconstructs a DirectShapeType to the active Revit document
+</td>
+  </tr>
+</table>
+
