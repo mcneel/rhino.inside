@@ -24,7 +24,7 @@ Double-click on the component to open the Python editor:
 
 This sample component will preview a sphere of an adjustable radius in Revit and Rhino.  It will pass that sphere onto other Grasshopper components through the `a` output.  And it will Bake (actually create) the sphere in Revit and Rhino if the `button` on `y` is pressed.
 
-<img src="images/sphere-sample-gh.png" width="60%" align="left">
+<img src="images/sphere-sample-gh.png" width="60%" align="middle">
 
 Use the Python component, a slider and a button to hook up this system.
 
@@ -108,7 +108,7 @@ Here are a few links to more resources about all the SDKs involved:
 
 ##  Completed Sample Code
 
-<img src="images/sphere-sample-gh.png" width="60%" align="left">
+<img src="images/sphere-sample-gh.png" width="60%" align="middle">
 
 ```python
 """Provides a scripting component.
