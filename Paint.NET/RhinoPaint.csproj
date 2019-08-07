@@ -70,6 +70,7 @@
     </Compile>
     <Compile Include="RhinoPaint.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RhinoTaskManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
