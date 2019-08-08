@@ -12,6 +12,7 @@ using PaintDotNet;
 using PaintDotNet.Core;
 using PaintDotNet.Effects;
 using Rhino;
+using Rhino.Display;
 using Rhino.Runtime.InProcess;
 
 namespace RhinoPaint
@@ -69,15 +70,26 @@ namespace RhinoPaint
     {
       try
       {
-        using (new RhinoCore(new string[] { "/NOSPLASH" }, WindowStyle.Normal))
+        using (new RhinoCore(new string[] { "/NOSPLASH" }, WindowStyle.Hidden))
         {
           var sphere = new Rhino.Geometry.Sphere(Rhino.Geometry.Point3d.Origin, 10.00);
           var sphereMesh = Rhino.Geometry.Mesh.CreateFromBrep(sphere.ToBrep(), Rhino.Geometry.MeshingParameters.Default)[0];
           Debug.WriteLine("The mesh has " + sphereMesh.Vertices.Count + " vertices and " + sphereMesh.Faces.Count + " faces.");
 
           RhinoDoc.ActiveDoc.Objects.AddMesh(sphereMesh);
-          RhinoDoc.ActiveDoc.Views.Redraw();
-          bm = RhinoDoc.ActiveDoc.Views.ActiveView.CaptureToBitmap();
+          RhinoDoc.ActiveDoc.Views.ActiveView.Redraw();
+
+          var imgScript = string.Format("_-ViewCaptureToClipboard _Enter");
+          RhinoApp.RunScript(imgScript, false);
+
+          int w = RhinoDoc.ActiveDoc.Views.ActiveView.Size.Width;
+          int h = RhinoDoc.ActiveDoc.Views.ActiveView.Size.Height;
+
+          Debug.WriteLine("View Size w:{0}, h:{1}", w, h);
+
+          bm = RhinoDoc.ActiveDoc.Views.ActiveView.CaptureToBitmap(RhinoDoc.ActiveDoc.Views.ActiveView.Size);
+
+          RhinoDoc.Create(null);
 
         }
       }
