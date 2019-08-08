@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using PaintDotNet;
 using PaintDotNet.Core;
@@ -25,6 +26,11 @@ namespace RhinoPaint
         return "RhinoPaint";
       }
     }
+
+
+    private readonly Thread rhinoThread = null;
+
+    Bitmap bm;
 
     //static RhinoTaskManager rhinoTaskManager;
 
@@ -53,6 +59,32 @@ namespace RhinoPaint
     public RhinoPaint() : base(StaticName, Properties.Resources.RhinoPaintTmp.ToBitmap(), "Rhinoceros", new EffectOptions { Flags = EffectFlags.SingleThreaded, RenderingSchedule = EffectRenderingSchedule.None })
     {
       Debug.WriteLine("Base Constructor.");
+      Debug.WriteLine(Thread.CurrentThread.GetApartmentState().ToString());
+      rhinoThread = new Thread(new ThreadStart(StartRhino));
+      rhinoThread.TrySetApartmentState(ApartmentState.STA);
+      rhinoThread.Name = "RhinoTaskManagerThread";
+    }
+
+    void StartRhino()
+    {
+      try
+      {
+        using (new RhinoCore(new string[] { "/NOSPLASH" }, WindowStyle.Normal))
+        {
+          var sphere = new Rhino.Geometry.Sphere(Rhino.Geometry.Point3d.Origin, 10.00);
+          var sphereMesh = Rhino.Geometry.Mesh.CreateFromBrep(sphere.ToBrep(), Rhino.Geometry.MeshingParameters.Default)[0];
+          Debug.WriteLine("The mesh has " + sphereMesh.Vertices.Count + " vertices and " + sphereMesh.Faces.Count + " faces.");
+
+          RhinoDoc.ActiveDoc.Objects.AddMesh(sphereMesh);
+          RhinoDoc.ActiveDoc.Views.Redraw();
+          bm = RhinoDoc.ActiveDoc.Views.ActiveView.CaptureToBitmap();
+
+        }
+      }
+      catch (Exception ex)
+      {
+        Debug.WriteLine(ex);
+      }
     }
 
     public override void Render(EffectConfigToken parameters, RenderArgs dstArgs, RenderArgs srcArgs, Rectangle[] rois, int startIndex, int length)
@@ -67,59 +99,37 @@ namespace RhinoPaint
 
       var bm = bmRes.Result;
       */
-      Bitmap bm;
-      try
-      {
-        using (new RhinoCore(new string[] { "/NOSPLASH" }, WindowStyle.Normal))
-        {
-          var sphere = new Rhino.Geometry.Sphere(Rhino.Geometry.Point3d.Origin, 10.00);
-          var sphereMesh = Rhino.Geometry.Mesh.CreateFromBrep(sphere.ToBrep(), Rhino.Geometry.MeshingParameters.Default)[0];
-          Debug.WriteLine("The mesh has " + sphereMesh.Vertices.Count + " vertices and " + sphereMesh.Faces.Count + " faces.");
 
-          RhinoDoc.ActiveDoc.Objects.AddMesh(sphereMesh);
-          RhinoDoc.ActiveDoc.Views.Redraw();
-          bm = RhinoDoc.ActiveDoc.Views.ActiveView.CaptureToBitmap();
-
-          PdnRegion selectionRegion = EnvironmentParameters.GetSelection(srcArgs.Bounds);
-
-          for (int i = startIndex; i < startIndex + length; ++i)
-          {
-            Rectangle rect = rois[i];
-
-            //srcArgs.Surface.CopyFromGdipBitmap(bmRes.Result);
-
-            for (int y = rect.Top; y < rect.Bottom; ++y)
-            {
-              for (int x = rect.Left; x < rect.Right; ++x)
-              {
-                // Render Code Here
-                Color pixel;
-                if (x < bm.Width && y < bm.Height)
-                  pixel = bm.GetPixel(x, y);
-                else
-                  pixel = Color.Black;
-
-                //ColorBgra pixel = srcArgs.Surface[x, y];
-                dstArgs.Surface[x, y] = ColorBgra.FromColor(pixel);
-              }
-            }
-          }
-
-        }
-
-      }
-      catch (Exception ex)
-      {
-        Debug.WriteLine(ex.Message);
-        //return ex.Message;
-      }
-
-
+      rhinoThread.Start();
+      while(rhinoThread.ThreadState != System.Threading.ThreadState.Stopped) { }
       
 
+      PdnRegion selectionRegion = EnvironmentParameters.GetSelection(srcArgs.Bounds);
+
+      for (int i = startIndex; i < startIndex + length; ++i)
+      {
+        Rectangle rect = rois[i];
+
+        //srcArgs.Surface.CopyFromGdipBitmap(bmRes.Result);
+
+        for (int y = rect.Top; y < rect.Bottom; ++y)
+        {
+          for (int x = rect.Left; x < rect.Right; ++x)
+          {
+            // Render Code Here
+            Color pixel;
+            if (x < bm.Width && y < bm.Height)
+              pixel = bm.GetPixel(x, y);
+            else
+              pixel = Color.Black;
+
+            //ColorBgra pixel = srcArgs.Surface[x, y];
+            dstArgs.Surface[x, y] = ColorBgra.FromColor(pixel);
+          }
+        }
+      }
 
     }
-
 
   }
 }
