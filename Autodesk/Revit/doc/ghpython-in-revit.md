@@ -134,7 +134,7 @@ from Autodesk.Revit.DB import *
 from Rhino import Geometry as Rhino
 from RhinoInside.Revit import Revit, Convert
 
-sphere = Rhino.Sphere(Rhino.Point3d.Origin, x * Revit.ModelUnits)
+sphere = Rhino.Sphere(Rhino.Point3d.Origin, x)
 
 a = sphere
 
