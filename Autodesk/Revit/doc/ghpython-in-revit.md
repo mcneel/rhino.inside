@@ -56,7 +56,7 @@ Once this foundation is layed down, then we can continue to create the script.
 To show how geometry created in Grasshopper will preview in both Rhino and Revit dynamically we can create this script.  Here Grasshopper will create a sphere based on the x input value:
 
 ```python
-sphere = Rhino.Sphere(Rhino.Point3d.Origin, x * Revit.ModelUnits)
+sphere = Rhino.Sphere(Rhino.Point3d.Origin, x)
 
 a = sphere #writes to output of component and previews the geometry
 ```
