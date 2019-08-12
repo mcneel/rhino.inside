@@ -19,6 +19,12 @@ This assumes you've already installed Rhino 7 WIP and Paint.NET 4.2 for Windows,
 ```
 The mesh has 561 vertices and 512 faces.
 ```
+7. In Paint.NET you should see the pixels rendered from the perspective Rhino viewport with a wireframe sphere.
+
+### References
+The Paint.NET Developer forums can be found here: [https://forums.getpaint.net/forum/17-plugin-developers-central/](https://forums.getpaint.net/forum/17-plugin-developers-central/).
+
+To get acquainted with what can and cannot be done with Paint.NET plugins, check out this thread [https://forums.getpaint.net/topic/14566-what-is-and-isnt-possible-when-writing-plugins/](https://forums.getpaint.net/topic/14566-what-is-and-isnt-possible-when-writing-plugins/).
 
 
 

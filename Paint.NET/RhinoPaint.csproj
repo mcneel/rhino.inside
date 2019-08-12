@@ -48,6 +48,15 @@
       <HintPath>..\..\..\..\Program Files\paint.net\PaintDotNet.Effects.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="PaintDotNet.Framework">
+      <HintPath>..\..\..\..\Program Files\paint.net\PaintDotNet.Framework.dll</HintPath>
+    </Reference>
+    <Reference Include="PaintDotNet.Resources">
+      <HintPath>..\..\..\..\Program Files\paint.net\PaintDotNet.Resources.dll</HintPath>
+    </Reference>
+    <Reference Include="PaintDotNet.SystemLayer">
+      <HintPath>..\..\..\..\Program Files\paint.net\PaintDotNet.SystemLayer.dll</HintPath>
+    </Reference>
     <Reference Include="RhinoCommon">
       <HintPath>..\..\..\..\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
       <Private>False</Private>

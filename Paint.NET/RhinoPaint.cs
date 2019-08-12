@@ -112,6 +112,8 @@ namespace RhinoPaint
       var bm = bmRes.Result;
       */
 
+      
+
       rhinoThread.Start();
       while(rhinoThread.ThreadState != System.Threading.ThreadState.Stopped) { }
       
