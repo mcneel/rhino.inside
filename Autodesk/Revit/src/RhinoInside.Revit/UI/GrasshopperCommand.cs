@@ -264,7 +264,7 @@ namespace RhinoInside.Revit.UI
   }
 
 #if REVIT_2018
-  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  [Transaction(TransactionMode.ReadOnly), Regeneration(RegenerationOption.Manual)]
   class CommandGrasshopperPreviewOff : CommandGrasshopperPreview
   {
     public static void CreateUI(RadioButtonGroup radioButtonGroup)
@@ -291,7 +291,7 @@ namespace RhinoInside.Revit.UI
     }
   }
 
-  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  [Transaction(TransactionMode.ReadOnly), Regeneration(RegenerationOption.Manual)]
   class CommandGrasshopperPreviewWireframe : CommandGrasshopperPreview
   {
     public static void CreateUI(RadioButtonGroup radioButtonGroup)
@@ -318,7 +318,7 @@ namespace RhinoInside.Revit.UI
     }
   }
 
-  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  [Transaction(TransactionMode.ReadOnly), Regeneration(RegenerationOption.Manual)]
   class CommandGrasshopperPreviewShaded : CommandGrasshopperPreview
   {
     public static void CreateUI(RadioButtonGroup radioButtonGroup)
