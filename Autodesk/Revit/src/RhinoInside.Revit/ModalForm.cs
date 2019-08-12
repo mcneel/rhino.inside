@@ -82,6 +82,7 @@ namespace RhinoInside.Revit
       readonly bool WasEnabled = IsWindowEnabled(Revit.MainWindowHandle);
       public EditScope()
       {
+        SetActiveWindow(Revit.MainWindowHandle);
         if (WasVisible) ShowOwnedPopups(false);
         if (WasExposed) Rhino.UI.RhinoEtoApp.MainWindow.Visible = false;
         if (ActiveForm != null) ActiveForm.Visible = false;
