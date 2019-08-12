@@ -1007,6 +1007,19 @@ namespace RhinoInside.Revit.GH.Components
       using (var geometry = element?.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
       {
         var list = geometry?.ToRhino().Where(x => x != null).ToList();
+
+        switch (element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING)?.AsInteger())
+        {
+          case 0: // SOLID
+            foreach (var geo in list.OfType<Rhino.Geometry.Brep>().Where(x => x.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Inward))
+              geo.Flip();
+            break;
+          case 1: // VOID
+            foreach (var geo in list.OfType<Rhino.Geometry.Brep>().Where(x => x.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Outward))
+              geo.Flip();
+            break;
+        }
+
         DA.SetDataList(PropertyName, list);
       }
     }

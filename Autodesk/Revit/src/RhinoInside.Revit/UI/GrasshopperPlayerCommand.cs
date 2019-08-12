@@ -131,6 +131,12 @@ namespace RhinoInside.Revit.UI
               return Result.Cancelled;
             values.Add(input, points);
             break;
+          case Param_Line line:
+            var lines = PromptLine(doc, input.NickName);
+            if (lines == null)
+              return Result.Cancelled;
+            values.Add(input, lines);
+            break;
           case Param_Curve curve:
             var curves = PromptEdge(doc, input.NickName);
             if (curves == null)
@@ -215,12 +221,43 @@ namespace RhinoInside.Revit.UI
     {
       point = null;
 
-      try { point = doc.Selection.PickPoint(snapSettings, prompt + "Please pick a point on the current work plane"); }
-      catch (OperationCanceledException) { }
+      View view = null;
+      do
+      {
+        view = doc.ActiveView;
+        try { point = doc.Selection.PickPoint(snapSettings, prompt + "Please pick a point on the current work plane"); }
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
+      }
+      while (doc.ActiveView.Id != view.Id);
 
       return null != point;
     }
 
+    internal static IEnumerable<IGH_Goo> PromptPoint(UIDocument doc, string prompt)
+    {
+      IGH_Goo goo = null;
+
+      if (PickPoint(doc, prompt + " : ", out var point))
+        goo = new GH_Point(point.ToRhino().Scale(Revit.ModelUnits));
+
+      yield return goo;
+    }
+
+    internal static IEnumerable<IGH_Goo> PromptLine(UIDocument doc, string prompt)
+    {
+      IGH_Goo goo = null;
+
+      if
+      (
+        PickPoint(doc, prompt + " : Start point - ", out var from) &&
+        PickPoint(doc, prompt + " : End pont - ", out var to)
+      )
+      {
+        goo = new GH_Line(new Rhino.Geometry.Line(from.ToRhino().Scale(Revit.ModelUnits), to.ToRhino().Scale(Revit.ModelUnits)));
+      }
+
+      yield return goo;
+    }
 
     internal static IEnumerable<IGH_Goo> PromptBox(UIDocument doc, string prompt)
     {
@@ -237,16 +274,6 @@ namespace RhinoInside.Revit.UI
 
         goo = new GH_Box(new BoundingBox(min.Scale(Revit.ModelUnits), max.Scale(Revit.ModelUnits)));
       }
-
-      yield return goo;
-    }
-
-    internal static IEnumerable<IGH_Goo> PromptPoint(UIDocument doc, string prompt)
-    {
-      IGH_Goo goo = null;
-
-      if (PickPoint(doc, prompt + " : ", out var point))
-        goo = new GH_Point(point.ToRhino().Scale(Revit.ModelUnits));
 
       yield return goo;
     }
@@ -322,7 +349,7 @@ namespace RhinoInside.Revit.UI
         using (definition)
         {
           bool enableSolutions = GH_Document.EnableSolutions;
-          var CurrentCulture = Thread.CurrentThread.CurrentCulture;
+          var currentCulture = Thread.CurrentThread.CurrentCulture;
           try
           {
             using (var transGroup = new TransactionGroup(data.Application.ActiveUIDocument.Document))
@@ -343,8 +370,13 @@ namespace RhinoInside.Revit.UI
                 value.Key.AddVolatileDataList(new Grasshopper.Kernel.Data.GH_Path(0), value.Value);
 
               Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-              definition.NewSolution(false, GH_SolutionMode.Silent);
-              Thread.CurrentThread.CurrentCulture = CurrentCulture;
+              using (var modal = new Rhinoceros.ModalScope())
+              {
+                definition.NewSolution(false, GH_SolutionMode.Silent);
+
+                result = modal.Run(false, false);
+              }
+              Thread.CurrentThread.CurrentCulture = currentCulture;
 
               if (definition.SolutionState == GH_ProcessStep.Aborted)
               {
@@ -362,7 +394,7 @@ namespace RhinoInside.Revit.UI
           }
           finally
           {
-            Thread.CurrentThread.CurrentCulture = CurrentCulture;
+            Thread.CurrentThread.CurrentCulture = currentCulture;
             GH_Document.EnableSolutions = enableSolutions;
           }
         }
