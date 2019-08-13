@@ -105,7 +105,7 @@ To find out more about these tools, see the [Grasshopper Components in Revit Gui
 Both the Revit and Rhino APIs are available simultaneously with Rhino.inside.  There are two main ways Python is used.
 
 1. [Create custom Python components in Grasshopper that are Revit aware](ghpython-in-revit.md)
-2. Use the Rhino Python editor to create Python Scripts.
+2. [Use the Rhino Python editor to create Python Scripts](rhinopython-in-revit.md)
 
 The Rhino.Python editor can be called up from within Revit. By referencing the Revit.Python namespaces, both the Rhino and Revit Python scripts can be called from a single Python script.
 
