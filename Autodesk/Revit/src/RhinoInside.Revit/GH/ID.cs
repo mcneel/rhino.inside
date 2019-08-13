@@ -68,24 +68,24 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
+      if (typeof(Q).IsAssignableFrom(typeof(Autodesk.Revit.DB.ElementId)))
+      {
+        target = (Q) (object) Value;
+        return true;
+      }
       if (typeof(Q).IsAssignableFrom(typeof(GH_Guid)))
       {
         target = (Q) (object) new GH_Guid(ReferenceID);
         return true;
       }
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Integer)))
+      if(typeof(Q).IsAssignableFrom(typeof(GH_Integer)))
       {
         target = (Q) (object) new GH_Integer(Value.IntegerValue);
         return true;
       }
-      if (typeof(Q).IsAssignableFrom(typeof(GH_String)))
+      if(typeof(Q).IsAssignableFrom(typeof(GH_String)))
       {
         target = (Q) (object) new GH_String(UniqueID);
-        return true;
-      }
-      if (target is ElementId)
-      {
-        target = (Q) (object) Value;
         return true;
       }
 
