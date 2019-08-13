@@ -36,26 +36,33 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
-      DA.GetData("Category", ref category);
-
-      var elements = new List<Types.Element>();
+      var categoryId = ElementId.InvalidElementId;
+      DA.GetData("Category", ref categoryId);
 
       using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
       {
-        if (category == null)
+        if (categoryId == ElementId.InvalidElementId)
         {
-          foreach (var element in collector.WhereElementIsNotElementType().ToElementIds())
-            elements.Add(Types.Element.Make(element));
+          DA.SetDataList
+          (
+            "Elements",
+            collector.WhereElementIsNotElementType().
+            ToElementIds().
+            Select(x => Types.Element.Make(x))
+          );
         }
         else
         {
-          foreach (var element in collector.WhereElementIsNotElementType().OfCategoryId(category.Id).ToElementIds())
-            elements.Add(Types.Element.Make(element));
+          DA.SetDataList
+          (
+            "Elements",
+            collector.WhereElementIsNotElementType().
+            OfCategoryId(categoryId).
+            ToElementIds().
+            Select(x => Types.Element.Make(x))
+          );
         }
       }
-
-      DA.SetDataList("Elements", elements);
     }
   }
 }
