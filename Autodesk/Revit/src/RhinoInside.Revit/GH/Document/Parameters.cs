@@ -39,11 +39,11 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
-      if (!DA.GetData("Category", ref category))
+      var categoryId = ElementId.InvalidElementId;
+      if (!DA.GetData("Category", ref categoryId))
         return;
 
-      var parameterKeys = TableView.GetAvailableParameters(Revit.ActiveDBDocument, category.Id);
+      var parameterKeys = TableView.GetAvailableParameters(Revit.ActiveDBDocument, categoryId);
       DA.SetDataList("ParameterKeys", parameterKeys);
     }
   }

@@ -138,8 +138,8 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         int selectedItemsCount = 0;
         using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+        using (var elementTypeCollector = collector.WhereElementIsElementType())
         {
-          HashSet<string> familiesSet = null;
           foreach (var goo in goos)
           {
             var e = new Types.Element();
@@ -148,7 +148,7 @@ namespace RhinoInside.Revit.GH.Parameters
               switch ((Autodesk.Revit.DB.Element) e)
               {
                 case Autodesk.Revit.DB.Family family:
-                  foreach (var elementType in collector.WhereElementIsElementType().Cast<Autodesk.Revit.DB.ElementType>())
+                  foreach (var elementType in elementTypeCollector.Cast<Autodesk.Revit.DB.ElementType>())
                   {
                     if (elementType.FamilyName != family.Name)
                       continue;
@@ -186,24 +186,8 @@ namespace RhinoInside.Revit.GH.Parameters
               var c = new Types.Category();
               if (c.CastFrom(goo))
               {
-                var category = (Autodesk.Revit.DB.Category) c;
-
-                if (familiesSet == null) using (var familyCollector = new FilteredElementCollector(Revit.ActiveDBDocument))
-                  {
-                    familiesSet = new HashSet<string>
-                    (
-                    familyCollector.OfClass(typeof(Family)).
-                    Cast<Family>().
-                    Where((x) => x.FamilyCategory.Id == category.Id).
-                    Select((x) => x.Name)
-                    );
-                  }
-
-                foreach (var elementType in collector.WhereElementIsElementType().Cast<Autodesk.Revit.DB.ElementType>())
+                foreach (var elementType in elementTypeCollector.OfCategoryId(c.Value).Cast<Autodesk.Revit.DB.ElementType>())
                 {
-                  if (elementType.Category?.Id != category.Id && !familiesSet.Contains(elementType.FamilyName))
-                    continue;
-
                   var item = new GH_ValueListItem(elementType.FamilyName + " : " + elementType.Name, elementType.Id.IntegerValue.ToString());
                   item.Selected = selectedItems.Contains(item.Expression);
                   ListItems.Add(item);
