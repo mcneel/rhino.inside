@@ -45,7 +45,7 @@ namespace RhinoInside.Revit.GH.Components
       if
       (
         !(scaleFactor != 1.0 ? curve.Scale(scaleFactor) : true) ||
-        ((curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane)) != null)
+        ((curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane)) == null)
       )
         ThrowArgumentException(nameof(curve), "Failed to project curve in the sketchPlane.");
 
