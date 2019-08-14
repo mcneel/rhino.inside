@@ -956,8 +956,7 @@ namespace RhinoInside.Revit.GH.Components
     public override Guid ComponentGuid => new Guid("213C1F14-A827-40E2-957E-BA079ECCE700");
     public override GH_Exposure Exposure => GH_Exposure.septenary | GH_Exposure.obscure;
     protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
-                                                     ImageBuilder.BuildIcon("X");
+    protected override string IconTag => "X";
 
     public ElementDelete()
     : base("Element.Delete", "Delete", "Deletes elements from Revit document", "Revit", "Element")

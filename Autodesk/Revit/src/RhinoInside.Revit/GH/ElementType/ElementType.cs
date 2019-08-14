@@ -247,14 +247,12 @@ namespace RhinoInside.Revit.GH.Parameters
   }
 }
 
-
 namespace RhinoInside.Revit.GH.Components
 {
   public class ElementTypeIdentity : GH_Component
   {
     public override Guid ComponentGuid => new Guid("7DEA1BA3-D9BC-4E94-9E1C-0E527187C9DC");
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
-                                                     ImageBuilder.BuildIcon("ID");
+    protected override string IconTag => "ID";
 
     public ElementTypeIdentity()
     : base("ElementType.Identity", "ElementType.Identity", "Query type identity information", "Revit", "Type")
@@ -289,8 +287,7 @@ namespace RhinoInside.Revit.GH.Components
   public class ElementTypeSimilar : GH_Component
   {
     public override Guid ComponentGuid => new Guid("BA9C72C5-EC88-450B-B736-BE6D827FA2F3");
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
-                                                     ImageBuilder.BuildIcon("S");
+    protected override string IconTag => "S";
 
     public ElementTypeSimilar()
     : base("ElementType.Similar", "ElementType.Similar", "Obtains a set of types that are similar to Type", "Revit", "Type")
@@ -321,8 +318,7 @@ namespace RhinoInside.Revit.GH.Components
     public override Guid ComponentGuid => new Guid("5ED7E612-E5C6-4F0E-AA69-814CF2478F7E");
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
-                                                     ImageBuilder.BuildIcon("D");
+    protected override string IconTag => "D";
 
     public ElementTypeDuplicate() : base
     (
