@@ -273,6 +273,8 @@ namespace RhinoInside.Revit.GH.Components
     public override bool IsBakeCapable => Params?.Output.OfType<IGH_BakeAwareObject>().Where(x => x.IsBakeCapable).Any() ?? false;
 
     protected override Bitmap Icon => ((Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
-                                      ImageBuilder.BuildIcon(GetType().Name.Substring(0, 1));
+                                      ImageBuilder.BuildIcon(IconTag);
+
+    protected virtual string IconTag => GetType().Name.Substring(0, 1);
   }
 }

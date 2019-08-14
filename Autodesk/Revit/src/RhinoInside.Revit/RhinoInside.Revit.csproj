@@ -192,6 +192,7 @@
     <Compile Include="GH\Element\Form\ByGeometry.cs" />
     <Compile Include="GH\Element\Form\ByCurves.cs" />
     <Compile Include="GH\Element\AdaptiveComponent\ByPoints.cs" />
+    <Compile Include="GH\ElementFilter\ElementFilter.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
     <Compile Include="GH\Solid.cs" />
     <Compile Include="GH\TransactionalComponent.cs" />
@@ -213,6 +214,7 @@
     <Compile Include="DirectContext3DServer.cs" />
     <Compile Include="ImageBuilder.cs" />
     <Compile Include="Operator.cs" />
+    <Compile Include="Extension.cs" />
     <Compile Include="State.cs" />
     <Compile Include="Convert.cs" />
     <Compile Include="Revit.cs" />
