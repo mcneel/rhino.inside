@@ -34,7 +34,6 @@ namespace RhinoInside.Revit.GH
 
     public override bool CanExecute(View dBView)
     {
-      var editor = Instances.DocumentEditor;
       var canvas = Instances.ActiveCanvas;
       var definition = canvas?.Document;
 
@@ -163,7 +162,13 @@ namespace RhinoInside.Revit.GH
               case Rhino.Geometry.Ellipse ellipse:  primitives.Add(new ParamPrimitive(docObject, ellipse.ToNurbsCurve())); break;
               case Rhino.Geometry.Curve curve:      primitives.Add(new ParamPrimitive(docObject, curve)); break;
               case Rhino.Geometry.Mesh mesh:        primitives.Add(new ParamPrimitive(docObject, mesh)); break;
-              case Rhino.Geometry.Box box:          primitives.Add(new ParamPrimitive(docObject, Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1))); break;
+              case Rhino.Geometry.Box box:
+              {
+                var boxMeshes = Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1);
+                if(boxMeshes != null)
+                  primitives.Add(new ParamPrimitive(docObject, boxMeshes));
+              }
+              break;
               case Rhino.Geometry.Brep brep:
               {
                 var brepMeshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters());
