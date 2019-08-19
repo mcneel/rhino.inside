@@ -51,7 +51,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager[manager.AddParameter(new Parameters.ElementFilter(), "Filter", "F", "Filter", GH_ParamAccess.item)].Optional = true;
+      manager.AddParameter(new Parameters.ElementFilter(), "Filter", "F", "Filter", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -62,31 +62,19 @@ namespace RhinoInside.Revit.GH.Components
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       Autodesk.Revit.DB.ElementFilter filter = null;
-      DA.GetData("Filter", ref filter);
+      if (!DA.GetData("Filter", ref filter))
+        return;
 
       using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
       {
-        if (filter == null)
-        {
-          DA.SetDataList
-          (
-            "Elements",
-            collector.WhereElementIsNotElementType().
-            GetElementIdIterator().
-            Select(x => Types.Element.Make(x))
-          );
-        }
-        else
-        {
-          DA.SetDataList
-          (
-            "Elements",
-            collector.WhereElementIsNotElementType().
-            WherePasses(filter).
-            GetElementIdIterator().
-            Select(x => Types.Element.Make(x))
-          );
-        }
+        DA.SetDataList
+        (
+          "Elements",
+          collector.WhereElementIsNotElementType().
+          WherePasses(filter).
+          GetElementIdIterator().
+          Select(x => Types.Element.Make(x))
+        );
       }
     }
   }

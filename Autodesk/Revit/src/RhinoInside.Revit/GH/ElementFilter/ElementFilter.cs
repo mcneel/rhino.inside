@@ -159,6 +159,26 @@ namespace RhinoInside.Revit.GH.Components
   #endregion
 
   #region Secondary
+  public class ElementExcludeElementTypeFilter : ElementFilterComponent
+  {
+    public override Guid ComponentGuid => new Guid("F69D485F-B262-4297-A496-93F5653F5D19");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    protected override string IconTag => "T";
+
+    public ElementExcludeElementTypeFilter()
+    : base("Element.ExcludeElementType", "Exclude ElementType Filter", "Filter used to exclude element types", "Revit", "Filter")
+    { }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var inverted = false;
+      if (!DA.GetData("Inverted", ref inverted))
+        return;
+
+      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIsElementTypeFilter(!inverted));
+    }
+  }
+
   public class ElementClassFilter : ElementFilterComponent
   {
     public override Guid ComponentGuid => new Guid("6BD34014-CD73-42D8-94DB-658BE8F42254");
