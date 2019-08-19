@@ -1253,7 +1253,7 @@ namespace RhinoInside.Revit
       return brep;
     }
 
-    public static IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.Brep brep)
+    public static Autodesk.Revit.DB.Solid ToHost(this Rhino.Geometry.Brep brep)
     {
       Solid solid = null;
 
@@ -1337,19 +1337,6 @@ namespace RhinoInside.Revit
             //Debug.Fail(e.Source, e.Message);
             Debug.WriteLine(e.Message, e.Source);
           }
-
-          if (brepBuilderOutcome == BRepBuilderOutcome.Failure)
-          {
-            Debug.WriteLine("Try exploding the brep and converting face by face.", "RhinoInside.Revit.Convert");
-            if (brep.Faces.Count > 1)
-            {
-              var breps = brep.UnjoinEdges(brep.Edges.Select(x => x.EdgeIndex));
-              foreach (var face in breps.SelectMany(x => x.ToHost()))
-                yield return face;
-
-              yield break;
-            }
-          }
         }
         else
         {
@@ -1357,12 +1344,30 @@ namespace RhinoInside.Revit
         }
       }
 
+      return solid;
+    }
+
+    static IEnumerable<GeometryObject> ToHostMultiple(this Rhino.Geometry.Brep brep)
+    {
+      var solid = brep.ToHost();
       if (solid != null)
       {
         yield return solid;
+        yield break;
+      }
+
+      if (brep.Faces.Count > 1)
+      {
+        Debug.WriteLine("Try exploding the brep and converting face by face.", "RhinoInside.Revit.Convert");
+
+        var breps = brep.UnjoinEdges(brep.Edges.Select(x => x.EdgeIndex));
+        foreach (var face in breps.SelectMany(x => x.ToHostMultiple()))
+          yield return face;
       }
       else
       {
+        Debug.WriteLine("Try meshing the brep.", "RhinoInside.Revit.Convert");
+
         // Emergency result as a mesh
         var mp = MeshingParameters.Default;
         mp.MinimumEdgeLength = Revit.VertexTolerance;
@@ -1402,7 +1407,7 @@ namespace RhinoInside.Revit
 
             var vertices = piece.Vertices.ToPoint3dArray();
 
-            builder.OpenConnectedFaceSet(piece.SolidOrientation() != -1);
+            builder.OpenConnectedFaceSet(piece.SolidOrientation() != 0);
             foreach (var face in piece.Faces)
             {
               faceVertices.Add(vertices[face.A].ToHost());
@@ -1443,28 +1448,28 @@ namespace RhinoInside.Revit
           if (scaleFactor != 1.0)
             point.Scale(scaleFactor);
 
-          return Enumerable.Repeat(point.ToHost(), 1).Cast<GeometryObject>();
+          return Enumerable.Repeat(point.ToHost(), 1);
         case Rhino.Geometry.PointCloud pointCloud:
           pointCloud = (Rhino.Geometry.PointCloud) pointCloud.DuplicateShallow();
 
           if (scaleFactor != 1.0)
             pointCloud.Scale(scaleFactor);
 
-          return pointCloud.ToHost().Cast<GeometryObject>();
+          return pointCloud.ToHost();
         case Rhino.Geometry.Curve curve:
           curve = (Rhino.Geometry.Curve) curve.DuplicateShallow();
 
           if (scaleFactor != 1.0)
             curve.Scale(scaleFactor);
 
-          return curve.ToHost().Cast<GeometryObject>();
+          return curve.ToHost();
         case Rhino.Geometry.Brep brep:
           brep = (Rhino.Geometry.Brep) brep.DuplicateShallow();
 
           if (scaleFactor != 1.0)
             brep.Scale(scaleFactor);
 
-          return brep.ToHost().Cast<GeometryObject>();
+          return brep.ToHostMultiple();
         case Rhino.Geometry.Mesh mesh:
           mesh = (Rhino.Geometry.Mesh) mesh.DuplicateShallow();
 
@@ -1473,7 +1478,7 @@ namespace RhinoInside.Revit
 
           while (mesh.CollapseFacesByEdgeLength(false, Revit.VertexTolerance) > 0) ;
 
-          return mesh.ToHost().Cast<GeometryObject>();
+          return mesh.ToHost();
         default:
           return Enumerable.Empty<GeometryObject>();
       }

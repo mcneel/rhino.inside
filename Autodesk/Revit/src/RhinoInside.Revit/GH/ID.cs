@@ -264,6 +264,11 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
+  public interface IGH_PersistentElementComponent
+  {
+    bool NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs args);
+  }
+
   public abstract class GH_Component : Grasshopper.Kernel.GH_Component
   {
     protected GH_Component(string name, string nickname, string description, string category, string subCategory)
