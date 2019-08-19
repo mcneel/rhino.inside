@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using RhinoInside.Runtime.InteropServices;
@@ -30,7 +31,8 @@ namespace RhinoInside.Revit.GH.Components
       ref Autodesk.Revit.DB.Element element,
 
       double elevation,
-      Optional<Autodesk.Revit.DB.LevelType> type
+      Optional<Autodesk.Revit.DB.LevelType> type,
+      Optional<string> name
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
@@ -50,17 +52,34 @@ namespace RhinoInside.Revit.GH.Components
           elevation
         );
 
-        var parametersMask = new BuiltInParameter[]
-        {
-          BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
-          BuiltInParameter.ELEM_FAMILY_PARAM,
-          BuiltInParameter.ELEM_TYPE_PARAM
-        };
+        var parametersMask = name == Optional.Nothig ?
+          new BuiltInParameter[]
+          {
+            BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+            BuiltInParameter.ELEM_FAMILY_PARAM,
+            BuiltInParameter.ELEM_TYPE_PARAM
+          } :
+          new BuiltInParameter[]
+          {
+            BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+            BuiltInParameter.ELEM_FAMILY_PARAM,
+            BuiltInParameter.ELEM_TYPE_PARAM,
+            BuiltInParameter.DATUM_TEXT
+          };
 
         ReplaceElement(ref element, newLevel, parametersMask);
       }
 
       ChangeElementTypeId(ref element, type.Value.Id);
+
+      if (name != Optional.Nothig && element != null)
+      {
+        try { element.Name = name.Value; }
+        catch (Autodesk.Revit.Exceptions.ArgumentException e)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{e.Message.Replace($".{Environment.NewLine}", ". ")}");
+        }
+      }
     }
   }
 }
