@@ -81,8 +81,8 @@ namespace RhinoInside.Revit.GH.Components
       }
       else
       {
-        var solids = brep.ToHost().ToArray();
-        if (solids.Length == 1 && (solids[0] is Solid solid))
+        var solid = brep.ToHost();
+        if (solid != null)
         {
           if (element is FreeFormElement freeFormElement)
           {
