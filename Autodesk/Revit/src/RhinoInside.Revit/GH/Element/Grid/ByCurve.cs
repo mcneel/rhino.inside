@@ -30,7 +30,8 @@ namespace RhinoInside.Revit.GH.Components
       ref Autodesk.Revit.DB.Element element,
 
       Rhino.Geometry.Curve curve,
-      Optional<Autodesk.Revit.DB.GridType> type
+      Optional<Autodesk.Revit.DB.GridType> type,
+      Optional<string> name
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
@@ -41,14 +42,29 @@ namespace RhinoInside.Revit.GH.Components
 
       SolveOptionalType(ref type, doc, ElementTypeGroup.GridType, nameof(type));
 
+      var parametersMask = name == Optional.Nothig ?
+        new BuiltInParameter[]
+        {
+          BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+          BuiltInParameter.ELEM_FAMILY_PARAM,
+          BuiltInParameter.ELEM_TYPE_PARAM
+        } :
+        new BuiltInParameter[]
+        {
+          BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+          BuiltInParameter.ELEM_FAMILY_PARAM,
+          BuiltInParameter.ELEM_TYPE_PARAM,
+          BuiltInParameter.DATUM_TEXT
+        };
+
       if (curve.TryGetLine(out var line, Revit.VertexTolerance))
       {
-        ReplaceElement(ref element, Grid.Create(doc, line.ToHost()));
+        ReplaceElement(ref element, Grid.Create(doc, line.ToHost()), parametersMask);
         ChangeElementTypeId(ref element, type.Value.Id);
       }
       else if (curve.TryGetArc(out var arc, Revit.VertexTolerance))
       {
-        ReplaceElement(ref element, Grid.Create(doc, arc.ToHost()));
+        ReplaceElement(ref element, Grid.Create(doc, arc.ToHost()), parametersMask);
         ChangeElementTypeId(ref element, type.Value.Id);
       }
       else
@@ -72,14 +88,16 @@ namespace RhinoInside.Revit.GH.Components
           curve.TryGetPlane(out var plane);
           var sketchPlane = SketchPlane.Create(doc, plane.ToHost());
 
-          var parametersMask = new BuiltInParameter[]
-          {
-            BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
-            BuiltInParameter.ELEM_FAMILY_PARAM,
-            BuiltInParameter.ELEM_TYPE_PARAM
-          };
-
           ReplaceElement(ref element, doc.GetElement(MultiSegmentGrid.Create(doc, type.Value.Id, curveLoop, sketchPlane.Id)), parametersMask);
+        }
+      }
+
+      if (name != Optional.Nothig && element != null)
+      {
+        try { element.Name = name.Value; }
+        catch (Autodesk.Revit.Exceptions.ArgumentException e)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{e.Message.Replace($".{Environment.NewLine}", ". ")}");
         }
       }
     }
