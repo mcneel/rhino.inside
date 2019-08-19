@@ -100,8 +100,6 @@ namespace RhinoInside.Revit.GH
 
       if (added.Count > 0 || deleted.Count > 0 || modified.Count > 0)
       {
-        var materialsChanged = modified.Select((x) => document.GetElement(x)).OfType<Material>().Any();
-
         foreach (GH_Document definition in Instances.DocumentServer)
         {
           bool expireNow =
@@ -120,9 +118,9 @@ namespace RhinoInside.Revit.GH
               if (param.Phase == GH_SolutionPhase.Blank)
                 continue;
 
-              if (obj is Parameters.IGH_PersistentGeometryParam persistent)
+              if (obj is Parameters.IGH_PersistentElementParam persistentParam)
               {
-                if (persistent.NeedsToBeExpired(document, added, deleted, modified))
+                if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
                 {
                   if (expireNow)
                     param.ExpireSolution(false);
@@ -133,12 +131,15 @@ namespace RhinoInside.Revit.GH
             }
             else if (obj is IGH_Component component)
             {
-              if (component is Components.DocumentElements)
+              if (component is Components.IGH_PersistentElementComponent persistentComponent)
               {
-                if (expireNow)
-                  component.ExpireSolution(false);
-                else
-                  component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Document has been changed since the last solution.");
+                if (persistentComponent.NeedsToBeExpired(e))
+                {
+                  if (expireNow)
+                    component.ExpireSolution(false);
+                  else
+                    component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Document has been changed since the last solution.");
+                }
               }
               else
               {
@@ -151,9 +152,9 @@ namespace RhinoInside.Revit.GH
                   if (inputParam.Phase == GH_SolutionPhase.Blank)
                     continue;
 
-                  if (inputParam is Parameters.IGH_PersistentGeometryParam persistent)
+                  if (inputParam is Parameters.IGH_PersistentElementParam persistentParam)
                   {
-                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
+                    if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
                     {
                       needsToBeExpired = true;
                       break;

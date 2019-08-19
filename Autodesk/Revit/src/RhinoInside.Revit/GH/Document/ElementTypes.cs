@@ -59,10 +59,35 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentElementTypes : GH_Component
+  public class DocumentElementTypes : GH_Component, IGH_PersistentElementComponent
   {
     public override Guid ComponentGuid => new Guid("7B00F940-4C6E-4F3F-AB81-C3EED430DE96");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
+    {
+      var filter = new Autodesk.Revit.DB.ElementIsElementTypeFilter(false);
+      var added = e.GetAddedElementIds(filter);
+      if (added.Count > 0)
+        return true;
+
+      var modified = e.GetModifiedElementIds(filter);
+      if (modified.Count > 0)
+        return true;
+
+      var deleted = e.GetDeletedElementIds();
+      if (deleted.Count > 0)
+      {
+        var document = e.GetDocument();
+        var empty = new ElementId[0];
+        foreach (var param in Params.Output.OfType<Parameters.IGH_PersistentElementParam>())
+        {
+          if (param.NeedsToBeExpired(document, empty, deleted, empty))
+            return true;
+        }
+      }
+
+      return false;
+    }
 
     public DocumentElementTypes() : base(
       "Document.ElementTypes", "ElementTypes",

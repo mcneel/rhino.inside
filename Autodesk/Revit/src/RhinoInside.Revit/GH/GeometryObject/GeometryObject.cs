@@ -494,7 +494,7 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public interface IGH_PersistentGeometryParam
+  public interface IGH_PersistentElementParam
   {
     bool NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified);
   }
@@ -502,7 +502,7 @@ namespace RhinoInside.Revit.GH.Parameters
   public abstract class GH_PersistentGeometryParam<X> :
   Grasshopper.Kernel.GH_PersistentGeometryParam<X>,
   IGH_PreviewObject,
-  IGH_PersistentGeometryParam
+  IGH_PersistentElementParam
   where X : class, Types.IGH_GeometricGoo
   {
     protected GH_PersistentGeometryParam(string name, string nickname, string description, string category, string subcategory) :
@@ -626,9 +626,9 @@ namespace RhinoInside.Revit.GH.Parameters
 #endregion
 
 #region IGH_PersistentGeometryParam
-    bool IGH_PersistentGeometryParam.NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified)
+    bool IGH_PersistentElementParam.NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified)
     {
-      foreach (var data in VolatileData.AllData(true).Cast<Types.IGH_GeometricGoo>())
+      foreach (var data in VolatileData.AllData(true).OfType<Types.IGH_GeometricGoo>())
       {
         if (!data.IsReferencedGeometry)
           continue;
