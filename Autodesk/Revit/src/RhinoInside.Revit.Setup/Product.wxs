@@ -70,6 +70,11 @@
     <ComponentGroup Id="ProductComponents2017" Directory="INSTALLFOLDER2017">
       <Component>
         <File Id="RhinoInside.Revit.2017.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2017\RhinoInside.Revit.dll"/>
+        <File Id="Sample2.2017" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
+        <File Id="Sample3.2017" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
+        <File Id="Sample4.2017" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
+        <File Id="Sample5.2017" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
+        <File Id="Sample7.2017" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
         <RemoveFolder Id="INSTALLFOLDER2017" On="uninstall"/>
       </Component>
     </ComponentGroup>
@@ -85,6 +90,11 @@
     <ComponentGroup Id="ProductComponents2018" Directory="INSTALLFOLDER2018">
       <Component>
         <File Id="RhinoInside.Revit.2018.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2018\RhinoInside.Revit.dll"/>
+        <File Id="Sample2.2018" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
+        <File Id="Sample3.2018" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
+        <File Id="Sample4.2018" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
+        <File Id="Sample5.2018" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
+        <File Id="Sample7.2018" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
         <RemoveFolder Id="INSTALLFOLDER2018" On="uninstall"/>
       </Component>
     </ComponentGroup>
@@ -100,6 +110,11 @@
     <ComponentGroup Id="ProductComponents2019" Directory="INSTALLFOLDER2019">
       <Component>
         <File Id="RhinoInside.Revit.2019.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2019\RhinoInside.Revit.dll"/>
+        <File Id="Sample2.2019" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
+        <File Id="Sample3.2019" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
+        <File Id="Sample4.2019" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
+        <File Id="Sample5.2019" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
+        <File Id="Sample7.2019" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
         <RemoveFolder Id="INSTALLFOLDER2019" On="uninstall"/>
       </Component>
     </ComponentGroup>
@@ -115,6 +130,11 @@
     <ComponentGroup Id="ProductComponents2020" Directory="INSTALLFOLDER2020">
       <Component>
         <File Id="RhinoInside.Revit.2020.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2020\RhinoInside.Revit.dll"/>
+        <File Id="Sample2.2020" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
+        <File Id="Sample3.2020" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
+        <File Id="Sample4.2020" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
+        <File Id="Sample5.2020" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
+        <File Id="Sample7.2020" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
         <RemoveFolder Id="INSTALLFOLDER2020" On="uninstall"/>
       </Component>
     </ComponentGroup>

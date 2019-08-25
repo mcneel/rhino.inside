@@ -35,215 +35,20 @@ namespace RhinoInside.Revit.Samples
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
-      var items = ribbonPanel.AddStackedItems
-      (
-        new ComboBoxData("Category"),
-        new PulldownButtonData("cmdRhinoInside.GrasshopperPlayer", "Grasshopper Player")
-      );
-
-      categoriesComboBox = items[0] as Autodesk.Revit.UI.ComboBox;
-      if (categoriesComboBox != null)
-      {
-        categoriesComboBox.ToolTip = "Category where Grasshopper Player will place geometry.";
-      }
-
-      mruPullDownButton = items[1] as Autodesk.Revit.UI.PulldownButton;
+      mruPullDownButton = ribbonPanel.AddItem(new PulldownButtonData("cmdRhinoInside.GrasshopperPlayer", "Sample 4")) as Autodesk.Revit.UI.PulldownButton;
       if (mruPullDownButton != null)
       {
         mruPullDownButton.ToolTip = "Loads and evals a Grasshopper definition";
         mruPullDownButton.Image = ImageBuilder.BuildImage("4");
+        mruPullDownButton.LargeImage = ImageBuilder.BuildLargeImage("4");
         mruPullDownButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-4"));
 
         mruPullDownButton.AddPushButton(typeof(Browse), "Browse...", "Browse for a Grasshopper definition to evaluate", typeof(Availability));
       }
-
-      EventHandler<IdlingEventArgs> BuildDirectShapeCategoryList = null;
-      Revit.ApplicationUI.Idling += BuildDirectShapeCategoryList = (sender, args) =>
-      {
-        var doc = (sender as UIApplication)?.ActiveUIDocument.Document;
-        if (doc == null)
-          return;
-
-        var directShapeCategories = Enum.GetValues(typeof(BuiltInCategory)).Cast<BuiltInCategory>().
-        Where(categoryId => DirectShape.IsValidCategoryId(new ElementId(categoryId), doc)).
-        Select(categoryId => Autodesk.Revit.DB.Category.GetCategory(doc, categoryId));
-
-        foreach (var group in directShapeCategories.GroupBy(x => x.CategoryType).OrderBy(x => x.Key.ToString()))
-        {
-          foreach (var category in group.OrderBy(x => x.Name))
-          {
-            var comboBoxMemberData = new ComboBoxMemberData(((BuiltInCategory) category.Id.IntegerValue).ToString(), category.Name)
-            {
-              GroupName = group.Key.ToString()
-            };
-            var item = categoriesComboBox.AddItem(comboBoxMemberData);
-
-            if ((BuiltInCategory) category.Id.IntegerValue == BuiltInCategory.OST_GenericModel)
-              categoriesComboBox.Current = item;
-          }
-        }
-
-        Revit.ApplicationUI.Idling -= BuildDirectShapeCategoryList;
-      };
     }
 
-    public static BuiltInCategory ActiveBuiltInCategory
-    {
-      get => Enum.TryParse(categoriesComboBox.Current.Name, out BuiltInCategory builtInCategory) ?
-             builtInCategory :
-             BuiltInCategory.OST_GenericModel;
-    }
-
-    static Autodesk.Revit.UI.ComboBox categoriesComboBox = null;
     static PulldownButton mruPullDownButton = null;
     static PushButton[] mruPushPuttons = null;
-
-    const ObjectSnapTypes DefaultSnapTypes =
-      ObjectSnapTypes.Endpoints |
-      ObjectSnapTypes.Midpoints |
-      ObjectSnapTypes.Nearest |
-      ObjectSnapTypes.WorkPlaneGrid |
-      //ObjectSnapTypes.Intersections |
-      ObjectSnapTypes.Centers |
-      ObjectSnapTypes.Perpendicular |
-      ObjectSnapTypes.Tangents |
-      ObjectSnapTypes.Quadrants |
-      ObjectSnapTypes.Points;
-
-    bool PickPointOnFace(UIDocument doc, string prompt, out XYZ point, ObjectSnapTypes snapSettings = DefaultSnapTypes)
-    {
-      point = null;
-
-      if (doc.ActiveView.ViewType != ViewType.ThreeD)
-      {
-        try { point = doc.Selection.PickPoint(snapSettings, prompt + "Please pick a point on the current work plane"); }
-        catch (OperationCanceledException) { }
-      }
-      else
-      {
-        var reference = doc.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Face, prompt + "Please select a face to define a work plane");
-        if (doc.Document.GetElement(reference.ElementId) is Element element)
-        {
-          if (element.GetGeometryObjectFromReference(reference) is Face face)
-          {
-            if (Keyboard.IsKeyDown(Key.LeftCtrl))
-            {
-              point = face.Evaluate(reference.UVPoint);
-            }
-            else
-            {
-              var plane = Autodesk.Revit.DB.Plane.CreateByNormalAndOrigin(face.ComputeNormal(reference.UVPoint), face.Evaluate(reference.UVPoint));
-
-              using (var transaction = new Transaction(doc.Document))
-              {
-                transaction.Start("PickPointOnFace");
-
-                doc.ActiveView.SketchPlane = SketchPlane.Create(doc.Document, plane);
-                doc.ActiveView.ShowActiveWorkPlane();
-
-                try { point = doc.Selection.PickPoint(snapSettings, prompt + "Please pick a point on the defined work plane"); }
-                catch (OperationCanceledException) { }
-
-                transaction.RollBack();
-              }
-            }
-          }
-        }
-      }
-
-      return null != point;
-    }
-
-    IEnumerable<IGH_Goo> PromptBox(UIDocument doc, string prompt)
-    {
-      IGH_Goo goo = null;
-
-      if
-      (
-        PickPointOnFace(doc, prompt + " : First box corner - ", out var from) &&
-        PickPointOnFace(doc, prompt + " : Second box corner - ", out var to)
-      )
-      {
-        var min = new Point3d(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y), Math.Min(from.Z, to.Z));
-        var max = new Point3d(Math.Max(from.X, to.X), Math.Max(from.Y, to.Y), Math.Max(from.Z, to.Z));
-
-        goo = new GH_Box(new BoundingBox(min.Scale(Revit.ModelUnits), max.Scale(Revit.ModelUnits)));
-      }
-
-      yield return goo;
-    }
-
-    IEnumerable<IGH_Goo> PromptPoint(UIDocument doc, string prompt)
-    {
-      IGH_Goo goo = null;
-
-      if (PickPointOnFace(doc, prompt + " : ", out var point))
-        goo = new GH_Point(point.ToRhino().Scale(Revit.ModelUnits));
-
-      yield return goo;
-    }
-
-    IEnumerable<IGH_Goo> PromptEdge(UIDocument doc, string prompt)
-    {
-      IGH_Goo goo = null;
-
-      try
-      {
-        var reference = doc.Selection.PickObject(ObjectType.Edge, prompt);
-        if (reference != null)
-        {
-          var element = doc.Document.GetElement(reference);
-          var edge = element.GetGeometryObjectFromReference(reference) as Edge;
-          var curve = edge.AsCurve().ToRhino();
-          curve.Scale(Revit.ModelUnits);
-          goo = new GH_Curve(curve);
-        }
-      }
-      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
-
-      yield return goo;
-    }
-
-    IEnumerable<IGH_Goo> PromptSurface(UIDocument doc, string prompt)
-    {
-      try
-      {
-        var reference = doc.Selection.PickObject(ObjectType.Face, prompt);
-        if (reference != null)
-        {
-          // TODO:
-          //var element = doc.Document.GetElement(reference);
-          //var face = element.GetGeometryObjectFromReference(reference) as Face;
-          //var surface = face.GetSurface().ToRhino();
-          //surface.Scale(Revit.ModelUnits);
-          //goo = new GH_Surface(surface);
-        }
-      }
-      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
-
-      return null;
-    }
-
-    IEnumerable<IGH_Goo> PromptBrep(UIDocument doc, string prompt)
-    {
-      try
-      {
-        var reference = doc.Selection.PickObject(ObjectType.Element, prompt);
-        if (reference != null)
-        {
-          var element = doc.Document.GetElement(reference);
-
-          using (var options = new Options { ComputeReferences = true })
-          {
-            var geometry = element.get_Geometry(options);
-            return geometry.ToRhino().OfType<Brep>().Select((x) => new GH_Brep(x));
-          }
-        }
-      }
-      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { }
-
-      return null;
-    }
 
     bool AddFileToMru(string filePath)
     {
@@ -322,7 +127,7 @@ namespace RhinoInside.Revit.Samples
           if (!archive.ExtractObject(definition, "Definition"))
             return Result.Failed;
 
-          // Update Most recet used item extended ToolTip information
+          // Update Most recent used item extended ToolTip information
           {
             mruPushPuttons[0].LongDescription = definition.Properties.Description;
 
@@ -360,31 +165,31 @@ namespace RhinoInside.Revit.Samples
             switch (input)
             {
               case Param_Box box:
-                var boxes = PromptBox(application.ActiveUIDocument, input.NickName);
+                var boxes = CommandGrasshopperPlayer.PromptBox(application.ActiveUIDocument, input.NickName);
                 if (boxes == null)
                   return Result.Cancelled;
                 values.Add(input, boxes);
                 break;
               case Param_Point point:
-                var points = PromptPoint(application.ActiveUIDocument, input.NickName);
+                var points = CommandGrasshopperPlayer.PromptPoint(application.ActiveUIDocument, input.NickName);
                 if (points == null)
                   return Result.Cancelled;
                 values.Add(input, points);
                 break;
               case Param_Curve curve:
-                var curves = PromptEdge(application.ActiveUIDocument, input.NickName);
+                var curves = CommandGrasshopperPlayer.PromptEdge(application.ActiveUIDocument, input.NickName);
                 if (curves == null)
                   return Result.Cancelled;
                 values.Add(input, curves);
                 break;
               case Param_Surface surface:
-                var surfaces = PromptSurface(application.ActiveUIDocument, input.NickName);
+                var surfaces = CommandGrasshopperPlayer.PromptSurface(application.ActiveUIDocument, input.NickName);
                 if (surfaces == null)
                   return Result.Cancelled;
                 values.Add(input, surfaces);
                 break;
               case Param_Brep brep:
-                var breps = PromptBrep(application.ActiveUIDocument, input.NickName);
+                var breps = CommandGrasshopperPlayer.PromptBrep(application.ActiveUIDocument, input.NickName);
                 if (breps == null)
                   return Result.Cancelled;
                 values.Add(input, breps);
@@ -469,7 +274,7 @@ namespace RhinoInside.Revit.Samples
         {
           if (trans.Start(MethodBase.GetCurrentMethod().DeclaringType.Name) == TransactionStatus.Started)
           {
-            var categoryId = new ElementId(ActiveBuiltInCategory);
+            var categoryId = new ElementId(CommandGrasshopperBake.ActiveBuiltInCategory);
 
             foreach (var output in outputs)
             {
@@ -496,24 +301,9 @@ namespace RhinoInside.Revit.Samples
     {
       public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
       {
-        string filePath;
-        using (var openFileDialog = new OpenFileDialog())
-        {
-          openFileDialog.Filter = "Grasshopper Binary (*.gh)|*.gh|Grasshopper Xml (*.ghx)|*.ghx";
-#if DEBUG
-          openFileDialog.FilterIndex = 2;
-#else
-        openFileDialog.FilterIndex = 1;
-#endif
-          openFileDialog.RestoreDirectory = true;
-
-          switch (openFileDialog.ShowDialog(ModalForm.OwnerWindow))
-          {
-            case DialogResult.OK: filePath = openFileDialog.FileName; break;
-            case DialogResult.Cancel: return Result.Cancelled;
-            default: return Result.Failed;
-          }
-        }
+        var rc = CommandGrasshopperPlayer.BrowseForFile(out var filePath);
+        if (rc != Result.Succeeded)
+          return rc;
 
         return Execute(data, ref message, elements, filePath);
       }

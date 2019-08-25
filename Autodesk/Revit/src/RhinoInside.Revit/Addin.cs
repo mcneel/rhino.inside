@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Windows.Input;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.UI;
+using Microsoft.Win32;
 
 namespace RhinoInside.Revit
 {
@@ -15,10 +16,14 @@ namespace RhinoInside.Revit
   public class Addin : IExternalApplication
   {
     #region Static constructor
-    static readonly string SystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+    static readonly string SystemDir = (string) Registry.GetValue
+    (
+      @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+    );
     internal static readonly string RhinoExePath = Path.Combine(SystemDir, "Rhino.exe");
     internal static readonly FileVersionInfo RhinoVersionInfo = File.Exists(RhinoExePath) ? FileVersionInfo.GetVersionInfo(RhinoExePath) : null ;
-    static readonly Version MinimumRhinoVersion = new Version(7, 0, 19148);
+    static readonly Version MinimumRhinoVersion = new Version(7, 0, 19183);
     static readonly Version RhinoVersion = new Version
     (
       RhinoVersionInfo?.FileMajorPart ?? 0,
@@ -204,9 +209,35 @@ namespace RhinoInside.Revit.UI
         // Register keyboard shortcut
         {
           string keyboardShortcutsPath = Path.Combine(Revit.CurrentUsersDataFolderPath, "KeyboardShortcuts.xml");
+          if (!File.Exists(keyboardShortcutsPath))
+            keyboardShortcutsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Autodesk", $"RVT {Revit.ApplicationUI.ControlledApplication.VersionNumber}", "UserDataCache", "KeyboardShortcuts.xml");
 
           if (!Revit.KeyboardShortcuts.LoadFrom(keyboardShortcutsPath, out var shortcuts))
-            shortcuts = new Revit.KeyboardShortcuts.Shortcuts();
+            Revit.KeyboardShortcuts.LoadFromResources($"RhinoInside.Resources.RVT{Revit.ApplicationUI.ControlledApplication.VersionNumber}.KeyboardShortcuts.xml", out shortcuts);
+
+#if DEBUG
+          // Those lines generate the KeyboardShortcuts.xml template file when new Revit version is supported
+          string keyboardShortcutsTemplatePath = Path.Combine(Addin.SourceCodePath, "Resources", $"RVT{Revit.ApplicationUI.ControlledApplication.VersionNumber}", "KeyboardShortcuts.xml");
+          var info = new FileInfo(keyboardShortcutsTemplatePath);
+          if (info.Length == 0)
+          {
+            var shortcutsSummary = new Revit.KeyboardShortcuts.Shortcuts();
+            foreach (var shortcut in shortcuts.OrderBy(x => x.CommandId))
+            {
+              if (!string.IsNullOrEmpty(shortcut.Shortcuts))
+              {
+                var shortcutDefinition = new Revit.KeyboardShortcuts.ShortcutItem
+                {
+                  CommandId = shortcut.CommandId,
+                  Shortcuts = shortcut.Shortcuts
+                };
+                shortcutsSummary.Add(shortcutDefinition);
+              }
+            }
+
+            Revit.KeyboardShortcuts.SaveAs(shortcutsSummary, keyboardShortcutsTemplatePath);
+          }
+#endif
 
           try
           {
@@ -230,7 +261,7 @@ namespace RhinoInside.Revit.UI
             Rhinoceros.ModalScope.Exit += ModalScope_Exit;
           }
 
-          Revit.KeyboardShortcuts.SaveAs(shortcuts, keyboardShortcutsPath);
+          Revit.KeyboardShortcuts.SaveAs(shortcuts, Path.Combine(Revit.CurrentUsersDataFolderPath, "KeyboardShortcuts.xml"));
         }
       }
     }
@@ -303,8 +334,14 @@ namespace RhinoInside.Revit.UI
         HelpCommand.CreateUI(RhinocerosPanel);
         RhinocerosPanel.AddSeparator();
         CommandRhino.CreateUI(RhinocerosPanel);
-        CommandGrasshopper.CreateUI(RhinocerosPanel);
         CommandPython.CreateUI(RhinocerosPanel);
+
+        var GrasshopperPanel = data.Application.CreateRibbonPanel(rhinoTab, "Grasshopper");
+        CommandGrasshopper.CreateUI(GrasshopperPanel);
+        CommandGrasshopperPlayer.CreateUI(GrasshopperPanel);
+        CommandGrasshopperPreview.CreateUI(GrasshopperPanel);
+        CommandGrasshopperRecompute.CreateUI(GrasshopperPanel);
+        CommandGrasshopperBake.CreateUI(GrasshopperPanel);
 
         var SamplesPanel = data.Application.CreateRibbonPanel(rhinoTab, "Samples");
         Samples.Sample1.CreateUI(SamplesPanel);

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Diagnostics;
 using System.Windows.Forms;
@@ -12,7 +13,6 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI;
 
 using Autodesk.Revit.DB;
-using System.ComponentModel;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -94,8 +94,8 @@ namespace RhinoInside.Revit.GH.Types
       {
         if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
         {
-          using (var options = new Options { ComputeReferences = true })
-          using (var geometry = element.get_Geometry(options))
+          Options options = null;
+          using (var geometry = element.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
           {
             if (geometry != null)
             {
@@ -292,18 +292,23 @@ namespace RhinoInside.Revit.GH.Types
         var element = (Autodesk.Revit.DB.Element) this;
         if (element != null)
         {
-          var str = "Revit " + element.GetType().Name;
+          var ToolTip = string.Empty;
+          if(element.Category != null)
+            ToolTip += $"{element.Category.Name} : ";
 
-          var ToolTip = element.Category?.Name ?? string.Empty;
-          if (string.IsNullOrEmpty(ToolTip))
-            ToolTip = element.Name;
-          else if(!string.IsNullOrEmpty(element.Name))
-            ToolTip += " : " + element.Name;
+          if (element.Document.GetElement(element.GetTypeId()) is Autodesk.Revit.DB.ElementType elementType)
+          {
+            if(!string.IsNullOrEmpty(elementType.FamilyName))
+              ToolTip += $"{elementType.FamilyName} : ";
 
-          if(!string.IsNullOrEmpty(ToolTip))
-            str += " \"" + ToolTip + "\"";
+            ToolTip += $"{elementType.Name} : ";
+          }
+          else if (!string.IsNullOrEmpty(element.Name))
+          {
+            ToolTip += $"{element.Name} : ";
+          }
 
-          return str;
+          return $"{ToolTip}id {element.Id}";
         }
       }
 
@@ -317,8 +322,8 @@ namespace RhinoInside.Revit.GH.Types
       out Rhino.Display.DisplayMaterial[] materials, out Rhino.Geometry.Mesh[] meshes, out Rhino.Geometry.Curve[] wires
     )
     {
-      using (var options = new Options { ComputeReferences = true, DetailLevel = DetailLevel == ViewDetailLevel.Undefined ? ViewDetailLevel.Medium : DetailLevel })
-      using (var geometry = element?.get_Geometry(options))
+      Options options = null;
+      using (var geometry = element?.GetGeometry(DetailLevel == ViewDetailLevel.Undefined ? ViewDetailLevel.Medium : DetailLevel, out options)) using (options)
       {
         if (geometry == null)
         {
@@ -840,10 +845,10 @@ namespace RhinoInside.Revit.GH.Parameters
 {
   public class Element : GH_PersistentGeometryParam<Types.Element>
   {
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
 
-    public Element() : base("Element", "Element", "Represents a Revit document element.", "Revit", "Element") { }
+    public Element() : base("Element", "Element", "Represents a Revit document element.", "Params", "Revit") { }
 
     protected override GH_GetterResult Prompt_Singular(ref Types.Element element)
     {
@@ -853,7 +858,11 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         using (new ModalForm.EditScope())
         {
+#if REVIT_2018
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Subelement);
+#else
           var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
+#endif
           if (reference != null)
             element = Types.Element.Make(reference.ElementId);
         }
@@ -918,15 +927,15 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to decompose", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to query for its identity", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddTextParameter("Name", "N", "Element name", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.Category(), "Category", "C", "Element category", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.ElementType(), "Type", "T", "Element type", GH_ParamAccess.item);
-      manager.AddTextParameter("UniqueID", "UUID", "Element UUID", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Category(), "Category", "C", "Category in which the Element resides", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.ElementType(), "Type", "T", "ElementType of the Element", GH_ParamAccess.item);
+      manager.AddTextParameter("Name", "N", "A human readable name for the Element", GH_ParamAccess.item);
+      manager.AddTextParameter("UniqueID", "UUID", "A stable unique identifier for the Element within the document", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -935,10 +944,43 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Element", ref element))
         return;
 
-      DA.SetData("Name", element?.Name);
       DA.SetData("Category", element?.Category);
       DA.SetData("Type", Revit.ActiveDBDocument.GetElement(element?.GetTypeId()));
+      DA.SetData("Name", element?.Name);
       DA.SetData("UniqueID", element?.UniqueId);
+    }
+  }
+
+  public class ElementDelete : TransactionalComponent
+  {
+    public override Guid ComponentGuid => new Guid("213C1F14-A827-40E2-957E-BA079ECCE700");
+    public override GH_Exposure Exposure => GH_Exposure.septenary | GH_Exposure.obscure;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
+    protected override string IconTag => "X";
+
+    public ElementDelete()
+    : base("Element.Delete", "Delete", "Deletes elements from Revit document", "Revit", "Element")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "Elements", "E", "Elements to delete", GH_ParamAccess.tree);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager) { }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      if (!DA.GetDataTree<Types.Element>("Elements", out var elementsTree))
+        return;
+
+      var elementsToDelete = Parameters.Element.ToElementIds(elementsTree).ToArray();
+      var deletedElements = Revit.ActiveDBDocument.Delete(elementsToDelete);
+
+      if (deletedElements.Count == 0)
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "No elements were deleted");
+      else
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{elementsToDelete.Length} elements and {deletedElements.Count - elementsToDelete.Length} dependant elements were deleted.");
     }
   }
 
@@ -960,10 +1002,23 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData(ObjectType.Name, ref element))
         return;
 
-      using (var options = new Options { ComputeReferences = true, DetailLevel = ViewDetailLevel.Fine })
-      using (var geometry = element?.get_Geometry(options))
+      Options options = null;
+      using (var geometry = element?.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
       {
         var list = geometry?.ToRhino().Where(x => x != null).ToList();
+
+        switch (element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING)?.AsInteger())
+        {
+          case 0: // SOLID
+            foreach (var geo in list.OfType<Rhino.Geometry.Brep>().Where(x => x.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Inward))
+              geo.Flip();
+            break;
+          case 1: // VOID
+            foreach (var geo in list.OfType<Rhino.Geometry.Brep>().Where(x => x.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Outward))
+              geo.Flip();
+            break;
+        }
+
         DA.SetDataList(PropertyName, list);
       }
     }

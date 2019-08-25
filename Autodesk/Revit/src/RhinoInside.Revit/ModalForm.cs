@@ -15,6 +15,10 @@ namespace RhinoInside.Revit
 
     [DllImport("USER32", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool IsWindowEnabled(IntPtr hWnd);
+
+    [DllImport("USER32", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool EnableWindow(IntPtr hWnd, [MarshalAs(UnmanagedType.Bool)] bool bEnable);
 
     [DllImport("USER32", SetLastError = true)]
@@ -30,9 +34,11 @@ namespace RhinoInside.Revit
     class RevitMainWindow : IWin32Window { IntPtr IWin32Window.Handle => Revit.MainWindowHandle; }
     public static IWin32Window OwnerWindow = new RevitMainWindow();
     public static new ModalForm ActiveForm { get; private set; }
+    readonly bool WasEnabled = IsWindowEnabled(Revit.MainWindowHandle);
 
     public ModalForm()
     {
+      EnableWindow(Revit.MainWindowHandle, false);
       ActiveForm = this;
       ShowIcon = false;
       ShowInTaskbar = false;
@@ -45,6 +51,7 @@ namespace RhinoInside.Revit
     {
       base.Dispose(disposing);
       ActiveForm = null;
+      EnableWindow(Revit.MainWindowHandle, WasEnabled);
     }
 
     protected override bool ShowWithoutActivation => true;
@@ -70,8 +77,30 @@ namespace RhinoInside.Revit
 
     public class EditScope : IDisposable
     {
-      public EditScope()         => ActiveForm.Hide();
-      void IDisposable.Dispose() => ActiveForm.Show();
+      readonly bool WasExposed = Rhino.UI.RhinoEtoApp.MainWindow.Visible;
+      readonly bool WasVisible = ActiveForm?.Visible ?? false;
+      readonly bool WasEnabled = IsWindowEnabled(Revit.MainWindowHandle);
+      public EditScope()
+      {
+        SetActiveWindow(Revit.MainWindowHandle);
+        if (WasVisible) ShowOwnedPopups(false);
+        if (WasExposed) Rhino.UI.RhinoEtoApp.MainWindow.Visible = false;
+        if (ActiveForm != null) ActiveForm.Visible = false;
+        EnableWindow(Revit.MainWindowHandle, true);
+      }
+      void IDisposable.Dispose()
+      {
+        EnableWindow(Revit.MainWindowHandle, WasEnabled);
+        if (ActiveForm != null) ActiveForm.Visible = WasVisible;
+        if (WasExposed) Rhino.UI.RhinoEtoApp.MainWindow.Visible = WasExposed;
+        if (WasVisible) ShowOwnedPopups(true);
+
+        var activePopup = GetEnabledPopup();
+        if (activePopup == IntPtr.Zero || WasExposed)
+          RhinoApp.SetFocusToMainWindow();
+        else
+          BringWindowToTop(activePopup);
+      }
     }
 
     public static bool ParentEnabled

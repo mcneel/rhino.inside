@@ -12,10 +12,35 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentElements : GH_Component
+  public class DocumentElements : GH_Component, IGH_PersistentElementComponent
   {
     public override Guid ComponentGuid => new Guid("0F7DA57E-6C05-4DD0-AABF-69E42DF38859");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
+    {
+      var filter = new Autodesk.Revit.DB.ElementIsElementTypeFilter(true);
+      var added = e.GetAddedElementIds(filter);
+      if (added.Count > 0)
+        return true;
+
+      var modified = e.GetModifiedElementIds(filter);
+      if (modified.Count > 0)
+        return true;
+
+      var deleted = e.GetDeletedElementIds();
+      if (deleted.Count > 0)
+      {
+        var document = e.GetDocument();
+        var empty = new ElementId[0];
+        foreach (var param in Params.Output.OfType<Parameters.IGH_PersistentElementParam>())
+        {
+          if (param.NeedsToBeExpired(document, empty, deleted, empty))
+            return true;
+        }
+      }
+
+      return false;
+    }
 
     public DocumentElements() : base(
       "Document.Elements", "Elements",
@@ -26,7 +51,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager[manager.AddParameter(new Parameters.Category(), "Category", "C", "Category", GH_ParamAccess.item)].Optional = true;
+      manager.AddParameter(new Parameters.ElementFilter(), "Filter", "F", "Filter", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -36,26 +61,21 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
-      DA.GetData("Category", ref category);
-
-      var elements = new List<Types.Element>();
+      Autodesk.Revit.DB.ElementFilter filter = null;
+      if (!DA.GetData("Filter", ref filter))
+        return;
 
       using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
       {
-        if (category == null)
-        {
-          foreach (var element in collector.WhereElementIsNotElementType().ToElementIds())
-            elements.Add(Types.Element.Make(element));
-        }
-        else
-        {
-          foreach (var element in collector.WhereElementIsNotElementType().OfCategoryId(category.Id).ToElementIds())
-            elements.Add(Types.Element.Make(element));
-        }
+        DA.SetDataList
+        (
+          "Elements",
+          collector.WhereElementIsNotElementType().
+          WherePasses(filter).
+          GetElementIdIterator().
+          Select(x => Types.Element.Make(x))
+        );
       }
-
-      DA.SetDataList("Elements", elements);
     }
   }
 }

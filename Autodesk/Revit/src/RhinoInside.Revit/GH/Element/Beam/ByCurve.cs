@@ -1,20 +1,17 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
-
-using Grasshopper.Kernel;
-
+using System.Linq;
 using Autodesk.Revit.DB;
+using Grasshopper.Kernel;
+using RhinoInside.Runtime.InteropServices;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class BeamByCurve : GH_TransactionalComponentItem
+  public class BeamByCurve : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("26411AA6-8187-49DF-A908-A292A07918F1");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public BeamByCurve() : base
     (
@@ -24,101 +21,69 @@ namespace RhinoInside.Revit.GH.Components
     )
     { }
 
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddCurveParameter("Axis", "A", string.Empty, GH_ParamAccess.item);
-      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "T", string.Empty, GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
-    }
-
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddParameter(new Parameters.Element(), "Beam", "B", "New Beam", GH_ParamAccess.item);
     }
 
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      Rhino.Geometry.Curve axis = null;
-      DA.GetData("Axis", ref axis);
-
-      FamilySymbol familySymbol = null;
-      if (!DA.GetData("Type", ref familySymbol) && Params.Input[1].Sources.Count == 0)
-        familySymbol = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultFamilyTypeId(new ElementId(BuiltInCategory.OST_StructuralFraming))) as FamilySymbol;
-
-      if (familySymbol == null)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' There is no default structural framing family loaded.", Params.Input[1].Name));
-        DA.AbortComponentSolution();
-        return;
-      }
-
-      if (!familySymbol.IsActive)
-        familySymbol.Activate();
-
-      Autodesk.Revit.DB.Level level = null;
-      DA.GetData("Level", ref level);
-
-      DA.DisableGapLogic();
-      int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, axis, familySymbol, level));
-    }
-
-    void CommitInstance
+    void ReconstructBeamByCurve
     (
-      Document doc, IGH_DataAccess DA, int Iteration,
-      Rhino.Geometry.Curve curve,
-      Autodesk.Revit.DB.FamilySymbol familySymbol,
-      Autodesk.Revit.DB.Level level
+      Document doc,
+      ref Autodesk.Revit.DB.Element element,
+
+                 Rhino.Geometry.Curve curve,
+      Optional<Autodesk.Revit.DB.FamilySymbol> type,
+      Optional<Autodesk.Revit.DB.Level> level
     )
     {
-      var element = PreviousElement(doc, Iteration);
-      if (!element?.Pinned ?? false)
-      {
-        ReplaceElement(doc, DA, Iteration, element);
-      }
-      else try
-      {
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
-        {
-          curve?.Scale(scaleFactor);
-        }
+      var scaleFactor = 1.0 / Revit.ModelUnits;
 
-        if
+      if
+      (
+        !(scaleFactor != 1.0 ? curve.Scale(scaleFactor) : true) ||
+        curve.IsClosed ||
+        !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
+        curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
+      )
+        ThrowArgumentException(nameof(curve), "Curve must be a C1 continuous planar non closed curve.");
+
+      SolveOptionalType(ref type, doc, BuiltInCategory.OST_StructuralFraming, nameof(type));
+
+      if (!type.Value.IsActive)
+        type.Value.Activate();
+
+      SolveOptionalLevel(ref level, doc, curve, nameof(level));
+
+      var curves = curve.ToHost().ToList();
+      Debug.Assert(curves.Count == 1);
+      var centerLine = curves[0];
+
+      // Type
+      ChangeElementTypeId(ref element, type.Value.Id);
+
+      if (element is FamilyInstance && element.Location is LocationCurve locationCurve && centerLine.IsSameKindAs(locationCurve.Curve))
+      {
+        locationCurve.Curve = centerLine;
+      }
+      else
+      {
+        var newBeam = doc.Create.NewFamilyInstance
         (
-          curve == null ||
-          curve.IsShort(Revit.ShortCurveTolerance) ||
-          curve.IsClosed ||
-          !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-          curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
-        )
-          throw new Exception(string.Format("Parameter '{0}' must be a C1 continuous planar non closed curve.", Params.Input[0].Name));
+          centerLine,
+          type.Value,
+          level.Value,
+          Autodesk.Revit.DB.Structure.StructuralType.Beam
+        );
 
-        var axisList = curve.ToHost().ToList();
-        Debug.Assert(axisList.Count == 1);
-
-        if (element is FamilyInstance && familySymbol.Id != element.GetTypeId())
+        var parametersMask = new BuiltInParameter[]
         {
-          var newElmentId = element.ChangeTypeId(familySymbol.Id);
-          if (newElmentId != ElementId.InvalidElementId)
-            element = doc.GetElement(newElmentId);
-        }
+          BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+          BuiltInParameter.ELEM_FAMILY_PARAM,
+          BuiltInParameter.ELEM_TYPE_PARAM,
+          BuiltInParameter.LEVEL_PARAM
+        };
 
-        if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
-        {
-          locationCurve.Curve = axisList[0];
-        }
-        else
-        {
-          element = CopyParametersFrom(doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam), element);
-        }
-
-        ReplaceElement(doc, DA, Iteration, element);
-      }
-      catch (Exception e)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-        ReplaceElement(doc, DA, Iteration, null);
+        ReplaceElement(ref element, newBeam);
       }
     }
   }

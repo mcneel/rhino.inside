@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
@@ -153,8 +153,8 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <PackageReference Include="RhinoCommon" Version="7.0.19148.11365-wip" IncludeAssets="compile; build" />
-        <PackageReference Include="Grasshopper" Version="7.0.19148.11365-wip" IncludeAssets="compile; build" />
+        <PackageReference Include="RhinoCommon" Version="7.0.19183.10495-wip" IncludeAssets="compile; build" />
+        <PackageReference Include="Grasshopper" Version="7.0.19183.10495-wip" IncludeAssets="compile; build" />
         <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).0.*" IncludeAssets="build; compile" />
       </ItemGroup>
     </Otherwise>
@@ -191,7 +191,11 @@
     <Compile Include="GH\Element\FamilyInstance\ByPointAtHost.cs" />
     <Compile Include="GH\Element\Form\ByGeometry.cs" />
     <Compile Include="GH\Element\Form\ByCurves.cs" />
+    <Compile Include="GH\Element\AdaptiveComponent\ByPoints.cs" />
+    <Compile Include="GH\ElementFilter\ElementFilter.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
+    <Compile Include="GH\Solid.cs" />
+    <Compile Include="GH\TransactionalComponent.cs" />
     <Compile Include="Rhino\Rhinoceros.cs" />
     <Compile Include="Rhino\DocumentPreviewServer.cs" />
     <Compile Include="ModalForm.cs">
@@ -205,10 +209,12 @@
     <Compile Include="UI\Command.cs" />
     <Compile Include="UI\HelpCommands.cs" />
     <Compile Include="UI\GrasshopperCommand.cs" />
+    <Compile Include="UI\GrasshopperPlayerCommand.cs" />
     <Compile Include="UI\RhinoCommand.cs" />
     <Compile Include="DirectContext3DServer.cs" />
     <Compile Include="ImageBuilder.cs" />
     <Compile Include="Operator.cs" />
+    <Compile Include="Extension.cs" />
     <Compile Include="State.cs" />
     <Compile Include="Convert.cs" />
     <Compile Include="Revit.cs" />
@@ -237,6 +243,7 @@
     <EmbeddedResource Include="Resources\Rhino-logo.png" />
     <EmbeddedResource Include="Resources\Rhino.png" />
     <EmbeddedResource Include="Resources\Grasshopper.png" />
+    <EmbeddedResource Include="Resources\GrasshopperPlayer.png" />
     <EmbeddedResource Include="Resources\Python.png" />
   </ItemGroup>
   <ItemGroup>
@@ -286,10 +293,24 @@
     <None Include="Resources\GH\Vertex.png" />
     <None Include="Resources\GH\WallByCurve.png" />
     <None Include="Resources\GH\RoofByOutline.png" />
-    <None Include="Resources\GH\FamilyInstanceByPointAtHost.png" />
+    <None Include="Resources\GH\FamilyInstanceByLocation.png" />
     <None Include="Resources\GH\ElementIdentity.png" />
     <None Include="Resources\GH\ColumnByCurve.png" />
     <None Include="Resources\GH\DirectShapeByBrep.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\RVT$(RevitVersion)\KeyboardShortcuts.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\GH\Toolbar\Preview_Off_24x24.png" />
+    <EmbeddedResource Include="Resources\GH\Toolbar\Preview_Shaded_24x24.png" />
+    <EmbeddedResource Include="Resources\GH\Toolbar\Preview_Wireframe_24x24.png" />
+    <EmbeddedResource Include="Resources\GH\Toolbar\Recompute_24x24.png" />
+    <EmbeddedResource Include="Resources\GH\Toolbar\SolverOff_24x24.png" />
+    <EmbeddedResource Include="Resources\GH\Toolbar\SolverOn_24x24.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\GH\Toolbar\Bake_24x24.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild" Condition="$(Configuration.Contains('Debug'))">

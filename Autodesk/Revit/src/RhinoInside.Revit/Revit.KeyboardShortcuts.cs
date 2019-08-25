@@ -20,9 +20,9 @@ namespace RhinoInside.Revit
       public class ShortcutItem
       {
         [XmlAttribute()] public string CommandName { get; set; }
-        [XmlAttribute()] public string CommandId   { get; set; }
-        [XmlAttribute()] public string Shortcuts   { get; set; }
-        [XmlAttribute()] public string Paths       { get; set; }
+        [XmlAttribute()] public string CommandId { get; set; }
+        [XmlAttribute()] public string Shortcuts { get; set; }
+        [XmlAttribute()] public string Paths { get; set; }
       }
 
       [Serializable(), XmlRoot("Shortcuts", Namespace = "")]
@@ -43,6 +43,15 @@ namespace RhinoInside.Revit
         {
           shortcuts = null;
           return false;
+        }
+      }
+
+      internal static void LoadFromResources(string keyboardShortcutsId, out Shortcuts shortcuts)
+      {
+        using (var ReadFileStream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(keyboardShortcutsId))
+        {
+          var serializer = new XmlSerializer(typeof(Shortcuts));
+          shortcuts = serializer.Deserialize(ReadFileStream) as Shortcuts;
         }
       }
 

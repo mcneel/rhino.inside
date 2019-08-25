@@ -21,6 +21,8 @@ namespace RhinoInside.Revit.GH
     Rhino.Geometry.BoundingBox primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
     int RebuildPrimitives = 1;
 
+    public static GH_PreviewMode PreviewMode = GH_PreviewMode.Shaded;
+
     #region IExternalServer
     public override string GetName() => "Grasshopper";
     public override string GetDescription() => "Grasshopper previews server";
@@ -28,11 +30,10 @@ namespace RhinoInside.Revit.GH
     #endregion
 
     #region IDirectContext3DServer
-    public override bool UseInTransparentPass(View dBView) => ((activeDefinition?.PreviewMode ?? GH_PreviewMode.Disabled) == GH_PreviewMode.Shaded);
+    public override bool UseInTransparentPass(View dBView) => ((activeDefinition != null ? PreviewMode : GH_PreviewMode.Disabled) == GH_PreviewMode.Shaded);
 
     public override bool CanExecute(View dBView)
     {
-      var editor = Instances.DocumentEditor;
       var canvas = Instances.ActiveCanvas;
       var definition = canvas?.Document;
 
@@ -59,9 +60,9 @@ namespace RhinoInside.Revit.GH
       }
 
       return
+      PreviewMode != GH_PreviewMode.Disabled &&
       IsModelView(dBView) &&
-      activeDefinition != null &&
-      ((definition?.PreviewMode ?? GH_PreviewMode.Disabled) != GH_PreviewMode.Disabled);
+      activeDefinition != null;
     }
 
     static List<IGH_DocumentObject> lastSelection = new List<IGH_DocumentObject>();
@@ -161,14 +162,23 @@ namespace RhinoInside.Revit.GH
               case Rhino.Geometry.Ellipse ellipse:  primitives.Add(new ParamPrimitive(docObject, ellipse.ToNurbsCurve())); break;
               case Rhino.Geometry.Curve curve:      primitives.Add(new ParamPrimitive(docObject, curve)); break;
               case Rhino.Geometry.Mesh mesh:        primitives.Add(new ParamPrimitive(docObject, mesh)); break;
-              case Rhino.Geometry.Box box:          primitives.Add(new ParamPrimitive(docObject, Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1))); break;
+              case Rhino.Geometry.Box box:
+              {
+                var boxMeshes = Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1);
+                if(boxMeshes != null)
+                  primitives.Add(new ParamPrimitive(docObject, boxMeshes));
+              }
+              break;
               case Rhino.Geometry.Brep brep:
               {
-                var previewMesh = new Rhino.Geometry.Mesh();
-                previewMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters()));
-                //previewMesh.Weld(Rhino.RhinoMath.ToRadians(10.0));
+                var brepMeshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters());
+                if (brepMeshes != null)
+                {
+                  var previewMesh = new Rhino.Geometry.Mesh();
+                  previewMesh.Append(brepMeshes);
 
-                primitives.Add(new ParamPrimitive(docObject, previewMesh));
+                  primitives.Add(new ParamPrimitive(docObject, previewMesh));
+                }
               }
               break;
             }

@@ -1,0 +1,23 @@
+{
+  "name": "sample-3",
+  "version": "1.0.0",
+  "description": "Example of running Rhino.Inside an Electron App",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron index.js"
+  },
+  "keywords": [
+    "electron",
+    "edge.js",
+    "Rhinoceros3d",
+    "Grasshopper3d",
+    "inside"
+  ],
+  "author": "Luis E. Fraguada",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^2.0.8",
+    "electron-default-menu": "^1.0.1",
+    "electron-edge-js": "^8.3.6"
+  }
+}

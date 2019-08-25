@@ -26,7 +26,18 @@ namespace RhinoInside.Revit.GH.Types
       {
         var elementType = (Autodesk.Revit.DB.ElementType) this;
         if (elementType != null)
-          return "Revit " + elementType.GetType().Name + " \"" + elementType.FamilyName + ":" + elementType.Name + "\"";
+        {
+          var ToolTip = string.Empty;
+          if (elementType.Category != null)
+            ToolTip += $"{elementType.Category.Name} : ";
+
+          if (!string.IsNullOrEmpty(elementType.FamilyName))
+            ToolTip += $"{elementType.FamilyName} : ";
+
+          ToolTip += $"{elementType.Name} : ";
+
+          return $"{ToolTip}id {elementType.Id}";
+        }
       }
 
       return base.ToString();
@@ -38,11 +49,11 @@ namespace RhinoInside.Revit.GH.Parameters
 {
   public class ElementType : GH_Param<Types.ElementType>
   {
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("97DD546D-65C3-4D00-A609-3F5FBDA67142");
     protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
-    public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Revit", "Element", GH_ParamAccess.item) { }
+    public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Params", "Revit", GH_ParamAccess.item) { }
   }
 
   public class ElementTypeByName : ValueListPicker
@@ -127,8 +138,8 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         int selectedItemsCount = 0;
         using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+        using (var elementTypeCollector = collector.WhereElementIsElementType())
         {
-          HashSet<string> familiesSet = null;
           foreach (var goo in goos)
           {
             var e = new Types.Element();
@@ -137,7 +148,7 @@ namespace RhinoInside.Revit.GH.Parameters
               switch ((Autodesk.Revit.DB.Element) e)
               {
                 case Autodesk.Revit.DB.Family family:
-                  foreach (var elementType in collector.WhereElementIsElementType().Cast<Autodesk.Revit.DB.ElementType>())
+                  foreach (var elementType in elementTypeCollector.Cast<Autodesk.Revit.DB.ElementType>())
                   {
                     if (elementType.FamilyName != family.Name)
                       continue;
@@ -175,24 +186,8 @@ namespace RhinoInside.Revit.GH.Parameters
               var c = new Types.Category();
               if (c.CastFrom(goo))
               {
-                var category = (Autodesk.Revit.DB.Category) c;
-
-                if (familiesSet == null) using (var familyCollector = new FilteredElementCollector(Revit.ActiveDBDocument))
-                  {
-                    familiesSet = new HashSet<string>
-                    (
-                    familyCollector.OfClass(typeof(Family)).
-                    Cast<Family>().
-                    Where((x) => x.FamilyCategory.Id == category.Id).
-                    Select((x) => x.Name)
-                    );
-                  }
-
-                foreach (var elementType in collector.WhereElementIsElementType().Cast<Autodesk.Revit.DB.ElementType>())
+                foreach (var elementType in elementTypeCollector.OfCategoryId(c.Value).Cast<Autodesk.Revit.DB.ElementType>())
                 {
-                  if (elementType.Category?.Id != category.Id && !familiesSet.Contains(elementType.FamilyName))
-                    continue;
-
                   var item = new GH_ValueListItem(elementType.FamilyName + " : " + elementType.Name, elementType.Id.IntegerValue.ToString());
                   item.Selected = selectedItems.Contains(item.Expression);
                   ListItems.Add(item);
@@ -248,6 +243,106 @@ namespace RhinoInside.Revit.GH.Parameters
       nTopic.AddRemark(@"You can also connect a list of categories, families or types at left as an input and this component will be filled up with all types that belong to those objects.");
 
       return nTopic.HtmlFormat();
+    }
+  }
+}
+
+namespace RhinoInside.Revit.GH.Components
+{
+  public class ElementTypeIdentity : GH_Component
+  {
+    public override Guid ComponentGuid => new Guid("7DEA1BA3-D9BC-4E94-9E1C-0E527187C9DC");
+    protected override string IconTag => "ID";
+
+    public ElementTypeIdentity()
+    : base("ElementType.Identity", "ElementType.Identity", "Query type identity information", "Revit", "Type")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ElementType(), "Type", "T", "ElementType to query for its identity", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Category(), "Category", "C", "Category in which the ElementType resides", GH_ParamAccess.item);
+      manager.AddTextParameter("FamilyName", "F", "The family name of the ElementType", GH_ParamAccess.item);
+      manager.AddTextParameter("Name", "N", "A human readable name for the ElementType", GH_ParamAccess.item);
+      manager.AddTextParameter("UniqueID", "UUID", "A stable unique identifier for the ElementType within the document", GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.ElementType elementType = null;
+      if (!DA.GetData("Type", ref elementType))
+        return;
+
+      DA.SetData("Category", elementType?.Category);
+      DA.SetData("FamilyName", elementType?.FamilyName);
+      DA.SetData("Name", elementType?.Name);
+      DA.SetData("UniqueID", elementType?.UniqueId);
+    }
+  }
+
+  public class ElementTypeSimilar : GH_Component
+  {
+    public override Guid ComponentGuid => new Guid("BA9C72C5-EC88-450B-B736-BE6D827FA2F3");
+    protected override string IconTag => "S";
+
+    public ElementTypeSimilar()
+    : base("ElementType.Similar", "ElementType.Similar", "Obtains a set of types that are similar to Type", "Revit", "Type")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ElementType(), "Type", "T", "ElementType to query for its similar types", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ElementType(), "Types", "T", string.Empty, GH_ParamAccess.list);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.ElementType elementType = null;
+      if (!DA.GetData("Type", ref elementType))
+        return;
+
+      DA.SetDataList("Types", elementType?.GetSimilarTypes());
+    }
+  }
+
+  public class ElementTypeDuplicate : ReconstructElementComponent
+  {
+    public override Guid ComponentGuid => new Guid("5ED7E612-E5C6-4F0E-AA69-814CF2478F7E");
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
+    protected override string IconTag => "D";
+
+    public ElementTypeDuplicate() : base
+    (
+      "ElementType.Duplicate", "Duplicate",
+      "Given a Name, it duplicates an ElementType into the active Revit document",
+      "Revit", "Type"
+    )
+    { }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ElementType(), "Type", "T", "New ElementType", GH_ParamAccess.item);
+    }
+
+    void ReconstructElementTypeDuplicate
+    (
+      Document doc,
+      ref Autodesk.Revit.DB.ElementType elementType,
+
+      Autodesk.Revit.DB.ElementType type,
+      string name
+    )
+    {
+      ReplaceElement(ref elementType, type.Duplicate(name));
     }
   }
 }

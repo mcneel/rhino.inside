@@ -100,6 +100,20 @@ namespace RhinoInside.Revit.UI
       };
     }
 
+    public static ToggleButtonData NewToggleButtonData<CommandType, AvailabilityType>(string text = null)
+    where CommandType : IExternalCommand where AvailabilityType : IExternalCommandAvailability
+    {
+      return new ToggleButtonData
+      (
+        typeof(CommandType).Name,
+        text ?? typeof(CommandType).Name,
+        typeof(CommandType).Assembly.Location,
+        typeof(CommandType).FullName
+      )
+      {
+        AvailabilityClassName = typeof(AvailabilityType).FullName
+      };
+    }
     internal class AllwaysAvailable : IExternalCommandAvailability
     {
       bool IExternalCommandAvailability.IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories) => true;

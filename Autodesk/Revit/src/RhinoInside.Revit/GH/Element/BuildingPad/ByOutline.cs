@@ -1,21 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-
-using Grasshopper.Kernel;
-
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Architecture;
+using Grasshopper.Kernel;
+using RhinoInside.Runtime.InteropServices;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class BuildingPadByOutline : GH_TransactionalComponentItem
+  public class BuildingPadByOutline : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("ADE71474-5F00-4BD5-9D1E-D518B42137F2");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public BuildingPadByOutline() : base
     (
@@ -25,106 +22,56 @@ namespace RhinoInside.Revit.GH.Components
     )
     { }
 
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddCurveParameter("Boundaries", "B", string.Empty, GH_ParamAccess.list);
-      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "T", string.Empty, GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
-    }
-
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddParameter(new Parameters.Element(), "BuildingPad", "BP", "New BuildingPad", GH_ParamAccess.item);
     }
 
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      var boundaries = new List<Rhino.Geometry.Curve>();
-      if (!DA.GetDataList("Boundaries", boundaries))
-        return;
-
-      Autodesk.Revit.DB.BuildingPadType buildingPadType = null;
-      if (!DA.GetData("Type", ref buildingPadType) && Params.Input[1].Sources.Count == 0)
-        buildingPadType = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultElementTypeId(ElementTypeGroup.BuildingPadType)) as BuildingPadType;
-
-      Autodesk.Revit.DB.Level level = null;
-      DA.GetData("Level", ref level);
-      if (level == null && boundaries.Count != 0)
-      {
-        var boundaryBBox = Rhino.Geometry.BoundingBox.Empty;
-        foreach (var boundary in boundaries.OfType<Rhino.Geometry.Curve>())
-          boundaryBBox.Union(boundary.GetBoundingBox(true));
-
-        level = Revit.ActiveDBDocument.FindLevelByElevation(boundaryBBox.Min.Z / Revit.ModelUnits);
-      }
-
-      DA.DisableGapLogic();
-      int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, boundaries, buildingPadType, level));
-    }
-
-    void CommitInstance
+    void ReconstructBuildingPadByOutline
     (
-      Document doc, IGH_DataAccess DA, int Iteration,
-      IEnumerable<Rhino.Geometry.Curve> boundaries,
-      Autodesk.Revit.DB.BuildingPadType buildingPadType,
-      Autodesk.Revit.DB.Level level
+      Document doc,
+      ref Autodesk.Revit.DB.Element element,
+
+      IList<Rhino.Geometry.Curve> boundaries,
+      Optional<Autodesk.Revit.DB.BuildingPadType> type,
+      Optional<Autodesk.Revit.DB.Level> level
     )
     {
-      var element = PreviousElement(doc, Iteration);
-
-      if (!element?.Pinned ?? false)
+      var scaleFactor = 1.0 / Revit.ModelUnits;
+      if (scaleFactor != 1.0)
       {
-        ReplaceElement(doc, DA, Iteration, element);
+        foreach (var boundary in boundaries)
+          boundary.Scale(scaleFactor);
       }
-      else try
-        {
-          var scaleFactor = 1.0 / Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-          {
-            foreach (var boundary in boundaries)
-              boundary.Scale(scaleFactor);
-          }
 
-          var curveLoops = boundaries.Select(region => CurveLoop.Create(region.ToHost().SelectMany(x => x.ToBoundedCurves()).ToList()));
+      var boundaryBBox = Rhino.Geometry.BoundingBox.Empty;
+      foreach (var boundary in boundaries)
+        boundaryBBox.Union(boundary.GetBoundingBox(true));
 
-          if (buildingPadType == null)
-            buildingPadType = BuildingPadType.CreateDefault(Revit.ActiveDBDocument);
+      SolveOptionalType(ref type, doc, ElementTypeGroup.BuildingPadType, (document, param) => BuildingPadType.CreateDefault(document), nameof(type));
 
-          if (element is BuildingPad && buildingPadType.Id != element.GetTypeId())
-          {
-            var newElmentId = element.ChangeTypeId(buildingPadType.Id);
-            if (newElmentId != ElementId.InvalidElementId)
-              element = doc.GetElement(newElmentId);
-          }
+      SolveOptionalLevel(ref level, doc, boundaryBBox.Min.Z, nameof(level));
 
-          if (element is BuildingPad buildingPad)
-          {
-            buildingPad.SetBoundary(curveLoops.ToList());
-          }
-          else
-          {
-            element = CopyParametersFrom(BuildingPad.Create(doc, buildingPadType.Id, level.Id, curveLoops.ToList()), element);
-          }
+      var curveLoops = boundaries.Select(region => CurveLoop.Create(region.ToHost().SelectMany(x => x.ToBoundedCurves()).ToList()));
 
-          if (element != null)
-          {
-            var boundaryBBox = Rhino.Geometry.BoundingBox.Empty;
-            foreach (var boundary in boundaries)
-              boundaryBBox.Union(boundary.GetBoundingBox(true));
+      // Type
+      ChangeElementTypeId(ref element, type.Value.Id);
 
-            element.get_Parameter(BuiltInParameter.TYPE_WALL_CLOSURE).Set(level.Id);
-            element.get_Parameter(BuiltInParameter.LEVEL_PARAM).Set(level.Id);
-            element.get_Parameter(BuiltInParameter.BUILDINGPAD_HEIGHTABOVELEVEL_PARAM).Set(boundaryBBox.Min.Z - level.Elevation);
-          }
+      if (element is BuildingPad buildingPad)
+      {
+        buildingPad.SetBoundary(curveLoops.ToList());
+      }
+      else
+      {
+        ReplaceElement(ref element, BuildingPad.Create(doc, type.Value.Id, level.Value.Id, curveLoops.ToList()));
+      }
 
-          ReplaceElement(doc, DA, Iteration, element);
-        }
-        catch (Exception e)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-          ReplaceElement(doc, DA, Iteration, null);
-        }
+      if (element != null)
+      {
+        element.get_Parameter(BuiltInParameter.TYPE_WALL_CLOSURE).Set(level.Value.Id);
+        element.get_Parameter(BuiltInParameter.LEVEL_PARAM).Set(level.Value.Id);
+        element.get_Parameter(BuiltInParameter.BUILDINGPAD_HEIGHTABOVELEVEL_PARAM).Set(boundaryBBox.Min.Z - level.Value.Elevation);
+      }
     }
   }
 }

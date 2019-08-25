@@ -100,10 +100,14 @@ namespace RhinoInside.Revit.GH
 
       if (added.Count > 0 || deleted.Count > 0 || modified.Count > 0)
       {
-        var materialsChanged = modified.Select((x) => document.GetElement(x)).OfType<Material>().Any();
-
         foreach (GH_Document definition in Instances.DocumentServer)
         {
+          bool expireNow =
+          GH_Document.EnableSolutions &&
+          Instances.ActiveCanvas.Document == definition &&
+          definition.Enabled &&
+          definition.SolutionState != GH_ProcessStep.Process;
+
           foreach (var obj in definition.Objects)
           {
             if (obj is IGH_Param param)
@@ -114,17 +118,28 @@ namespace RhinoInside.Revit.GH
               if (param.Phase == GH_SolutionPhase.Blank)
                 continue;
 
-              if (obj is Parameters.IGH_PersistentGeometryParam persistent)
+              if (obj is Parameters.IGH_PersistentElementParam persistentParam)
               {
-                if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                  param.ExpireSolution(false);
+                if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
+                {
+                  if (expireNow)
+                    param.ExpireSolution(false);
+                  else
+                    param.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "This parameter contains expired elements.");
+                }
               }
             }
             else if (obj is IGH_Component component)
             {
-              if (component is Components.DocumentElements)
+              if (component is Components.IGH_PersistentElementComponent persistentComponent)
               {
-                component.ExpireSolution(false);
+                if (persistentComponent.NeedsToBeExpired(e))
+                {
+                  if (expireNow)
+                    component.ExpireSolution(false);
+                  else
+                    component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Document has been changed since the last solution.");
+                }
               }
               else
               {
@@ -137,9 +152,9 @@ namespace RhinoInside.Revit.GH
                   if (inputParam.Phase == GH_SolutionPhase.Blank)
                     continue;
 
-                  if (inputParam is Parameters.IGH_PersistentGeometryParam persistent)
+                  if (inputParam is Parameters.IGH_PersistentElementParam persistentParam)
                   {
-                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
+                    if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
                     {
                       needsToBeExpired = true;
                       break;
@@ -147,31 +162,18 @@ namespace RhinoInside.Revit.GH
                   }
                 }
 
-                if (needsToBeExpired) component.ExpireSolution(true);
-                else foreach (var outParam in component.Params.Output)
-                  {
-                    if (outParam is Parameters.IGH_PersistentGeometryParam persistent)
-                    {
-                      if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                      {
-                        foreach (var r in outParam.Recipients)
-                          r.ExpireSolution(false);
-                      }
-                      else if (materialsChanged)
-                      {
-                        foreach (var goo in outParam.VolatileData.AllData(true))
-                        {
-                          if (goo is IGH_PreviewMeshData previewMeshData)
-                            previewMeshData.DestroyPreviewMeshes();
-                        }
-                      }
-                    }
-                  }
+                if (needsToBeExpired)
+                {
+                  if (expireNow)
+                    component.ExpireSolution(false);
+                  else
+                    component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Some input parameter contains expired elements.");
+                }
               }
             }
           }
 
-          if (definition.Enabled)
+          if (expireNow)
             definition.NewSolution(false);
         }
       }
