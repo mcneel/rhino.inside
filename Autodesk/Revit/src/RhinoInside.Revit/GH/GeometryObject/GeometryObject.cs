@@ -14,35 +14,25 @@ using Rhino.Geometry;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public interface IGH_GeometricGoo : Grasshopper.Kernel.Types.IGH_GeometricGoo
-  {
-    Reference Reference     { get; }
-    string UniqueID         { get; }
-    bool LoadGeometry(Document doc);
-  }
-
-  public abstract class GH_GeometricGoo<X> : Grasshopper.Kernel.Types.GH_GeometricGoo<X>, IGH_GeometricGoo, IGH_PreviewMeshData where X : GeometryObject
+  public abstract class GeometryObject<X> :
+    GH_Goo<X>,
+    IElementId,
+    IGH_GeometricGoo,
+    IGH_PreviewMeshData
+    where X : Autodesk.Revit.DB.GeometryObject
   {
     public override string TypeName => "Revit GeometryObject";
     public override string TypeDescription => "Represents a Revit GeometryObject";
-    public override bool IsValid => Value != null;
+    public override bool IsValid => !(Value is null);
     public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
     protected virtual Type ScriptVariableType => typeof(X);
 
-    #region IGH_GeometricGoo
-    Guid Grasshopper.Kernel.Types.IGH_GeometricGoo.ReferenceID
-    {
-      // TODO: Generate a Guid using the Reference.ElementReferenceType and its index
-      // get => Reference == null ? Guid.Empty : new Guid(Reference.ElementId == ElementId.InvalidElementId ? 0 : Reference.ElementId.IntegerValue, Reference.ElementIndex(), Reference.ElementReferenceType, 0, 0, 0, 0, 0, 0, 0, 0);
-      get => Guid.Empty;
-      set => throw new InvalidOperationException();
-    }
-    public Reference Reference { get; private set; }
+    #region IPersistentId
+    public Reference Reference { get; protected set; }
+    public bool IsReferencedElement => !string.IsNullOrEmpty(UniqueID);
     public string UniqueID { get; protected set; } = string.Empty;
-    public override bool IsReferencedGeometry => !string.IsNullOrEmpty(UniqueID);
-    public override bool IsGeometryLoaded => Value != null;
-    public override bool LoadGeometry() => LoadGeometry(Revit.ActiveDBDocument);
-    public virtual bool LoadGeometry(Document doc)
+    public bool IsElementLoaded => !(Value is null);
+    public virtual bool LoadElement(Document doc)
     {
       Value = null;
 
@@ -58,13 +48,29 @@ namespace RhinoInside.Revit.GH.Types
       }
       catch (Autodesk.Revit.Exceptions.ArgumentException) { }
 
-      return IsValid;
+      return IsElementLoaded;
     }
+    public void UnloadElement() => Value = null;
+    #endregion
 
-    public override sealed Grasshopper.Kernel.Types.IGH_GeometricGoo DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
-    public override BoundingBox Boundingbox => GetBoundingBox(Rhino.Geometry.Transform.Identity);
-    public override Grasshopper.Kernel.Types.IGH_GeometricGoo Transform(Rhino.Geometry.Transform xform) => null;
-    public override Grasshopper.Kernel.Types.IGH_GeometricGoo Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
+    #region IGH_GeometricGoo
+    BoundingBox IGH_GeometricGoo.Boundingbox => GetBoundingBox(Rhino.Geometry.Transform.Identity);
+    Guid IGH_GeometricGoo.ReferenceID
+    {
+      get => Guid.Empty;
+      set { if (value != Guid.Empty) throw new InvalidOperationException(); }
+    }
+    bool IGH_GeometricGoo.IsReferencedGeometry => false;
+    bool IGH_GeometricGoo.IsGeometryLoaded => IsElementLoaded;
+
+    void IGH_GeometricGoo.ClearCaches() { }
+    IGH_GeometricGoo IGH_GeometricGoo.DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
+    public abstract BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform);
+    bool IGH_GeometricGoo.LoadGeometry() => false;
+    bool IGH_GeometricGoo.LoadGeometry(Rhino.RhinoDoc doc) => false;
+    IGH_GeometricGoo IGH_GeometricGoo.Transform(Rhino.Geometry.Transform xform) => null;
+    IGH_GeometricGoo IGH_GeometricGoo.Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
+
     public override sealed string ToString()
     {
       if (!IsValid)
@@ -76,7 +82,7 @@ namespace RhinoInside.Revit.GH.Types
         var element = Revit.ActiveDBDocument.GetElement(Reference);
         if (element != null)
         {
-          typeName = IsReferencedGeometry ? "Referenced " : string.Empty;
+          typeName = "Referenced ";
           switch (Reference.ElementReferenceType)
           {
             case ElementReferenceType.REFERENCE_TYPE_NONE: typeName += "geometry"; break;
@@ -133,26 +139,26 @@ namespace RhinoInside.Revit.GH.Types
     Rhino.Geometry.Mesh[] IGH_PreviewMeshData.GetPreviewMeshes() => meshes;
     #endregion
 
-    protected GH_GeometricGoo() { }
-    protected GH_GeometricGoo(X data) : base(data) { }
-    protected GH_GeometricGoo(Reference reference, Document doc) { Reference = reference; UniqueID = reference.ConvertToStableRepresentation(doc); }
+    protected GeometryObject() { }
+    protected GeometryObject(X data) : base(data) { }
+    protected GeometryObject(Reference reference, Document doc) { Reference = reference; UniqueID = reference.ConvertToStableRepresentation(doc); }
   }
 
-  public class Vertex : GH_GeometricGoo<Autodesk.Revit.DB.Point>, IGH_PreviewData
+  public class Vertex : GeometryObject<Autodesk.Revit.DB.Point>, IGH_PreviewData
   {
     public override string TypeName => "Revit Vertex";
     public override string TypeDescription => "Represents a Revit Vertex";
 
     readonly int VertexIndex = -1;
-    public override bool LoadGeometry(Document doc)
+    public override bool LoadElement(Document doc)
     {
       Value = null;
 
       try
       {
-        var reference = Autodesk.Revit.DB.Reference.ParseFromStableRepresentation(doc, UniqueID);
-        var element = doc.GetElement(reference);
-        var geometry = element?.GetGeometryObjectFromReference(reference);
+        Reference = Autodesk.Revit.DB.Reference.ParseFromStableRepresentation(doc, UniqueID);
+        var element = doc.GetElement(Reference);
+        var geometry = element?.GetGeometryObjectFromReference(Reference);
         if (geometry is Autodesk.Revit.DB.Edge edge)
         {
           var curve = edge.AsCurve();
@@ -259,7 +265,7 @@ namespace RhinoInside.Revit.GH.Types
     #endregion
   }
 
-  public class Edge : GH_GeometricGoo<Autodesk.Revit.DB.Edge>, IGH_PreviewData
+  public class Edge : GeometryObject<Autodesk.Revit.DB.Edge>, IGH_PreviewData
   {
     public override string TypeName => "Revit Edge";
     public override string TypeDescription => "Represents a Revit Edge";
@@ -344,7 +350,7 @@ namespace RhinoInside.Revit.GH.Types
     #endregion
   }
 
-  public class Face : GH_GeometricGoo<Autodesk.Revit.DB.Face>, IGH_PreviewData
+  public class Face : GeometryObject<Autodesk.Revit.DB.Face>, IGH_PreviewData
   {
     public override string TypeName => "Revit Face";
     public override string TypeDescription => "Represents a Revit Face";
@@ -503,7 +509,7 @@ namespace RhinoInside.Revit.GH.Parameters
   Grasshopper.Kernel.GH_PersistentGeometryParam<X>,
   IGH_PreviewObject,
   IGH_PersistentElementParam
-  where X : class, Types.IGH_GeometricGoo
+  where X : class, IGH_GeometricGoo
   {
     protected GH_PersistentGeometryParam(string name, string nickname, string description, string category, string subcategory) :
     base(new GH_InstanceDescription(name, nickname, description, category, subcategory)) { }
@@ -523,11 +529,9 @@ namespace RhinoInside.Revit.GH.Parameters
 
     internal static IEnumerable<ElementId> ToElementIds(IGH_Structure data) =>
       data.AllData(true).
-      OfType<Types.IGH_GeometricGoo>().
-      Where(x => x.IsReferencedGeometry).
-      Select(x => x.Reference).
+      OfType<Types.Element>().
       Where(x => x != null).
-      Select(x => x.ElementId);
+      Select(x => x.Value);
 
     void Menu_HighlightElements(object sender, EventArgs e)
     {
@@ -628,19 +632,15 @@ namespace RhinoInside.Revit.GH.Parameters
 #region IGH_PersistentGeometryParam
     bool IGH_PersistentElementParam.NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified)
     {
-      foreach (var data in VolatileData.AllData(true).OfType<Types.IGH_GeometricGoo>())
+      foreach (var data in VolatileData.AllData(true).OfType<Types.Element>())
       {
-        if (!data.IsReferencedGeometry)
+        if (!data.IsElementLoaded)
           continue;
 
-        var reference = data.Reference;
-        if (reference == null)
-          continue;
-
-        if (modified.Contains(reference.ElementId))
+        if (modified.Contains(data.Value))
           return true;
 
-        if (deleted.Contains(reference.ElementId))
+        if (deleted.Contains(data.Value))
           return true;
       }
 

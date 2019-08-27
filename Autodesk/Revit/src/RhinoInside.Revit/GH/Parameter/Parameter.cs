@@ -21,11 +21,18 @@ namespace RhinoInside.Revit.GH.Types
 
     public static explicit operator Autodesk.Revit.DB.ParameterElement(ParameterKey self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.ParameterElement;
 
-    #region IGH_PersitentGoo
-    public override Guid ReferenceID
+    #region IElementId
+    public override bool LoadElement(Document doc)
     {
-      get => (Revit.ActiveDBDocument?.GetElement(this) as SharedParameterElement)?.GuidValue ?? base.ReferenceID;
-      set => Value = SharedParameterElement.Lookup(Revit.ActiveDBDocument, value)?.Id ?? ElementId.InvalidElementId;
+      if (TryParseUniqueID(UniqueID, out var _, out var index))
+      {
+        Value = new ElementId(index);
+        if (Value.IsParameterId(Revit.ActiveDBDocument))
+          return true;
+      }
+
+      Value = ElementId.InvalidElementId;
+      return false;
     }
     #endregion
 
@@ -38,48 +45,34 @@ namespace RhinoInside.Revit.GH.Types
       if (source is IGH_Goo goo)
         source = goo.ScriptVariable();
 
+      var parameterId = ElementId.InvalidElementId;
       switch (source)
       {
-        case Autodesk.Revit.DB.ParameterElement parameterElement:
-          {
-            Value = parameterElement.Id;
-            UniqueID = string.Empty;
-            return true;
-          }
-          //break;
-        case Autodesk.Revit.DB.Parameter parameter:
-          if(parameter.Id != ElementId.InvalidElementId)
-          {
-            Value = parameter.Id;
-            UniqueID = string.Empty;
-            return true;
-          }
-          break;
-        case Autodesk.Revit.DB.ElementId id:
-          if (Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue))
-          {
-            Value = new ElementId(id.IntegerValue);
-            UniqueID = string.Empty;
-            return true;
-          }
-          else if(Revit.ActiveDBDocument.GetElement(id) is ParameterElement parameterElement)
-          {
-            Value = parameterElement.Id;
-            UniqueID = string.Empty;
-            return true;
-          }
-          break;
-        case int integer:
-          if (Enum.IsDefined(typeof(BuiltInParameter), integer))
-          {
-            Value = new ElementId(integer);
-            UniqueID = string.Empty;
-            return true;
-          }
-          break;
+        case Autodesk.Revit.DB.ParameterElement parameterElement: SetValue(parameterElement); return true;
+        case Autodesk.Revit.DB.Parameter parameter: parameterId = parameter.Id; break;
+        case Autodesk.Revit.DB.ElementId id:        parameterId = id; break;
+        case int integer:                           parameterId = new ElementId(integer); break;
+      }
+
+      if (parameterId.IsParameterId(Revit.ActiveDBDocument))
+      {
+        SetValue(Revit.ActiveDBDocument, parameterId);
+        return true;
       }
 
       return base.CastFrom(source);
+    }
+
+    public override bool CastTo<Q>(ref Q target)
+    {
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Guid)))
+      {
+        var element = (Autodesk.Revit.DB.SharedParameterElement) this;
+        target = (Q) (object) new GH_Guid(element?.GuidValue ?? Guid.Empty);
+        return true;
+      }
+
+      return base.CastTo<Q>(ref target);
     }
 
     class Proxy : IGH_GooProxy
@@ -139,13 +132,12 @@ namespace RhinoInside.Revit.GH.Types
       {
         var element = (Autodesk.Revit.DB.ParameterElement) this;
         if (element != null)
-          return "Revit " + element.GetType().Name + " \"" + element.Name + "\"";
+          return element.Name;
 
         try
         {
           var builtInParameterLabel = LabelUtils.GetLabelFor((BuiltInParameter) Value.IntegerValue);
-          if (builtInParameterLabel != null)
-            return "Revit BuiltInParameter \"" + builtInParameterLabel + "\"";
+          return builtInParameterLabel ?? string.Empty;
         }
         catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
       }
@@ -263,6 +255,40 @@ namespace RhinoInside.Revit.GH.Types
       }
 
       return base.CastTo<Q>(ref target);
+    }
+
+    public override bool Equals(object obj)
+    {
+      if (obj is ParameterValue paramValue)
+      {
+        if
+        (
+          paramValue.Value.Id.IntegerValue == Value.Id.IntegerValue &&
+          paramValue.Value.Element.Id.IntegerValue == Value.Element.Id.IntegerValue &&
+          paramValue.Value.StorageType == Value.StorageType &&
+          paramValue.Value.HasValue == Value.HasValue
+        )
+        {
+          if (!Value.HasValue)
+            return true;
+
+          switch (Value.StorageType)
+          {
+            case StorageType.None:    return true;
+            case StorageType.Integer: return paramValue.Value.AsInteger() == Value.AsInteger();
+            case StorageType.Double:  return paramValue.Value.AsDouble() == Value.AsDouble();
+            case StorageType.String:   return paramValue.Value.AsString() == Value.AsString();
+            case StorageType.ElementId: return paramValue.Value.AsElementId().IntegerValue == Value.AsElementId().IntegerValue;
+          }
+        }
+      }
+
+      return base.Equals(obj);
+    }
+
+    public override int GetHashCode()
+    {
+      return Value.Id.IntegerValue;
     }
 
     public override string ToString()
@@ -430,6 +456,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public ParameterParam() : base("INVALID", "Invalid", "Represents a Revit parameter instance.", "Revit", "Parameter", GH_ParamAccess.item) { }
     public ParameterParam(Autodesk.Revit.DB.Parameter p) : this()
     {
+      MutableNickName = false;
       ParameterId = p.Id.IntegerValue;
 
       try { NickName = LabelUtils.GetLabelFor(p.Definition.ParameterGroup) + " : " + p.Definition.Name; }
@@ -477,7 +504,7 @@ namespace RhinoInside.Revit.GH.Parameters
     }
   }
 
-  public class BuiltInParameterByName : ValueListPicker
+  public class BuiltInParameterByName : ValueList
   {
     public override Guid ComponentGuid => new Guid("C1D96F56-F53C-4DFC-8090-EC2050BDBB66");
     public override GH_Exposure Exposure => GH_Exposure.primary;
