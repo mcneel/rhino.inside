@@ -34,6 +34,27 @@ namespace RhinoInside.Revit
     }
     #endregion
 
+    #region ElementId
+    public static bool IsValid(this ElementId id) => id.IntegerValue != ElementId.InvalidElementId.IntegerValue;
+    public static bool IsBuiltInId(this ElementId id) => id.IntegerValue < 0;
+    public static bool IsParameterId(this ElementId id, Autodesk.Revit.DB.Document doc)
+    {
+      if (-2000000 < id.IntegerValue && id.IntegerValue < -1000000)
+        return Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue);
+
+      try { return doc.GetElement(id) is ParameterElement; }
+      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
+    }
+    public static bool IsCategoryId(this ElementId id, Autodesk.Revit.DB.Document doc)
+    {
+      if (-3000000 < id.IntegerValue && id.IntegerValue < -2000000)
+        return Enum.IsDefined(typeof(BuiltInCategory), id.IntegerValue);
+
+      try { return Autodesk.Revit.DB.Category.GetCategory(doc, id) != null; }
+      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
+    }
+    #endregion
+
     #region Levels
     public static Autodesk.Revit.DB.Level FindLevelByElevation(this Autodesk.Revit.DB.Document doc, double elevation)
     {
@@ -117,6 +138,39 @@ namespace RhinoInside.Revit
               case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
             }
           }
+      }
+    }
+    #endregion
+
+    #region Element
+    public static void SetTransform(this Autodesk.Revit.DB.Instance element, XYZ newOrigin, XYZ newBasisX, XYZ newBasisY)
+    {
+      var current = element.GetTransform();
+      var BasisZ = newBasisX.CrossProduct(newBasisY);
+      {
+        if (!current.BasisZ.IsParallelTo(BasisZ))
+        {
+          var axisDirection = current.BasisZ.CrossProduct(BasisZ);
+          double angle = current.BasisZ.AngleTo(BasisZ);
+
+          using (var axis = Autodesk.Revit.DB.Line.CreateUnbound(current.Origin, axisDirection))
+            ElementTransformUtils.RotateElement(element.Document, element.Id, axis, angle);
+
+          current = element.GetTransform();
+        }
+
+        if (!current.BasisX.IsAlmostEqualTo(newBasisX))
+        {
+          double angle = current.BasisX.AngleOnPlaneTo(newBasisX, BasisZ);
+          using (var axis = Autodesk.Revit.DB.Line.CreateUnbound(current.Origin, BasisZ))
+            ElementTransformUtils.RotateElement(element.Document, element.Id, axis, angle);
+        }
+
+        {
+          var trans = newOrigin - current.Origin;
+          if (!trans.IsZeroLength())
+            ElementTransformUtils.MoveElement(element.Document, element.Id, trans);
+        }
       }
     }
     #endregion
