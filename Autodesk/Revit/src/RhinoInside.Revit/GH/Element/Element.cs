@@ -13,18 +13,24 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI;
 
 using Autodesk.Revit.DB;
+using Grasshopper.Kernel.Special;
+using Grasshopper.Kernel.Data;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class Element : ID, IGH_GeometricGoo, IGH_PreviewData, IGH_PreviewMeshData
+  public class Element :
+    ID,
+    IGH_GeometricGoo,
+    IGH_PreviewData,
+    IGH_PreviewMeshData
   {
     public override string TypeName => "Revit Element";
     public override string TypeDescription => "Represents a Revit element";
     override public object ScriptVariable() => (Autodesk.Revit.DB.Element) this;
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Element);
-    public static explicit operator Autodesk.Revit.DB.Element(Element self) => Revit.ActiveDBDocument?.GetElement(self);
+    public static explicit operator Autodesk.Revit.DB.Element(Element self) => self.IsValid ? Revit.ActiveDBDocument?.GetElement(self) : null;
 
-    static public Element Make(Autodesk.Revit.DB.Element element)
+    public static Element Make(Autodesk.Revit.DB.Element element)
     {
       if (element == null)
         return null;
@@ -41,12 +47,12 @@ namespace RhinoInside.Revit.GH.Types
       return new Element(element);
     }
 
-    static public new Element Make(ElementId Id)    => Make(Revit.ActiveDBDocument.GetElement(Id));
-    static public     Element Make(string uniqueId) => Make(Revit.ActiveDBDocument.GetElement(uniqueId));
+    public static new Element Make(ElementId Id)    => Make(Revit.ActiveDBDocument.GetElement(Id));
+    public static     Element Make(string uniqueId) => Make(Revit.ActiveDBDocument.GetElement(uniqueId));
 
     public Element() : base() { }
     protected Element(Autodesk.Revit.DB.Element element)     : base(element.Id, element.UniqueId) { }
-    protected Element(Autodesk.Revit.DB.ElementId elementId) : base(elementId, Revit.ActiveDBDocument?.GetElement(elementId)?.UniqueId) { }
+    protected Element(Autodesk.Revit.DB.ElementId elementId) : base(elementId) { }
 
     public override bool CastFrom(object source)
     {
@@ -64,8 +70,7 @@ namespace RhinoInside.Revit.GH.Types
 
       if (ScriptVariableType.IsInstanceOfType(element))
       {
-        Value = element.Id;
-        UniqueID = element.UniqueId;
+        SetValue(element);
         return true;
       }
 
@@ -74,105 +79,108 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
+      if (base.CastTo<Q>(ref target))
+        return true;
+
       var element = (Autodesk.Revit.DB.Element) this;
-      if (element == null)
-        return false;
-
-      if (typeof(Q).IsSubclassOf(ScriptVariableType))
+      if (!(element is null))
       {
-        target = (Q) (object) element;
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(ScriptVariableType))
-      {
-        target = (Q) (object) element;
-        return true;
-      }
-
-      if (element.Category?.HasMaterialQuantities ?? false)
-      {
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
+        if (typeof(Q).IsSubclassOf(ScriptVariableType))
         {
-          Options options = null;
-          using (var geometry = element.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
+          target = (Q) (object) element;
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(ScriptVariableType))
+        {
+          target = (Q) (object) element;
+          return true;
+        }
+
+        if (element.Category?.HasMaterialQuantities ?? false)
+        {
+          if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
           {
-            if (geometry != null)
+            Options options = null;
+            using (var geometry = element.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
             {
-              var mesh = new Rhino.Geometry.Mesh();
-              mesh.Append(geometry.GetPreviewMeshes().Where(x => x != null));
-              mesh.Normals.ComputeNormals();
-              if (mesh.Faces.Count > 0)
+              if (geometry != null)
               {
-                target = (Q) (object) new GH_Mesh(mesh);
-                return true;
+                var mesh = new Rhino.Geometry.Mesh();
+                mesh.Append(geometry.GetPreviewMeshes().Where(x => x != null));
+                mesh.Normals.ComputeNormals();
+                if (mesh.Faces.Count > 0)
+                {
+                  target = (Q) (object) new GH_Mesh(mesh);
+                  return true;
+                }
               }
             }
           }
         }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
+        {
+          var axis = Axis;
+          if (axis == null)
+            return false;
+
+          target = (Q) (object) new GH_Curve(axis);
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Plane)))
+        {
+          var plane = Plane;
+          if (!plane.IsValid || !plane.Origin.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Plane(plane);
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
+        {
+          var location = Location;
+          if (!location.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Point(location);
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Vector)))
+        {
+          var normal = ZAxis;
+          if (!normal.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Vector(normal);
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Transform)))
+        {
+          var plane = Plane;
+          if (!plane.IsValid || !plane.Origin.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, plane));
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Box)))
+        {
+          var box = Box;
+          if (!box.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Box(box);
+          return true;
+        }
       }
 
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
-      {
-        var axis = Axis;
-        if (axis == null)
-          return false;
-
-        target = (Q) (object) new GH_Curve(axis);
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Plane)))
-      {
-        var plane = Plane;
-        if (!plane.IsValid || !plane.Origin.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Plane(plane);
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
-      {
-        var location = Location;
-        if (!location.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Point(location);
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Vector)))
-      {
-        var normal = ZAxis;
-        if (!normal.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Vector(normal);
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Transform)))
-      {
-        var plane = Plane;
-        if (!plane.IsValid || !plane.Origin.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, plane));
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Box)))
-      {
-        var box = Box;
-        if (!box.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Box(box);
-        return true;
-      }
-
-      return base.CastTo<Q>(ref target);
+      return false;
     }
 
     [TypeConverter(typeof(Proxy.ObjectConverter))]
@@ -204,17 +212,17 @@ namespace RhinoInside.Revit.GH.Types
       bool IGH_GooProxy.IsParsable => true;
       string IGH_GooProxy.UserString { get; set; }
 
-      Autodesk.Revit.DB.Element element => proxyOwner.Value != null ? Revit.ActiveDBDocument?.GetElement(proxyOwner.Value) : null;
+      Autodesk.Revit.DB.Element element => proxyOwner.Value is null ? null : Revit.ActiveDBDocument?.GetElement(proxyOwner.Value);
 
       public bool Valid => element != null;
       [System.ComponentModel.Description("The element identifier in this session.")]
-      public int Id => proxyOwner.Value.IntegerValue;
+      public int Id => element?.Id.IntegerValue ?? -1;
       [System.ComponentModel.Description("A human readable name for the Element.")]
       public string Name => element?.Name;
       [System.ComponentModel.Description(".NET Object Type.")]
       public string Object => element?.GetType().FullName;
       [System.ComponentModel.Description("A stable unique identifier for an element within the document.")]
-      public string UniqueID => element?.UniqueId;
+      public string UniqueID => proxyOwner.UniqueID;
 
       class ObjectConverter : ExpandableObjectConverter
       {
@@ -496,28 +504,22 @@ namespace RhinoInside.Revit.GH.Types
     #endregion
 
     #region IGH_GeometricGoo
-    public Reference Reference { get { var element = (Autodesk.Revit.DB.Element) this; return element != null ? new Reference(element) : null; } }
-    public bool LoadGeometry() => LoadGeometry(Revit.ActiveDBDocument);
-    public bool LoadGeometry(Rhino.RhinoDoc doc) => LoadGeometry(Revit.ActiveDBDocument);
-    public bool LoadGeometry(Document doc)
-    {
-      Value = ElementId.InvalidElementId;
-
-      try { Value = Revit.ActiveDBDocument?.GetElement(UniqueID)?.Id ?? ElementId.InvalidElementId; }
-      catch (ArgumentException) { }
-
-      return IsValid;
-    }
-    public Grasshopper.Kernel.Types.IGH_GeometricGoo DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
-    public void ClearCaches()
-    {
-      if (IsReferencedGeometry)
-        Value = null;
-    }
     public Rhino.Geometry.BoundingBox Boundingbox => ClippingBox;
+    Guid IGH_GeometricGoo.ReferenceID
+    {
+      get => Guid.Empty;
+      set { if (value != Guid.Empty) throw new InvalidOperationException(); }
+    }
+    bool IGH_GeometricGoo.IsReferencedGeometry => IsReferencedElement;
+    bool IGH_GeometricGoo.IsGeometryLoaded => IsElementLoaded;
+
+    void IGH_GeometricGoo.ClearCaches() => UnloadElement();
+    IGH_GeometricGoo IGH_GeometricGoo.DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
     public Rhino.Geometry.BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform) => ClippingBox;
-    Grasshopper.Kernel.Types.IGH_GeometricGoo Grasshopper.Kernel.Types.IGH_GeometricGoo.Transform(Rhino.Geometry.Transform xform) => null;
-    Grasshopper.Kernel.Types.IGH_GeometricGoo Grasshopper.Kernel.Types.IGH_GeometricGoo.Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
+    bool IGH_GeometricGoo.LoadGeometry(                  ) => IsElementLoaded || LoadElement(Revit.ActiveDBDocument);
+    bool IGH_GeometricGoo.LoadGeometry(Rhino.RhinoDoc doc) => IsElementLoaded || LoadElement(Revit.ActiveDBDocument);
+    IGH_GeometricGoo IGH_GeometricGoo.Transform(Rhino.Geometry.Transform xform) => null;
+    IGH_GeometricGoo IGH_GeometricGoo.Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
     #endregion
 
     #region IGH_PreviewData
@@ -700,6 +702,11 @@ namespace RhinoInside.Revit.GH.Types
                   p = bbox.Min.ToRhino(); break;
           }
 
+          if (!p.IsValid && element is Level level)
+          {
+            p = new Rhino.Geometry.Point3d(0.0, 0.0, level.Elevation);
+          }
+
           if (p.IsValid)
           {
             var scaleFactor = Revit.ModelUnits;
@@ -826,6 +833,11 @@ namespace RhinoInside.Revit.GH.Types
 
         if(element?.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
           c = curveLocation.Curve.ToRhino();
+
+        if (c == null && element is Grid grid)
+        {
+          c = grid.Curve.ToRhino();
+        }
 
         if (c != null)
         {

@@ -56,7 +56,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Params", "Revit", GH_ParamAccess.item) { }
   }
 
-  public class ElementTypeByName : ValueListPicker
+  public class ElementTypeByName : ValueList
   {
     public override Guid ComponentGuid => new Guid("D3FB53D3-9118-4F11-A32D-AECB30AA418D");
     public override GH_Exposure Exposure => GH_Exposure.primary;

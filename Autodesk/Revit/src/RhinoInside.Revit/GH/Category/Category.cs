@@ -19,7 +19,8 @@ namespace RhinoInside.Revit.GH.Types
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Category);
     public static explicit operator Autodesk.Revit.DB.Category(Category self) => GetCategory(Revit.ActiveDBDocument, self.Value);
 
-    public static Category Make(Autodesk.Revit.DB.Category category) => Make(category?.Id);
+    public  static Category Make(Autodesk.Revit.DB.Category category) => Make(category?.Id);
+    private static new Category Make(ElementId id) => new Category(id);
 
     static Autodesk.Revit.DB.Category GetCategory(Document doc, ElementId id)
     {
@@ -45,69 +46,53 @@ namespace RhinoInside.Revit.GH.Types
 
       return null;
     }
-
     static bool TryGetBuiltInCategory(int id, out BuiltInCategory builtInCategory)
     {
-      if (-2100000 < id && id < -2000000)
+      if (-3000000 < id && id < -2000000 && Enum.IsDefined(typeof(BuiltInCategory), id))
       {
-        if (Enum.IsDefined(typeof(BuiltInCategory), id))
-        {
-          builtInCategory = (BuiltInCategory) id;
-          return true;
-        }
+        builtInCategory = (BuiltInCategory) id;
+        return true;
       }
 
       builtInCategory = BuiltInCategory.INVALID;
       return false;
     }
 
-    static bool IsCategoryId(int id, Document doc)
+    #region IElementId
+    public override bool LoadElement(Document doc)
     {
-      if (-2100000 < id && id < -2000000)
-        return Enum.IsDefined(typeof(BuiltInCategory), id);
+      if (TryParseUniqueID(UniqueID, out var _, out var index))
+      {
+        Value = new ElementId(index);
+        if (Value.IsCategoryId(Revit.ActiveDBDocument))
+          return true;
+      }
 
-      try { return Autodesk.Revit.DB.Category.GetCategory(doc, new ElementId(id)) != null;  }
-      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
+      Value = ElementId.InvalidElementId;
+      return false;
     }
-
-    static bool IsCategoryId(ElementId id, Document doc)
-    {
-      if (-2100000 < id.IntegerValue && id.IntegerValue < -2000000)
-        return Enum.IsDefined(typeof(BuiltInCategory), id);
-
-      try { return Autodesk.Revit.DB.Category.GetCategory(doc, id) != null; }
-      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
-    }
-
-    static public new Category Make(ElementId id)
-    {
-      return IsCategoryId(id, Revit.ActiveDBDocument) ? new Category(id) : null;
-    }
+    #endregion
 
     public Category() : base() { }
-    protected Category(Autodesk.Revit.DB.ElementId categoryId) : base(categoryId, Enum.GetName(typeof(BuiltInCategory), categoryId.IntegerValue) ?? string.Empty) { }
+    protected Category(ElementId categoryId) : base(categoryId) { }
 
     public override sealed bool CastFrom(object source)
     {
-      Autodesk.Revit.DB.ElementId categoryId = null;
+      var categoryId = ElementId.InvalidElementId;
       if (source is IGH_Goo goo)
         source = goo.ScriptVariable();
 
       switch (source)
       {
         case Autodesk.Revit.DB.Category c:   categoryId = c.Id; break;
-        case Autodesk.Revit.DB.ElementId id: categoryId = IsCategoryId(id, Revit.ActiveDBDocument) ? id : ElementId.InvalidElementId; break;
-        case int integer:                    categoryId = IsCategoryId(integer, Revit.ActiveDBDocument) ? new ElementId(integer) : ElementId.InvalidElementId; break;
-        case string uniqueId:
-          try { categoryId = new ElementId((BuiltInCategory) Enum.Parse(typeof(BuiltInCategory), uniqueId, false)); }
-          catch (ArgumentException) { }
-          break;
+        case Autodesk.Revit.DB.ElementId id: categoryId = id; break;
+        case int integer:                    categoryId = new ElementId(integer); break;
+        case string uniqueId:                categoryId = TryParseUniqueID(uniqueId, out var _, out var index) ? new ElementId(index) : ElementId.InvalidElementId; break;
       }
 
-      if (categoryId != ElementId.InvalidElementId)
+      if (categoryId.IsCategoryId(Revit.ActiveDBDocument))
       {
-        Value = categoryId;
-        UniqueID = Enum.GetName(typeof(BuiltInCategory), Value.IntegerValue) ?? string.Empty;
+        SetValue(Revit.ActiveDBDocument, categoryId);
         return true;
       }
 
@@ -196,7 +181,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         var category = (Autodesk.Revit.DB.Category) this;
         if (category != null)
-          return "Revit " + category.GetType().Name + " \"" + category.Name + "\"";
+          return category.Parent is null ? category.Name : $"{category.Parent.Name} : {category.Name}";
         else if(Enum.IsDefined(typeof(BuiltInCategory), Value.IntegerValue))
           return "Revit BuiltIn Category \"" + ((BuiltInCategory) Value.IntegerValue).ToString() + "\"";
       }

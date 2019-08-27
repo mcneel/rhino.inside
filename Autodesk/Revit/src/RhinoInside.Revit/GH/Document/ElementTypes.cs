@@ -98,7 +98,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager[manager.AddParameter(new Parameters.Category(), "FamilyCategory", "C", "Category of the requested element type", GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.ElementFilter(), "Filter", "F", "Filter", GH_ParamAccess.item)].Optional = true;
       manager[manager.AddTextParameter("FamilyName", "F", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager[manager.AddTextParameter("TypeName", "N", string.Empty, GH_ParamAccess.item)].Optional = true;
     }
@@ -110,8 +110,8 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var categoryId = ElementId.InvalidElementId;
-      DA.GetData("FamilyCategory", ref categoryId);
+      Autodesk.Revit.DB.ElementFilter filter = null;
+      DA.GetData("Filter", ref filter);
 
       string familyName = null;
       DA.GetData("FamilyName", ref familyName);
@@ -123,8 +123,8 @@ namespace RhinoInside.Revit.GH.Components
       {
         var elementCollector = collector.WhereElementIsElementType();
 
-        if (categoryId != ElementId.InvalidElementId)
-          elementCollector = elementCollector.OfCategoryId(categoryId);
+        if (!(filter is null))
+          elementCollector = elementCollector.WherePasses(filter);
 
         var elementTypes = elementCollector.Cast<ElementType>();
 

@@ -71,8 +71,8 @@ namespace RhinoInside.Revit.GH.Components
         (
           "Elements",
           collector.WhereElementIsNotElementType().
+          //WherePasses(new Autodesk.Revit.DB.ElementClassFilter(typeof(Autodesk.Revit.DB.ParameterElement), true)).
           WherePasses(filter).
-          GetElementIdIterator().
           Select(x => Types.Element.Make(x))
         );
       }
