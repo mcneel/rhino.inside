@@ -47,13 +47,13 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class ElementType : GH_Param<Types.ElementType>
+  public class ElementType : PersistentParam<Types.ElementType>
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("97DD546D-65C3-4D00-A609-3F5FBDA67142");
     protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
-    public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Params", "Revit", GH_ParamAccess.item) { }
+    public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Params", "Revit") { }
   }
 
   public class ElementTypeByName : ValueList
