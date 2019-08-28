@@ -491,17 +491,26 @@ namespace RhinoInside.Revit.GH.Parameters
                 graphics.DrawString(string.IsNullOrEmpty(Owner.NickName) ? "Filter mask…" : Owner.NickName, GH_FontServer.LargeAdjusted, nameFill, Bounds, GH_TextRenderingConstants.StringFormat(StringAlignment.Center, StringAlignment.Near));
 
               {
-                GH_GraphicsUtil.EtchFadingHorizontal(graphics, (int) bounds.Left, (int) bounds.Right, (int) (bounds.Top + 20), (int) (0.8 * alpha), (int) (0.3 * alpha));
-
                 var clip = ListBounds;
                 clip.Inflate(-2, 0);
+
+                Brush alternateBrush = null;
+                if (GH_Canvas.ZoomFadeMedium > 0 && Owner.DataType == GH_ParamData.remote)
+                {
+                  graphics.FillRectangle(Brushes.White, clip);
+                  alternateBrush = Brushes.WhiteSmoke;
+                }
+                else
+                {
+                  alternateBrush = new SolidBrush(System.Drawing.Color.FromArgb(70, style.Fill));
+                }
+
                 graphics.SetClip(clip);
 
                 var transform = graphics.Transform;
                 if(!ScrollerBounds.IsEmpty)
                   graphics.TranslateTransform(0.0f, -((Owner.ListItems.Count * ItemHeight) - clip.Height) * ScrollRatio);
 
-                var brush = new SolidBrush(System.Drawing.Color.FromArgb(60, style.Fill));
                 var format = new StringFormat(StringFormatFlags.NoWrap)
                 {
                   LineAlignment = StringAlignment.Center
@@ -512,11 +521,11 @@ namespace RhinoInside.Revit.GH.Parameters
                 foreach (var item in Owner.ListItems)
                 {
                   if (index++ % 2 != 0)
-                    graphics.FillRectangle(brush, itemBounds);
+                    graphics.FillRectangle(alternateBrush, itemBounds);
 
                   if (item.Selected)
                   {
-                    if (Owner.DataType == GH_ParamData.remote)
+                    if (Owner.DataType == GH_ParamData.remote && GH_Canvas.ZoomFadeMedium > 0)
                     {
                       var highlightBounds = itemBounds;
                       highlightBounds.Inflate(-1, -1);
@@ -538,7 +547,17 @@ namespace RhinoInside.Revit.GH.Parameters
 
                 graphics.ResetClip();
 
-                GH_GraphicsUtil.EtchFadingHorizontal(graphics, (int) bounds.Left, (int) bounds.Right, (int) (bounds.Bottom - 16), (int) (0.8 * alpha), (int) (0.3 * alpha));
+                if (GH_Canvas.ZoomFadeMedium > 0 && Owner.DataType == GH_ParamData.remote)
+                {
+                  graphics.DrawRectangle(Pens.Black, clip);
+                  GH_GraphicsUtil.ShadowHorizontal(graphics, clip.Left, clip.Right, clip.Top);
+                }
+                else
+                {
+                  GH_GraphicsUtil.EtchFadingHorizontal(graphics, (int) bounds.Left, (int) bounds.Right, (int) (bounds.Top + 20), (int) (0.8 * alpha), (int) (0.3 * alpha));
+                  GH_GraphicsUtil.EtchFadingHorizontal(graphics, (int) bounds.Left, (int) bounds.Right, (int) (bounds.Bottom - 16), (int) (0.8 * alpha), (int) (0.3 * alpha));
+                }
+
                 var footnoteBounds = new RectangleF(bounds.Left, bounds.Bottom - 17, bounds.Width - 3, 17);
                 graphics.DrawString($"{Owner.ListItems.Count} items, {Owner.VolatileDataCount} selected.", GH_FontServer.StandardAdjusted, Brushes.Gray, footnoteBounds, GH_TextRenderingConstants.FarCenter);
               }
@@ -638,7 +657,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       public override GH_ObjectResponse RespondToMouseDown(GH_Canvas canvas, GH_CanvasMouseEvent e)
       {
-        if (canvas.Viewport.Zoom >= 1.2)
+        if (canvas.Viewport.Zoom >= GH_Viewport.ZoomDefault * 0.6f)
         {
           if (e.Button == MouseButtons.Left)
           {
@@ -656,7 +675,7 @@ namespace RhinoInside.Revit.GH.Parameters
                   Scrolling = ScrollRatio;
                   return GH_ObjectResponse.Handled;
                 }
-                else if (Owner.DataType == GH_ParamData.remote)
+                else if (Owner.DataType == GH_ParamData.remote && canvas.Viewport.Zoom >= GH_Viewport.ZoomDefault * 0.8f)
                 {
                   var scrolledCanvasLocation = e.CanvasLocation;
                   if(!ScrollerBounds.IsEmpty)
@@ -733,32 +752,41 @@ namespace RhinoInside.Revit.GH.Parameters
         return base.RespondToMouseMove(sender, e);
       }
 
-      public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas sender, GH_CanvasMouseEvent e)
+      public override GH_ObjectResponse RespondToMouseDoubleClick(GH_Canvas canvas, GH_CanvasMouseEvent e)
       {
-        if (Owner.MutableNickName && e.Button == MouseButtons.Left && e.CanvasLocation.Y < Bounds.Top + 20.0f)
+        if (canvas.Viewport.Zoom >= GH_Viewport.ZoomDefault * 0.6f)
         {
-          var objectMenu = new ContextMenuStrip();
-
-          Owner.AppendMenuItems(objectMenu);
-          if (objectMenu.Items.Count > 0)
+          if (e.Button == MouseButtons.Left)
           {
-            sender.ActiveInteraction = null;
-            objectMenu.Show(sender, e.ControlLocation);
-          }
+            if (Owner.MutableNickName && e.CanvasLocation.Y < Bounds.Top + 20.0f)
+            {
+              var objectMenu = new ContextMenuStrip();
 
-          return GH_ObjectResponse.Handled;
-        }
-        if (e.Button == MouseButtons.Left)
-        {
-          var listBounds = new RectangleF(ListBounds.X, ListBounds.Y, ListBounds.Width, ListBounds.Height);
-          if (listBounds.Contains(e.CanvasLocation))
-          {
-            Owner.RecordUndoEvent("Change selection");
-            for (int i = 0; i < Owner.ListItems.Count; i++)
-              Owner.ListItems[i].Selected = true;
+              Owner.AppendMenuItems(objectMenu);
+              if (objectMenu.Items.Count > 0)
+              {
+                canvas.ActiveInteraction = null;
+                objectMenu.Show(canvas, e.ControlLocation);
+              }
 
-            Owner.ExpireSolution(true);
-            return GH_ObjectResponse.Handled;
+              return GH_ObjectResponse.Handled;
+            }
+
+            if (Owner.DataType == GH_ParamData.remote && canvas.Viewport.Zoom >= GH_Viewport.ZoomDefault * 0.8f)
+            {
+              var listBounds = new RectangleF(ListBounds.X, ListBounds.Y, ListBounds.Width, ListBounds.Height);
+              if (listBounds.Contains(e.CanvasLocation))
+              {
+                Owner.RecordUndoEvent("Change selection");
+
+                Owner.PersistentData.Clear();
+                Owner.PersistentData.AppendRange(Owner.ListItems.Select(x => x.Value), new GH_Path(0));
+                Owner.OnObjectChanged(GH_ObjectEventType.PersistentData);
+
+                Owner.ExpireSolution(true);
+                return GH_ObjectResponse.Handled;
+              }
+            }
           }
         }
 
