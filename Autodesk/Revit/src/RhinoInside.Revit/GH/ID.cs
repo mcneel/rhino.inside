@@ -921,8 +921,8 @@ namespace RhinoInside.Revit.GH.Parameters
         if (x is Types.IElementId idX && y is Types.IElementId idY)
           return idX.IsReferencedElement && idY.IsReferencedElement && idX.UniqueID == idY.UniqueID;
 
-        if (x is IGH_GeometricGoo geoX && y is IGH_GeometricGoo geoY)
-          return geoX.IsReferencedGeometry && geoY.IsReferencedGeometry && geoX.ReferenceID == geoY.ReferenceID;
+        if (x is IGH_GeometricGoo geoX && geoX.IsReferencedGeometry && y is IGH_GeometricGoo geoY && geoY.IsReferencedGeometry)
+          return geoX.ReferenceID == geoY.ReferenceID;
 
         if (x is IGH_QuickCast qcX && y is IGH_QuickCast qcY)
           return qcX.QC_CompareTo(qcY) == 0;
@@ -935,7 +935,7 @@ namespace RhinoInside.Revit.GH.Parameters
         if (obj is Types.IElementId id)
           return id.UniqueID.GetHashCode();
 
-        if (obj is IGH_GeometricGoo geo)
+        if (obj is IGH_GeometricGoo geo && geo.IsReferencedGeometry)
           return geo.ReferenceID.GetHashCode();
 
         if (obj is IGH_QuickCast qc)
