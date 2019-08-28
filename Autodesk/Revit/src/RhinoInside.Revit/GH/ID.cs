@@ -914,7 +914,22 @@ namespace RhinoInside.Revit.GH.Parameters
 
     class GooComparer : IEqualityComparer<IGH_Goo>
     {
-      public static bool IsComparable(IGH_Goo goo) => (goo is Types.ID id && id.IsReferencedElement) || (goo is IGH_GeometricGoo geometry && geometry.IsReferencedGeometry) || goo is IGH_QuickCast;
+      public static bool IsComparable(IGH_Goo goo)
+      {
+        return
+        (goo is Types.ID id && id.IsReferencedElement) ||
+        (goo is IGH_GeometricGoo geometry && geometry.IsReferencedGeometry) ||
+        goo is IGH_QuickCast ||
+        goo is GH_StructurePath ||
+        goo is GH_Culture ||
+        (
+          goo.ScriptVariable() is object obj &&
+          (
+            obj is ValueType ||
+            obj is IComparable
+          )
+        );
+      }
 
       public bool Equals(IGH_Goo x, IGH_Goo y)
       {
@@ -926,6 +941,21 @@ namespace RhinoInside.Revit.GH.Parameters
 
         if (x is IGH_QuickCast qcX && y is IGH_QuickCast qcY)
           return qcX.QC_CompareTo(qcY) == 0;
+
+        if (x is GH_StructurePath pathX && y is GH_StructurePath pathY)
+          return pathX.Value.CompareTo(pathX.Value) == 0;
+
+        if (x is GH_Culture cultureX && y is GH_Culture cultureY)
+          return cultureX.Value.LCID == cultureY.Value.LCID;
+
+        if (x.ScriptVariable() is object objX && y.ScriptVariable() is object objY)
+        {
+          if (objX is ValueType valueX && objY is ValueType valueY)
+            return valueX.Equals(valueY);
+
+          if (objX is IComparable comparableX && objY is IComparable comparableY)
+            return comparableX.CompareTo(comparableY) == 0;
+        }
 
         return false;
       }
@@ -940,6 +970,21 @@ namespace RhinoInside.Revit.GH.Parameters
 
         if (obj is IGH_QuickCast qc)
           return qc.QC_Hash();
+
+        if (obj is GH_StructurePath path)
+          return path.Value.GetHashCode();
+
+        if (obj is GH_Culture culture)
+          return culture.Value.LCID;
+
+        if (obj.ScriptVariable() is object o)
+        {
+          if (o is ValueType value)
+            return value.GetHashCode();
+
+          if(o is IComparable comparable)
+            return comparable.GetHashCode();
+        }
 
         return 0;
       }
