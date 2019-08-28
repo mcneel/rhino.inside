@@ -163,6 +163,143 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
+  public abstract class GH_PersistentParam<T>: Grasshopper.Kernel.GH_PersistentParam<T> where T : class, IGH_Goo
+  {
+    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
+
+    protected GH_PersistentParam(string name, string nickname, string description, string category, string subcategory) :
+      base(name, nickname, description, category, subcategory) { }
+
+    protected override void Menu_AppendPromptOne(ToolStripDropDown menu) { }
+    protected override void Menu_AppendPromptMore(ToolStripDropDown menu) { }
+
+    protected override GH_GetterResult Prompt_Plural(ref List<T> values) => GH_GetterResult.cancel;
+    protected override GH_GetterResult Prompt_Singular(ref T value) => GH_GetterResult.cancel;
+  }
+
+  public abstract class PersistentParam<T> : GH_PersistentParam<T> where T : Types.ID
+  {
+    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
+
+    protected PersistentParam(string name, string nickname, string description, string category, string subcategory) :
+      base(name, nickname, description, category, subcategory)
+    { }
+
+    public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+    {
+      base.AppendAdditionalMenuItems(menu);
+
+      if ((Kind == GH_ParamKind.floating || Kind == GH_ParamKind.output) && Recipients.Count == 0)
+      {
+        var components = new List<IGH_Component>();
+
+        foreach (var proxy in Grasshopper.Instances.ComponentServer.ObjectProxies.Where(x => !x.Obsolete && x.Exposure != GH_Exposure.hidden && x.Exposure < GH_Exposure.tertiary))
+        {
+          if (typeof(IGH_Component).IsAssignableFrom(proxy.Type))
+          {
+            var obj = proxy.CreateInstance() as IGH_Component;
+            foreach (var input in obj.Params.Input)
+            {
+              if (input.GetType() == GetType())
+              {
+                components.Add(obj);
+                break;
+              }
+            }
+          }
+        }
+
+        Menu_AppendSeparator(menu);
+        var connect = Menu_AppendItem(menu, "Connect") as ToolStripMenuItem;
+
+        var panedComponentId = new Guid("{59E0B89A-E487-49f8-BAB8-B5BAB16BE14C}");
+        var panel = Menu_AppendItem(connect.DropDown, "Panel", Menu_Connect, Grasshopper.Instances.ComponentServer.EmitObjectIcon(panedComponentId));
+        panel.Tag = panedComponentId;
+
+        var picker = Menu_AppendItem(connect.DropDown, "Picker", Menu_Connect, Grasshopper.Instances.ComponentServer.EmitObjectIcon(ValueSetPicker.ComponentClassGuid));
+        picker.Tag = ValueSetPicker.ComponentClassGuid;
+
+        if (components.Count > 0)
+        {
+          Menu_AppendSeparator(connect.DropDown);
+
+          var maxComponents = Grasshopper.CentralSettings.CanvasMaxSearchResults;
+          maxComponents = Math.Min(maxComponents, 30);
+          maxComponents = Math.Max(maxComponents, 3);
+
+          int count = 0;
+          foreach (var component in components.OrderBy(x => x.Exposure).OrderBy(x => x.Name))
+          {
+            var item = Menu_AppendItem(connect.DropDown, component.Name, Menu_Connect, component.Icon_24x24);
+            item.Tag = component.ComponentGuid;
+
+            if (count >= maxComponents)
+              break;
+          }
+        }
+      }
+    }
+
+    private void Menu_Connect(object sender, EventArgs e)
+    {
+      if (sender is ToolStripMenuItem item && item.Tag is Guid componentGuid)
+      {
+        var doc = OnPingDocument();
+        if (doc is null)
+          return;
+
+        var obj = Grasshopper.Instances.ComponentServer.EmitObject(componentGuid) as IGH_ActiveObject;
+        if (obj is null)
+          return;
+
+        obj.CreateAttributes();
+        if (Grasshopper.CentralSettings.CanvasFullNames)
+        {
+          var atts = new List<IGH_Attributes>();
+          obj.Attributes.AppendToAttributeTree(atts);
+          foreach (var att in atts)
+            att.DocObject.NickName = att.DocObject.Name;
+        }
+
+        obj.NewInstanceGuid();
+        obj.Attributes.Pivot = new PointF();
+        obj.Attributes.PerformLayout();
+        if (obj is IGH_Param)
+          obj.Attributes.Pivot = new PointF(Attributes.Pivot.X + 120, Attributes.Pivot.Y - obj.Attributes.Bounds.Height / 2);
+        else if(obj is IGH_Component)
+          obj.Attributes.Pivot = new PointF(Attributes.Pivot.X + 120, Attributes.Pivot.Y);
+
+        obj.Attributes.ExpireLayout();
+
+        doc.AddObject(obj, false);
+        doc.UndoUtil.RecordAddObjectEvent($"Add {obj.Name}", obj);
+
+        if (obj is IGH_Param param)
+        {
+          param.AddSource(this);
+          ExpireDownStreamObjects();
+          doc.NewSolution(false);
+        }
+        else if (obj is IGH_Component component)
+        {
+          foreach (var input in component.Params.Input)
+          {
+            if (input.GetType() == GetType())
+            {
+              input.AddSource(this);
+              component.ExpireSolution(true);
+              break;
+            }
+          }
+        }
+        else
+        {
+          obj.OnDisplayExpired(false);
+        }
+      }
+    }
+  }
+
   public abstract class GH_ValueList : Grasshopper.Kernel.Special.GH_ValueList
   {
     protected override Bitmap Icon => ((Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
@@ -308,14 +445,29 @@ namespace RhinoInside.Revit.GH.Parameters
     }
   }
 
-  public abstract class ListParam : GH_PersistentParam<IGH_Goo>, IGH_InitCodeAware
+  public abstract class ValueSet : GH_PersistentParam<IGH_Goo>, IGH_InitCodeAware
   {
-    public override GH_ParamKind Kind => GH_ParamKind.floating;
     public override string TypeName => "Data";
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_ParamKind Kind => GH_ParamKind.floating;
+    protected override Bitmap Icon => ClassIcon;
+    static Bitmap ClassIcon => ImageBuilder.BuildIcon
+    (
+      (graphics, bounds) =>
+      {
+        bounds.Inflate(-1, -1);
+        using (var capsule = GH_Capsule.CreateCapsule(bounds, GH_Palette.Grey))
+        {
+          capsule.Render(graphics, false, false, false);
+          Attributes.RenderCheckMark(graphics, new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height), System.Drawing.Color.Black);
+        }
+      }
+    );
+
 
     void IGH_InitCodeAware.SetInitCode(string code) => NickName = code;
 
-    public ListParam() : base(new GH_InstanceDescription("ValueListPicker", "", string.Empty, "Revit", "Input"))
+    public ValueSet() : base("Value Set Picker", string.Empty, "A value picker for comparable values", "Params", "Input")
     {
       ObjectChanged += OnObjectChanged;
     }
@@ -352,9 +504,6 @@ namespace RhinoInside.Revit.GH.Parameters
       Menu_AppendItem(menu, "Invert selection", Menu_InvertSelectionClicked, SourceCount > 0);
       Menu_AppendItem(menu, "Select all", Menu_SelectAllClicked, SourceCount > 0);
     }
-
-    protected override void Menu_AppendPromptOne(ToolStripDropDown menu) { }
-    protected override void Menu_AppendPromptMore(ToolStripDropDown menu) { }
 
     protected override void Menu_AppendDestroyPersistent(ToolStripDropDown menu) =>
       Menu_AppendItem(menu, "Clear selection", Menu_DestroyPersistentData, PersistentDataCount > 0);
@@ -414,7 +563,7 @@ namespace RhinoInside.Revit.GH.Parameters
       ExpireSolution(true);
     }
 
-    new class Attributes : GH_ResizableAttributes<ListParam>
+    new class Attributes : GH_ResizableAttributes<ValueSet>
     {
       public override bool HasInputGrip => true;
       public override bool HasOutputGrip => true;
@@ -422,7 +571,14 @@ namespace RhinoInside.Revit.GH.Parameters
       protected override Padding SizingBorders => new Padding(4, 6, 4, 6);
       protected override Size MinimumSize => new Size(50, 25 + 18 * 5);
 
-      public Attributes(ListParam owner) : base(owner) { }
+      public Attributes(ValueSet owner) : base(owner)
+      {
+        Bounds = new RectangleF
+        (
+          Bounds.Location,
+          new SizeF(Math.Max(Bounds.Width, MinimumSize.Width), Math.Max(Bounds.Height, MinimumSize.Height))
+        );
+      }
       protected override void Layout()
       {
         if (MaximumSize.Width < Bounds.Width || Bounds.Width < MinimumSize.Width)
@@ -533,7 +689,7 @@ namespace RhinoInside.Revit.GH.Parameters
                     }
 
                     var markBounds = new RectangleF(itemBounds.X, itemBounds.Y, 22, itemBounds.Height);
-                    RenderCheckMark(canvas, graphics, markBounds, textColor);
+                    RenderCheckMark(graphics, markBounds, textColor);
                   }
 
                   var nameBounds = new RectangleF(itemBounds.X + 22, itemBounds.Y, itemBounds.Width - 22, itemBounds.Height);
@@ -570,7 +726,7 @@ namespace RhinoInside.Revit.GH.Parameters
         base.Render(canvas, graphics, channel);
       }
 
-      void RenderCheckMark(GH_Canvas canvas, Graphics graphics, RectangleF bounds, System.Drawing.Color color)
+      public static void RenderCheckMark(Graphics graphics, RectangleF bounds, System.Drawing.Color color)
       {
         var x = (int) (bounds.X + 0.5F * bounds.Width) - 2;
         var y = (int) (bounds.Y + 0.5F * bounds.Height);
@@ -590,14 +746,6 @@ namespace RhinoInside.Revit.GH.Parameters
         graphics.DrawPolygon(edge, corners);
 
         //RenderShape(canvas, graphics, corners, color);
-      }
-
-      void RenderItemList(GH_Canvas canvas, Graphics graphics, RectangleF bounds)
-      {
-        bounds.Inflate(-2, -2);
-        graphics.SetClip(bounds);
-
-        graphics.ResetClip();
       }
 
       System.Drawing.Rectangle ListBounds => new System.Drawing.Rectangle
@@ -803,16 +951,6 @@ namespace RhinoInside.Revit.GH.Parameters
       base.AddedToDocument(document);
     }
 
-    protected override GH_GetterResult Prompt_Singular(ref IGH_Goo value) => GH_GetterResult.cancel;
-    protected override GH_GetterResult Prompt_Plural(ref List<IGH_Goo> values) => GH_GetterResult.cancel;
-
-    protected override void OnVolatileDataCollected()
-    {
-
-
-      //base.OnVolatileDataCollected();
-    }
-
     public override void ClearData()
     {
       base.ClearData();
@@ -827,24 +965,21 @@ namespace RhinoInside.Revit.GH.Parameters
     public abstract void ProcessData();
     public override sealed void PostProcessData()
     {
-      //if (DataType == GH_ParamData.local)
+      foreach (var branch in m_data.Branches)
       {
-        foreach (var branch in m_data.Branches)
+        for (int i = 0; i < branch.Count; i++)
         {
-          for (int i = 0; i < branch.Count; i++)
-          {
-            var goo = branch[i];
+          var goo = branch[i];
 
-            if (goo is Types.IElementId id && id.IsReferencedElement && !id.IsElementLoaded && !id.LoadElement(Revit.ActiveDBDocument))
-            {
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A referenced element could not be found in the Revit document.");
-              branch[i] = null;
-            }
-            else if (goo is IGH_GeometricGoo geo && geo.IsReferencedGeometry && !geo.IsGeometryLoaded && !geo.LoadGeometry())
-            {
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A referenced {geo.TypeName} could not be found in the Rhino document.");
-              branch[i] = null;
-            }
+          if (goo is Types.IElementId id && id.IsReferencedElement && !id.IsElementLoaded && !id.LoadElement(Revit.ActiveDBDocument))
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A referenced element could not be found in the Revit document.");
+            branch[i] = null;
+          }
+          else if (goo is IGH_GeometricGoo geo && geo.IsReferencedGeometry && !geo.IsGeometryLoaded && !geo.LoadGeometry())
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A referenced {geo.TypeName} could not be found in the Rhino document.");
+            branch[i] = null;
           }
         }
       }
@@ -866,8 +1001,9 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         Title = Name,
         Description =
-        @"<p>Double click on it and use the name input box to enter a name, alternativelly you can enter a name patter. " +
-        @"If a pattern is used, this param list will be filled up with all the objects that match it.</p>" +
+        @"<p>This component is a special interface object that allows for quick picking an item from a list.</p>" +
+        @"<p>Double click on it and use the name input box to enter an exact name, alternativelly you can enter a name patter. " +
+        @"If a pattern is used, this param list will be filled up with all the items that match it.</p>" +
         @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:</p>" +
         @"<dl>" +
         @"<dt><b>></b></dt><dd>Starts with</dd>" +
@@ -881,36 +1017,14 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return nTopic.HtmlFormat();
     }
-
-    public override bool Write(GH_IWriter writer)
-    {
-      if (!base.Write(writer))
-        return false;
-
-      return true;
-    }
-
-    public override bool Read(GH_IReader reader)
-    {
-      if (!base.Read(reader))
-        return false;
-
-      return true;
-    }
   }
 
-  public class ItemSetPicker : ListParam
+  public class ValueSetPicker : ValueSet
   {
-    public override Guid ComponentGuid => new Guid("AFB12752-3ACB-4ACF-8102-16982A69CDAE");
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override Bitmap Icon => ((Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
-                                     ImageBuilder.BuildIcon("*");
+    public static readonly Guid ComponentClassGuid = new Guid("AFB12752-3ACB-4ACF-8102-16982A69CDAE");
+    public override Guid ComponentGuid => ComponentClassGuid;
 
-    public ItemSetPicker()
-    {
-      Name = "Item Set Picker";
-      Description = "Provides an item picker";
-    }
+    public ValueSetPicker() { }
 
     class GooComparer : IEqualityComparer<IGH_Goo>
     {
@@ -1029,29 +1143,6 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         ListItems.Clear();
       }
-    }
-
-    protected override string HtmlHelp_Source()
-    {
-      var nTopic = new Grasshopper.GUI.HTML.GH_HtmlFormatter(this)
-      {
-        Title = Name,
-        Description =
-        @"<p>This component is a special interface object that allows for quick picking an item from a list.</p>" +
-        @"<p>Double click on it and use the name input box to enter an exact name, alternativelly you can enter a name patter. " +
-        @"If a pattern is used, this param list will be filled up with all the items that match it.</p>" +
-        @"<p>Several kind of patterns are supported, the method used depends on the first pattern character:</p>" +
-        @"<dl>" +
-        @"<dt><b>></b></dt><dd>Starts with</dd>" +
-        @"<dt><b><</b></dt><dd>Ends with</dd>" +
-        @"<dt><b>?</b></dt><dd>Contains, same as a regular search</dd>" +
-        @"<dt><b>:</b></dt><dd>Wildcards, see Microsoft.VisualBasic " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/visual-basic/language-reference/operators/like-operator#pattern-options\">LikeOperator</a></dd>" +
-        @"<dt><b>;</b></dt><dd>Regular expresion, see " + "<a target=\"_blank\" href=\"https://docs.microsoft.com/en-us/dotnet/standard/base-types/regular-expression-language-quick-reference\">here</a> as reference</dd>" +
-        @"</dl>",
-        ContactURI = @"https://discourse.mcneel.com/c/serengeti/inside"
-      };
-
-      return nTopic.HtmlFormat();
     }
   }
 }

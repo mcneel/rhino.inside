@@ -176,6 +176,17 @@ namespace RhinoInside
       return bitmap;
     }
 
+    public static Bitmap BuildIcon(Action<Graphics, Rectangle> action, int width = 24, int height = 24)
+    {
+      var bitmap = new Bitmap(width, height);
+      using (var graphics = Graphics.FromImage(bitmap))
+      {
+        action(graphics, new Rectangle(0, 0, width, height));
+      }
+
+      return bitmap;
+    }
+
     public static ImageSource BuildImage(string tag, Color color = default(Color))
     {
       using (var g = Graphics.FromHwnd(Revit.Revit.MainWindowHandle))
