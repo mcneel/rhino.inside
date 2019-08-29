@@ -359,11 +359,12 @@ namespace RhinoInside.Revit.GH.Parameters
     (
       (graphics, bounds) =>
       {
-        bounds.Inflate(-1, -1);
-        using (var capsule = GH_Capsule.CreateCapsule(bounds, GH_Palette.Grey))
+        var iconBounds = new RectangleF(bounds.Location, bounds.Size);
+        iconBounds.Inflate(-0.5f, -0.5f);
+        using (var capsule = GH_Capsule.CreateCapsule(iconBounds, GH_Palette.Grey))
         {
           capsule.Render(graphics, false, false, false);
-          Attributes.RenderCheckMark(graphics, new RectangleF(bounds.X, bounds.Y, bounds.Width, bounds.Height), System.Drawing.Color.Black);
+          Attributes.RenderCheckMark(graphics, iconBounds, System.Drawing.Color.Black);
         }
       }
     );
