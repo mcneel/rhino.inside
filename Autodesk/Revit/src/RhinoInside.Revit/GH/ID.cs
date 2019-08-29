@@ -188,114 +188,18 @@ namespace RhinoInside.Revit.GH.Parameters
     public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
     {
       base.AppendAdditionalMenuItems(menu);
-
-      if ((Kind == GH_ParamKind.floating || Kind == GH_ParamKind.output) && Recipients.Count == 0)
-      {
-        var components = new List<IGH_Component>();
-
-        foreach (var proxy in Grasshopper.Instances.ComponentServer.ObjectProxies.Where(x => !x.Obsolete && x.Exposure != GH_Exposure.hidden && x.Exposure < GH_Exposure.tertiary))
-        {
-          if (typeof(IGH_Component).IsAssignableFrom(proxy.Type))
-          {
-            var obj = proxy.CreateInstance() as IGH_Component;
-            foreach (var input in obj.Params.Input)
-            {
-              if (input.GetType() == GetType())
-              {
-                components.Add(obj);
-                break;
-              }
-            }
-          }
-        }
-
-        Menu_AppendSeparator(menu);
-        var connect = Menu_AppendItem(menu, "Connect") as ToolStripMenuItem;
-
-        var panedComponentId = new Guid("{59E0B89A-E487-49f8-BAB8-B5BAB16BE14C}");
-        var panel = Menu_AppendItem(connect.DropDown, "Panel", Menu_Connect, Grasshopper.Instances.ComponentServer.EmitObjectIcon(panedComponentId));
-        panel.Tag = panedComponentId;
-
-        var picker = Menu_AppendItem(connect.DropDown, "Picker", Menu_Connect, Grasshopper.Instances.ComponentServer.EmitObjectIcon(ValueSetPicker.ComponentClassGuid));
-        picker.Tag = ValueSetPicker.ComponentClassGuid;
-
-        if (components.Count > 0)
-        {
-          Menu_AppendSeparator(connect.DropDown);
-
-          var maxComponents = Grasshopper.CentralSettings.CanvasMaxSearchResults;
-          maxComponents = Math.Min(maxComponents, 30);
-          maxComponents = Math.Max(maxComponents, 3);
-
-          int count = 0;
-          foreach (var component in components.OrderBy(x => x.Exposure).OrderBy(x => x.Name))
-          {
-            var item = Menu_AppendItem(connect.DropDown, component.Name, Menu_Connect, component.Icon_24x24);
-            item.Tag = component.ComponentGuid;
-
-            if (count >= maxComponents)
-              break;
-          }
-        }
-      }
+      this.Menu_AppendConnect(menu, Menu_Connect);
     }
 
     private void Menu_Connect(object sender, EventArgs e)
     {
       if (sender is ToolStripMenuItem item && item.Tag is Guid componentGuid)
       {
-        var doc = OnPingDocument();
-        if (doc is null)
-          return;
-
-        var obj = Grasshopper.Instances.ComponentServer.EmitObject(componentGuid) as IGH_ActiveObject;
+        var obj = this.ConnectNewObject(componentGuid);
         if (obj is null)
           return;
 
-        obj.CreateAttributes();
-        if (Grasshopper.CentralSettings.CanvasFullNames)
-        {
-          var atts = new List<IGH_Attributes>();
-          obj.Attributes.AppendToAttributeTree(atts);
-          foreach (var att in atts)
-            att.DocObject.NickName = att.DocObject.Name;
-        }
-
-        obj.NewInstanceGuid();
-        obj.Attributes.Pivot = new PointF();
-        obj.Attributes.PerformLayout();
-        if (obj is IGH_Param)
-          obj.Attributes.Pivot = new PointF(Attributes.Pivot.X + 120, Attributes.Pivot.Y - obj.Attributes.Bounds.Height / 2);
-        else if(obj is IGH_Component)
-          obj.Attributes.Pivot = new PointF(Attributes.Pivot.X + 120, Attributes.Pivot.Y);
-
-        obj.Attributes.ExpireLayout();
-
-        doc.AddObject(obj, false);
-        doc.UndoUtil.RecordAddObjectEvent($"Add {obj.Name}", obj);
-
-        if (obj is IGH_Param param)
-        {
-          param.AddSource(this);
-          ExpireDownStreamObjects();
-          doc.NewSolution(false);
-        }
-        else if (obj is IGH_Component component)
-        {
-          foreach (var input in component.Params.Input)
-          {
-            if (input.GetType() == GetType())
-            {
-              input.AddSource(this);
-              component.ExpireSolution(true);
-              break;
-            }
-          }
-        }
-        else
-        {
-          obj.OnDisplayExpired(false);
-        }
+        obj.ExpireSolution(true);
       }
     }
   }
