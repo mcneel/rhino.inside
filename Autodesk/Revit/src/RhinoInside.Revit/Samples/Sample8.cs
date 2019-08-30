@@ -16,7 +16,9 @@ using Rhino.Geometry;
 using Rhino.FileIO;
 using Rhino.DocObjects;
 using RhinoInside.Revit.UI;
+#if REVIT_2019
 using Autodesk.Revit.DB.Visual;
+#endif
 
 namespace RhinoInside.Revit.Samples
 {
@@ -62,7 +64,7 @@ namespace RhinoInside.Revit.Samples
         var newMaterial = doc.GetElement(id) as Autodesk.Revit.DB.Material;
 
         newMaterial.Color = new Autodesk.Revit.DB.Color(255, 255, 255);
-
+#if REVIT_2019
         if (newMaterial.AppearanceAssetId == ElementId.InvalidElementId)
         {
           if (AppearanceAssetElement.GetAppearanceAssetElementByName(doc, mat.Name) is AppearanceAssetElement appearanceAssetElement)
@@ -106,7 +108,7 @@ namespace RhinoInside.Revit.Samples
             }
           }
         }
-
+#endif
         materials.Add(mat.Name, newMaterial);
       }
 
