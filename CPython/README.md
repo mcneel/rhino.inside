@@ -8,6 +8,10 @@ Embed Rhino in CPython
 - Windows
 - 64 bit version of CPython (2.7, 3.5, 3.6, 3.7)
 
+## Join the discussion
+
+https://discourse.mcneel.com/t/rhino-inside-python/78987
+
 ## How to use
 ```
 import rhinoinside
