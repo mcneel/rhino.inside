@@ -174,7 +174,7 @@ namespace RhinoInside.Revit.GH
           }
 
           if (expireNow)
-            definition.NewSolution(false);
+            Revit.EnqueueAction(doc => definition.NewSolution(false));
         }
       }
     }
