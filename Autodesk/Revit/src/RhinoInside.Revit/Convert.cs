@@ -1479,6 +1479,12 @@ namespace RhinoInside.Revit
           while (mesh.CollapseFacesByEdgeLength(false, Revit.VertexTolerance) > 0) ;
 
           return mesh.ToHost();
+        case Rhino.Geometry.Extrusion extrusion:
+
+          return extrusion.ToBrep().ToHost(scaleFactor);
+        case Rhino.Geometry.SubD subD:
+
+          return subD.ToBrep().ToHost(scaleFactor);
         default:
           return Enumerable.Empty<GeometryObject>();
       }
