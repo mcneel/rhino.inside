@@ -340,11 +340,25 @@ namespace RhinoInside.Revit.UI
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       var result = Result.Failed;
-      if
-      (
-        (result = BrowseForFile(out var filePath)) == Result.Succeeded &&
-        (result = ReadFromFile(filePath, out var definition)) == Result.Succeeded
-      )
+      if ((result = BrowseForFile(out var filePath)) == Result.Succeeded)
+      {
+        result = Execute(data.Application, data.View, data.JournalData, filePath, ref message);
+      }
+
+      return result;
+    }
+
+    public static Result Execute
+    (
+      UIApplication app,
+      View view,
+      IDictionary<string, string> JournalData,
+      string filePath,
+      ref string message
+    )
+    {
+      var result = Result.Failed;
+      if ((result = ReadFromFile(filePath, out var definition)) == Result.Succeeded)
       {
         using (definition)
         {
@@ -352,7 +366,7 @@ namespace RhinoInside.Revit.UI
           var currentCulture = Thread.CurrentThread.CurrentCulture;
           try
           {
-            using (var transGroup = new TransactionGroup(data.Application.ActiveUIDocument.Document))
+            using (var transGroup = new TransactionGroup(app.ActiveUIDocument.Document))
             {
               transGroup.Start(Path.GetFileNameWithoutExtension(definition.Properties.ProjectFileName));
 
@@ -361,7 +375,7 @@ namespace RhinoInside.Revit.UI
               definition.ExpireSolution();
 
               var inputs = GetInputParams(definition);
-              result = PromptForInputs(data.Application.ActiveUIDocument, inputs, out var values);
+              result = PromptForInputs(app.ActiveUIDocument, inputs, out var values);
               if (result != Result.Succeeded)
                 return result;
 
@@ -374,7 +388,13 @@ namespace RhinoInside.Revit.UI
               {
                 definition.NewSolution(false, GH_SolutionMode.Silent);
 
-                result = modal.Run(false, false);
+                do
+                {
+                  result = modal.Run(false, false);
+                  if (result != Result.Succeeded)
+                    return result;
+
+                } while (definition.ScheduleDelay >= GH_Document.ScheduleRecursive);
               }
               Thread.CurrentThread.CurrentCulture = currentCulture;
 
