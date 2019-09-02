@@ -16,7 +16,7 @@ using Rhino.Geometry;
 using Rhino.FileIO;
 using Rhino.DocObjects;
 using RhinoInside.Revit.UI;
-#if REVIT_2019
+#if REVIT_2018
 using Autodesk.Revit.DB.Visual;
 #else
 using Autodesk.Revit.Utility;

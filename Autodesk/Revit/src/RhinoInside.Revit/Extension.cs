@@ -177,7 +177,7 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Application
-#if !REVIT_2019
+#if !REVIT_2018
     public static IList<Autodesk.Revit.Utility.Asset> GetAssets(this Autodesk.Revit.ApplicationServices.Application app, Autodesk.Revit.Utility.AssetType assetType)
     {
       return new Autodesk.Revit.Utility.Asset[0];
