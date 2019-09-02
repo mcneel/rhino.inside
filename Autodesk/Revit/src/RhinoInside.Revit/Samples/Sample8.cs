@@ -16,8 +16,10 @@ using Rhino.Geometry;
 using Rhino.FileIO;
 using Rhino.DocObjects;
 using RhinoInside.Revit.UI;
-#if REVIT_2019
+#if REVIT_2018
 using Autodesk.Revit.DB.Visual;
+#else
+using Autodesk.Revit.Utility;
 #endif
 
 namespace RhinoInside.Revit.Samples
@@ -54,62 +56,169 @@ namespace RhinoInside.Revit.Samples
       return collector.OfClass(typeof(Autodesk.Revit.DB.Material)).OfType<Autodesk.Revit.DB.Material>().ToDictionary(x => x.Name);
     }
 
-    static ElementId ToHost(Rhino.DocObjects.Material mat, Document doc, Dictionary<string, Autodesk.Revit.DB.Material> materials)
+    static string GenericAssetName()
     {
-      var id = ElementId.InvalidElementId;
-      if (materials.TryGetValue(mat.Name ?? "Default", out var material)) id = material.Id;
+      switch (Revit.ActiveUIApplication.Application.Language)
+      {
+        case Autodesk.Revit.ApplicationServices.LanguageType.English_USA:           return "Generic";
+        case Autodesk.Revit.ApplicationServices.LanguageType.German:                return "Generisch";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Spanish:               return "Genérico";
+        case Autodesk.Revit.ApplicationServices.LanguageType.French:                return "Générique";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Italian:               return "Generico";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Dutch:                 return "Allgemeine";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Simplified:    return "常规";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Traditional:   return "常規";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Japanese:              return "一般";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Korean:                return "일반";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Russian:               return "общий";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Czech:                 return "Obecný";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Polish:                return "Rodzajowy";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Hungarian:             return "Generikus";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Brazilian_Portuguese:  return "Genérico";
+        #if REVIT_2018
+        case Autodesk.Revit.ApplicationServices.LanguageType.English_GB:            return "Generic";
+        #endif
+      }
+
+      return "Generic";
+    }
+
+    static ElementId ToHost(Rhino.Render.RenderMaterial mat, Document doc, string name)
+    {
+      var appearanceAssetId = ElementId.InvalidElementId;
+
+#if REVIT_2019
+      if (AppearanceAssetElement.GetAppearanceAssetElementByName(doc, name) is AppearanceAssetElement appearanceAssetElement)
+        appearanceAssetId = appearanceAssetElement.Id;
       else
       {
-        id = Autodesk.Revit.DB.Material.Create(doc, mat.Name);
-        var newMaterial = doc.GetElement(id) as Autodesk.Revit.DB.Material;
-
-        newMaterial.Color = new Autodesk.Revit.DB.Color(255, 255, 255);
-#if REVIT_2019
-        if (newMaterial.AppearanceAssetId == ElementId.InvalidElementId)
+        appearanceAssetElement = AppearanceAssetElement.GetAppearanceAssetElementByName(doc, GenericAssetName());
+        if (appearanceAssetElement is null)
         {
-          if (AppearanceAssetElement.GetAppearanceAssetElementByName(doc, mat.Name) is AppearanceAssetElement appearanceAssetElement)
-            newMaterial.AppearanceAssetId = appearanceAssetElement.Id;
-          else
+          var assets = Revit.ActiveUIApplication.Application.GetAssets(AssetType.Appearance);
+          foreach (var asset in assets)
           {
-            appearanceAssetElement = AppearanceAssetElement.GetAppearanceAssetElementByName(doc, "Generic");
-            if (appearanceAssetElement is null)
+            if (asset.Name == GenericAssetName())
             {
-              var assets = Revit.ActiveUIApplication.Application.GetAssets(AssetType.Appearance);
-              foreach (var asset in assets)
-              {
-                if (asset.Name == "Generic")
-                {
-                  appearanceAssetElement = AppearanceAssetElement.Create(doc, mat.Name, asset);
-                  newMaterial.AppearanceAssetId = appearanceAssetElement.Id;
-                  break;
-                }
-              }
-            }
-            else
-            {
-              appearanceAssetElement = appearanceAssetElement.Duplicate(mat.Name);
-              newMaterial.AppearanceAssetId = appearanceAssetElement.Id;
-            }
-
-            if(newMaterial.AppearanceAssetId != ElementId.InvalidElementId)
-            {
-              using (var editScope = new AppearanceAssetEditScope(doc))
-              {
-                var editableAsset = editScope.Start(newMaterial.AppearanceAssetId);
-                var genericDiffuseProperty = editableAsset.FindByName("generic_diffuse") as AssetPropertyDoubleArray4d;
-                genericDiffuseProperty.SetValueAsColor(mat.DiffuseColor.ToHost());
-
-                var properties = new List<AssetProperty>(editableAsset.Size);
-                for (int i = 0; i < editableAsset.Size; i++)
-                  properties.Add(editableAsset[i]);
-
-                editScope.Commit(false);
-              }
+              appearanceAssetElement = AppearanceAssetElement.Create(doc, name, asset);
+              appearanceAssetId = appearanceAssetElement.Id;
+              break;
             }
           }
         }
+        else
+        {
+          appearanceAssetElement = appearanceAssetElement.Duplicate(name);
+          appearanceAssetId = appearanceAssetElement.Id;
+        }
+
+        if (appearanceAssetId != ElementId.InvalidElementId)
+        {
+          using (var editScope = new AppearanceAssetEditScope(doc))
+          {
+            var editableAsset = editScope.Start(appearanceAssetId);
+
+            if(mat.SmellsLikeMetal || mat.SmellsLikeTexturedMetal)
+            {
+              var generic_self_illum_luminance = editableAsset.FindByName(Generic.GenericIsMetal) as AssetPropertyBoolean;
+              generic_self_illum_luminance.Value = true;
+            }
+
+            if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.Diffuse, out Rhino.Display.Color4f diffuse))
+            {
+              var generic_diffuse = editableAsset.FindByName(Generic.GenericDiffuse) as AssetPropertyDoubleArray4d;
+              generic_diffuse.SetValueAsDoubles(new double[] { diffuse.R, diffuse.G, diffuse.B, diffuse.A });
+            }
+
+            if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.Transparency, out double transparency))
+            {
+              var generic_transparency = editableAsset.FindByName(Generic.GenericTransparency) as AssetPropertyDouble;
+              generic_transparency.Value = transparency;
+
+              if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.TransparencyColor, out Rhino.Display.Color4f transparencyColor))
+              {
+                diffuse = diffuse.BlendTo((float) transparency, transparencyColor);
+
+                var generic_diffuse = editableAsset.FindByName(Generic.GenericDiffuse) as AssetPropertyDoubleArray4d;
+                generic_diffuse.SetValueAsDoubles(new double[] { diffuse.R, diffuse.G, diffuse.B, diffuse.A });
+              }
+            }
+
+            if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.Ior, out double ior))
+            {
+              var generic_refraction_index = editableAsset.FindByName(Generic.GenericRefractionIndex) as AssetPropertyDouble;
+              generic_refraction_index.Value = ior;
+            }
+
+            if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.Shine, out double shine))
+            {
+              if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.Specular, out Rhino.Display.Color4f specularColor))
+              {
+                var generic_reflectivity_at_0deg = editableAsset.FindByName(Generic.GenericReflectivityAt0deg) as AssetPropertyDouble;
+                generic_reflectivity_at_0deg.Value = shine * specularColor.L;
+              }
+            }
+
+            if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.Reflectivity, out double reflectivity))
+            {
+              if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.ReflectivityColor, out Rhino.Display.Color4f reflectivityColor))
+              {
+                var generic_reflectivity_at_90deg = editableAsset.FindByName(Generic.GenericReflectivityAt90deg) as AssetPropertyDouble;
+                generic_reflectivity_at_90deg.Value = reflectivity * reflectivityColor.L;
+
+                if (mat.Fields.TryGetValue("fresnel-enabled", out bool fresnel_enabled) && !fresnel_enabled)
+                {
+                  diffuse = diffuse.BlendTo((float) reflectivity, reflectivityColor);
+                  var generic_diffuse = editableAsset.FindByName(Generic.GenericDiffuse) as AssetPropertyDoubleArray4d;
+                  generic_diffuse.SetValueAsDoubles(new double[] { diffuse.R, diffuse.G, diffuse.B, diffuse.A });
+                }
+              }
+            }
+
+            if (mat.Fields.TryGetValue("polish-amount", out double polish_amount))
+            {
+              var generic_glossiness = editableAsset.FindByName(Generic.GenericGlossiness) as AssetPropertyDouble;
+              generic_glossiness.Value = polish_amount;
+            }
+
+            if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.Emission, out Rhino.Display.Color4f emission))
+            {
+              var generic_self_illum_filter_map = editableAsset.FindByName(Generic.GenericSelfIllumFilterMap) as AssetPropertyDoubleArray4d;
+              generic_self_illum_filter_map.SetValueAsDoubles(new double[] { emission.R, emission.G, emission.B, emission.A });
+            }
+
+            if (mat.Fields.TryGetValue(Rhino.Render.RenderMaterial.BasicMaterialParameterNames.DisableLighting, out bool self_illum))
+            {
+              var generic_self_illum_luminance = editableAsset.FindByName(Generic.GenericSelfIllumLuminance) as AssetPropertyDouble;
+              generic_self_illum_luminance.Value = self_illum ? 200000 : 0.0;
+            }
+
+            editScope.Commit(false);
+          }
+        }
+      }
 #endif
-        materials.Add(mat.Name, newMaterial);
+
+      return appearanceAssetId;
+    }
+
+    static ElementId ToHost(Rhino.DocObjects.Material mat, Document doc, Dictionary<string, Autodesk.Revit.DB.Material> materials)
+    {
+      var id = ElementId.InvalidElementId;
+      var matName = mat.Name ?? "Default";
+      if (materials.TryGetValue(matName, out var material)) id = material.Id;
+      else
+      {
+        id = Autodesk.Revit.DB.Material.Create(doc, matName);
+        var newMaterial = doc.GetElement(id) as Autodesk.Revit.DB.Material;
+
+        newMaterial.Color         = mat.PreviewColor.ToHost();
+        newMaterial.Shininess     = (int) Math.Round(mat.Shine / Rhino.DocObjects.Material.MaxShine * 128.0);
+        newMaterial.Smoothness    = (int) Math.Round(mat.Reflectivity * 100.0);
+        newMaterial.Transparency  = (int) Math.Round(mat.Transparency * 100.0);
+        newMaterial.AppearanceAssetId = ToHost(mat.RenderMaterial, doc, matName);
+
+        materials.Add(matName, newMaterial);
       }
 
       return id;

@@ -176,6 +176,20 @@ namespace RhinoInside.Revit
     }
     #endregion
 
+    #region Application
+#if !REVIT_2018
+    public static IList<Autodesk.Revit.Utility.Asset> GetAssets(this Autodesk.Revit.ApplicationServices.Application app, Autodesk.Revit.Utility.AssetType assetType)
+    {
+      return new Autodesk.Revit.Utility.Asset[0];
+    }
+
+    public static AppearanceAssetElement Duplicate(this AppearanceAssetElement element, string name)
+    {
+      return AppearanceAssetElement.Create(element.Document, name, element.GetRenderingAsset());
+    }
+#endif
+    #endregion
+
     #region Linq
     public static IEnumerable<K> Select<K, T>(this IEnumerator<T> e, Func<T, K> selector)
     {
