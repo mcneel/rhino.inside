@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 
@@ -258,10 +259,60 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
+  public class ElementTypeFilter : ElementFilterComponent
+  {
+    public override Guid ComponentGuid => new Guid("4434C470-4CAF-4178-929D-284C3B5A24B5");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    protected override string IconTag => "T";
+
+    public ElementTypeFilter()
+    : base("Element.TypeFilter", "Type Filter", "Filter used to match elements by their type", "Revit", "Filter")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ElementType(), "Types", "T", "Types to match", GH_ParamAccess.list);
+      base.RegisterInputParams(manager);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var typeIds = new List<Autodesk.Revit.DB.ElementId>();
+      if (!DA.GetDataList("Types", typeIds))
+        return;
+
+      var inverted = false;
+      if (!DA.GetData("Inverted", ref inverted))
+        return;
+
+      var provider = new ParameterValueProvider(new ElementId(BuiltInParameter.ELEM_TYPE_PARAM));
+      if (typeIds.Count == 1)
+      {
+        var rule = new FilterElementIdRule(provider, new FilterNumericEquals(), typeIds[0]);
+        DA.SetData("Filter", new Autodesk.Revit.DB.ElementParameterFilter(rule, inverted));
+      }
+      else
+      {
+        if (inverted)
+        {
+          var rules = typeIds.Select(x => new FilterInverseRule(new FilterElementIdRule(provider, new FilterNumericEquals(), x))).ToArray();
+          DA.SetData("Filter", new ElementParameterFilter(rules));
+        }
+        else
+        {
+          var filters = typeIds.Select(x => new FilterElementIdRule(provider, new FilterNumericEquals(), x)).Select(x => new ElementParameterFilter(x)).ToArray();
+          DA.SetData("Filter", new LogicalOrFilter(filters));
+        }
+      }
+    }
+  }
+  #endregion
+
+  #region Tertiary
   public class ElementBoundingBoxFilter : ElementFilterComponent
   {
     public override Guid ComponentGuid => new Guid("F5A32842-B18E-470F-8BD3-BAE1373AD982");
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
     protected override string IconTag => "B";
 
     public ElementBoundingBoxFilter()
@@ -332,14 +383,14 @@ namespace RhinoInside.Revit.GH.Components
         var filters = points.Select<Rhino.Geometry.Point3d, Autodesk.Revit.DB.ElementFilter>
                      (x =>
                      {
-                        var pointsBBox = new Rhino.Geometry.BoundingBox(x, x);
-                        {
-                          var box = new Rhino.Geometry.Box(pointsBBox);
-                          box.Inflate(tolerance);
-                          targets.Add(box);
-                        }
+                       var pointsBBox = new Rhino.Geometry.BoundingBox(x, x);
+                       {
+                         var box = new Rhino.Geometry.Box(pointsBBox);
+                         box.Inflate(tolerance);
+                         targets.Add(box);
+                       }
 
-                        x = x.Scale(scaleFactor);
+                       x = x.Scale(scaleFactor);
 
                        if (strict)
                        {
@@ -360,38 +411,6 @@ namespace RhinoInside.Revit.GH.Components
 
       DA.SetData("Filter", filter);
       DA.SetDataList("Target", targets);
-    }
-  }
-  #endregion
-
-  #region Tertiary
-  public class ElementLevelFilter : ElementFilterComponent
-  {
-    public override Guid ComponentGuid => new Guid("B534489B-1367-4ACA-8FD8-D4B365CEEE0D");
-    public override GH_Exposure Exposure => GH_Exposure.tertiary;
-    protected override string IconTag => "L";
-
-    public ElementLevelFilter()
-    : base("Element.LevelFilter", "Level Filter", "Filter used to match elements associated to the given level", "Revit", "Filter")
-    { }
-
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddParameter(new Parameters.Element(), "Level", "L", "Level to match", GH_ParamAccess.item);
-      base.RegisterInputParams(manager);
-    }
-
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      var levelId = Autodesk.Revit.DB.ElementId.InvalidElementId;
-      if (!DA.GetData("Level", ref levelId))
-        return;
-
-      var inverted = false;
-      if (!DA.GetData("Inverted", ref inverted))
-        return;
-
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementLevelFilter(levelId, inverted));
     }
   }
 
@@ -492,6 +511,68 @@ namespace RhinoInside.Revit.GH.Components
         mesh.Scale(scaleFactor);
 
       DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(Rhino.Geometry.Brep.CreateFromMesh(mesh, true).ToHost(), inverted));
+    }
+  }
+  #endregion
+
+  #region Quarternary
+  public class ElementLevelFilter : ElementFilterComponent
+  {
+    public override Guid ComponentGuid => new Guid("B534489B-1367-4ACA-8FD8-D4B365CEEE0D");
+    public override GH_Exposure Exposure => GH_Exposure.quarternary;
+    protected override string IconTag => "L";
+
+    public ElementLevelFilter()
+    : base("Element.LevelFilter", "Level Filter", "Filter used to match elements associated to the given level", "Revit", "Filter")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "Level", "L", "Level to match", GH_ParamAccess.item);
+      base.RegisterInputParams(manager);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var levelId = Autodesk.Revit.DB.ElementId.InvalidElementId;
+      if (!DA.GetData("Level", ref levelId))
+        return;
+
+      var inverted = false;
+      if (!DA.GetData("Inverted", ref inverted))
+        return;
+
+      DA.SetData("Filter", new Autodesk.Revit.DB.ElementLevelFilter(levelId, inverted));
+    }
+  }
+
+  public class ElementDesignOptionFilter : ElementFilterComponent
+  {
+    public override Guid ComponentGuid => new Guid("1B197E82-3A65-43D4-AE47-FD25E4E6F2E5");
+    public override GH_Exposure Exposure => GH_Exposure.quarternary;
+    protected override string IconTag => "D";
+
+    public ElementDesignOptionFilter()
+    : base("Element.DesignOptionFilter", "Design Option Filter", "Filter used to match elements associated to the given Design Option", "Revit", "Filter")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager[manager.AddParameter(new Parameters.Element(), "Design Option", "D", "Design Option to match", GH_ParamAccess.item)].Optional = true;
+      base.RegisterInputParams(manager);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var designOptionId = Autodesk.Revit.DB.ElementId.InvalidElementId;
+      if (!DA.GetData("Design Option", ref designOptionId))
+        designOptionId = Autodesk.Revit.DB.DesignOption.GetActiveDesignOptionId(Revit.ActiveDBDocument);
+
+      var inverted = false;
+      if (!DA.GetData("Inverted", ref inverted))
+        return;
+
+      DA.SetData("Filter", new Autodesk.Revit.DB.ElementDesignOptionFilter(designOptionId, inverted));
     }
   }
   #endregion
