@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 
@@ -255,6 +256,49 @@ namespace RhinoInside.Revit.GH.Components
         DA.SetData("Filter", new Autodesk.Revit.DB.ElementCategoryFilter(categoryIds[0], inverted));
       else
         DA.SetData("Filter", new Autodesk.Revit.DB.ElementMulticategoryFilter(categoryIds, inverted));
+    }
+  }
+
+  public class ElementTypeFilter : ElementFilterComponent
+  {
+    public override Guid ComponentGuid => new Guid("4434C470-4CAF-4178-929D-284C3B5A24B5");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    protected override string IconTag => "T";
+
+    public ElementTypeFilter()
+    : base("Element.TypeFilter", "Type Filter", "Filter used to match elements by their type", "Revit", "Filter")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ElementType(), "Types", "T", "Types to match", GH_ParamAccess.list);
+      base.RegisterInputParams(manager);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var typeIds = new List<Autodesk.Revit.DB.ElementId>();
+      if (!DA.GetDataList("Types", typeIds))
+        return;
+
+      var inverted = false;
+      if (!DA.GetData("Inverted", ref inverted))
+        return;
+
+      var provider = new ParameterValueProvider(new ElementId(BuiltInParameter.ELEM_TYPE_PARAM));
+      if (typeIds.Count == 1)
+      {
+        var rule = new FilterElementIdRule(provider, new FilterNumericEquals(), typeIds[0]);
+        DA.SetData("Filter", new Autodesk.Revit.DB.ElementParameterFilter(rule, inverted));
+      }
+      else
+      {
+        var filters = typeIds.Select(x => new FilterElementIdRule(provider, new FilterNumericEquals(), x)).Select(x => new ElementParameterFilter(x, inverted)).ToArray();
+        if(inverted)
+          DA.SetData("Filter", new LogicalAndFilter(filters));
+        else
+          DA.SetData("Filter", new LogicalOrFilter(filters));
+      }
     }
   }
 
