@@ -607,7 +607,7 @@ namespace RhinoInside.Revit.GH.Components
 
   public class ElementSelectableInViewFilter : ElementFilterComponent
   {
-    public override Guid ComponentGuid => new Guid("CFB42D90-F9D4-4601-9EEF-C624E92A424D");
+    public override Guid ComponentGuid => new Guid("AC546F16-C917-4CD1-9F8A-FBDD6330EB80");
     public override GH_Exposure Exposure => GH_Exposure.quarternary;
     protected override string IconTag => "S";
 
