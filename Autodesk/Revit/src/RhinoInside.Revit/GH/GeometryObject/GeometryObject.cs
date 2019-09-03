@@ -62,14 +62,14 @@ namespace RhinoInside.Revit.GH.Types
       get => Guid.Empty;
       set { if (value != Guid.Empty) throw new InvalidOperationException(); }
     }
-    bool IGH_GeometricGoo.IsReferencedGeometry => false;
+    bool IGH_GeometricGoo.IsReferencedGeometry => IsReferencedElement;
     bool IGH_GeometricGoo.IsGeometryLoaded => IsElementLoaded;
 
-    void IGH_GeometricGoo.ClearCaches() { }
+    void IGH_GeometricGoo.ClearCaches() => UnloadElement();
     IGH_GeometricGoo IGH_GeometricGoo.DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
     public abstract BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform);
-    bool IGH_GeometricGoo.LoadGeometry() => false;
-    bool IGH_GeometricGoo.LoadGeometry(Rhino.RhinoDoc doc) => false;
+    bool IGH_GeometricGoo.LoadGeometry(                  ) => IsElementLoaded || LoadElement(Revit.ActiveDBDocument);
+    bool IGH_GeometricGoo.LoadGeometry(Rhino.RhinoDoc doc) => IsElementLoaded || LoadElement(Revit.ActiveDBDocument);
     IGH_GeometricGoo IGH_GeometricGoo.Transform(Rhino.Geometry.Transform xform) => null;
     IGH_GeometricGoo IGH_GeometricGoo.Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
 
