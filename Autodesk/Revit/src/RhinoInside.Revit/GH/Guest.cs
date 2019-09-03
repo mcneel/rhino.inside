@@ -25,9 +25,20 @@ namespace RhinoInside.Revit.GH
     public string Name => "Grasshopper";
     LoadReturnCode IGuest.OnCheckIn(ref string errorMessage)
     {
-      if (!LoadComponents())
+      string message = null;
+      try
       {
-        errorMessage = "Failed to load Revit Grasshopper components.";
+        if(!LoadComponents())
+          message = "Failed to load Revit Grasshopper components.";
+      }
+      catch(Exception e)
+      {
+        message = e.Message;
+      }
+
+      if (!(message is null))
+      {
+        errorMessage = message;
         return LoadReturnCode.ErrorShowDialog;
       }
 
@@ -49,20 +60,32 @@ namespace RhinoInside.Revit.GH
       previewServer = null;
     }
 
-    bool LoadComponents()
+    static bool LoadGHA(string filePath)
     {
-      var LoadGHAProc = Instances.ComponentServer.GetType().GetMethod("LoadGHA", BindingFlags.NonPublic | BindingFlags.Instance);
+      var LoadGHAProc = typeof(GH_ComponentServer).GetMethod("LoadGHA", BindingFlags.NonPublic | BindingFlags.Instance);
       if (LoadGHAProc == null)
         return false;
 
+      try
+      {
+        return (bool) LoadGHAProc.Invoke
+        (
+          Instances.ComponentServer,
+          new object[] { new GH_ExternalFile(filePath), false }
+        );
+      }
+      catch(TargetInvocationException e)
+      {
+        throw e.InnerException;
+      }
+    }
+
+    bool LoadComponents()
+    {
       var bCoff = Instances.Settings.GetValue("Assemblies:COFF", true);
       Instances.Settings.SetValue("Assemblies:COFF", false);
 
-      var rc = (bool) LoadGHAProc.Invoke
-      (
-        Instances.ComponentServer,
-        new object[] { new GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
-      );
+      var rc = LoadGHA(Assembly.GetExecutingAssembly().Location);
 
       var assemblyFolders = new DirectoryInfo[]
       {
@@ -80,7 +103,42 @@ namespace RhinoInside.Revit.GH
         catch (System.IO.DirectoryNotFoundException) { continue; }
 
         foreach (var assemblyFile in assemblyFiles)
-          LoadGHAProc.Invoke(Instances.ComponentServer, new object[] { new GH_ExternalFile(assemblyFile.FullName), false });
+        {
+          bool loaded = false;
+          string mainContent = string.Empty;
+          string expandedContent = string.Empty;
+
+          try
+          {
+            loaded = LoadGHA(assemblyFile.FullName);
+          }
+          catch (Exception e)
+          {
+            mainContent     = e.Message;
+            expandedContent = e.Source;
+          }
+
+          if (!loaded)
+          {
+            using
+            (
+              var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
+              {
+                Title = "Grasshopper Assembly Failure",
+                MainIcon = TaskDialogIcons.IconError,
+                TitleAutoPrefix = false,
+                AllowCancellation = false,
+                MainInstruction = $"Grasshopper cannot load the external assembly {assemblyFile.Name}. Please contact the provider for assistance.",
+                MainContent = mainContent,
+                ExpandedContent = expandedContent,
+                FooterText = assemblyFile.FullName
+              }
+            )
+            {
+              taskDialog.Show();
+            }
+          }
+        }
       }
 
       Instances.Settings.SetValue("Assemblies:COFF", bCoff);
