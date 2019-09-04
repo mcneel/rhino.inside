@@ -5,8 +5,8 @@ This folder contains a test sample for using Rhino Inside Microsoft Excel using 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes
 
 ### Prerequisites
-1. Microsoft Excel 2016 
-2. Visual Studio 2017 ([download](https://visualstudio.microsoft.com/downloads/))
+1. Microsoft Excel 2016 **64bits**
+2. Visual Studio 2017 ([download](https://visualstudio.microsoft.com/downloads/)) with VSTO Add-in extension
 3. Rhino WIP ([download](https://www.rhino3d.com/download/rhino/wip))
 
 ### Getting Source and testing
