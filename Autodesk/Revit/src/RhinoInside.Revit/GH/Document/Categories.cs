@@ -11,10 +11,11 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class DocumentCategoriesPicker : GH_ValueList
+  public class DocumentCategoriesPicker : DocumentPicker
   {
     public override Guid ComponentGuid => new Guid("EB266925-F1AA-4729-B5C0-B978937F51A3");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    public override bool PassesFilter(Document document, ElementId id) => id.IsCategoryId(document);
 
     public DocumentCategoriesPicker()
     {
@@ -64,10 +65,38 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentCategories : GH_Component
+  public class DocumentCategories : DocumentComponent
   {
     public override Guid ComponentGuid => new Guid("D150E40E-0970-4683-B517-038F8BA8B0D8");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override ElementFilter ElementFilter => null;
+
+    public override bool NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
+    {
+      var document = e.GetDocument();
+
+      var added = e.GetAddedElementIds().Where(x => x.IsCategoryId(document));
+      if (added.Any())
+        return true;
+
+      var modified = e.GetModifiedElementIds().Where(x => x.IsCategoryId(document));
+      if (modified.Any())
+        return true;
+
+      var deleted = e.GetDeletedElementIds();
+      if (deleted.Any())
+      {
+        var empty = new ElementId[0];
+        var deletedSet = new HashSet<ElementId>(deleted);
+        foreach (var param in Params.Output.OfType<Parameters.IGH_ElementIdParam>())
+        {
+          if (param.NeedsToBeExpired(document, empty, deletedSet, empty))
+            return true;
+        }
+      }
+
+      return false;
+    }
 
     public DocumentCategories() : base(
       "Document.Categories", "Categories",

@@ -58,7 +58,7 @@ namespace RhinoInside.Revit.GH.Types
       return false;
     }
 
-    #region IElementId
+    #region IGH_ElementId
     public override bool LoadElement(Document doc)
     {
       if (TryParseUniqueID(UniqueID, out var _, out var index))
@@ -122,7 +122,7 @@ namespace RhinoInside.Revit.GH.Types
       public string MutateString(string str) => str.Trim();
       public string FormatInstance()
       {
-        int value = proxyOwner.Value.IntegerValue;
+        int value = proxyOwner.Value?.IntegerValue ?? -1;
         if (Enum.IsDefined(typeof(Autodesk.Revit.DB.BuiltInCategory), value))
           return ((BuiltInCategory)value).ToString();
 
@@ -193,7 +193,7 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Category : PersistentParam<Types.Category>
+  public class Category : ElementIdNonGeometryParam<Types.Category>
   {
     public override Guid ComponentGuid => new Guid("6722C7A5-EFD3-4119-A7FD-6C8BE892FD04");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -227,7 +227,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class CategoryDecompose : GH_Component
+  public class CategoryDecompose : Component
   {
     public override Guid ComponentGuid => new Guid("D794361E-DE8C-4D0A-BC77-52293F27D3AA");
 
@@ -265,7 +265,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class CategorySubCategories : GH_Component
+  public class CategorySubCategories : Component
   {
     public override Guid ComponentGuid => new Guid("4915AB87-0BD5-4541-AC43-3FBC450DD883");
 

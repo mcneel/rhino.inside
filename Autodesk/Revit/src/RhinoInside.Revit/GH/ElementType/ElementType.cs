@@ -47,11 +47,10 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class ElementType : PersistentParam<Types.ElementType>
+  public class ElementType : ElementIdNonGeometryParam<Types.ElementType>
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("97DD546D-65C3-4D00-A609-3F5FBDA67142");
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Params", "Revit") { }
   }
@@ -249,7 +248,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class ElementTypeIdentity : GH_Component
+  public class ElementTypeIdentity : Component
   {
     public override Guid ComponentGuid => new Guid("7DEA1BA3-D9BC-4E94-9E1C-0E527187C9DC");
     protected override string IconTag => "ID";
@@ -284,7 +283,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementTypeSimilar : GH_Component
+  public class ElementTypeSimilar : Component
   {
     public override Guid ComponentGuid => new Guid("BA9C72C5-EC88-450B-B736-BE6D827FA2F3");
     protected override string IconTag => "S";

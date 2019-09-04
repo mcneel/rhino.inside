@@ -18,7 +18,7 @@ namespace RhinoInside.Revit.GH.Types
 {
   public abstract class GeometryObject<X> :
     GH_Goo<X>,
-    IElementId,
+    IGH_ElementId,
     IGH_GeometricGoo,
     IGH_PreviewMeshData
     where X : Autodesk.Revit.DB.GeometryObject
@@ -31,6 +31,7 @@ namespace RhinoInside.Revit.GH.Types
 
     #region IPersistentId
     public Reference Reference { get; protected set; }
+    public ElementId Id => Reference.ElementId;
     public bool IsReferencedElement => !string.IsNullOrEmpty(UniqueID);
     public string UniqueID { get; protected set; } = string.Empty;
     public bool IsElementLoaded => !(Value is null);
@@ -502,25 +503,13 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public interface IGH_PersistentElementParam
+  public abstract class ElementIdGeometryParam<X> : ElementIdParam<X>, IGH_PreviewObject
+    where X : class, Types.IGH_ElementId
   {
-    bool NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified);
-  }
-
-  public abstract class GH_PersistentGeometryParam<X> :
-  Grasshopper.Kernel.GH_PersistentGeometryParam<X>,
-  IGH_PreviewObject,
-  IGH_PersistentElementParam
-  where X : class, IGH_GeometricGoo
-  {
-    protected GH_PersistentGeometryParam(string name, string nickname, string description, string category, string subcategory) :
-    base(new GH_InstanceDescription(name, nickname, description, category, subcategory)) { }
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
+    protected ElementIdGeometryParam(string name, string nickname, string description, string category, string subcategory) :
+    base(name, nickname, description, category, subcategory) { }
 
     #region UI methods
-    protected override void PrepareForPrompt()  { }
-    protected override void RecoverFromPrompt() { }
-
     public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
     {
       base.AppendAdditionalMenuItems(menu);
@@ -530,23 +519,11 @@ namespace RhinoInside.Revit.GH.Parameters
       this.Menu_AppendConnect(menu, Menu_Connect);
     }
 
-    private void Menu_Connect(object sender, EventArgs e)
-    {
-      if (sender is ToolStripMenuItem item && item.Tag is Guid componentGuid)
-      {
-        var obj = this.ConnectNewObject(componentGuid);
-        if (obj is null)
-          return;
-
-        obj.ExpireSolution(true);
-      }
-    }
-
     internal static IEnumerable<ElementId> ToElementIds(IGH_Structure data) =>
       data.AllData(true).
-      OfType<Types.Element>().
+      OfType<Types.IGH_ElementId>().
       Where(x => x != null).
-      Select(x => x.Value);
+      Select(x => x.Id);
 
     void Menu_HighlightElements(object sender, EventArgs e)
     {
@@ -634,37 +611,18 @@ namespace RhinoInside.Revit.GH.Parameters
         }
       }
     }
-#endregion
+    #endregion
 
-#region IGH_PreviewObject
+    #region IGH_PreviewObject
     bool IGH_PreviewObject.Hidden { get; set; }
     bool IGH_PreviewObject.IsPreviewCapable => !VolatileData.IsEmpty;
     Rhino.Geometry.BoundingBox IGH_PreviewObject.ClippingBox => Preview_ComputeClippingBox();
     void IGH_PreviewObject.DrawViewportMeshes(IGH_PreviewArgs args) => Preview_DrawMeshes(args);
     void IGH_PreviewObject.DrawViewportWires(IGH_PreviewArgs args) => Preview_DrawWires(args);
-#endregion
-
-#region IGH_PersistentGeometryParam
-    bool IGH_PersistentElementParam.NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified)
-    {
-      foreach (var data in VolatileData.AllData(true).OfType<Types.Element>())
-      {
-        if (!data.IsElementLoaded)
-          continue;
-
-        if (modified.Contains(data.Value))
-          return true;
-
-        if (deleted.Contains(data.Value))
-          return true;
-      }
-
-      return false;
-    }
-#endregion
+    #endregion
   }
 
-  public class Vertex : GH_PersistentGeometryParam<Types.Vertex>
+  public class Vertex : ElementIdGeometryParam<Types.Vertex>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("BC1B160A-DC04-4139-AB7D-1AECBDE7FF88");
@@ -723,7 +681,7 @@ namespace RhinoInside.Revit.GH.Parameters
 #endregion
   }
 
-  public class Edge : GH_PersistentGeometryParam<Types.Edge>
+  public class Edge : ElementIdGeometryParam<Types.Edge>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("B79FD0FD-63AE-4776-A0A7-6392A3A58B0D");
@@ -768,7 +726,7 @@ namespace RhinoInside.Revit.GH.Parameters
 #endregion
   }
 
-  public class Face : GH_PersistentGeometryParam<Types.Face>
+  public class Face : ElementIdGeometryParam<Types.Face>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("759700ED-BC79-4986-A6AB-84921A7C9293");

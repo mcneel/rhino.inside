@@ -414,12 +414,11 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementIntersectsElementFilter : ElementFilterComponent, IGH_PersistentElementComponent
+  public class ElementIntersectsElementFilter : ElementFilterComponent
   {
     public override Guid ComponentGuid => new Guid("D1E4C98D-E550-4F25-991A-5061EF845C37");
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     protected override string IconTag => "I";
-    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e) => true;
 
     public ElementIntersectsElementFilter()
     : base("Element.IntersectsElementFilter", "Intersects element Filter", "Filter used to match elements that intersect to the given element", "Revit", "Filter")
@@ -445,12 +444,11 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementIntersectsBrepFilter : ElementFilterComponent, IGH_PersistentElementComponent
+  public class ElementIntersectsBrepFilter : ElementFilterComponent
   {
     public override Guid ComponentGuid => new Guid("A8889824-F607-4465-B84F-16DF79DD08AB");
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     protected override string IconTag => "I";
-    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e) => true;
 
     public ElementIntersectsBrepFilter()
     : base("Element.IntersectsBrepFilter", "Intersects brep Filter", "Filter used to match elements that intersect to the given brep", "Revit", "Filter")
@@ -573,6 +571,64 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       DA.SetData("Filter", new Autodesk.Revit.DB.ElementDesignOptionFilter(designOptionId, inverted));
+    }
+  }
+
+  public class ElementOwnerViewFilter : ElementFilterComponent
+  {
+    public override Guid ComponentGuid => new Guid("CFB42D90-F9D4-4601-9EEF-C624E92A424D");
+    public override GH_Exposure Exposure => GH_Exposure.quarternary;
+    protected override string IconTag => "V";
+
+    public ElementOwnerViewFilter()
+    : base("Element.OwnerViewFilter", "Owner View Filter", "Filter used to match elements associated to the given View", "Revit", "Filter")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager[manager.AddParameter(new Parameters.Element(), "View", "V", "View to match", GH_ParamAccess.item)].Optional = true;
+      base.RegisterInputParams(manager);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var viewId = Autodesk.Revit.DB.ElementId.InvalidElementId;
+      DA.GetData("View", ref viewId);
+
+      var inverted = false;
+      if (!DA.GetData("Inverted", ref inverted))
+        return;
+
+      DA.SetData("Filter", new Autodesk.Revit.DB.ElementOwnerViewFilter(viewId, inverted));
+    }
+  }
+
+  public class ElementSelectableInViewFilter : ElementFilterComponent
+  {
+    public override Guid ComponentGuid => new Guid("AC546F16-C917-4CD1-9F8A-FBDD6330EB80");
+    public override GH_Exposure Exposure => GH_Exposure.quarternary;
+    protected override string IconTag => "S";
+
+    public ElementSelectableInViewFilter()
+    : base("Element.SelectableInViewFilter", "Selectable in View Filter", "Filter used to match seletable elements into the given View", "Revit", "Filter")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager[manager.AddParameter(new Parameters.Element(), "View", "V", "View to match", GH_ParamAccess.item)].Optional = true;
+      base.RegisterInputParams(manager);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var viewId = Revit.ActiveDBDocument.ActiveView.Id;
+      DA.GetData("View", ref viewId);
+
+      var inverted = false;
+      if (!DA.GetData("Inverted", ref inverted))
+        return;
+
+      DA.SetData("Filter", new Autodesk.Revit.UI.Selection.SelectableInViewFilter(Revit.ActiveDBDocument, viewId, inverted));
     }
   }
   #endregion

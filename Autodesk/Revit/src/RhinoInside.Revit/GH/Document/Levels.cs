@@ -13,10 +13,11 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class DocumentLevelsPicker : GH_ValueList
+  public class DocumentLevelsPicker : DocumentPicker
   {
     public override Guid ComponentGuid => new Guid("BD6A74F3-8C46-4506-87D9-B34BD96747DA");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override Autodesk.Revit.DB.ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementClassFilter(typeof(Level));
 
     public DocumentLevelsPicker()
     {
@@ -59,31 +60,11 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentLevels : GH_Component, IGH_PersistentElementComponent
+  public class DocumentLevels : DocumentComponent
   {
     public override Guid ComponentGuid => new Guid("87715CAF-92A9-4B14-99E5-F8CCB2CC19BD");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
-    {
-      var filter = new Autodesk.Revit.DB.ElementClassFilter(typeof(Level));
-      var added = e.GetAddedElementIds(filter);
-      if (added.Count > 0)
-        return true;
-
-      var deleted = e.GetDeletedElementIds();
-      if (deleted.Count > 0)
-      {
-        var document = e.GetDocument();
-        var empty = new ElementId[0];
-        foreach (var param in Params.Output.OfType<Parameters.IGH_PersistentElementParam>())
-        {
-          if (param.NeedsToBeExpired(document, empty, deleted, empty))
-            return true;
-        }
-      }
-
-      return false;
-    }
+    protected override ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementClassFilter(typeof(Level));
 
     public DocumentLevels() : base(
       "Document.Levels", "Levels",

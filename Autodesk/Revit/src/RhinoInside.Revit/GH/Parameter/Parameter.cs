@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public static explicit operator Autodesk.Revit.DB.ParameterElement(ParameterKey self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.ParameterElement;
 
-    #region IElementId
+    #region IGH_ElementId
     public override bool LoadElement(Document doc)
     {
       if (TryParseUniqueID(UniqueID, out var _, out var index))
@@ -406,16 +406,12 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class ParameterKey : GH_PersistentParam<Types.ParameterKey>
+  public class ParameterKey : ElementIdParam<Types.ParameterKey>
   {
     public override Guid ComponentGuid => new Guid("A550F532-8C68-460B-91F3-DA0A5A0D42B5");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public ParameterKey() : base("ParameterKey", "ParameterKey", "Represents a Revit parameter definition.", "Revit", "Parameter") { }
-
-    protected override GH_GetterResult Prompt_Plural(ref List<Types.ParameterKey> values) => GH_GetterResult.cancel;
-    protected override GH_GetterResult Prompt_Singular(ref Types.ParameterKey value) => GH_GetterResult.cancel;
   }
 
   public class ParameterValue : GH_Param<Types.ParameterValue>
@@ -472,12 +468,8 @@ namespace RhinoInside.Revit.GH.Parameters
   {
     public override Guid ComponentGuid => new Guid("3D9979B4-65C8-447F-BCEA-3705249DF3B6");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public BuiltInParameterGroup() : base("BuiltInParameterGroup", "BuiltInParameterGroup", "Represents a Revit parameter group.", "Revit", "Parameter") { }
-
-    protected override GH_GetterResult Prompt_Plural(ref List<Types.BuiltInParameterGroup> values) => GH_GetterResult.cancel;
-    protected override GH_GetterResult Prompt_Singular(ref Types.BuiltInParameterGroup value) => GH_GetterResult.cancel;
   }
 
   public class BuiltInParameterGroups : GH_ValueList
@@ -578,7 +570,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class ParameterKeyDecompose : GH_Component
+  public class ParameterKeyDecompose : Component
   {
     public override Guid ComponentGuid => new Guid("A80F4919-2387-4C78-BE2B-2F35B2E60298");
 
@@ -624,7 +616,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ParameterValueDecompose : GH_Component
+  public class ParameterValueDecompose : Component
   {
     public override Guid ComponentGuid => new Guid("3BDE5890-FB80-4AF2-B9AC-373661756BDA");
 
@@ -632,6 +624,7 @@ namespace RhinoInside.Revit.GH.Components
     : base("ParameterValue.Decompose", "ParameterValue.Decompose", "Decompose a parameter value", "Revit", "Parameter")
     { }
 
+    protected override ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementClassFilter(typeof(ParameterElement));
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddParameter(new Parameters.ParameterValue(), "ParameterValue", "V", "Parameter value to decompose", GH_ParamAccess.item);
