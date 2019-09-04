@@ -12,35 +12,11 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentElements : GH_Component, IGH_PersistentElementComponent
+  public class DocumentElements : DocumentComponent
   {
     public override Guid ComponentGuid => new Guid("0F7DA57E-6C05-4DD0-AABF-69E42DF38859");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
-    {
-      var filter = new Autodesk.Revit.DB.ElementIsElementTypeFilter(true);
-      var added = e.GetAddedElementIds(filter);
-      if (added.Count > 0)
-        return true;
-
-      var modified = e.GetModifiedElementIds(filter);
-      if (modified.Count > 0)
-        return true;
-
-      var deleted = e.GetDeletedElementIds();
-      if (deleted.Count > 0)
-      {
-        var document = e.GetDocument();
-        var empty = new ElementId[0];
-        foreach (var param in Params.Output.OfType<Parameters.IGH_PersistentElementParam>())
-        {
-          if (param.NeedsToBeExpired(document, empty, deleted, empty))
-            return true;
-        }
-      }
-
-      return false;
-    }
+    protected override ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementIsElementTypeFilter(true);
 
     public DocumentElements() : base(
       "Document.Elements", "Elements",

@@ -15,8 +15,9 @@ using Grasshopper.Kernel.Types;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public interface IElementId
+  public interface IGH_ElementId : IGH_Goo
   {
+    ElementId Id { get; }
     bool IsReferencedElement { get; }
     string UniqueID { get; }
     bool IsElementLoaded { get; }
@@ -24,7 +25,7 @@ namespace RhinoInside.Revit.GH.Types
     void UnloadElement();
   }
 
-  public abstract class ID : GH_Goo<ElementId>, IEquatable<ID>, IElementId
+  public abstract class ID : GH_Goo<ElementId>, IEquatable<ID>, IGH_ElementId
   {
     public override string TypeName => "Revit Model Object";
     public override string TypeDescription => "Represents a Revit model object";
@@ -76,7 +77,8 @@ namespace RhinoInside.Revit.GH.Types
       UniqueID = element?.UniqueId;
     }
 
-    #region IElementId
+    #region IGH_ElementId
+    public ElementId Id => Value;
     public bool IsReferencedElement => !string.IsNullOrEmpty(UniqueID);
     public string UniqueID { get; private set; }
     public bool IsElementLoaded => !(Value is null);
@@ -87,7 +89,6 @@ namespace RhinoInside.Revit.GH.Types
 
       return IsElementLoaded;
     }
-
     public void UnloadElement() => Value = null;
     #endregion
 
@@ -165,33 +166,69 @@ namespace RhinoInside.Revit.GH.Parameters
 {
   public abstract class GH_PersistentParam<T>: Grasshopper.Kernel.GH_PersistentParam<T> where T : class, IGH_Goo
   {
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
+    protected override sealed Bitmap Icon => ((Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
+                                      ImageBuilder.BuildIcon(IconTag);
+
+    protected virtual string IconTag => GetType().Name.Substring(0, 1);
 
     protected GH_PersistentParam(string name, string nickname, string description, string category, string subcategory) :
       base(name, nickname, description, category, subcategory) { }
 
-    protected override void Menu_AppendPromptOne(ToolStripDropDown menu) { }
-    protected override void Menu_AppendPromptMore(ToolStripDropDown menu) { }
+    protected override void PrepareForPrompt() { }
+    protected override void RecoverFromPrompt() { }
 
     protected override GH_GetterResult Prompt_Plural(ref List<T> values) => GH_GetterResult.cancel;
     protected override GH_GetterResult Prompt_Singular(ref T value) => GH_GetterResult.cancel;
   }
 
-  public abstract class PersistentParam<T> : GH_PersistentParam<T> where T : Types.ID
+  public interface IGH_ElementIdParam : IGH_Param
   {
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
+    bool NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified);
+  }
 
-    protected PersistentParam(string name, string nickname, string description, string category, string subcategory) :
+  public abstract class ElementIdParam<T> : GH_PersistentParam<T>, IGH_ElementIdParam
+    where T : class, Types.IGH_ElementId
+  {
+    protected ElementIdParam(string name, string nickname, string description, string category, string subcategory) :
       base(name, nickname, description, category, subcategory)
     { }
 
-    public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+    public override void ClearData()
     {
-      base.AppendAdditionalMenuItems(menu);
-      this.Menu_AppendConnect(menu, Menu_Connect);
+      base.ClearData();
+
+      if (PersistentDataCount == 0)
+        return;
+
+      foreach (var goo in PersistentData.OfType<T>())
+        goo?.UnloadElement();
     }
 
-    private void Menu_Connect(object sender, EventArgs e)
+    protected override void OnVolatileDataCollected()
+    {
+      if (SourceCount == 0)
+      {
+        foreach (var branch in m_data.Branches)
+        {
+          for (int i = 0; i < branch.Count; i++)
+          {
+            var item = branch[i];
+            if (item?.IsReferencedElement ?? false)
+            {
+              if (!item.LoadElement(Revit.ActiveDBDocument))
+              {
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A referenced {item.TypeName} could not be found in the Revit document.");
+                branch[i] = null;
+              }
+            }
+          }
+        }
+      }
+
+      base.OnVolatileDataCollected();
+    }
+
+    protected void Menu_Connect(object sender, EventArgs e)
     {
       if (sender is ToolStripMenuItem item && item.Tag is Guid componentGuid)
       {
@@ -202,6 +239,45 @@ namespace RhinoInside.Revit.GH.Parameters
         obj.ExpireSolution(true);
       }
     }
+
+    #region IGH_ElementIdParam
+    bool IGH_ElementIdParam.NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified)
+    {
+      if (DataType == GH_ParamData.remote)
+        return false;
+
+      foreach (var data in VolatileData.AllData(true).OfType<Types.IGH_ElementId>())
+      {
+        if (!data.IsElementLoaded)
+          continue;
+
+        if (modified.Contains(data.Id))
+          return true;
+
+        if (deleted.Contains(data.Id))
+          return true;
+      }
+
+      return false;
+    }
+    #endregion
+  }
+
+  public abstract class ElementIdNonGeometryParam<T> : ElementIdParam<T>
+    where T : class, Types.IGH_ElementId
+  {
+    protected ElementIdNonGeometryParam(string name, string nickname, string description, string category, string subcategory) :
+      base(name, nickname, description, category, subcategory)
+    { }
+
+    public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+    {
+      base.AppendAdditionalMenuItems(menu);
+      this.Menu_AppendConnect(menu, Menu_Connect);
+    }
+
+    protected override void Menu_AppendPromptOne(ToolStripDropDown menu) { }
+    protected override void Menu_AppendPromptMore(ToolStripDropDown menu) { }
   }
 
   public abstract class GH_ValueList : Grasshopper.Kernel.Special.GH_ValueList
@@ -255,7 +331,7 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       public override bool HasInputGrip => true;
       public override bool AllowMessageBalloon => true;
-      public ValueListAttributes(GH_ValueList owner) : base(owner) { }
+      public ValueListAttributes(ValueList owner) : base(owner) { }
       protected override void Render(GH_Canvas canvas, Graphics graphics, GH_CanvasChannel channel)
       {
         if (channel == GH_CanvasChannel.Wires)
@@ -349,7 +425,7 @@ namespace RhinoInside.Revit.GH.Parameters
     }
   }
 
-  public abstract class ValueSet : GH_PersistentParam<IGH_Goo>, IGH_InitCodeAware
+  public abstract class ValueSet : Grasshopper.Kernel.GH_PersistentParam<IGH_Goo>, IGH_InitCodeAware
   {
     public override string TypeName => "Data";
     public override GH_Exposure Exposure => GH_Exposure.secondary;
@@ -368,7 +444,6 @@ namespace RhinoInside.Revit.GH.Parameters
         }
       }
     );
-
 
     void IGH_InitCodeAware.SetInitCode(string code) => NickName = code;
 
@@ -409,6 +484,12 @@ namespace RhinoInside.Revit.GH.Parameters
       Menu_AppendItem(menu, "Invert selection", Menu_InvertSelectionClicked, SourceCount > 0);
       Menu_AppendItem(menu, "Select all", Menu_SelectAllClicked, SourceCount > 0);
     }
+
+    protected override void Menu_AppendPromptOne(ToolStripDropDown menu) { }
+    protected override void Menu_AppendPromptMore(ToolStripDropDown menu) { }
+
+    protected override GH_GetterResult Prompt_Plural(ref List<IGH_Goo> values) => GH_GetterResult.cancel;
+    protected override GH_GetterResult Prompt_Singular(ref IGH_Goo value) => GH_GetterResult.cancel;
 
     protected override void Menu_AppendDestroyPersistent(ToolStripDropDown menu) =>
       Menu_AppendItem(menu, "Clear selection", Menu_DestroyPersistentData, PersistentDataCount > 0);
@@ -862,7 +943,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       foreach (var goo in PersistentData)
       {
-             if (goo is Types.IElementId id)   id.UnloadElement();
+             if (goo is Types.IGH_ElementId id)   id.UnloadElement();
         else if (goo is IGH_GeometricGoo geo)     geo.ClearCaches();
       }
     }
@@ -876,7 +957,7 @@ namespace RhinoInside.Revit.GH.Parameters
         {
           var goo = branch[i];
 
-          if (goo is Types.IElementId id && id.IsReferencedElement && !id.IsElementLoaded && !id.LoadElement(Revit.ActiveDBDocument))
+          if (goo is Types.IGH_ElementId id && id.IsReferencedElement && !id.IsElementLoaded && !id.LoadElement(Revit.ActiveDBDocument))
           {
             AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A referenced element could not be found in the Revit document.");
             branch[i] = null;
@@ -952,7 +1033,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       public bool Equals(IGH_Goo x, IGH_Goo y)
       {
-        if (x is Types.IElementId idX && y is Types.IElementId idY)
+        if (x is Types.IGH_ElementId idX && y is Types.IGH_ElementId idY)
           return idX.IsReferencedElement && idY.IsReferencedElement && idX.UniqueID == idY.UniqueID;
 
         if (x is IGH_GeometricGoo geoX && geoX.IsReferencedGeometry && y is IGH_GeometricGoo geoY && geoY.IsReferencedGeometry)
@@ -981,7 +1062,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       public int GetHashCode(IGH_Goo obj)
       {
-        if (obj is Types.IElementId id)
+        if (obj is Types.IGH_ElementId id)
           return id.UniqueID.GetHashCode();
 
         if (obj is IGH_GeometricGoo geo && geo.IsReferencedGeometry)
@@ -1013,7 +1094,7 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       int dataCount = VolatileDataCount;
       int nonComparableCount = 0;
-      var goosSet = new HashSet<IGH_Goo>(VolatileData.AllData(false).
+      var goosSet = new HashSet<IGH_Goo>(VolatileData.AllData(true).
           Where(x =>
           {
             if (GooComparer.IsComparable(x))
@@ -1054,7 +1135,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public interface IGH_PersistentElementComponent
+  public interface IGH_ElementIdComponent : IGH_Component
   {
     bool NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs args);
   }
@@ -1071,5 +1152,41 @@ namespace RhinoInside.Revit.GH.Components
                                       ImageBuilder.BuildIcon(IconTag);
 
     protected virtual string IconTag => GetType().Name.Substring(0, 1);
+  }
+
+  public abstract class Component : GH_Component, IGH_ElementIdComponent
+  {
+    protected Component(string name, string nickname, string description, string category, string subCategory)
+    : base(name, nickname, description, category, subCategory) { }
+
+    protected virtual ElementFilter ElementFilter { get; }
+    public virtual bool NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
+    {
+      var persistentInputs = Params.Input.
+        Where(x => x.DataType == GH_ParamData.local && x.Phase != GH_SolutionPhase.Blank).
+        OfType<Parameters.IGH_ElementIdParam>();
+
+      if (persistentInputs.Any())
+      {
+        var filter = ElementFilter;
+
+        var modified = filter is null ? e.GetModifiedElementIds() : e.GetModifiedElementIds(filter);
+        var deleted = e.GetDeletedElementIds();
+
+        if (modified.Count > 0 || deleted.Count > 0)
+        {
+          var document = e.GetDocument();
+          var empty = new ElementId[0];
+
+          foreach (var param in persistentInputs)
+          {
+            if (param.NeedsToBeExpired(document, empty, deleted, modified))
+              return true;
+          }
+        }
+      }
+
+      return false;
+    }
   }
 }

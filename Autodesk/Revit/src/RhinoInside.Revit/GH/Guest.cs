@@ -161,6 +161,7 @@ namespace RhinoInside.Revit.GH
         foreach (GH_Document definition in Instances.DocumentServer)
         {
           bool expireNow =
+          e.Operation == UndoOperation.TransactionCommitted &&
           GH_Document.EnableSolutions &&
           Instances.ActiveCanvas.Document == definition &&
           definition.Enabled &&
@@ -168,65 +169,30 @@ namespace RhinoInside.Revit.GH
 
           foreach (var obj in definition.Objects)
           {
-            if (obj is IGH_Param param)
+            if (obj is Parameters.IGH_ElementIdParam persistentParam)
             {
-              if (param.SourceCount > 0)
+              if (persistentParam.DataType == GH_ParamData.remote)
                 continue;
 
-              if (param.Phase == GH_SolutionPhase.Blank)
+              if (persistentParam.Phase == GH_SolutionPhase.Blank)
                 continue;
 
-              if (obj is Parameters.IGH_PersistentElementParam persistentParam)
+              if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
               {
-                if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
-                {
-                  if (expireNow)
-                    param.ExpireSolution(false);
-                  else
-                    param.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "This parameter contains expired elements.");
-                }
+                if (expireNow)
+                  persistentParam.ExpireSolution(false);
+                else
+                  persistentParam.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "This parameter contains expired elements.");
               }
             }
-            else if (obj is IGH_Component component)
+            else if (obj is Components.IGH_ElementIdComponent persistentComponent)
             {
-              if (component is Components.IGH_PersistentElementComponent persistentComponent)
+              if (persistentComponent.NeedsToBeExpired(e))
               {
-                if (persistentComponent.NeedsToBeExpired(e))
-                {
-                  if (expireNow)
-                    component.ExpireSolution(false);
-                  else
-                    component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Document has been changed since the last solution.");
-                }
-              }
-              else
-              {
-                bool needsToBeExpired = false;
-                foreach (var inputParam in component.Params.Input)
-                {
-                  if (inputParam.SourceCount > 0)
-                    continue;
-
-                  if (inputParam.Phase == GH_SolutionPhase.Blank)
-                    continue;
-
-                  if (inputParam is Parameters.IGH_PersistentElementParam persistentParam)
-                  {
-                    if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
-                    {
-                      needsToBeExpired = true;
-                      break;
-                    }
-                  }
-                }
-
-                if (needsToBeExpired)
-                {
-                  if (expireNow)
-                    component.ExpireSolution(false);
-                  else
-                    component.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Some input parameter contains expired elements.");
-                }
+                if (expireNow)
+                  persistentComponent.ExpireSolution(false);
+                else
+                  persistentComponent.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Document has been changed since the last solution.");
               }
             }
           }

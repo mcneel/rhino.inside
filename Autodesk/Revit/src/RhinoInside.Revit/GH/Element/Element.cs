@@ -855,7 +855,7 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Element : GH_PersistentGeometryParam<Types.Element>
+  public class Element : ElementIdGeometryParam<Types.Element>
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
@@ -913,7 +913,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public abstract class ElementGetter : GH_Component
+  public abstract class ElementGetter : Component
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected static readonly Type ObjectType = typeof(Types.Element);
@@ -929,7 +929,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementIdentity : GH_Component
+  public class ElementIdentity : Component
   {
     public override Guid ComponentGuid => new Guid("D3917D58-7183-4B3F-9D22-03F0FE93B956");
 
@@ -956,7 +956,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Element", ref element))
         return;
 
-      DA.SetData("Category", element?.Category);
+      DA.SetData("Category", element is Family family ? family.FamilyCategory : element?.Category);
       DA.SetData("Type", Revit.ActiveDBDocument.GetElement(element?.GetTypeId()));
       DA.SetData("Name", element?.Name);
       DA.SetData("UniqueID", element?.UniqueId);
@@ -1160,7 +1160,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementDecompose : GH_Component, IGH_VariableParameterComponent
+  public class ElementDecompose : Component, IGH_VariableParameterComponent
   {
     public override Guid ComponentGuid => new Guid("FAD33C4B-A7C3-479B-B309-8F5363B25599");
     public ElementDecompose() : base("Element.Decompose", "Decompose", "Decomposes an Element into its parameters", "Revit", "Element") { }
@@ -1379,7 +1379,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementParameterGet : GH_Component
+  public class ElementParameterGet : Component
   {
     public override Guid ComponentGuid => new Guid("D86050F2-C774-49B1-9973-FB3AB188DC94");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -1465,7 +1465,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementParameterSet : GH_Component
+  public class ElementParameterSet : Component
   {
     public override Guid ComponentGuid => new Guid("8F1EE110-7FDA-49E0-BED4-E8E0227BC021");
     public override GH_Exposure Exposure => GH_Exposure.primary;
