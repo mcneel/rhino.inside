@@ -18,10 +18,10 @@
     <Property Id="ARPPRODUCTICON" Value="RhinoInside.ico" />
     <Property Id="ARPURLINFOABOUT" Value="https://www.rhino3d.com/inside"/>
     <Property Id="ARPURLUPDATEINFO" Value="https://github.com/mcneel/rhino.inside.git"/>
-    <Property Id="ARPHELPLINK" Value="https://discourse.mcneel.com/c/serengeti/inside" />
+    <Property Id="ARPHELPLINK" Value="https://discourse.mcneel.com/c/rhino-inside" />
     <Property Id="ARPCONTACT" Value="tech@mcneel.com"/>
     <Property Id="ARPHELPTELEPHONE" Value="+1 (206) 545-7000"/>
-    <Property Id='ARPNOMODIFY'>1</Property>
+    <!--<Property Id='ARPNOMODIFY'>1</Property>-->
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of RhinoInside.Revit is already installed." />
     <MediaTemplate EmbedCab="yes" />
@@ -39,6 +39,11 @@
       <ComponentGroupRef Id="ProductComponents2020" />
       <ComponentGroupRef Id="ProductAddin2020" />
     </Feature>
+    
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <WixVariable Id="WixUIDialogBmp" Value="Dialog.png" />
+    <WixVariable Id="WixUIBannerBmp" Value="Banner.png" />
+    <UIRef Id="WixUI_Minimal"/>
   </Product>
 
   <Fragment>
