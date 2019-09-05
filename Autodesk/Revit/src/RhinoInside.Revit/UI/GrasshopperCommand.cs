@@ -66,7 +66,6 @@ namespace RhinoInside.Revit.UI
     {
       public override bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories) =>
         base.IsCommandAvailable(applicationData, selectedCategories) &&
-        GH_Document.EnableSolutions &&
         Instances.ActiveCanvas?.Document != null;
     }
 
@@ -89,7 +88,13 @@ namespace RhinoInside.Revit.UI
       {
         using (var modal = new Rhinoceros.ModalScope())
         {
-          definition.NewSolution(true);
+          if(GH_Document.EnableSolutions) definition.NewSolution(true);
+          else
+          {
+            GH_Document.EnableSolutions = true;
+            try { definition.NewSolution(false); }
+            finally { GH_Document.EnableSolutions = false; }
+          }
 
           do
           {

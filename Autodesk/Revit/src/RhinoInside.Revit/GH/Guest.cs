@@ -47,12 +47,14 @@ namespace RhinoInside.Revit.GH
       previewServer.Register();
 
       Revit.DocumentChanged += OnDocumentChanged;
+      Revit.ApplicationUI.Idling += OnIdle;
 
       return LoadReturnCode.Success;
     }
 
     void IGuest.OnCheckOut()
     {
+      Revit.ApplicationUI.Idling -= OnIdle;
       Revit.DocumentChanged -= OnDocumentChanged;
 
       // Unregister PreviewServer
@@ -149,7 +151,7 @@ namespace RhinoInside.Revit.GH
       return rc;
     }
 
-    static void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
+    void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
     {
       var document = e.GetDocument();
       var added    = e.GetAddedElementIds();
@@ -161,7 +163,7 @@ namespace RhinoInside.Revit.GH
         foreach (GH_Document definition in Instances.DocumentServer)
         {
           bool expireNow =
-          e.Operation == UndoOperation.TransactionCommitted &&
+          (e.Operation == UndoOperation.TransactionCommitted || e.Operation == UndoOperation.TransactionUndone || e.Operation == UndoOperation.TransactionRedone) &&
           GH_Document.EnableSolutions &&
           Instances.ActiveCanvas.Document == definition &&
           definition.Enabled &&
@@ -178,29 +180,28 @@ namespace RhinoInside.Revit.GH
                 continue;
 
               if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
-              {
-                if (expireNow)
-                  persistentParam.ExpireSolution(false);
-                else
-                  persistentParam.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "This parameter contains expired elements.");
-              }
+                persistentParam.ExpireSolution(false);
             }
             else if (obj is Components.IGH_ElementIdComponent persistentComponent)
             {
               if (persistentComponent.NeedsToBeExpired(e))
-              {
-                if (expireNow)
                   persistentComponent.ExpireSolution(false);
-                else
-                  persistentComponent.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "Document has been changed since the last solution.");
-              }
             }
           }
 
           if (expireNow)
-            Revit.EnqueueAction(doc => definition.NewSolution(false));
+            expiredDocuments.Add(definition);
         }
       }
+    }
+
+    HashSet<GH_Document> expiredDocuments = new HashSet<GH_Document>();
+    void OnIdle(object sender, Autodesk.Revit.UI.Events.IdlingEventArgs e)
+    {
+      foreach (var document in expiredDocuments)
+        document.NewSolution(false);
+
+      expiredDocuments.Clear();
     }
   }
 }
