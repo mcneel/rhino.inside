@@ -68,7 +68,7 @@ namespace RhinoInside.Runtime.InteropServices
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public abstract class TransactionalComponent : GH_Component, ITransactionFinalizer, IFailuresPreprocessor
+  public abstract class TransactionalComponent : Component, ITransactionFinalizer, IFailuresPreprocessor
   {
     protected TransactionalComponent(string name, string nickname, string description, string category, string subCategory)
     : base(name, nickname, description, category, subCategory) { }
@@ -233,6 +233,7 @@ namespace RhinoInside.Revit.GH.Components
       { typeof(Autodesk.Revit.DB.Category),     Tuple.Create(typeof(Parameters.Category),     typeof(Types.Category))     },
       { typeof(Autodesk.Revit.DB.Element),      Tuple.Create(typeof(Parameters.Element),      typeof(Types.Element))      },
       { typeof(Autodesk.Revit.DB.ElementType),  Tuple.Create(typeof(Parameters.ElementType),  typeof(Types.ElementType))  },
+      { typeof(Autodesk.Revit.DB.SketchPlane),  Tuple.Create(typeof(Parameters.SketchPlane),  typeof(Types.SketchPlane))  },
     };
 
     protected virtual bool TryGetParamTypes(Type type, out Tuple<Type, Type> paramTypes)
@@ -248,12 +249,6 @@ namespace RhinoInside.Revit.GH.Components
         if (typeof(Autodesk.Revit.DB.ElementType).IsAssignableFrom(type))
         {
           paramTypes = Tuple.Create(typeof(Parameters.ElementType), typeof(Types.ElementType));
-          return true;
-        }
-
-        if (typeof(Autodesk.Revit.DB.SketchPlane).IsAssignableFrom(type))
-        {
-          paramTypes = Tuple.Create(typeof(Parameters.SketchPlane), typeof(Types.SketchPlane));
           return true;
         }
 
@@ -310,8 +305,13 @@ namespace RhinoInside.Revit.GH.Components
       return parameterType;
     }
 
+    ElementFilter elementFilter = null;
+    protected override ElementFilter ElementFilter => elementFilter;
+
     protected void RegisterInputParams(GH_InputParamManager manager, MethodInfo methodInfo)
     {
+      var elementFilterClasses = new List<Type>();
+
       foreach (var parameter in methodInfo.GetParameters())
       {
         if (parameter.Position < 2)
@@ -340,6 +340,21 @@ namespace RhinoInside.Revit.GH.Components
           foreach (var e in Enum.GetValues(parameterType))
             integerParam.AddNamedValue(Enum.GetName(parameterType, e), (int) e);
         }
+        else if (parameterType == typeof(Autodesk.Revit.DB.Element) || parameterType.IsSubclassOf(typeof(Autodesk.Revit.DB.Element)))
+        {
+          elementFilterClasses.Add(parameterType);
+        }
+        else if (parameterType == typeof(Autodesk.Revit.DB.Category))
+        {
+          elementFilterClasses.Add(typeof(Autodesk.Revit.DB.Element));
+        }
+      }
+
+      if (elementFilterClasses.Count > 0 && !elementFilterClasses.Contains(typeof(Autodesk.Revit.DB.Element)))
+      {
+        elementFilter = (elementFilterClasses.Count == 1) ?
+         (ElementFilter) new Autodesk.Revit.DB.ElementClassFilter(elementFilterClasses[0]) :
+         (ElementFilter) new Autodesk.Revit.DB.LogicalOrFilter(elementFilterClasses.Select(x => new Autodesk.Revit.DB.ElementClassFilter(x)).ToArray());
       }
     }
 
@@ -458,7 +473,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected void BeginTransaction(Document document)
     {
-      CurrentTransaction = new Transaction(Revit.ActiveDBDocument, Name);
+      CurrentTransaction = new Transaction(document, Name);
       if (CurrentTransaction.Start() != TransactionStatus.Started)
       {
         CurrentTransaction.Dispose();
@@ -515,8 +530,6 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       BeginTransaction(Revit.ActiveDBDocument);
-
-      //PreviousStructureEnumerator = PreviousStructure?.GetEnumerator();
 
       OnAfterStart(Revit.ActiveDBDocument, CurrentTransaction.GetName());
     }
@@ -655,10 +668,6 @@ namespace RhinoInside.Revit.GH.Components
           CommitTransaction();
         }
       }
-      //catch (Exception e)
-      //{
-      //  throw e;
-      //}
       finally
       {
         switch (TransactionStatus)
@@ -743,13 +752,13 @@ namespace RhinoInside.Revit.GH.Components
           element?.Document.Delete(element.Id);
           element = null;
         }
-        catch (ArgumentNullException e)
+        catch (System.ArgumentNullException)
         {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message.Replace("\r\n", " "));
+          // Grasshopper components use to send a Null when they receive a Null without throwing any error
           element?.Document.Delete(element.Id);
           element = null;
         }
-        catch (ArgumentException e)
+        catch (System.ArgumentException e)
         {
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message.Replace("\r\n", " "));
           element?.Document.Delete(element.Id);
@@ -762,7 +771,7 @@ namespace RhinoInside.Revit.GH.Components
           element?.Document.Delete(element.Id);
           element = null;
         }
-        catch (Exception e)
+        catch (System.Exception e)
         {
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
           DA.AbortComponentSolution();

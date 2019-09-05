@@ -414,12 +414,11 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementIntersectsElementFilter : ElementFilterComponent, IGH_PersistentElementComponent
+  public class ElementIntersectsElementFilter : ElementFilterComponent
   {
     public override Guid ComponentGuid => new Guid("D1E4C98D-E550-4F25-991A-5061EF845C37");
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     protected override string IconTag => "I";
-    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e) => true;
 
     public ElementIntersectsElementFilter()
     : base("Element.IntersectsElementFilter", "Intersects element Filter", "Filter used to match elements that intersect to the given element", "Revit", "Filter")
@@ -445,12 +444,11 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementIntersectsBrepFilter : ElementFilterComponent, IGH_PersistentElementComponent
+  public class ElementIntersectsBrepFilter : ElementFilterComponent
   {
     public override Guid ComponentGuid => new Guid("A8889824-F607-4465-B84F-16DF79DD08AB");
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     protected override string IconTag => "I";
-    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e) => true;
 
     public ElementIntersectsBrepFilter()
     : base("Element.IntersectsBrepFilter", "Intersects brep Filter", "Filter used to match elements that intersect to the given brep", "Revit", "Filter")

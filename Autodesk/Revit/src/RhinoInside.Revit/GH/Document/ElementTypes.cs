@@ -13,10 +13,11 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class DocumentFamiliesPicker : GH_ValueList
+  public class DocumentFamiliesPicker : DocumentPicker
   {
     public override Guid ComponentGuid => new Guid("45CEE087-4194-4E55-AA20-9CC5D2193CE0");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override Autodesk.Revit.DB.ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementClassFilter(typeof(Family));
 
     public DocumentFamiliesPicker()
     {
@@ -38,9 +39,9 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
         {
-          foreach (var family in collector.OfClass(typeof(Family)).Cast<Family>().OrderBy((x) => x.Name))
+          foreach (var family in collector.OfClass(typeof(Family)).Cast<Family>().OrderBy((x) => $"{x.FamilyCategory.Name} : {x.Name}"))
           {
-            var item = new GH_ValueListItem(family.Name, family.Id.IntegerValue.ToString());
+            var item = new GH_ValueListItem($"{family.FamilyCategory.Name} : {family.Name}", family.Id.IntegerValue.ToString());
             item.Selected = selectedItems.Contains(item.Expression);
             ListItems.Add(item);
           }
@@ -59,35 +60,11 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentElementTypes : GH_Component, IGH_PersistentElementComponent
+  public class DocumentElementTypes : DocumentComponent
   {
     public override Guid ComponentGuid => new Guid("7B00F940-4C6E-4F3F-AB81-C3EED430DE96");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
-    {
-      var filter = new Autodesk.Revit.DB.ElementIsElementTypeFilter(false);
-      var added = e.GetAddedElementIds(filter);
-      if (added.Count > 0)
-        return true;
-
-      var modified = e.GetModifiedElementIds(filter);
-      if (modified.Count > 0)
-        return true;
-
-      var deleted = e.GetDeletedElementIds();
-      if (deleted.Count > 0)
-      {
-        var document = e.GetDocument();
-        var empty = new ElementId[0];
-        foreach (var param in Params.Output.OfType<Parameters.IGH_PersistentElementParam>())
-        {
-          if (param.NeedsToBeExpired(document, empty, deleted, empty))
-            return true;
-        }
-      }
-
-      return false;
-    }
+    protected override ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementIsElementTypeFilter(false);
 
     public DocumentElementTypes() : base(
       "Document.ElementTypes", "ElementTypes",
