@@ -39,7 +39,7 @@ namespace GhApper
         var window = System.Windows.Application.Current.Windows[i];
         if (window.IsVisible)
         {
-          window.Closed += (s, e) => System.Windows.Forms.Application.Exit();
+          window.Closed += (s, e) => app.Shutdown();;
           break;
         }
       }

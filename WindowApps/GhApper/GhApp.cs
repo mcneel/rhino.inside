@@ -4,6 +4,7 @@ namespace GhApper
 {
   class GhApp
   {
+    string _tempPath;
     const string ghname = "HumanUI_Example.gh";
     Rhino.Runtime.InProcess.RhinoCore _rhinoCore;
 
@@ -12,8 +13,8 @@ namespace GhApper
       using (var resource = typeof(GhApp).Assembly.GetManifestResourceStream($"GhApper.{ghname}"))
       {
         string dir = Path.GetDirectoryName(typeof(GhApp).Assembly.Location);
-        string filename = Path.Combine(dir, ghname);
-        using (var file = new FileStream(filename, FileMode.Create, FileAccess.Write))
+        _tempPath = Path.Combine(Path.GetTempPath(), ghname);
+        using (var file = new FileStream(_tempPath, FileMode.Create, FileAccess.Write))
         {
           resource.CopyTo(file);
         }
@@ -27,12 +28,16 @@ namespace GhApper
       if (Rhino.RhinoApp.GetPlugInObject("Grasshopper") is Grasshopper.Plugin.GH_RhinoScriptInterface gh)
       {
         Grasshopper.Instances.AutoShowBanner = false;
-        string dir = Path.GetDirectoryName(typeof(GhApp).Assembly.Location);
-        string path = Path.Combine(dir, ghname);
         gh.LoadEditor();
-        var doc = Grasshopper.Instances.DocumentServer.AddDocument(path, true);
+        var doc = Grasshopper.Instances.DocumentServer.AddDocument(_tempPath, true);
         doc.NewSolution(true);
       }
+    }
+
+    public void Shutdown()
+    {
+      System.Windows.Forms.Application.Exit();
+      File.Delete(_tempPath);
     }
   }
 }
