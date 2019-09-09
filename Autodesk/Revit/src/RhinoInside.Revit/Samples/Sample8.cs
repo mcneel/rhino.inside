@@ -118,10 +118,6 @@ namespace RhinoInside.Revit.Samples
           {
             var editableAsset = editScope.Start(appearanceAssetId);
 
-            var properties = new List<AssetProperty>();
-            for (int i = 0; i < editableAsset.Size; i++)
-              properties.Add(editableAsset[i]);
-
             //var category = editableAsset.FindByName("category") as AssetPropertyString;
             //category.Value = $":{mat.Category.FirstCharUpper()}";
 
