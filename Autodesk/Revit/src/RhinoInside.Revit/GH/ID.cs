@@ -69,14 +69,14 @@ namespace RhinoInside.Revit.GH.Types
     public void SetValue(Autodesk.Revit.DB.Element element)
     {
       Value = element?.Id;
-      UniqueID = element?.UniqueId;
+      UniqueID = element?.UniqueId ?? string.Empty;
     }
 
     #region IGH_ElementId
     public ElementId Id => Value;
     public bool IsReferencedElement => !string.IsNullOrEmpty(UniqueID);
     public string UniqueID { get; private set; }
-    public bool IsElementLoaded => !(Value is null);
+    public bool IsElementLoaded => Value is object;
     public virtual bool LoadElement(Document doc)
     {
       try { Value = doc?.GetElement(UniqueID)?.Id; }
@@ -130,9 +130,9 @@ namespace RhinoInside.Revit.GH.Types
       return base.CastTo<Q>(ref target);
     }
 
-    public bool Equals(ID id) => id?.Value.IntegerValue == Value.IntegerValue && id?.UniqueID == UniqueID;
+    public bool Equals(ID id) => id?.UniqueID == UniqueID;
     public override bool Equals(object obj) => (obj is ID id) ? Equals(id) : base.Equals(obj);
-    public override int GetHashCode() => Value?.IntegerValue ?? 0;
+    public override int GetHashCode() => UniqueID.GetHashCode();
 
     public override string ToString()
     {
@@ -145,13 +145,21 @@ namespace RhinoInside.Revit.GH.Types
     public override sealed bool Read(GH_IReader reader)
     {
       Value = null;
-      UniqueID = reader.GetString("UniqueID");
+
+      string uniqueID = null;
+      if(!reader.TryGetString("UniqueID", ref uniqueID))
+        UniqueID = string.Empty;
+      else
+        UniqueID = uniqueID;
+
       return true;
     }
 
     public override sealed bool Write(GH_IWriter writer)
     {
-      writer.SetString("UniqueID", UniqueID);
+      if(!string.IsNullOrEmpty(UniqueID))
+        writer.SetString("UniqueID", UniqueID);
+
       return true;
     }
   }
@@ -162,7 +170,7 @@ namespace RhinoInside.Revit.GH.Parameters
   public abstract class GH_PersistentParam<T>: Grasshopper.Kernel.GH_PersistentParam<T> where T : class, IGH_Goo
   {
     protected override sealed Bitmap Icon => ((Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name)) ??
-                                      ImageBuilder.BuildIcon(IconTag);
+                                             ImageBuilder.BuildIcon(IconTag);
 
     protected virtual string IconTag => GetType().Name.Substring(0, 1);
 

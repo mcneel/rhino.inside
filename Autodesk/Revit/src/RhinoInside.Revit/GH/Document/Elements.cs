@@ -37,6 +37,8 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
+      DA.DisableGapLogic();
+
       Autodesk.Revit.DB.ElementFilter filter = null;
       if (!DA.GetData("Filter", ref filter))
         return;
@@ -47,7 +49,7 @@ namespace RhinoInside.Revit.GH.Components
         (
           "Elements",
           collector.WhereElementIsNotElementType().
-          //WherePasses(new Autodesk.Revit.DB.ElementClassFilter(typeof(Autodesk.Revit.DB.ParameterElement), true)).
+          WherePasses(new Autodesk.Revit.DB.ElementClassFilter(typeof(Autodesk.Revit.DB.ParameterElement), true)).
           WherePasses(filter).
           Select(x => Types.Element.Make(x))
         );
