@@ -105,23 +105,27 @@ namespace RhinoInside.Revit.GH.Types
       bool    IGH_GooProxy.IsParsable => true;
       string  IGH_GooProxy.UserString { get; set; }
 
-      Autodesk.Revit.DB.BuiltInParameter builtInParameter => IsBuiltIn ? (BuiltInParameter) proxyOwner.Value.IntegerValue : BuiltInParameter.INVALID;
+      Autodesk.Revit.DB.BuiltInParameter builtInParameter => proxyOwner.Value.TryGetBuiltInParameter(out var bip) ? bip : BuiltInParameter.INVALID;
       Autodesk.Revit.DB.ParameterElement parameter => IsBuiltIn ? null : Revit.ActiveDBDocument?.GetElement(proxyOwner.Value) as Autodesk.Revit.DB.ParameterElement;
 
       public bool Valid => proxyOwner.IsValid;
       [System.ComponentModel.Description("The parameter identifier in this session.")]
       public int Id => proxyOwner.Value.IntegerValue;
-      [System.ComponentModel.Description("The user-visible name for the parameter.")]
-      public string Name => IsBuiltIn ? builtInParameter != BuiltInParameter.INVALID ? LabelUtils.GetLabelFor(builtInParameter) : string.Empty : parameter?.GetDefinition().Name;
+      [System.ComponentModel.Description("A stable unique identifier for this parameter within the document.")]
+      public string UniqueID => proxyOwner.UniqueID;
       [System.ComponentModel.Description("The Guid that identifies this parameter as a shared parameter.")]
-      public Guid Guid => IsBuiltIn ? Guid.Empty : (parameter as SharedParameterElement)?.GuidValue ?? Guid.Empty;
+      public Guid Guid => (parameter as SharedParameterElement)?.GuidValue ?? Guid.Empty;
+      [System.ComponentModel.Description("The user-visible name for the parameter.")]
+      public string Name => IsBuiltIn ? LabelUtils.GetLabelFor(builtInParameter) : parameter?.GetDefinition().Name ?? string.Empty;
+      [System.ComponentModel.Description(".NET Object Type.")]
+      public string Object => IsBuiltIn ? typeof(BuiltInParameter).FullName : parameter?.GetType().FullName;
 
       [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Parameter is built in Revit.")]
-      public bool IsBuiltIn => Enum.IsDefined(typeof(BuiltInParameter), proxyOwner.Value.IntegerValue);
-      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Group of the parameter definition.")]
-      public string Type => IsBuiltIn ? builtInParameter != BuiltInParameter.INVALID ? Revit.ActiveDBDocument.get_TypeOfStorage(builtInParameter).ToString() : string.Empty : LabelUtils.GetLabelFor(parameter.GetDefinition().ParameterType);
-      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Element type name if the element has one assigned.")]
-      public bool Visible => IsBuiltIn ? true : parameter.GetDefinition().Visible;
+      public bool IsBuiltIn => builtInParameter != BuiltInParameter.INVALID;
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Internal parameter data storage type.")]
+      public StorageType StorageType => IsBuiltIn ? Revit.ActiveDBDocument.get_TypeOfStorage(builtInParameter) : parameter.GetDefinition().ParameterType.ToStorageType();
+      [System.ComponentModel.Category("Other"), System.ComponentModel.Description("Visible in UI.")]
+      public bool Visible => IsBuiltIn ? true : parameter?.GetDefinition().Visible ?? false;
     }
 
     public override IGH_GooProxy EmitProxy() => new Proxy(this);
@@ -406,12 +410,12 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class ParameterKey : ElementIdParam<Types.ParameterKey>
+  public class ParameterKey : ElementIdNonGeometryParam<Types.ParameterKey>
   {
     public override Guid ComponentGuid => new Guid("A550F532-8C68-460B-91F3-DA0A5A0D42B5");
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
-    public ParameterKey() : base("ParameterKey", "ParameterKey", "Represents a Revit parameter definition.", "Revit", "Parameter") { }
+    public ParameterKey() : base("ParameterKey", "ParameterKey", "Represents a Revit parameter definition.", "Params", "Revit") { }
   }
 
   public class ParameterValue : GH_Param<Types.ParameterValue>
@@ -420,7 +424,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public override GH_Exposure Exposure => GH_Exposure.hidden;
     protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("#");
 
-    public ParameterValue() : base("ParameterValue", "ParameterValue", "Represents a Revit parameter value on an element.", "Revit", "Parameter", GH_ParamAccess.item) { }
+    public ParameterValue() : base("ParameterValue", "ParameterValue", "Represents a Revit parameter value on an element.", "Params", "Revit", GH_ParamAccess.item) { }
     protected ParameterValue(string name, string nickname, string description, string category, string subcategory, GH_ParamAccess access) :
     base(name, nickname, description, category, subcategory, access) { }
   }
@@ -449,7 +453,7 @@ namespace RhinoInside.Revit.GH.Parameters
       }
     }
 
-    public ParameterParam() : base("INVALID", "Invalid", "Represents a Revit parameter instance.", "Revit", "Parameter", GH_ParamAccess.item) { }
+    public ParameterParam() : base("INVALID", "Invalid", "Represents a Revit parameter instance.", "Params", "Revit", GH_ParamAccess.item) { }
     public ParameterParam(Autodesk.Revit.DB.Parameter p) : this()
     {
       MutableNickName = false;
@@ -467,15 +471,15 @@ namespace RhinoInside.Revit.GH.Parameters
   public class BuiltInParameterGroup : GH_PersistentParam<Types.BuiltInParameterGroup>
   {
     public override Guid ComponentGuid => new Guid("3D9979B4-65C8-447F-BCEA-3705249DF3B6");
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
-    public BuiltInParameterGroup() : base("BuiltInParameterGroup", "BuiltInParameterGroup", "Represents a Revit parameter group.", "Revit", "Parameter") { }
+    public BuiltInParameterGroup() : base("BuiltInParameterGroup", "BuiltInParameterGroup", "Represents a Revit parameter group.", "Params", "Revit") { }
   }
 
   public class BuiltInParameterGroups : GH_ValueList
   {
     public override Guid ComponentGuid => new Guid("5D331B12-DA6C-46A7-AA13-F463E42650D1");
-    public override GH_Exposure Exposure => GH_Exposure.secondary;
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
 
     public BuiltInParameterGroups()
     {
@@ -742,7 +746,7 @@ namespace RhinoInside.Revit.GH.Components
           // TODO : Ask for categories
           var categorySet = new CategorySet();
           foreach (var category in doc.Settings.Categories.Cast<Category>().Where(category => category.AllowsBoundParameters))
-              categorySet.Insert(category);
+            categorySet.Insert(category);
 
           var binding = instance ? (ElementBinding) new InstanceBinding(categorySet) : (ElementBinding) new TypeBinding(categorySet);
 
