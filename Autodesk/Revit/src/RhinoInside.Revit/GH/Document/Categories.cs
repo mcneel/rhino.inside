@@ -154,7 +154,10 @@ namespace RhinoInside.Revit.GH.Components
         list = list?.Concat(orderedGroup) ?? orderedGroup;
       }
 
-      DA.SetDataList("Categories", list);
+      if (list is object)
+        DA.SetDataList("Categories", list);
+      else
+        DA.DisableGapLogic();
     }
   }
 }

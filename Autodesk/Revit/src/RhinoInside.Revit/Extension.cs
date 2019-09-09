@@ -10,6 +10,18 @@ namespace RhinoInside.Revit
 {
   public static class Extension
   {
+    #region string
+    public static string FirstCharUpper(this string text)
+    {
+      if (char.IsUpper(text, 0))
+        return text;
+
+      var chars = text.ToCharArray();
+      chars[0] = char.ToUpperInvariant(chars[0]);
+      return new string(chars);
+    }
+    #endregion
+
     #region Curves
     public static bool IsSameKindAs(this Autodesk.Revit.DB.Curve self, Autodesk.Revit.DB.Curve other)
     {
@@ -38,6 +50,33 @@ namespace RhinoInside.Revit
     #region ElementId
     public static bool IsValid(this ElementId id) => id.IntegerValue != ElementId.InvalidElementId.IntegerValue;
     public static bool IsBuiltInId(this ElementId id) => id.IntegerValue < 0;
+    public static bool TryGetBuiltInParameter(this ElementId id, out BuiltInParameter builtInParameter)
+    {
+      if (Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue))
+      {
+        builtInParameter = (BuiltInParameter) id.IntegerValue;
+        return true;
+      }
+      else
+      {
+        builtInParameter = BuiltInParameter.INVALID;
+        return true;
+      }
+    }
+    public static bool TryGetBuiltInCategory(this ElementId id, out BuiltInCategory builtInParameter)
+    {
+      if (Enum.IsDefined(typeof(BuiltInCategory), id.IntegerValue))
+      {
+        builtInParameter = (BuiltInCategory) id.IntegerValue;
+        return true;
+      }
+      else
+      {
+        builtInParameter = BuiltInCategory.INVALID;
+        return true;
+      }
+    }
+
     public static bool IsParameterId(this ElementId id, Autodesk.Revit.DB.Document doc)
     {
       if (-2000000 < id.IntegerValue && id.IntegerValue < -1000000)
@@ -91,7 +130,7 @@ namespace RhinoInside.Revit
           return Enum.GetValues(typeof(BuiltInParameter)).
             Cast<BuiltInParameter>().
             Select(x => element.get_Parameter(x)).
-            Where(x => x?.HasValue ?? false).
+            Where(x => x is object).
             Union(element.Parameters.Cast<Autodesk.Revit.DB.Parameter>()).
             GroupBy(x => x.Id).
             Select(x => x.First());
@@ -101,7 +140,7 @@ namespace RhinoInside.Revit
             GroupBy(x => x).
             Select(x => x.First()).
             Select(x => element.get_Parameter(x)).
-            Where(x => x?.HasValue ?? false);
+            Where(x => x is object);
         case ParameterSource.Project:
           return element.Parameters.Cast<Autodesk.Revit.DB.Parameter>().
             Where(p => !p.IsShared);

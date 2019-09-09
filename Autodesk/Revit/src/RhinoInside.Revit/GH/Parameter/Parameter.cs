@@ -158,13 +158,13 @@ namespace RhinoInside.Revit.GH.Types
     public override bool IsValid => Value != null;
     public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
 
-    double ToRhino(double value, UnitType unit)
+    double ToRhino(double value, ParameterType type)
     {
-      switch (unit)
+      switch (type)
       {
-        case UnitType.UT_Length: return value * Math.Pow(Revit.ModelUnits, 1.0);
-        case UnitType.UT_Area:   return value * Math.Pow(Revit.ModelUnits, 2.0);
-        case UnitType.UT_Volume: return value * Math.Pow(Revit.ModelUnits, 3.0);
+        case ParameterType.Length: return value * Math.Pow(Revit.ModelUnits, 1.0);
+        case ParameterType.Area:   return value * Math.Pow(Revit.ModelUnits, 2.0);
+        case ParameterType.Volume: return value * Math.Pow(Revit.ModelUnits, 3.0);
       }
 
       return value;
@@ -229,12 +229,12 @@ namespace RhinoInside.Revit.GH.Types
         case StorageType.Double:
           if (typeof(Q).IsAssignableFrom(typeof(GH_Number)))
           {
-            target = (Q) (object) new GH_Number(ToRhino(Value.AsDouble(), Value.Definition.UnitType));
+            target = (Q) (object) new GH_Number(ToRhino(Value.AsDouble(), Value.Definition.ParameterType));
             return true;
           }
           else if (typeof(Q).IsAssignableFrom(typeof(GH_Integer)))
           {
-            var value = Math.Round(ToRhino(Value.AsDouble(), Value.Definition.UnitType));
+            var value = Math.Round(ToRhino(Value.AsDouble(), Value.Definition.ParameterType));
             if (int.MinValue <= value && value <= int.MaxValue)
             {
               target = (Q) (object) new GH_Integer((int) value);
@@ -305,7 +305,7 @@ namespace RhinoInside.Revit.GH.Types
           if (Value.HasValue)
           {
             value = Value.AsValueString();
-            if (value == null)
+            if (value is null)
             {
               switch (Value.StorageType)
               {

@@ -100,15 +100,15 @@ namespace RhinoInside.Revit.GH.Components
       {
         var elementCollector = collector.WhereElementIsElementType();
 
-        if (!(filter is null))
+        if (filter is object)
           elementCollector = elementCollector.WherePasses(filter);
 
         var elementTypes = elementCollector.Cast<ElementType>();
 
-        if (familyName != null)
+        if (familyName is object)
           elementTypes = elementTypes.Where(x => x.FamilyName == familyName);
 
-        if (name != null)
+        if (name is object)
           elementTypes = elementTypes.Where(x => x.Name == name);
 
         DA.SetDataList("ElementTypes", elementTypes.Select(x => new Types.ElementType(x)));
