@@ -390,9 +390,8 @@ namespace RhinoInside.Revit.UI
 
                 do
                 {
-                  result = modal.Run(false, false);
-                  if (result == Result.Failed)
-                    return result;
+                  if (modal.Run(false, false) == Result.Failed)
+                    return Result.Failed;
 
                 } while (definition.ScheduleDelay >= GH_Document.ScheduleRecursive);
               }
