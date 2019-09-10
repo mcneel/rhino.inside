@@ -99,7 +99,7 @@ namespace RhinoInside.Revit.UI
           do
           {
             var result = modal.Run(false, false);
-            if (result != Result.Succeeded)
+            if (result == Result.Failed)
               return result;
 
           } while (definition.ScheduleDelay >= GH_Document.ScheduleRecursive);
