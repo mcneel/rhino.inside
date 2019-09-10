@@ -216,7 +216,7 @@ namespace RhinoInside.Revit.GH.Types
 
       public bool Valid => proxyOwner.IsValid;
       [System.ComponentModel.Description("The element identifier in this session.")]
-      public int Id => proxyOwner.Value.IntegerValue;
+      public int Id => proxyOwner.Value?.IntegerValue ?? -1;
       [System.ComponentModel.Description("A stable unique identifier for an element within the document.")]
       public string UniqueID => proxyOwner.UniqueID;
       [System.ComponentModel.Description("A human readable name for the Element.")]
