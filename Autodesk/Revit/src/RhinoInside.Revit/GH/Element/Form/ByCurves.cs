@@ -32,8 +32,8 @@ namespace RhinoInside.Revit.GH.Components
       IList<Rhino.Geometry.Curve> profiles
     )
     {
-      if (!doc.IsFamilyDocument || !doc.OwnerFamily.IsConceptualMassFamily)
-        throw new InvalidOperationException("This component can only run in Conceptual Mass Family editor");
+      if (!doc.IsFamilyDocument)
+        throw new InvalidOperationException("This component can only run in Family editor");
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
       var planes = new List<Rhino.Geometry.Plane>();

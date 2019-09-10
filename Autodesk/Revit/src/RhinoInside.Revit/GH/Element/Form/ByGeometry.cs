@@ -33,53 +33,68 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       if (!doc.IsFamilyDocument)
-        throw new InvalidOperationException("Document is not a family document, nor a document editing an in-place family.");
+        throw new InvalidOperationException("This component can only run in Family editor");
 
-     var scaleFactor = 1.0 / Revit.ModelUnits;
+      var scaleFactor = 1.0 / Revit.ModelUnits;
       if (scaleFactor != 1.0)
         brep.Scale(scaleFactor);
 
-      if (doc.OwnerFamily.IsConceptualMassFamily && brep.Faces.Count == 1 && brep.Faces[0].Loops.Count == 1 && brep.Faces[0].TryGetPlane(out var capPlane))
+      if (brep.Faces.Count == 1 && brep.Faces[0].Loops.Count == 1 && brep.Faces[0].TryGetPlane(out var capPlane))
       {
         using (var sketchPlane = SketchPlane.Create(doc, capPlane.ToHost()))
         using (var referenceArray = new ReferenceArray())
         {
-          var loop = brep.Faces[0].OuterLoop.To3dCurve();
+          try
+          {
+            foreach (var curve in brep.Faces[0].OuterLoop.To3dCurve().ToHost())
+              referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
 
-          foreach (var curve in brep.Faces[0].OuterLoop.To3dCurve().ToHost())
-            referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
-
-          ReplaceElement
-          (
-            ref element,
-            doc.FamilyCreate.NewFormByCap
+            ReplaceElement
             (
-              brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
-              referenceArray
-            )
-          );
+              ref element,
+              doc.FamilyCreate.NewFormByCap
+              (
+                brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
+                referenceArray
+              )
+            );
+
+            return;
+          }
+          catch (Autodesk.Revit.Exceptions.InvalidOperationException)
+          {
+            doc.Delete(referenceArray.OfType<Reference>().Select(x => x.ElementId).ToArray());
+          }
         }
       }
-      else if (doc.OwnerFamily.IsConceptualMassFamily && brep.TryGetExtrusion(out var extrusion) && (extrusion.CapCount == 2 || !extrusion.IsClosed(0)))
+      else if ( brep.TryGetExtrusion(out var extrusion) && (extrusion.CapCount == 2 || !extrusion.IsClosed(0)))
       {
         using (var sketchPlane = SketchPlane.Create(doc, extrusion.GetProfilePlane(0.0).ToHost()))
         using (var referenceArray = new ReferenceArray())
         {
-          foreach (var curve in extrusion.Profile3d(new Rhino.Geometry.ComponentIndex(Rhino.Geometry.ComponentIndexType.ExtrusionBottomProfile, 0)).ToHost())
-            referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
+          try
+          {
+            foreach (var curve in extrusion.Profile3d(new Rhino.Geometry.ComponentIndex(Rhino.Geometry.ComponentIndexType.ExtrusionBottomProfile, 0)).ToHost())
+              referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
 
-          ReplaceElement
-          (
-            ref element,
-            doc.FamilyCreate.NewExtrusionForm
+            ReplaceElement
             (
-              brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
-              referenceArray, extrusion.PathLineCurve().Line.Direction.ToHost()
-            )
-          );
+              ref element,
+              doc.FamilyCreate.NewExtrusionForm
+              (
+                brep.SolidOrientation != Rhino.Geometry.BrepSolidOrientation.Inward,
+                referenceArray, extrusion.PathLineCurve().Line.Direction.ToHost()
+              )
+            );
+            return;
+          }
+          catch(Autodesk.Revit.Exceptions.InvalidOperationException)
+          {
+             doc.Delete(referenceArray.OfType<Reference>().Select(x => x.ElementId).ToArray());
+          }
         }
       }
-      else
+
       {
         var solid = brep.ToHost();
         if (solid != null)
