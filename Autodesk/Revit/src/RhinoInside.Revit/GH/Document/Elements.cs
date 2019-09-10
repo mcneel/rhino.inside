@@ -16,7 +16,12 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("0F7DA57E-6C05-4DD0-AABF-69E42DF38859");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementIsElementTypeFilter(true);
+    protected override ElementFilter ElementFilter =>
+      new Autodesk.Revit.DB.LogicalAndFilter
+      (
+      new Autodesk.Revit.DB.ElementIsElementTypeFilter(true),
+      new Autodesk.Revit.DB.ElementClassFilter(typeof(Autodesk.Revit.DB.ParameterElement), true)
+      );
 
     public DocumentElements() : base(
       "Document.Elements", "Elements",
@@ -49,7 +54,7 @@ namespace RhinoInside.Revit.GH.Components
         (
           "Elements",
           collector.WhereElementIsNotElementType().
-          WherePasses(new Autodesk.Revit.DB.ElementClassFilter(typeof(Autodesk.Revit.DB.ParameterElement), true)).
+          WherePasses(ElementFilter).
           WherePasses(filter).
           Select(x => Types.Element.Make(x))
         );

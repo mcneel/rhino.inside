@@ -56,25 +56,31 @@ namespace RhinoInside.Revit.GH.Components
 
     public override bool NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
     {
-      var filter = ElementFilter;
+      var elementFilter = ElementFilter;
+      var filters = Params.Input.Count > 0 ?
+                    Params.Input[0].VolatileData.AllData(true).OfType<Types.ElementFilter>().Select(x => new LogicalAndFilter(x.Value, elementFilter)) :
+                    Enumerable.Empty<ElementFilter>();
 
-      var added = filter is null ? e.GetAddedElementIds(): e.GetAddedElementIds(filter);
-      if (added.Count > 0)
-        return true;
-
-      var modified = filter is null ? e.GetModifiedElementIds() : e.GetModifiedElementIds(filter);
-      if (modified.Count > 0)
-        return true;
-
-      var deleted = e.GetDeletedElementIds();
-      if (deleted.Count > 0)
+      foreach (var filter in filters.Any() ? filters : Enumerable.Repeat(elementFilter, 1))
       {
-        var document = e.GetDocument();
-        var empty = new ElementId[0];
-        foreach (var param in Params.Output.OfType<Parameters.IGH_ElementIdParam>())
+        var added = filter is null ? e.GetAddedElementIds() : e.GetAddedElementIds(filter);
+        if (added.Count > 0)
+          return true;
+
+        var modified = filter is null ? e.GetModifiedElementIds() : e.GetModifiedElementIds(filter);
+        if (modified.Count > 0)
+          return true;
+
+        var deleted = e.GetDeletedElementIds();
+        if (deleted.Count > 0)
         {
-          if (param.NeedsToBeExpired(document, empty, deleted, empty))
-            return true;
+          var document = e.GetDocument();
+          var empty = new ElementId[0];
+          foreach (var param in Params.Output.OfType<Parameters.IGH_ElementIdParam>())
+          {
+            if (param.NeedsToBeExpired(document, empty, deleted, empty))
+              return true;
+          }
         }
       }
 

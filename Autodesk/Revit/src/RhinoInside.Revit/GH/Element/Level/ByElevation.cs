@@ -42,7 +42,8 @@ namespace RhinoInside.Revit.GH.Components
 
       if (element is Level level)
       {
-        level.Elevation = elevation;
+        if(level.Elevation != elevation)
+          level.Elevation = elevation;
       }
       else
       {
