@@ -259,7 +259,8 @@ namespace RhinoInside.Revit.GH.Components
       if (element is DirectShape ds && ds.Category.Id == type.Category.Id) { }
       else ds = DirectShape.CreateElement(doc, type.Category.Id);
 
-      ds.SetTypeId(type.Id);
+      if(ds.TypeId != type.Id)
+        ds.SetTypeId(type.Id);
 
       var library = DirectShapeLibrary.GetDirectShapeLibrary(doc);
       if (!library.ContainsType(type.UniqueId))
