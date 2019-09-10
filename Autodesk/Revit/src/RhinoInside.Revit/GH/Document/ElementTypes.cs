@@ -98,7 +98,7 @@ namespace RhinoInside.Revit.GH.Components
 
       using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
       {
-        var elementCollector = collector.WhereElementIsElementType();
+        var elementCollector = collector.WherePasses(ElementFilter);
 
         if (filter is object)
           elementCollector = elementCollector.WherePasses(filter);

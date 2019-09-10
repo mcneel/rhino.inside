@@ -169,6 +169,13 @@ namespace RhinoInside.Revit.GH
           definition.Enabled &&
           definition.SolutionState != GH_ProcessStep.Process;
 
+          var change = new DocumentChangedEvent()
+          {
+            Operation = e.Operation,
+            Document = document,
+            Definition = definition
+          };
+
           foreach (var obj in definition.Objects)
           {
             if (obj is Parameters.IGH_ElementIdParam persistentParam)
@@ -180,28 +187,89 @@ namespace RhinoInside.Revit.GH
                 continue;
 
               if (persistentParam.NeedsToBeExpired(document, added, deleted, modified))
-                persistentParam.ExpireSolution(false);
+              {
+                if (expireNow)
+                  persistentParam.ExpireSolution(false);
+                else
+                  change.ExpiredObjects.Add(persistentParam);
+              }
             }
             else if (obj is Components.IGH_ElementIdComponent persistentComponent)
             {
               if (persistentComponent.NeedsToBeExpired(e))
+              {
+                if (expireNow)
                   persistentComponent.ExpireSolution(false);
+                else
+                  change.ExpiredObjects.Add(persistentComponent);
+              }
             }
           }
 
-          if (expireNow)
-            expiredDocuments.Add(definition);
+          if (definition.SolutionState != GH_ProcessStep.Process)
+          {
+            changeQuque.Enqueue(change);
+          }
+          else if (definition == Instances.ActiveCanvas.Document)
+          {
+            if (change.ExpiredObjects.Count > 0)
+            {
+              foreach (var obj in change.ExpiredObjects)
+              {
+                obj.ClearData();
+                obj.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"This object was expired because it contained obsolete Revit elements.");
+              }
+
+              Instances.DocumentEditor.SetStatusBarEvent
+              (
+                new GH_RuntimeMessage
+                (
+                  change.ExpiredObjects.Count == 1 ?
+                  $"An object was expired because it contained obsolete Revit elements." :
+                  $"{change.ExpiredObjects.Count} objects were expired because them contained obsolete Revit elements.",
+                  GH_RuntimeMessageLevel.Remark,
+                  "Document"
+                )
+              );
+            }
+          }
         }
       }
     }
 
-    HashSet<GH_Document> expiredDocuments = new HashSet<GH_Document>();
+    class DocumentChangedEvent
+    {
+      public UndoOperation Operation;
+      public Document Document = null;
+      public GH_Document Definition = null;
+      public readonly List<IGH_ActiveObject> ExpiredObjects = new List<IGH_ActiveObject>();
+      public void Apply()
+      {
+        foreach (var obj in ExpiredObjects)
+          obj.ExpireSolution(false);
+
+        if (Operation == UndoOperation.TransactionCommitted)
+        {
+          Definition.NewSolution(false);
+        }
+        else
+        {
+          // We create a transaction to avoid new changes while undoing or redoing
+          using (var transaction = new Transaction(Document))
+          {
+            transaction.Start(Operation.ToString());
+            Definition.NewSolution(false);
+          }
+        }
+      }
+    }
+
+    Queue<DocumentChangedEvent> changeQuque = new Queue<DocumentChangedEvent>();
+
     void OnIdle(object sender, Autodesk.Revit.UI.Events.IdlingEventArgs e)
     {
-      foreach (var document in expiredDocuments)
-        document.NewSolution(false);
-
-      expiredDocuments.Clear();
+      while (changeQuque.Count > 0)
+        changeQuque.Dequeue().Apply();
     }
   }
 }
