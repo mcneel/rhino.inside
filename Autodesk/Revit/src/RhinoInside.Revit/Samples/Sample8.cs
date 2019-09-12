@@ -53,12 +53,14 @@ namespace RhinoInside.Revit.Samples
     public static Dictionary<string, Autodesk.Revit.DB.Material> GetMaterialsByName(Document doc)
     {
       var collector = new FilteredElementCollector(doc);
-      return collector.OfClass(typeof(Autodesk.Revit.DB.Material)).OfType<Autodesk.Revit.DB.Material>().ToDictionary(x => x.Name);
+      return collector.OfClass(typeof(Autodesk.Revit.DB.Material)).OfType<Autodesk.Revit.DB.Material>().
+        GroupBy(x => x.Name).
+        ToDictionary(x => x.Key, x => x.First());
     }
 
-    static string GenericAssetName()
+    static string GenericAssetName(Autodesk.Revit.ApplicationServices.LanguageType language)
     {
-      switch (Revit.ActiveUIApplication.Application.Language)
+      switch (language)
       {
         case Autodesk.Revit.ApplicationServices.LanguageType.English_USA:           return "Generic";
         case Autodesk.Revit.ApplicationServices.LanguageType.German:                return "Generisch";
@@ -80,7 +82,29 @@ namespace RhinoInside.Revit.Samples
         #endif
       }
 
-      return "Generic";
+      return null;
+    }
+
+    static string GenericAssetName() => GenericAssetName(Revit.ActiveUIApplication.Application.Language) ?? "Generic";
+
+    public static AppearanceAssetElement GetGenericAppearanceAssetElement(Document doc)
+    {
+      var applicationLanguage = Revit.ActiveUIApplication.Application.Language;
+      var languages = Enumerable.Repeat(applicationLanguage, 1).
+      Concat
+      (
+        Enum.GetValues(typeof(Autodesk.Revit.ApplicationServices.LanguageType)).
+        Cast<Autodesk.Revit.ApplicationServices.LanguageType>().
+        Where(lang => lang != applicationLanguage && lang != Autodesk.Revit.ApplicationServices.LanguageType.Unknown)
+      );
+
+      foreach (var lang in languages)
+      {
+        if (AppearanceAssetElement.GetAppearanceAssetElementByName(doc, GenericAssetName(lang)) is AppearanceAssetElement assetElement)
+          return assetElement;
+      }
+
+      return null;
     }
 
     static ElementId ToHost(Rhino.Render.RenderMaterial mat, Document doc, string name)
@@ -92,7 +116,7 @@ namespace RhinoInside.Revit.Samples
         appearanceAssetId = appearanceAssetElement.Id;
       else
       {
-        appearanceAssetElement = AppearanceAssetElement.GetAppearanceAssetElementByName(doc, GenericAssetName());
+        appearanceAssetElement = GetGenericAppearanceAssetElement(doc);
         if (appearanceAssetElement is null)
         {
           var assets = Revit.ActiveUIApplication.Application.GetAssets(AssetType.Appearance);
@@ -219,20 +243,24 @@ namespace RhinoInside.Revit.Samples
     static ElementId ToHost(Rhino.DocObjects.Material mat, Document doc, Dictionary<string, Autodesk.Revit.DB.Material> materials)
     {
       var id = ElementId.InvalidElementId;
-      var matName = mat.Name ?? "Default";
-      if (materials.TryGetValue(matName, out var material)) id = material.Id;
-      else
+
+      if(mat.HasName)
       {
-        id = Autodesk.Revit.DB.Material.Create(doc, matName);
-        var newMaterial = doc.GetElement(id) as Autodesk.Revit.DB.Material;
+        var matName = mat.Name;
+        if (materials.TryGetValue(matName, out var material)) id = material.Id;
+        else
+        {
+          id = Autodesk.Revit.DB.Material.Create(doc, matName);
+          var newMaterial = doc.GetElement(id) as Autodesk.Revit.DB.Material;
 
-        newMaterial.Color         = mat.PreviewColor.ToHost();
-        newMaterial.Shininess     = (int) Math.Round(mat.Shine / Rhino.DocObjects.Material.MaxShine * 128.0);
-        newMaterial.Smoothness    = (int) Math.Round(mat.Reflectivity * 100.0);
-        newMaterial.Transparency  = (int) Math.Round(mat.Transparency * 100.0);
-        newMaterial.AppearanceAssetId = ToHost(mat.RenderMaterial, doc, matName);
+          newMaterial.Color         = mat.PreviewColor.ToHost();
+          newMaterial.Shininess     = (int) Math.Round(mat.Shine / Rhino.DocObjects.Material.MaxShine * 128.0);
+          newMaterial.Smoothness    = (int) Math.Round(mat.Reflectivity * 100.0);
+          newMaterial.Transparency  = (int) Math.Round(mat.Transparency * 100.0);
+          newMaterial.AppearanceAssetId = ToHost(mat.RenderMaterial, doc, matName);
 
-        materials.Add(matName, newMaterial);
+          materials.Add(matName, newMaterial);
+        }
       }
 
       return id;
