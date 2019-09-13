@@ -29,9 +29,11 @@ namespace RhinoInside.Revit
           return StorageType.None;
         case ParameterType.Text:
         case ParameterType.MultilineText:
+        case ParameterType.URL:
           return StorageType.String;
         case ParameterType.YesNo:
         case ParameterType.Integer:
+        case ParameterType.LoadClassification:
           return StorageType.Integer;
         case ParameterType.Material:
         case ParameterType.FamilyType:
@@ -124,7 +126,7 @@ namespace RhinoInside.Revit
     static readonly Rhino.Display.DisplayMaterial defaultMaterial = new Rhino.Display.DisplayMaterial(System.Drawing.Color.WhiteSmoke);
     public static Rhino.Display.DisplayMaterial ToRhino(this Autodesk.Revit.DB.Material material, Rhino.Display.DisplayMaterial parentMaterial)
     {
-      return (material == null) ? parentMaterial ?? defaultMaterial :
+      return (material is null) ? parentMaterial ?? defaultMaterial :
         new Rhino.Display.DisplayMaterial()
         {
           Diffuse = material.Color.ToRhino(),
@@ -325,7 +327,7 @@ namespace RhinoInside.Revit
       return Rhino.Geometry.RevSurface.Create(curve, axis);
     }
 
-    public static Rhino.Geometry.Brep JoinAndMerge(this ICollection<Rhino.Geometry.Brep> brepFaces, double tolerance)
+    static Rhino.Geometry.Brep JoinAndMerge(this ICollection<Rhino.Geometry.Brep> brepFaces, double tolerance)
     {
       if (brepFaces.Count == 0)
         return null;
@@ -334,12 +336,27 @@ namespace RhinoInside.Revit
         return brepFaces.First();
 
       ICollection<Brep> joinedBreps = Brep.JoinBreps(brepFaces, tolerance);
-      if (joinedBreps == null)
+      if (joinedBreps is null)
         joinedBreps = brepFaces;
       else if (joinedBreps.Count == 1)
         return joinedBreps.First();
 
       return Brep.MergeBreps(joinedBreps, tolerance);
+    }
+
+    static Rhino.Geometry.Brep SolidOrMerge(this ICollection<Rhino.Geometry.Brep> brepFaces, double tolerance)
+    {
+      if (brepFaces.Count == 0)
+        return null;
+
+      if (brepFaces.Count == 1)
+        return brepFaces.First();
+
+      var solidBreps = Brep.CreateSolid(brepFaces, tolerance);
+      if ((solidBreps?.Length ?? 0) == 0)
+        return JoinAndMerge(brepFaces, tolerance);
+
+      return solidBreps.Length == 1 ? solidBreps[0] : Brep.MergeBreps(solidBreps, tolerance);
     }
 
     static Rhino.Geometry.Brep TrimFaces(this Rhino.Geometry.Brep brep, IEnumerable<Rhino.Geometry.Curve> loops, Autodesk.Revit.DB.Face face)
@@ -349,39 +366,41 @@ namespace RhinoInside.Revit
       foreach (var brepFace in brep?.Faces ?? Enumerable.Empty<BrepFace>())
       {
 #if REVIT_2018
-        brepFace.OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation; 
+        brepFace.OrientationIsReversed = !face.OrientationMatchesSurfaceOrientation;
 #endif
+        var trimmedBrep = brepFace.Split(loops, Revit.VertexTolerance / 10.0);
 
-        var trimmedBrep = brepFace.Split(loops, Revit.VertexTolerance);
-
-        foreach (var trimmedFace in trimmedBrep.Faces.OrderByDescending(x => x.FaceIndex))
+        if (trimmedBrep is object)
         {
-          // Remove holes, faces with only interior edges
-          if (!trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence != EdgeAdjacency.Interior).Any())
+          foreach (var trimmedFace in trimmedBrep.Faces.OrderByDescending(x => x.FaceIndex))
           {
-            trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
-            continue;
-          }
-
-          // Remove ears, faces with edges not in the boundary
-          foreach (var trim in trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence == EdgeAdjacency.Naked))
-          {
-            var midPoint = trim.Edge.PointAt(trim.Edge.Domain.Mid);
-
-            var intersectionResult = face.Project(midPoint.ToHost());
-            if (intersectionResult == null || !face.IsInside(intersectionResult.UVPoint))
+            // Remove holes, faces with only interior edges
+            if (!trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence != EdgeAdjacency.Interior).Any())
             {
               trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
-              break;
+              continue;
+            }
+
+            // Remove ears, faces with edges not in the boundary
+            foreach (var trim in trimmedFace.Loops.SelectMany(loop => loop.Trims).Where(trim => trim.TrimType != BrepTrimType.Singular && trim.Edge.Valence == EdgeAdjacency.Naked))
+            {
+              var midPoint = trim.Edge.PointAt(trim.Edge.Domain.Mid);
+
+              var intersectionResult = face.Project(midPoint.ToHost());
+              if (intersectionResult is null || !face.IsInside(intersectionResult.UVPoint))
+              {
+                trimmedBrep.Faces.RemoveAt(trimmedFace.FaceIndex);
+                break;
+              }
             }
           }
-        }
 
-        brepFaces.Add(trimmedBrep);
+          brepFaces.Add(trimmedBrep);
+        }
       }
 
       return brepFaces.Count == 0 ?
-             brep :
+             brep.DuplicateBrep() :
              brepFaces.JoinAndMerge(Revit.VertexTolerance);
     }
 
@@ -448,12 +467,12 @@ namespace RhinoInside.Revit
 
     internal static bool HasFirstProfilePoint(this RuledSurface ruledSurface)
     {
-      return ruledSurface.GetFirstProfilePoint() != null;
+      return ruledSurface.GetFirstProfilePoint() is object;
     }
 
     internal static bool HasSecondProfilePoint(this RuledSurface ruledSurface)
     {
-      return ruledSurface.GetSecondProfilePoint() != null;
+      return ruledSurface.GetSecondProfilePoint() is object;
     }
 #endif
 
@@ -617,7 +636,7 @@ namespace RhinoInside.Revit
              Cast<Face>().
              Select(x => x.ToRhino()).
              ToArray().
-             JoinAndMerge(Revit.VertexTolerance);
+             SolidOrMerge(Revit.VertexTolerance);
     }
 
     public static Rhino.Geometry.Mesh ToRhino(this Autodesk.Revit.DB.Mesh mesh)
@@ -782,7 +801,7 @@ namespace RhinoInside.Revit
           case Autodesk.Revit.DB.Face face:
           {
             var meshingParameters = GraphicAttributes.Peek.MeshingParameters;
-            var f = (meshingParameters == null ? face.Triangulate() : face.Triangulate(meshingParameters.RelativeTolerance)).ToRhino();
+            var f = (meshingParameters is null ? face.Triangulate() : face.Triangulate(meshingParameters.RelativeTolerance)).ToRhino();
 
             if (scaleFactor != 1.0)
               f?.Scale(scaleFactor);
@@ -801,18 +820,18 @@ namespace RhinoInside.Revit
             var facesMeshes = useMultipleMaterials ? null : new List<Rhino.Geometry.Mesh>(solid.Faces.Size);
             foreach (var face in solidFaces)
             {
-              var f = (meshingParameters == null ? face.Triangulate() : face.Triangulate(meshingParameters.RelativeTolerance)).ToRhino();
+              var f = (meshingParameters is null ? face.Triangulate() : face.Triangulate(meshingParameters.RelativeTolerance)).ToRhino();
 
               if (scaleFactor != 1.0)
                 f?.Scale(scaleFactor);
 
-              if (facesMeshes == null)
+              if (facesMeshes is null)
                 yield return f;
               else
                 facesMeshes.Add(f);
             }
 
-            if (facesMeshes != null)
+            if (facesMeshes is object)
             {
               if (facesMeshes.Count > 0)
               {
@@ -1095,7 +1114,7 @@ namespace RhinoInside.Revit
             }
 
             var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
-            if (simplifiedCurve != null)
+            if (simplifiedCurve is object)
             {
               foreach(var simpleCurve in simplifiedCurve.ToHost())
                 yield return simpleCurve;
@@ -1116,7 +1135,7 @@ namespace RhinoInside.Revit
             }
 
             var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
-            if (simplifiedCurve != null)
+            if (simplifiedCurve is object)
             {
               foreach (var simpleCurve in simplifiedCurve.ToHost())
                 yield return simpleCurve;
@@ -1202,7 +1221,7 @@ namespace RhinoInside.Revit
     {
       Brep brepToSplit = null;
 
-      while (brepToSplit != brep && brep != null)
+      while (brepToSplit != brep && brep is object)
       {
         brep.Standardize();
         brepToSplit = brep;
@@ -1237,7 +1256,7 @@ namespace RhinoInside.Revit
           {
             brep = face.Split(splitters, Revit.ShortCurveTolerance);
 
-            if (brep == null)
+            if (brep is null)
               return null;
 
             if(brep.Faces.Count != brepToSplit.Faces.Count)
@@ -1261,7 +1280,7 @@ namespace RhinoInside.Revit
       if (brep.MakeValidForV2())
       {
         var splittedBrep = SplitClosedFaces(brep);
-        if (splittedBrep != null)
+        if (splittedBrep is object)
         {
           brep = splittedBrep;
 
@@ -1298,11 +1317,11 @@ namespace RhinoInside.Revit
                     continue;
 
                   var edge = trim.Edge;
-                  if (edge == null)
+                  if (edge is null)
                     continue;
 
                   var edgeIds = brepEdges[edge.EdgeIndex];
-                  if (edgeIds == null)
+                  if (edgeIds is null)
                   {
                     edgeIds = brepEdges[edge.EdgeIndex] = new List<BRepBuilderGeometryId>();
                     foreach (var e in edge.ToHost().SelectMany(x => x.ToBoundedCurves()))
@@ -1350,7 +1369,7 @@ namespace RhinoInside.Revit
     static IEnumerable<GeometryObject> ToHostMultiple(this Rhino.Geometry.Brep brep)
     {
       var solid = brep.ToHost();
-      if (solid != null)
+      if (solid is object)
       {
         yield return solid;
         yield break;
@@ -1667,7 +1686,7 @@ namespace RhinoInside.Revit
 
       public Rhino.Geometry.NurbsCurve Loop
       {
-        get { if (loop == null) loop = Face.OuterLoop.To3dCurve().ToNurbsCurve(); return loop; }
+        get { if (loop is null) loop = Face.OuterLoop.To3dCurve().ToNurbsCurve(); return loop; }
       }
       public Point3d Centroid
       {
