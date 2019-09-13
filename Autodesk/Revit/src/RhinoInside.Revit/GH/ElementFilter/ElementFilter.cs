@@ -718,7 +718,6 @@ namespace RhinoInside.Revit.GH.Components
 
   public abstract class ElementFilterRule : GH_Component
   {
-    public override Guid ComponentGuid => new Guid("0F9139AC-2A21-474C-9C5B-6864B2F2313C");
     public override GH_Exposure Exposure => GH_Exposure.quinary;
     public override bool IsPreviewCapable => false;
 
@@ -728,14 +727,6 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       manager.AddParameter(new Parameters.ParameterKey(), "ParameterKey", "K", "Parameter to check", GH_ParamAccess.item);
-      //var condition = manager[manager.AddIntegerParameter("Condition", "C", string.Empty, GH_ParamAccess.item, 1)] as Param_Integer;
-
-      //condition.AddNamedValue("Equals", 1);
-      //condition.AddNamedValue("Greater", 2);
-      //condition.AddNamedValue("Greater or Equal", 3);
-      //condition.AddNamedValue("Less", 4);
-      //condition.AddNamedValue("Less or Equal", 5);
-
       manager.AddGenericParameter("Value", "V", "Value to check with", GH_ParamAccess.item);
     }
 
@@ -970,69 +961,69 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementFilterNotEquals : ElementFilterRule
+  public class ElementFilterRuleNotEquals : ElementFilterRule
   {
     public override Guid ComponentGuid => new Guid("6BBE9731-EF71-42E8-A880-1D2ADFEB9F79");
     protected override string IconTag => "≠";
     protected override ConditionType Condition => ConditionType.NotEquals;
 
-    public ElementFilterNotEquals()
-    : base("Element.ElementFilterNotEquals", "Filter Equals", "Filter used to match elements if value of a parameter are not equals to Value", "Revit", "Filter")
+    public ElementFilterRuleNotEquals()
+    : base("Element.RuleNotEquals", "Not Equals", "Filter used to match elements if value of a parameter are not equals to Value", "Revit", "Filter")
     { }
   }
 
-  public class ElementFilterEquals : ElementFilterRule
+  public class ElementFilterRuleEquals : ElementFilterRule
   {
     public override Guid ComponentGuid => new Guid("0F9139AC-2A21-474C-9C5B-6864B2F2313C");
     protected override string IconTag => "=";
     protected override ConditionType Condition => ConditionType.Equals;
 
-    public ElementFilterEquals()
-    : base("Element.ElementFilterEquals", "Filter Equals", "Filter used to match elements if value of a parameter equals to Value", "Revit", "Filter")
+    public ElementFilterRuleEquals()
+    : base("Element.RuleEquals", "Equals", "Filter used to match elements if value of a parameter equals to Value", "Revit", "Filter")
     { }
   }
 
-  public class ElementFilterGreater : ElementFilterRule
+  public class ElementFilterRuleGreater : ElementFilterRule
   {
     public override Guid ComponentGuid => new Guid("BB7D39DA-97AD-4277-82C7-010AF857FF03");
     protected override string IconTag => ">";
     protected override ConditionType Condition => ConditionType.Greater;
 
-    public ElementFilterGreater()
-    : base("Element.ElementFilterGreater", "Filter Greater", "Filter used to match elements if value of a parameter greater than Value", "Revit", "Filter")
+    public ElementFilterRuleGreater()
+    : base("Element.RuleGreater", "Greater", "Filter used to match elements if value of a parameter greater than Value", "Revit", "Filter")
     { }
   }
 
-  public class ElementFilterGreaterOrEqual : ElementFilterRule
+  public class ElementFilterRuleGreaterOrEqual : ElementFilterRule
   {
     public override Guid ComponentGuid => new Guid("05BBAEDD-027B-40DA-8390-F826B63FD100");
     protected override string IconTag => "≥";
     protected override ConditionType Condition => ConditionType.GreaterOrEqual;
 
-    public ElementFilterGreaterOrEqual()
-    : base("Element.ElementFilterGreater", "Filter greater or equal", "Filter used to match elements if value of a parameter greater or equal than Value", "Revit", "Filter")
+    public ElementFilterRuleGreaterOrEqual()
+    : base("Element.RuleGreaterOrEqual", "Greater or Equal", "Filter used to match elements if value of a parameter greater or equal than Value", "Revit", "Filter")
     { }
   }
 
-  public class ElementFilterLess : ElementFilterRule
+  public class ElementFilterRuleLess : ElementFilterRule
   {
     public override Guid ComponentGuid => new Guid("BE2C5AFE-7D56-4F63-9A23-20560E3675B9");
     protected override string IconTag => "<";
     protected override ConditionType Condition => ConditionType.Less;
 
-    public ElementFilterLess()
-    : base("Element.ElementFilterLess", "Filter less", "Filter used to match elements if value of a parameter less than Value", "Revit", "Filter")
+    public ElementFilterRuleLess()
+    : base("Element.RuleLess", "Less", "Filter used to match elements if value of a parameter less than Value", "Revit", "Filter")
     { }
   }
 
-  public class ElementFilterLessOrEqual : ElementFilterRule
+  public class ElementFilterRuleLessOrEqual : ElementFilterRule
   {
     public override Guid ComponentGuid => new Guid("BB69852F-6A39-4ADC-B9B8-D16A8862B4C7");
     protected override string IconTag => "≤";
     protected override ConditionType Condition => ConditionType.LessOrEqual;
 
-    public ElementFilterLessOrEqual()
-    : base("Element.ElementFilterLessOrEqual", "Filter less or equal", "Filter used to match elements if value of a parameter less or equal than Value", "Revit", "Filter")
+    public ElementFilterRuleLessOrEqual()
+    : base("Element.RuleLessOrEqual", "Less or Equal", "Filter used to match elements if value of a parameter less or equal than Value", "Revit", "Filter")
     { }
   }
   #endregion
