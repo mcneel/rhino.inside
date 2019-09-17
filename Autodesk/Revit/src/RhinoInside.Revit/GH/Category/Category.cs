@@ -182,8 +182,10 @@ namespace RhinoInside.Revit.GH.Types
         var category = (Autodesk.Revit.DB.Category) this;
         if (category is object)
           return category.Parent is null ? category.Name : $"{category.Parent.Name} : {category.Name}";
+#if REVIT_2020
         else if (Enum.IsDefined(typeof(BuiltInCategory), Value.IntegerValue))
           return LabelUtils.GetLabelFor((BuiltInCategory) Value.IntegerValue);
+#endif
         else
           return "Revit Category \"" + ((BuiltInCategory) Value.IntegerValue).ToString() + "\"";
       }
