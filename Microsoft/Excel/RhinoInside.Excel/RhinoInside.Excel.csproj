@@ -26,11 +26,9 @@
     <NoStandardLibraries>false</NoStandardLibraries>
     <RootNamespace>RhinoInside.Excel</RootNamespace>
     <AssemblyName>RhinoInside.Excel</AssemblyName>
-    <LoadBehavior>3</LoadBehavior>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <DefineConstants>VSTO40</DefineConstants>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <BootstrapperComponentsLocation>HomeSite</BootstrapperComponentsLocation>
   </PropertyGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.VSTORuntime.4.0">
@@ -191,7 +189,6 @@
     <Compile Include="RhinoInsideAddIn.cs">
       <SubType>Code</SubType>
     </Compile>
-    <None Include="RhinoInside.Excel_TemporaryKey.pfx" />
     <None Include="RhinoInsideAddIn.Designer.xml">
       <DependentUpon>RhinoInsideAddIn.cs</DependentUpon>
     </None>
@@ -203,15 +200,6 @@
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
-  </PropertyGroup>
-  <PropertyGroup>
-    <SignManifests>true</SignManifests>
-  </PropertyGroup>
-  <PropertyGroup>
-    <ManifestKeyFile>RhinoInside.Excel_TemporaryKey.pfx</ManifestKeyFile>
-  </PropertyGroup>
-  <PropertyGroup>
-    <ManifestCertificateThumbprint>714F7CE014022C95EF8D450F38A6131D577C5D12</ManifestCertificateThumbprint>
   </PropertyGroup>
   <!-- Include the build rules for a C# project. -->
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
