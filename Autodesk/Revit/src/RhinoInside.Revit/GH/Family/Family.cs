@@ -388,7 +388,9 @@ namespace RhinoInside.Revit.GH.Components
           case Autodesk.Revit.ApplicationServices.LanguageType.Polish:      templatePath = System.IO.Path.Combine(templatePath, @"Model ogólny (metryczny)"); break;
           case Autodesk.Revit.ApplicationServices.LanguageType.Hungarian:   templatePath = System.IO.Path.Combine(templatePath, @"Metric Generic Model"); break;
           case Autodesk.Revit.ApplicationServices.LanguageType.Brazilian_Portuguese: templatePath = System.IO.Path.Combine(templatePath, @"Metric Generic Model"); break;
+          #if REVIT_2018
           case Autodesk.Revit.ApplicationServices.LanguageType.English_GB:  templatePath = System.IO.Path.Combine(templatePath, @"Generic Model"); break;
+          #endif
         }
       }
 
