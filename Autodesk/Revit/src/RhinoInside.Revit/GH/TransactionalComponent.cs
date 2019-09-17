@@ -131,9 +131,13 @@ namespace RhinoInside.Revit.GH.Components
       if (element != null && elementTypeId != element.GetTypeId())
       {
         var doc = element.Document;
-        var newElmentId = element.ChangeTypeId(elementTypeId);
-        if (newElmentId != ElementId.InvalidElementId)
-          element = doc.GetElement(newElmentId);
+        if (element.IsValidType(elementTypeId))
+        {
+          var newElmentId = element.ChangeTypeId(elementTypeId);
+          if (newElmentId != ElementId.InvalidElementId)
+            element = doc.GetElement(newElmentId);
+        }
+        else element = null;
       }
     }
 
@@ -438,18 +442,8 @@ namespace RhinoInside.Revit.GH.Components
     }
     protected static readonly MethodInfo GetInputDataListInfo = typeof(TransactionalComponent).GetMethod("GetInputDataList", BindingFlags.Instance | BindingFlags.NonPublic);
 
-    static string FirstCharUpper(string text)
-    {
-      if (char.IsUpper(text, 0))
-        return text;
-
-      var chars = text.ToCharArray();
-      chars[0] = char.ToUpperInvariant(chars[0]);
-      return new string(chars);
-    }
-
-    protected void ThrowArgumentNullException(string paramName, string description = null) => throw new ArgumentNullException(FirstCharUpper(paramName), description ?? string.Empty);
-    protected void ThrowArgumentException(string paramName, string description = null) => throw new ArgumentException(description ?? "Invalid value.", FirstCharUpper(paramName));
+    protected void ThrowArgumentNullException(string paramName, string description = null) => throw new ArgumentNullException(paramName.FirstCharUpper(), description ?? string.Empty);
+    protected void ThrowArgumentException(string paramName, string description = null) => throw new ArgumentException(description ?? "Invalid value.", paramName.FirstCharUpper());
     protected void ThrowIfNotValid(string paramName, Rhino.Geometry.Point3d value)
     {
       if (!value.IsValid) ThrowArgumentException(paramName);
@@ -501,7 +495,7 @@ namespace RhinoInside.Revit.GH.Components
         {
           Revit.ApplicationUI.DialogBoxShowing += _ = (sender, args) =>
           {
-            if (editScope == null)
+            if (editScope is null)
               editScope = new ModalForm.EditScope();
           };
 
