@@ -333,3 +333,9 @@ ASALocalRun/
 /CPython/rhinoinside.egg-info
 /CPython/rhinoinside/RhinoInsidePythonShim.dll
 /Autodesk/Revit/src/RhinoInside.Revit/RhinoInside.Revit.sln
+
+# docker + cloudzoo testing
+cloudzoo.json
+settings-Scheme__Default.xml
+55500d41-3a41-4474-99b3-684032a4f4df.lic
+rhino_en-us_*.exe
