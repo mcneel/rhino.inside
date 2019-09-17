@@ -39,7 +39,7 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
         {
-          foreach (var family in collector.OfClass(typeof(Family)).Cast<Family>().OrderBy((x) => $"{x.FamilyCategory.Name} : {x.Name}"))
+          foreach (var family in collector.OfClass(typeof(Autodesk.Revit.DB.Family)).Cast<Autodesk.Revit.DB.Family>().OrderBy((x) => $"{x.FamilyCategory.Name} : {x.Name}"))
           {
             var item = new GH_ValueListItem($"{family.FamilyCategory.Name} : {family.Name}", family.Id.IntegerValue.ToString());
             item.Selected = selectedItems.Contains(item.Expression);

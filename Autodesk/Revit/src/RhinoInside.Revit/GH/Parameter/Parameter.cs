@@ -200,44 +200,61 @@ namespace RhinoInside.Revit.GH.Types
         case StorageType.Integer:
           if (typeof(Q).IsAssignableFrom(typeof(GH_Boolean)))
           {
-            target = (Q) (object) new GH_Boolean(Value.AsInteger() != 0);
+            target = Value.Element is null ? (Q) (object) null :
+                     (Q) (object) new GH_Boolean(Value.AsInteger() != 0);
             return true;
           }
           else if (typeof(Q).IsAssignableFrom(typeof(GH_Integer)))
           {
-            target = (Q) (object) new GH_Integer(Value.AsInteger());
+            target = Value.Element is null ? (Q) (object) null :
+                     (Q) (object) new GH_Integer(Value.AsInteger());
             return true;
           }
           else if (typeof(Q).IsAssignableFrom(typeof(GH_Number)))
           {
-            target = (Q) (object) new GH_Number((double)Value.AsInteger());
+            target = Value.Element is null ? (Q) (object) null :
+                     (Q) (object) new GH_Number((double)Value.AsInteger());
             return true;
           }
           else if (typeof(Q).IsAssignableFrom(typeof(GH_Colour)))
           {
-            int value = Value.AsInteger();
-            int r = value % 256;
-            value /= 256;
-            int g = value % 256;
-            value /= 256;
-            int b = value % 256;
+            if (Value.Element is object)
+            {
+              int value = Value.AsInteger();
+              int r = value % 256;
+              value /= 256;
+              int g = value % 256;
+              value /= 256;
+              int b = value % 256;
 
-            target = (Q) (object) new GH_Colour(System.Drawing.Color.FromArgb(r, g, b));
+              target = (Q) (object) new GH_Colour(System.Drawing.Color.FromArgb(r, g, b));
+            }
+            else
+              target = (Q) (object) null;
             return true;
           }
           break;
         case StorageType.Double:
           if (typeof(Q).IsAssignableFrom(typeof(GH_Number)))
           {
-            target = (Q) (object) new GH_Number(ToRhino(Value.AsDouble(), Value.Definition.ParameterType));
+            target = Value.Element is null ? (Q) (object) null :
+                     (Q) (object) new GH_Number(ToRhino(Value.AsDouble(), Value.Definition.ParameterType));
             return true;
           }
           else if (typeof(Q).IsAssignableFrom(typeof(GH_Integer)))
           {
-            var value = Math.Round(ToRhino(Value.AsDouble(), Value.Definition.ParameterType));
-            if (int.MinValue <= value && value <= int.MaxValue)
+            if (Value.Element is object)
             {
-              target = (Q) (object) new GH_Integer((int) value);
+              var value = Math.Round(ToRhino(Value.AsDouble(), Value.Definition.ParameterType));
+              if (int.MinValue <= value && value <= int.MaxValue)
+              {
+                target = (Q) (object) new GH_Integer((int) value);
+                return true;
+              }
+            }
+            else
+            {
+              target = (Q) (object) null;
               return true;
             }
           }
@@ -245,14 +262,16 @@ namespace RhinoInside.Revit.GH.Types
         case StorageType.String:
           if (typeof(Q).IsAssignableFrom(typeof(GH_String)))
           {
-            target = (Q) (object) new GH_String(Value.AsString());
+            target = Value.Element is null ? (Q) (object) null :
+                     (Q) (object) new GH_String(Value.AsString());
             return true;
           }
           break;
         case StorageType.ElementId:
           if (typeof(Q).IsSubclassOf(typeof(ID)))
           {
-            target = (Q) (object) ID.Make(Value.AsElementId());
+            target = Value.Element is null ? (Q) (object) null :
+                     (Q) (object) ID.Make(Value.AsElementId());
             return true;
           }
           break;

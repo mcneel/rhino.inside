@@ -48,7 +48,7 @@ namespace RhinoInside.Revit
     #endregion
 
     #region ElementId
-    public static bool IsValid(this ElementId id) => id.IntegerValue != ElementId.InvalidElementId.IntegerValue;
+    public static bool IsValid(this ElementId id) => id?.IntegerValue != ElementId.InvalidElementId.IntegerValue;
     public static bool IsBuiltInId(this ElementId id) => id.IntegerValue < 0;
     public static bool TryGetBuiltInParameter(this ElementId id, out BuiltInParameter builtInParameter)
     {
@@ -179,6 +179,46 @@ namespace RhinoInside.Revit
             }
           }
       }
+    }
+    #endregion
+
+    #region GeometryBase
+    public static bool GetUserBoolean(this Rhino.Geometry.GeometryBase geometry, string key, out bool value, bool def = default(bool))
+    {
+      if (geometry.GetUserInteger(key, out var idx))
+      {
+        value = idx != 0;
+        return true;
+      }
+
+      value = def;
+      return false;
+    }
+
+    public static bool GetUserInteger(this Rhino.Geometry.GeometryBase geometry, string key, out int value, int def = default(int))
+    {
+      value = def;
+      return geometry.GetUserString(key) is string stringValue && int.TryParse(stringValue, out value);
+    }
+
+    public static bool GetUserEnum<E>(this Rhino.Geometry.GeometryBase geometry, string key, out E value, E def = default(E)) where E : struct
+    {
+      value = def;
+      return geometry.GetUserString(key) is string stringValue && Enum.TryParse<E>(stringValue, out value);
+    }
+
+    public static bool GetUserElementId(this Rhino.Geometry.GeometryBase geometry, string key, out ElementId value) =>
+      GetUserElementId(geometry, key, out value, ElementId.InvalidElementId);
+    public static bool GetUserElementId(this Rhino.Geometry.GeometryBase geometry, string key, out ElementId value, ElementId def)
+    {
+      if (geometry.GetUserInteger(key, out var idx))
+      {
+        value = new ElementId(idx);
+        return true;
+      }
+
+      value = def;
+      return false;
     }
     #endregion
 
