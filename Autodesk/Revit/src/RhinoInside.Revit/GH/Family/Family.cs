@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
@@ -82,47 +83,62 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class FamilyByGeometry : Component, Autodesk.Revit.DB.IFamilyLoadOptions
+  #region FamilyLoadOptions
+  class FamilyLoadOptions : IFamilyLoadOptions
+  {
+    public FamilyLoadOptions(bool overrideFamily, bool overrideParameters)
+    {
+      OverrideFamily = overrideFamily;
+      OverrideParameters = overrideParameters;
+    }
+
+    readonly bool OverrideFamily;
+    readonly bool OverrideParameters;
+
+    bool IFamilyLoadOptions.OnFamilyFound(bool familyInUse, out bool overwriteParameterValues)
+    {
+      overwriteParameterValues = !familyInUse | OverrideParameters;
+      return !familyInUse | OverrideFamily;
+    }
+
+    bool IFamilyLoadOptions.OnSharedFamilyFound(Family sharedFamily, bool familyInUse, out FamilySource source, out bool overwriteParameterValues)
+    {
+      source = FamilySource.Family;
+      overwriteParameterValues = !familyInUse | OverrideParameters;
+      return !familyInUse | OverrideFamily;
+    }
+  }
+  #endregion
+
+  public class FamilyNew : Component
   {
     public override Guid ComponentGuid => new Guid("82523911-309F-4A66-A4B9-CF21E0AC250E");
     public override GH_Exposure Exposure => GH_Exposure.primary;
 
-    protected override string IconTag => "F";
+    protected override string IconTag => "N";
 
-    public FamilyByGeometry()
-    : base("AddFamily.ByGeometry", "Family.ByGeometry", string.Empty, "Revit", "Family")
+    public FamilyNew()
+    : base("Family.New", "Family.New", "Creates a new Family from a template.", "Revit", "Family")
     { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       var templatePath = new Grasshopper.Kernel.Parameters.Param_FilePath();
-      templatePath.FileFilter = "Revit Family Template (*.rft)|*.rft";
+      templatePath.FileFilter = "Family Template Files (*.rft)|*.rft";
       manager[manager.AddParameter(templatePath, "Template", "T", string.Empty, GH_ParamAccess.item)].Optional = true;
+
+      manager.AddBooleanParameter("OverrideFamily", "O", "Override Family", GH_ParamAccess.item, false);
+      manager.AddBooleanParameter("OverrideParameters", "O", "Override Parameters", GH_ParamAccess.item, false);
 
       manager.AddTextParameter("Name", "N", string.Empty, GH_ParamAccess.item);
       manager[manager.AddParameter(new Parameters.Category(), "Category", "C", string.Empty, GH_ParamAccess.item)].Optional = true;
-      manager.AddGeometryParameter("Geometry", "G", string.Empty, GH_ParamAccess.list);
+      manager[manager.AddGeometryParameter("Geometry", "G", string.Empty, GH_ParamAccess.list)].Optional = true;
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddParameter(new Parameters.Family(), "Family", "F", string.Empty, GH_ParamAccess.item);
     }
-
-    #region Autodesk.Revit.DB.IFamilyLoadOptions
-    bool IFamilyLoadOptions.OnFamilyFound(bool familyInUse, out bool overwriteParameterValues)
-    {
-      overwriteParameterValues = true;
-      return true;
-    }
-
-    bool IFamilyLoadOptions.OnSharedFamilyFound(Family sharedFamily, bool familyInUse, out FamilySource source, out bool overwriteParameterValues)
-    {
-      source = FamilySource.Family;
-      overwriteParameterValues = true;
-      return true;
-    }
-    #endregion
 
     public static Dictionary<string, ElementId> GetMaterialIdsByName(Document doc)
     {
@@ -274,7 +290,8 @@ namespace RhinoInside.Revit.GH.Components
             }
           }
 
-          element.Subcategory = familySubCategory;
+          if(familySubCategory is object)
+            element.Subcategory = familySubCategory;
 
           if(brep.GetUserBoolean(BuiltInParameter.IS_VISIBLE_PARAM.ToString(), out var visible))
             element.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
@@ -362,43 +379,94 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
+    static string GetFamilyTemplateFileName(ElementId categoryId, Autodesk.Revit.ApplicationServices.LanguageType language)
+    {
+      if(categoryId.TryGetBuiltInCategory(out var builtInCategory))
+      {
+        if(builtInCategory == BuiltInCategory.OST_Mass)
+        {
+          switch (language)
+          {
+            case Autodesk.Revit.ApplicationServices.LanguageType.English_USA:           return @"Conceptual Mass\Metric Mass";
+            case Autodesk.Revit.ApplicationServices.LanguageType.German:                return @"Entwurfskörper\M_Körper";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Spanish:               return @"Masas conceptuales\Masa métrica";
+            case Autodesk.Revit.ApplicationServices.LanguageType.French:                return @"Volume conceptuel\Volume métrique";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Italian:               return @"Massa concettuale\Massa metrica";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Simplified:    return @"概念体量\公制体量";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Traditional:   return @"概念量體\公制量體";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Japanese:              return @"コンセプト マス\マス(メートル単位)";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Korean:                return @"개념 질량\미터법 질량";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Russian:               return @"Концептуальный формообразующий элемент\Метрическая система, формообразующий элемент";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Czech:                 return null;
+            case Autodesk.Revit.ApplicationServices.LanguageType.Polish:                return @"Bryła koncepcyjna\Bryła (metryczna)";
+            case Autodesk.Revit.ApplicationServices.LanguageType.Hungarian:             return null;
+            case Autodesk.Revit.ApplicationServices.LanguageType.Brazilian_Portuguese:  return @"Massa conceitual\Massa métrica";
+#if REVIT_2018
+            case Autodesk.Revit.ApplicationServices.LanguageType.English_GB:            return @"Conceptual Mass\Mass";
+#endif
+          }
+
+          return null;
+        }
+      }
+
+      switch (language)
+      {
+        case Autodesk.Revit.ApplicationServices.LanguageType.English_USA:         return @"Metric Generic Model";
+        case Autodesk.Revit.ApplicationServices.LanguageType.German:              return @"Allgemeines Modell";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Spanish:             return @"Modelo genérico métrico";
+        case Autodesk.Revit.ApplicationServices.LanguageType.French:              return @"Modèle générique métrique";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Italian:             return @"Modello generico metrico";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Simplified:  return @"公制常规模型";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Traditional: return @"公制常规模型";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Japanese:            return @"一般モデル(メートル単位)";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Korean:              return @"미터법 일반 모델";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Russian:             return @"Метрическая система, типовая модель";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Czech:               return @"Obecný model";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Polish:              return @"Model ogólny (metryczny)";
+        case Autodesk.Revit.ApplicationServices.LanguageType.Hungarian:           return null;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Brazilian_Portuguese: return @"Modelo genérico métrico";
+#if REVIT_2018
+        case Autodesk.Revit.ApplicationServices.LanguageType.English_GB:          return @"Generic Model";
+#endif
+      }
+
+      return null;
+    }
+
+    static string GetFamilyTemplateFilePath(ElementId categoryId, Autodesk.Revit.ApplicationServices.Application app)
+    {
+      string fileName = GetFamilyTemplateFileName(categoryId, app.Language);
+      var templateFilePath = fileName is null ? string.Empty : Path.Combine(app.FamilyTemplatePath, $"{fileName}.rft");
+
+      if (File.Exists(templateFilePath))
+        return templateFilePath;
+
+      // Emergency template file path
+      fileName = GetFamilyTemplateFileName(categoryId, Autodesk.Revit.ApplicationServices.LanguageType.English_USA);
+      return Path.Combine
+      (
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData)),
+        "Autodesk",
+        $"RVT {app.VersionNumber}",
+        "Family Templates",
+        "English",
+        $"{fileName}.rft"
+      );
+    }
+
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       var doc = Revit.ActiveDBDocument;
       var scaleFactor = 1.0 / Revit.ModelUnits;
 
-      var templatePath = string.Empty;
-      if (!DA.GetData("Template", ref templatePath))
-      {
-        templatePath = doc.Application.FamilyTemplatePath;
+      var overrideFamily = false;
+      if (!DA.GetData("OverrideFamily", ref overrideFamily))
+        return;
 
-        switch(doc.Application.Language)
-        {
-          case Autodesk.Revit.ApplicationServices.LanguageType.English_USA: templatePath = System.IO.Path.Combine(templatePath, @"Metric Generic Model"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.German:      templatePath = System.IO.Path.Combine(templatePath, @"Allgemeines Modell"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Spanish:     templatePath = System.IO.Path.Combine(templatePath, @"Modelo genérico métrico"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.French:      templatePath = System.IO.Path.Combine(templatePath, @"Modèle générique métrique"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Italian:     templatePath = System.IO.Path.Combine(templatePath, @"Modello generico metrico"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Simplified: templatePath = System.IO.Path.Combine(templatePath, @"公制常规模型"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Traditional: templatePath = System.IO.Path.Combine(templatePath, @"公制常规模型"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Japanese:    templatePath = System.IO.Path.Combine(templatePath, @"一般モデル(メートル単位)"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Korean:      templatePath = System.IO.Path.Combine(templatePath, @"미터법 일반 모델"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Russian:     templatePath = System.IO.Path.Combine(templatePath, @"Метрическая система, типовая модель"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Czech:       templatePath = System.IO.Path.Combine(templatePath, @"Obecný model"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Polish:      templatePath = System.IO.Path.Combine(templatePath, @"Model ogólny (metryczny)"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Hungarian:   templatePath = System.IO.Path.Combine(templatePath, @"Metric Generic Model"); break;
-          case Autodesk.Revit.ApplicationServices.LanguageType.Brazilian_Portuguese: templatePath = System.IO.Path.Combine(templatePath, @"Metric Generic Model"); break;
-          #if REVIT_2018
-          case Autodesk.Revit.ApplicationServices.LanguageType.English_GB:  templatePath = System.IO.Path.Combine(templatePath, @"Generic Model"); break;
-          #endif
-        }
-      }
-
-      if (!System.IO.Path.HasExtension(templatePath))
-        templatePath += ".rft";
-
-      if (!System.IO.Path.IsPathRooted(templatePath))
-        templatePath = System.IO.Path.Combine(doc.Application.FamilyTemplatePath, templatePath);
+      var overrideParameters = false;
+      if (!DA.GetData("OverrideParameters", ref overrideParameters))
+        return;
 
       var name = string.Empty;
       if (!DA.GetData("Name", ref name))
@@ -406,101 +474,285 @@ namespace RhinoInside.Revit.GH.Components
 
       var categoryId = ElementId.InvalidElementId;
       DA.GetData("Category", ref categoryId);
-
-      if(categoryId is null)
-        categoryId = ElementId.InvalidElementId;
+      var updateCategory = categoryId != ElementId.InvalidElementId;
 
       var geometry = new List<IGH_GeometricGoo>();
-      if (!DA.GetDataList("Geometry", geometry))
-        return;
+      var updateGeometry = !(!DA.GetDataList("Geometry", geometry) && Params.Input[Params.IndexOfInputParam("Geometry")].SourceCount == 0);
 
       var family = default(Family);
       using (var collector = new FilteredElementCollector(doc).OfClass(typeof(Family)))
         family = collector.ToElements().Cast<Family>().Where(x => x.Name == name).FirstOrDefault();
 
-      if
-      (
-        (
-          family is null ?
-          doc.Application.NewFamilyDocument(templatePath) :
-          doc.EditFamily(family)
-        )
-        is var familyDoc
-      )
+      bool familyIsNew = family is null;
+
+      var templatePath = string.Empty;
+      if (familyIsNew)
       {
-        using (var transaction = new Transaction(familyDoc))
+        if (!DA.GetData("Template", ref templatePath))
+          templatePath = GetFamilyTemplateFilePath(categoryId, doc.Application);
+
+        if (!Path.HasExtension(templatePath))
+          templatePath += ".rft";
+
+        if (!Path.IsPathRooted(templatePath))
+          templatePath = Path.Combine(doc.Application.FamilyTemplatePath, templatePath);
+      }
+      else
+      {
+        updateCategory &= family.FamilyCategory.Id != categoryId;
+      }
+
+      if (familyIsNew || (overrideFamily && (updateCategory || updateGeometry)))
+      {
+        try
         {
-          transaction.Start(Name);
-
-          using (var collector = new FilteredElementCollector(familyDoc).OfClass(typeof(FreeFormElement)))
-            familyDoc.Delete(collector.ToElementIds());
-
-          using (var collector = new FilteredElementCollector(familyDoc).OfClass(typeof(CurveElement)))
-            familyDoc.Delete(collector.ToElementIds());
-
-          if (categoryId != ElementId.InvalidElementId)
+          if
+          (
+            (
+              familyIsNew ?
+              doc.Application.NewFamilyDocument(templatePath) :
+              doc.EditFamily(family)
+            )
+            is var familyDoc
+          )
           {
-            try { familyDoc.OwnerFamily.FamilyCategoryId = categoryId; }
-            catch (Autodesk.Revit.Exceptions.ArgumentException e)
-            {
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-              return;
-            }
-          }
-
-          bool hasVoids = false;
-          var planesSet = new List<KeyValuePair<double[], SketchPlane>>();
-          var planesSetComparer = new PlaneComparer();
-
-          foreach (var geo in geometry.Select(x => AsGeometryBase(x)))
-          {
-            if (scaleFactor != 1.0)
-              geo.Scale(scaleFactor);
-
             try
             {
-              geo.GetUserElementId(BuiltInParameter.FAMILY_CURVE_GSTYLE_PLUS_INVISIBLE.ToString(), out var graphicsStyle);
-
-              switch (geo)
+              using (var transaction = new Transaction(familyDoc))
               {
-                case Rhino.Geometry.Brep brep:   hasVoids |= Add(doc, familyDoc, brep); break;
-                case Rhino.Geometry.Curve curve: Add(doc, familyDoc, curve, planesSet); break;
-                default: AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{geo.GetType().Name} is not supported and will be ignored"); break;
+                transaction.Start(Name);
+
+                if (updateCategory && familyDoc.OwnerFamily.FamilyCategoryId != categoryId)
+                {
+                  try { familyDoc.OwnerFamily.FamilyCategoryId = categoryId; }
+                  catch (Autodesk.Revit.Exceptions.ArgumentException e)
+                  {
+                    AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+                    return;
+                  }
+                }
+
+                if (updateGeometry)
+                {
+                  using (var collector = new FilteredElementCollector(familyDoc).OfClass(typeof(GenericForm)))
+                    familyDoc.Delete(collector.ToElementIds());
+
+                  using (var collector = new FilteredElementCollector(familyDoc).OfClass(typeof(CurveElement)))
+                    familyDoc.Delete(collector.ToElementIds());
+
+                  bool hasVoids = false;
+                  var planesSet = new List<KeyValuePair<double[], SketchPlane>>();
+                  var planesSetComparer = new PlaneComparer();
+
+                  foreach (var geo in geometry.Select(x => AsGeometryBase(x)))
+                  {
+                    if (scaleFactor != 1.0)
+                      geo.Scale(scaleFactor);
+
+                    try
+                    {
+                      switch (geo)
+                      {
+                        case Rhino.Geometry.Brep brep: hasVoids |= Add(doc, familyDoc, brep); break;
+                        case Rhino.Geometry.Curve curve: Add(doc, familyDoc, curve, planesSet); break;
+                        default: AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{geo.GetType().Name} is not supported and will be ignored"); break;
+                      }
+                    }
+                    catch (Autodesk.Revit.Exceptions.InvalidOperationException e)
+                    {
+                      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
+                    }
+                  }
+
+                  familyDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS).Set(hasVoids ? 1 : 0);
+                }
+
+                transaction.Commit();
+              }
+
+              family = familyDoc.LoadFamily(doc, new FamilyLoadOptions(overrideFamily, overrideParameters));
+            }
+            finally
+            {
+              familyDoc.Close(false);
+            }
+
+            if (familyIsNew)
+            {
+              using (var transaction = new Transaction(doc))
+              {
+                transaction.Start(Name);
+                try { family.Name = name; }
+                catch (Autodesk.Revit.Exceptions.ArgumentException e) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, e.Message); }
+
+                if (doc.GetElement(family.GetFamilySymbolIds().First()) is FamilySymbol symbol)
+                  symbol.Name = name;
+
+                transaction.Commit();
               }
             }
-            catch (Autodesk.Revit.Exceptions.InvalidOperationException e)
-            {
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-            }
           }
-
-          familyDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS).Set(hasVoids ? 1 : 0);
-
-          transaction.Commit();
         }
-
-        bool familyIsNew = family is null;
-
-        family = familyDoc.LoadFamily(doc, this);
-        familyDoc.Close(false);
-
-        if (familyIsNew)
+        catch (Autodesk.Revit.Exceptions.ArgumentException e)
         {
-          using (var transaction = new Transaction(doc))
-          {
-            transaction.Start(Name);
-            try { family.Name = name; }
-            catch (Autodesk.Revit.Exceptions.ArgumentException e) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, e.Message); }
-
-            if (doc.GetElement(family.GetFamilySymbolIds().First()) is FamilySymbol symbol)
-              symbol.Name = name;
-
-            transaction.Commit();
-          }
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
         }
+      }
+      else if (!overrideFamily)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Family '{name}' already loaded!");
       }
 
       DA.SetData("Family", family);
+    }
+  }
+
+  public class FamilyLoad : Component
+  {
+    public override Guid ComponentGuid => new Guid("0E244846-95AE-4B0E-8218-CB24FD4D34D1");
+    protected override string IconTag => "L";
+
+    public FamilyLoad()
+    : base("Family.Load", "Family.Load", "Loads a family into the document", "Revit", "Family")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      var path = new Grasshopper.Kernel.Parameters.Param_FilePath();
+      path.FileFilter = "Family File (*.rfa)|*.rfa";
+      manager.AddParameter(path, "Path", "P", string.Empty, GH_ParamAccess.item);
+
+      manager.AddBooleanParameter("OverrideFamily", "O", "Override Family", GH_ParamAccess.item, false);
+      manager.AddBooleanParameter("OverrideParameters", "O", "Override Parameters", GH_ParamAccess.item, false);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Family(), "Family", "F", string.Empty, GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var filePath = string.Empty;
+      if (!DA.GetData("Path", ref filePath))
+        return;
+
+      var overrideFamily = false;
+      if (!DA.GetData("OverrideFamily", ref overrideFamily))
+        return;
+
+      var overrideParameters = false;
+      if (!DA.GetData("OverrideParameters", ref overrideParameters))
+        return;
+
+      using (var transaction = new Transaction(Revit.ActiveDBDocument))
+      {
+        transaction.Start(Name);
+
+        if (Revit.ActiveDBDocument.LoadFamily(filePath, new FamilyLoadOptions(overrideFamily, overrideParameters), out var family))
+        {
+          transaction.Commit();
+        }
+        else
+        {
+          var name = Path.GetFileNameWithoutExtension(filePath);
+          using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument).OfClass(typeof(Family)))
+            family = collector.ToElements().Cast<Family>().Where(x => x.Name == name).FirstOrDefault();
+
+          if (family is object && overrideFamily == false)
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Family '{name}' already loaded!");
+        }
+
+        DA.SetData("Family", family);
+      }
+    }
+  }
+
+  public class FamilySaveAs : Component
+  {
+    public override Guid ComponentGuid => new Guid("C2B9B045-8FD2-4124-9294-D9BA809B44B1");
+    protected override string IconTag => "S";
+
+    public FamilySaveAs()
+    : base("Family.SaveAs", "Family.SaveAs", "Saves the Family to a given file path.", "Revit", "Family")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Family(), "Family", "F", "Family to save", GH_ParamAccess.item);
+
+      var path = new Grasshopper.Kernel.Parameters.Param_FilePath();
+      path.FileFilter = "Family File (*.rfa)|*.rfa";
+      manager[manager.AddParameter(path, "Path", "P", string.Empty, GH_ParamAccess.item)].Optional = true;
+
+      manager.AddBooleanParameter("OverrideFile", "O", "Override file on disk", GH_ParamAccess.item, false);
+      manager.AddBooleanParameter("Compact", "C", "Compact the file", GH_ParamAccess.item, false);
+      manager.AddIntegerParameter("Backups", "B", "The maximum number of backups to keep on disk", GH_ParamAccess.item, -1);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Family(), "Family", "F", string.Empty, GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Family family = null;
+      if (!DA.GetData("Family", ref family))
+        return;
+
+      var filePath = string.Empty;
+      DA.GetData("Path", ref filePath);
+
+      var overrideFile = false;
+      if (!DA.GetData("OverrideFile", ref overrideFile))
+        return;
+
+      var compact = false;
+      if (!DA.GetData("Compact", ref compact))
+        return;
+
+      var backups = -1;
+      if (!DA.GetData("Backups", ref backups))
+        return;
+
+      if (Revit.ActiveDBDocument.EditFamily(family) is Document familyDoc) using (familyDoc)
+      {
+        try
+        {
+          var options = new SaveAsOptions() { OverwriteExistingFile = overrideFile, Compact = compact };
+          if (backups > -1)
+            options.MaximumBackups = backups;
+
+          if(string.IsNullOrEmpty(filePath))
+            filePath = familyDoc.PathName;
+
+          if(string.IsNullOrEmpty(filePath))
+            filePath = familyDoc.Title;
+
+          if(Directory.Exists(filePath))
+            filePath = Path.Combine(filePath, filePath);
+
+          if (!Path.HasExtension(filePath))
+            filePath += ".rfa";
+
+          if(Path.IsPathRooted(filePath))
+          {
+            familyDoc.SaveAs(filePath, options);
+            DA.SetData("Family", family);
+          }
+          else
+          {
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "Path should be absolute.");
+          }
+        }
+        catch(Autodesk.Revit.Exceptions.InvalidOperationException e) { AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message); }
+        finally { familyDoc.Close(false); }
+      }
+      else
+      {
+        DA.SetData("Family", null);
+      }
     }
   }
 
@@ -603,6 +855,67 @@ namespace RhinoInside.Revit.GH.Components
         curve.SetUserString(BuiltInParameter.MODEL_OR_SYMBOLIC.ToString(), symbolic ? "1" : null);
 
       DA.SetData("Curve", curve);
+    }
+  }
+
+  public class VisibilityConstruct : Component
+  {
+    public override Guid ComponentGuid => new Guid("10EA29D4-16AF-4060-89CE-F467F0069675");
+    public override GH_Exposure Exposure => GH_Exposure.secondary;
+
+    protected override string IconTag => "V";
+
+    public VisibilityConstruct()
+    : base("Visibility.Construct", "Visibility.Construct", string.Empty, "Revit", "Family")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddBooleanParameter("ViewSpecific", "V", string.Empty, GH_ParamAccess.item, false);
+      manager.AddBooleanParameter("PlanRCPCut", "RCP", string.Empty, GH_ParamAccess.item, true);
+      manager.AddBooleanParameter("TopBottom", "Z", string.Empty, GH_ParamAccess.item, true);
+      manager.AddBooleanParameter("FrontBack", "Y", string.Empty, GH_ParamAccess.item, true);
+      manager.AddBooleanParameter("LeftRight", "X", string.Empty, GH_ParamAccess.item, true);
+      manager.AddBooleanParameter("OnlyWhenCut", "CUT", string.Empty, GH_ParamAccess.item, false);
+
+      manager.AddBooleanParameter("Coarse", "C", string.Empty, GH_ParamAccess.item, true);
+      manager.AddBooleanParameter("Medium", "M", string.Empty, GH_ParamAccess.item, true);
+      manager.AddBooleanParameter("Fine", "F", string.Empty, GH_ParamAccess.item, true);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddIntegerParameter("Visibility", "V", string.Empty, GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      var viewSpecific = false; if (!DA.GetData("ViewSpecific", ref viewSpecific)) return;
+
+      var planRCPCut = false;   if (!DA.GetData("PlanRCPCut", ref planRCPCut)) return;
+      var topBottom = false;    if (!DA.GetData("TopBottom", ref topBottom)) return;
+      var frontBack = false;    if (!DA.GetData("FrontBack", ref frontBack)) return;
+      var leftRight = false;    if (!DA.GetData("LeftRight", ref leftRight)) return;
+      var onlyWhenCut = false;  if (!DA.GetData("OnlyWhenCut", ref onlyWhenCut)) return;
+
+      var coarse = false;       if (!DA.GetData("Coarse", ref coarse)) return;
+      var medium = false;       if (!DA.GetData("Medium", ref medium)) return;
+      var fine = false;         if (!DA.GetData("Fine", ref fine)) return;
+
+      int value = 0;
+      if (viewSpecific) value |= 1 << 1;
+
+      if (planRCPCut)   value |= 1 << 2;
+      if (topBottom)    value |= 1 << 3;
+      if (frontBack)    value |= 1 << 4;
+      if (leftRight)    value |= 1 << 5;
+      if (onlyWhenCut)  value |= 1 << 6;
+
+      if (coarse)       value |= 1 << 13;
+      if (medium)       value |= 1 << 14;
+      if (fine)         value |= 1 << 15;
+
+      DA.SetData("Visibility", value);
     }
   }
 }
