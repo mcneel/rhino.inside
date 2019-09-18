@@ -16,5 +16,5 @@ This assumes you have already installed:
 
 Once these are all installed you should be able to: 
 - Open the `rhino.inside\Epic Games\UE\Sample-1\Managed\Sample1.Managed.sln` file in Visual Studio and start debugging. This should open the Unreal Engine Editor which will prompt you to open a project.
-- Once the UE Editor is open, go ahead and open the `rhino.inside\Epic Games\UE\Sample1\Sample1.uproject`
-- Check the Developer Tools Output Log in Unreal Engine Editor for a few messages which we print in the [RhinoInsideGameMode.cs](Sample1.Managed\RhinoInsideGameMode.cs) code.
+- Once the UE Editor is open, go ahead and open the `rhino.inside\Epic Games\UE\Sample-1\Sample1.uproject`
+- Check the Developer Tools Output Log in Unreal Engine Editor for a few messages which we print in the [RhinoInsideGameMode.cs](Managed\Sample1.Managed\RhinoInsideGameMode.cs) code.
