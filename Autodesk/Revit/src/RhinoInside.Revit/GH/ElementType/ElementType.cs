@@ -49,7 +49,7 @@ namespace RhinoInside.Revit.GH.Parameters
 {
   public class ElementType : ElementIdNonGeometryParam<Types.ElementType>
   {
-    public override GH_Exposure Exposure => GH_Exposure.primary;
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("97DD546D-65C3-4D00-A609-3F5FBDA67142");
 
     public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Params", "Revit") { }

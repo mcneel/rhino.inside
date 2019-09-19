@@ -184,6 +184,7 @@
     <Compile Include="GH\Element\SketchPlane\ByPlane.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
+    <Compile Include="GH\Element\HostObject\HostObject.cs" />
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Element\DirectShape\ByMesh.cs" />
     <Compile Include="GH\Element\DirectShape\ByBrep.cs" />

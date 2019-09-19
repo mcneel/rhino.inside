@@ -241,16 +241,16 @@ namespace RhinoInside.Revit.GH.Parameters
 {
   public class Category : ElementIdNonGeometryParam<Types.Category>
   {
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("6722C7A5-EFD3-4119-A7FD-6C8BE892FD04");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
 
     public Category() : base("Category", "Category", "Represents a Revit document category.", "Params", "Revit") { }
   }
 
   public class GraphicsStyle : ElementIdNonGeometryParam<Types.GraphicsStyle>
   {
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("833E6207-BA60-4C6B-AB8B-96FDA0F91822");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
 
     public GraphicsStyle() : base("GraphicsStyle", "GraphicsStyle", "Represents a Revit graphics style.", "Params", "Revit") { }
   }

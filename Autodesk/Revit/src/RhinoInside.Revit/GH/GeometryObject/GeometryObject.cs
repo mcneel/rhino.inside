@@ -2,15 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Reflection;
 using System.Windows.Forms;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Selection;
 using GH_IO.Serialization;
 using Grasshopper;
-using Grasshopper.GUI;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 
@@ -509,21 +506,27 @@ namespace RhinoInside.Revit.GH.Parameters
     protected ElementIdGeometryParam(string name, string nickname, string description, string category, string subcategory) :
     base(name, nickname, description, category, subcategory) { }
 
-    #region UI methods
-    public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
-    {
-      base.AppendAdditionalMenuItems(menu);
-      Menu_AppendSeparator(menu);
-      Menu_AppendItem(menu, "Highlight elements", Menu_HighlightElements, !VolatileData.IsEmpty, false);
-      Menu_AppendItem(menu, "Delete elements", Menu_DeleteElements, DataType != GH_ParamData.remote && !VolatileData.IsEmpty, false);
-      this.Menu_AppendConnect(menu, Menu_Connect);
-    }
+    #region IGH_PreviewObject
+    bool IGH_PreviewObject.Hidden { get; set; }
+    bool IGH_PreviewObject.IsPreviewCapable => !VolatileData.IsEmpty;
+    Rhino.Geometry.BoundingBox IGH_PreviewObject.ClippingBox => Preview_ComputeClippingBox();
+    void IGH_PreviewObject.DrawViewportMeshes(IGH_PreviewArgs args) => Preview_DrawMeshes(args);
+    void IGH_PreviewObject.DrawViewportWires(IGH_PreviewArgs args) => Preview_DrawWires(args);
+    #endregion
+  }
 
-    internal static IEnumerable<ElementId> ToElementIds(IGH_Structure data) =>
-      data.AllData(true).
-      OfType<Types.IGH_ElementId>().
-      Where(x => x != null).
-      Select(x => x.Id);
+  public abstract class GeometricElementT<T> : ElementIdGeometryParam<T>, ISelectionFilter where T : Types.Element
+  {
+    protected GeometricElementT(string name, string nickname, string description, string category, string subcategory) :
+    base(name, nickname, description, category, subcategory)
+    { }
+
+    #region UI methods
+    public override void AppendAdditionalElementMenuItems(ToolStripDropDown menu)
+    {
+      base.AppendAdditionalElementMenuItems(menu);
+      Menu_AppendItem(menu, $"Highlight {GH_Convert.ToPlural(TypeName)}", Menu_HighlightElements, !VolatileData.IsEmpty, false);
+    }
 
     void Menu_HighlightElements(object sender, EventArgs e)
     {
@@ -535,91 +538,76 @@ namespace RhinoInside.Revit.GH.Parameters
         Revit.ActiveUIDocument.ShowElements(elements);
       }
     }
+    #endregion
 
-    void Menu_DeleteElements(object sender, EventArgs e)
+    public abstract bool AllowElement(Autodesk.Revit.DB.Element elem);
+    public bool AllowReference(Reference reference, XYZ position)
     {
-      var elementIds = ToElementIds(VolatileData);
-      if (elementIds.Any())
+      if (reference.ElementReferenceType == ElementReferenceType.REFERENCE_TYPE_NONE)
+        return AllowElement(Revit.ActiveUIDocument.Document.GetElement(reference));
+
+      return false;
+    }
+
+    protected override GH_GetterResult Prompt_Singular(ref T element)
+    {
+      element = null;
+
+      try
       {
         using (new ModalForm.EditScope())
         {
-          using
-          (
-            var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
-            {
-              MainIcon = TaskDialogIcons.IconWarning,
-              TitleAutoPrefix = false,
-              Title = "Delete Elements",
-              MainInstruction = "Are you sure you want to delete those elements?",
-              CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
-              DefaultButton = TaskDialogResult.Yes,
-              AllowCancellation = true,
-#if REVIT_2020
-              EnableMarqueeProgressBar = true
+#if REVIT_2018
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Subelement, this);
+#else
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element, this);
 #endif
-            }
-          )
-          {
-            taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Show elements");
-            taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Manage element collection");
-
-            var result = TaskDialogResult.None;
-            bool highlight = false;
-            do
-            {
-              var elements = elementIds.ToArray();
-              taskDialog.ExpandedContent = $"{elements.Length} elements and its depending elements will be deleted.";
-
-              if(highlight)
-                Revit.ActiveUIDocument.Selection.SetElementIds(elements);
-
-              switch (result = taskDialog.Show())
-              {
-                case TaskDialogResult.CommandLink1:
-                  Revit.ActiveUIDocument.ShowElements(elements);
-                  highlight = true;
-                  break;
-
-                case TaskDialogResult.CommandLink2:
-                  using (var dataManager = new GH_PersistentDataEditor())
-                  {
-                    var elementCollection = new GH_Structure<IGH_Goo>();
-                    elementCollection.AppendRange(elementIds.Select(x => Types.Element.Make(x)));
-                    dataManager.SetData(elementCollection, new Types.Element());
-
-                    GH_WindowsFormUtil.CenterFormOnCursor(dataManager, true);
-                    if (dataManager.ShowDialog(ModalForm.OwnerWindow) == System.Windows.Forms.DialogResult.OK)
-                      elementIds = dataManager.GetData<IGH_Goo>().AllData(true).OfType<Types.Element>().Select(x => x.Value);
-                  }
-                  break;
-
-                case TaskDialogResult.Yes:
-                  using (var transaction = new Transaction(Revit.ActiveDBDocument, "Delete elements"))
-                  {
-                    transaction.Start();
-                    Revit.ActiveDBDocument.Delete(elements);
-                    transaction.Commit();
-                  }
-
-                  ExpireDownStreamObjects();
-                  OnPingDocument().NewSolution(false);
-                  break;
-              }
-            }
-            while (result == TaskDialogResult.CommandLink1 || result == TaskDialogResult.CommandLink2);
-          }
+          if (reference is object)
+            element = (T) Types.Element.Make(reference.ElementId);
         }
       }
-    }
-    #endregion
+      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
 
-    #region IGH_PreviewObject
-    bool IGH_PreviewObject.Hidden { get; set; }
-    bool IGH_PreviewObject.IsPreviewCapable => !VolatileData.IsEmpty;
-    Rhino.Geometry.BoundingBox IGH_PreviewObject.ClippingBox => Preview_ComputeClippingBox();
-    void IGH_PreviewObject.DrawViewportMeshes(IGH_PreviewArgs args) => Preview_DrawMeshes(args);
-    void IGH_PreviewObject.DrawViewportWires(IGH_PreviewArgs args) => Preview_DrawWires(args);
-    #endregion
+      return GH_GetterResult.success;
+    }
+
+    protected override GH_GetterResult Prompt_Plural(ref List<T> elements)
+    {
+      elements = null;
+
+      var selection = Revit.ActiveUIDocument.Selection.GetElementIds();
+      if (selection?.Count > 0)
+      {
+        var doc = Revit.ActiveUIDocument.Document;
+        elements = selection.
+          Where(x => AllowElement(doc.GetElement(x))).
+          Select((x) => (T) Types.Element.Make(x)).ToList();
+      }
+      else
+      {
+        try
+        {
+          using (new ModalForm.EditScope())
+          {
+            var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element, this);
+            if (references is object)
+              elements = references.Select((x) => (T) Types.Element.Make(x.ElementId)).ToList();
+          }
+        }
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
+      }
+      return GH_GetterResult.success;
+    }
+  }
+
+  public class GeometricElement : GeometricElementT<Types.Element>
+  {
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+    public override Guid ComponentGuid => new Guid("EF607C2A-2F44-43F4-9C39-369CE114B51F");
+
+    public GeometricElement() : base("GeometricElement", "GeometricElement", "Represents a Revit document geometric element.", "Params", "Revit") { }
+
+    public override bool AllowElement(Autodesk.Revit.DB.Element elem) => true;
   }
 
   public class Vertex : ElementIdGeometryParam<Types.Vertex>
@@ -628,7 +616,8 @@ namespace RhinoInside.Revit.GH.Parameters
     public override Guid ComponentGuid => new Guid("BC1B160A-DC04-4139-AB7D-1AECBDE7FF88");
     public Vertex() : base("Vertex", "Vertex", "Represents a Revit vertex.", "Params", "Revit") { }
 
-#region UI methods
+    #region UI methods
+    public override void AppendAdditionalElementMenuItems(ToolStripDropDown menu) { }
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Vertex> value)
     {
       try
@@ -678,7 +667,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.accept;
     }
-#endregion
+    #endregion
   }
 
   public class Edge : ElementIdGeometryParam<Types.Edge>
@@ -687,7 +676,8 @@ namespace RhinoInside.Revit.GH.Parameters
     public override Guid ComponentGuid => new Guid("B79FD0FD-63AE-4776-A0A7-6392A3A58B0D");
     public Edge() : base("Edge", "Edge", "Represents a Revit edge.", "Params", "Revit") { }
 
-#region UI methods
+    #region UI methods
+    public override void AppendAdditionalElementMenuItems(ToolStripDropDown menu) { }
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Edge> value)
     {
       try
@@ -723,7 +713,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.success;
     }
-#endregion
+    #endregion
   }
 
   public class Face : ElementIdGeometryParam<Types.Face>
@@ -732,7 +722,8 @@ namespace RhinoInside.Revit.GH.Parameters
     public override Guid ComponentGuid => new Guid("759700ED-BC79-4986-A6AB-84921A7C9293");
     public Face() : base("Face", "Face", "Represents a Revit face.", "Params", "Revit") { }
 
-#region UI methods
+    #region UI methods
+    public override void AppendAdditionalElementMenuItems(ToolStripDropDown menu) { }
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Face> value)
     {
       try
@@ -768,6 +759,6 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.success;
     }
-#endregion
+    #endregion
   }
 }
