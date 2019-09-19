@@ -196,7 +196,7 @@ namespace RhinoInside.Revit.GH.Types
 
   public class GraphicsStyle : Element
   {
-    public override string TypeName => "Revit GraphicsStyle";
+    public override string TypeName => "Revit Graphics Style";
     public override string TypeDescription => "Represents a Revit graphics style";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.GraphicsStyle);
     public static explicit operator Autodesk.Revit.DB.GraphicsStyle(GraphicsStyle self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.GraphicsStyle;
@@ -252,7 +252,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("833E6207-BA60-4C6B-AB8B-96FDA0F91822");
 
-    public GraphicsStyle() : base("GraphicsStyle", "GraphicsStyle", "Represents a Revit graphics style.", "Params", "Revit") { }
+    public GraphicsStyle() : base("Graphics Style", "Graphics Style", "Represents a Revit graphics style.", "Params", "Revit") { }
   }
 }
 

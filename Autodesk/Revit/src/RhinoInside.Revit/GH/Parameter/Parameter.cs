@@ -432,9 +432,9 @@ namespace RhinoInside.Revit.GH.Parameters
   public class ParameterKey : ElementIdNonGeometryParam<Types.ParameterKey>
   {
     public override Guid ComponentGuid => new Guid("A550F532-8C68-460B-91F3-DA0A5A0D42B5");
-    public override GH_Exposure Exposure => GH_Exposure.tertiary;
+    public override GH_Exposure Exposure => GH_Exposure.quarternary;
 
-    public ParameterKey() : base("ParameterKey", "ParameterKey", "Represents a Revit parameter definition.", "Params", "Revit") { }
+    public ParameterKey() : base("Parameter Key", "Parameter Key", "Represents a Revit parameter definition.", "Params", "Revit") { }
   }
 
   public class ParameterValue : GH_Param<Types.ParameterValue>
@@ -490,9 +490,9 @@ namespace RhinoInside.Revit.GH.Parameters
   public class BuiltInParameterGroup : GH_PersistentParam<Types.BuiltInParameterGroup>
   {
     public override Guid ComponentGuid => new Guid("3D9979B4-65C8-447F-BCEA-3705249DF3B6");
-    public override GH_Exposure Exposure => GH_Exposure.tertiary;
+    public override GH_Exposure Exposure => GH_Exposure.quarternary;
 
-    public BuiltInParameterGroup() : base("BuiltInParameterGroup", "BuiltInParameterGroup", "Represents a Revit parameter group.", "Params", "Revit") { }
+    public BuiltInParameterGroup() : base("Parameter Group", "Parameter Group", "Represents a Revit parameter group.", "Params", "Revit") { }
   }
 
   public class BuiltInParameterGroups : GH_ValueList

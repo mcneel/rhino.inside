@@ -12,7 +12,7 @@ namespace RhinoInside.Revit.GH.Types
 {
   public class ElementType : Element
   {
-    public override string TypeName => "Revit ElementType";
+    public override string TypeName => "Revit Element Type";
     public override string TypeDescription => "Represents a Revit element type";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.ElementType);
     public static explicit operator Autodesk.Revit.DB.ElementType(ElementType self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.ElementType;
@@ -52,7 +52,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("97DD546D-65C3-4D00-A609-3F5FBDA67142");
 
-    public ElementType() : base("ElementType", "ElementType", "Represents a Revit document element type.", "Params", "Revit") { }
+    public ElementType() : base("Element Type", "Element Type", "Represents a Revit document element type.", "Params", "Revit") { }
   }
 
   public class ElementTypeByName : ValueList

@@ -605,7 +605,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("EF607C2A-2F44-43F4-9C39-369CE114B51F");
 
-    public GeometricElement() : base("GeometricElement", "GeometricElement", "Represents a Revit document geometric element.", "Params", "Revit") { }
+    public GeometricElement() : base("Geometric Element", "Geometric Element", "Represents a Revit document geometric element.", "Params", "Revit") { }
 
     public override bool AllowElement(Autodesk.Revit.DB.Element elem) => true;
   }
