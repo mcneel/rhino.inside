@@ -39,7 +39,7 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
         {
-          foreach (var level in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderByDescending((x) => x.Elevation))
+          foreach (var level in collector.OfClass(typeof(Autodesk.Revit.DB.Level)).ToElements().Cast<Autodesk.Revit.DB.Level>().OrderByDescending((x) => x.Elevation))
           {
             var item = new GH_ValueListItem(level.Name, level.Id.IntegerValue.ToString());
             item.Selected = selectedItems.Contains(item.Expression);
@@ -79,20 +79,13 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Levels", "Levels", "Levels list", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.Level(), "Levels", "Levels", "Levels list", GH_ParamAccess.list);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var levels = new List<Level>();
-
       using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
-      {
-        foreach (var level in collector.OfClass(typeof(Level)).ToElements().Cast<Level>())
-          levels.Add(level);
-      }
-
-      DA.SetDataList("Levels", levels);
+        DA.SetDataList("Levels", collector.OfClass(typeof(Level)).ToElementIds());
     }
   }
 }

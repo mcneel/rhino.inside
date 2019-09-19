@@ -578,7 +578,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Level", "L", "Level to match", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Level(), "Level", "L", "Level to match", GH_ParamAccess.item);
       base.RegisterInputParams(manager);
     }
 
