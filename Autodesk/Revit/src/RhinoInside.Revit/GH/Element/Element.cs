@@ -34,14 +34,17 @@ namespace RhinoInside.Revit.GH.Types
       if (element is Autodesk.Revit.DB.ParameterElement parameterElement)
         return new ParameterKey(parameterElement);
 
-      if (element is Autodesk.Revit.DB.ElementType elementType)
-        return new ElementType(elementType);
-
       if (element is Autodesk.Revit.DB.SketchPlane sketchPlane)
         return new SketchPlane(sketchPlane);
 
       if (element is Autodesk.Revit.DB.HostObject host)
         return new HostObject(host);
+
+      if (element is Autodesk.Revit.DB.Level level)
+        return new Level(level);
+
+      if (element is Autodesk.Revit.DB.ElementType elementType)
+        return new ElementType(elementType);
 
       return new Element(element);
     }
@@ -695,7 +698,7 @@ namespace RhinoInside.Revit.GH.Types
                   p = bbox.Min.ToRhino(); break;
           }
 
-          if (!p.IsValid && element is Level level)
+          if (!p.IsValid && element is Autodesk.Revit.DB.Level level)
           {
             p = new Rhino.Geometry.Point3d(0.0, 0.0, level.Elevation);
           }
