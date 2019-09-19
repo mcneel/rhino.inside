@@ -303,16 +303,6 @@ namespace RhinoInside.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap Element {
-            get {
-                object obj = ResourceManager.GetObject("Element", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap ElementDecompose {
             get {
                 object obj = ResourceManager.GetObject("ElementDecompose", resourceCulture);
@@ -446,6 +436,16 @@ namespace RhinoInside.Properties {
         internal static System.Drawing.Bitmap FormByGeometry {
             get {
                 object obj = ResourceManager.GetObject("FormByGeometry", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap GeometricElement {
+            get {
+                object obj = ResourceManager.GetObject("GeometricElement", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

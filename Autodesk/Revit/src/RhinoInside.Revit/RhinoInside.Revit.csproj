@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
@@ -272,7 +272,7 @@
     <None Include="Resources\GH\DocumentLevelsPicker.png" />
     <None Include="Resources\GH\DocumentParameters.png" />
     <None Include="Resources\GH\Edge.png" />
-    <None Include="Resources\GH\Element.png" />
+    <None Include="Resources\GH\GeometricElement.png" />
     <None Include="Resources\GH\ElementDecompose.png" />
     <None Include="Resources\GH\ElementGeometry.png" />
     <None Include="Resources\GH\ElementParameterGet.png" />
