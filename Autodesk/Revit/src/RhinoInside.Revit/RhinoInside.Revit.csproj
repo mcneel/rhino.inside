@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
@@ -184,6 +184,7 @@
     <Compile Include="GH\Element\SketchPlane\ByPlane.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
+    <Compile Include="GH\Element\HostObject\HostObject.cs" />
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Element\DirectShape\ByMesh.cs" />
     <Compile Include="GH\Element\DirectShape\ByBrep.cs" />
@@ -271,7 +272,7 @@
     <None Include="Resources\GH\DocumentLevelsPicker.png" />
     <None Include="Resources\GH\DocumentParameters.png" />
     <None Include="Resources\GH\Edge.png" />
-    <None Include="Resources\GH\Element.png" />
+    <None Include="Resources\GH\GeometricElement.png" />
     <None Include="Resources\GH\ElementDecompose.png" />
     <None Include="Resources\GH\ElementGeometry.png" />
     <None Include="Resources\GH\ElementParameterGet.png" />

@@ -1,20 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows.Forms;
-using Control = System.Windows.Forms.Control;
-
-using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
-using Grasshopper.Kernel.Attributes;
-using Grasshopper.GUI.Canvas;
-using Grasshopper.GUI;
-
 using Autodesk.Revit.DB;
-using Grasshopper.Kernel.Special;
-using Grasshopper.Kernel.Data;
+using Grasshopper.GUI;
+using Grasshopper.GUI.Canvas;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Attributes;
+using Grasshopper.Kernel.Types;
+using Control = System.Windows.Forms.Control;
 
 namespace RhinoInside.Revit.GH.Types
 {
@@ -43,6 +39,9 @@ namespace RhinoInside.Revit.GH.Types
 
       if (element is Autodesk.Revit.DB.SketchPlane sketchPlane)
         return new SketchPlane(sketchPlane);
+
+      if (element is Autodesk.Revit.DB.HostObject host)
+        return new HostObject(host);
 
       return new Element(element);
     }
@@ -85,13 +84,7 @@ namespace RhinoInside.Revit.GH.Types
       var element = (Autodesk.Revit.DB.Element) this;
       if (!(element is null))
       {
-        if (typeof(Q).IsSubclassOf(ScriptVariableType))
-        {
-          target = (Q) (object) element;
-          return true;
-        }
-
-        if (typeof(Q).IsAssignableFrom(ScriptVariableType))
+        if (typeof(Q).IsAssignableFrom(element.GetType()))
         {
           target = (Q) (object) element;
           return true;
@@ -855,59 +848,12 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Element : ElementIdGeometryParam<Types.Element>
+  public class Element : ElementIdNonGeometryParam<Types.Element>
   {
-    public override GH_Exposure Exposure => GH_Exposure.primary;
+    public override GH_Exposure Exposure => GH_Exposure.tertiary | GH_Exposure.obscure;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
 
     public Element() : base("Element", "Element", "Represents a Revit document element.", "Params", "Revit") { }
-
-    protected override GH_GetterResult Prompt_Singular(ref Types.Element element)
-    {
-      element = null;
-
-      try
-      {
-        using (new ModalForm.EditScope())
-        {
-#if REVIT_2018
-          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Subelement);
-#else
-          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
-#endif
-          if (reference is object)
-            element = Types.Element.Make(reference.ElementId);
-        }
-      }
-      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
-
-      return GH_GetterResult.success;
-    }
-
-    protected override GH_GetterResult Prompt_Plural(ref List<Types.Element> elements)
-    {
-      elements = null;
-
-      var selection = Revit.ActiveUIDocument.Selection.GetElementIds();
-      if (selection?.Count > 0)
-      {
-        elements = selection.Select((x) => Types.Element.Make(x)).ToList();
-      }
-      else
-      {
-        try
-        {
-          using (new ModalForm.EditScope())
-          {
-            var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element);
-            if (references is object)
-              elements = references.Select((x) => Types.Element.Make(x.ElementId)).ToList();
-          }
-        }
-        catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
-      }
-      return GH_GetterResult.success;
-    }
   }
 }
 
@@ -957,7 +903,7 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       DA.SetData("Category", element is Family family ? family.FamilyCategory : element?.Category);
-      DA.SetData("Type", Revit.ActiveDBDocument.GetElement(element?.GetTypeId()));
+      DA.SetData("Type", element?.GetTypeId());
       DA.SetData("Name", element?.Name);
       DA.SetData("UniqueID", element?.UniqueId);
     }
@@ -987,12 +933,20 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       var elementsToDelete = Parameters.Element.ToElementIds(elementsTree).ToArray();
-      var deletedElements = Revit.ActiveDBDocument.Delete(elementsToDelete);
 
-      if (deletedElements.Count == 0)
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "No elements were deleted");
-      else
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{elementsToDelete.Length} elements and {deletedElements.Count - elementsToDelete.Length} dependant elements were deleted.");
+      try
+      {
+        var deletedElements = Revit.ActiveDBDocument.Delete(elementsToDelete);
+
+        if (deletedElements.Count == 0)
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "No elements were deleted");
+        else
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{elementsToDelete.Length} elements and {deletedElements.Count - elementsToDelete.Length} dependant elements were deleted.");
+      }
+      catch (Autodesk.Revit.Exceptions.ArgumentException)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "One or more of the elements cannot be deleted.");
+      }
     }
   }
 

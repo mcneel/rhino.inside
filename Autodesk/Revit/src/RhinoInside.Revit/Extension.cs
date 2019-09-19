@@ -50,6 +50,7 @@ namespace RhinoInside.Revit
     #region ElementId
     public static bool IsValid(this ElementId id) => id?.IntegerValue != ElementId.InvalidElementId.IntegerValue;
     public static bool IsBuiltInId(this ElementId id) => id.IntegerValue < 0;
+
     public static bool TryGetBuiltInParameter(this ElementId id, out BuiltInParameter builtInParameter)
     {
       if (Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue))
@@ -335,15 +336,16 @@ namespace RhinoInside.Revit
       if ((param.Kind == GH_ParamKind.floating || param.Kind == GH_ParamKind.output) && param.Recipients.Count == 0)
       {
         var components = new List<IGH_Component>();
+        var paramType = param.Type;
 
         foreach (var proxy in Grasshopper.Instances.ComponentServer.ObjectProxies.Where(x => !x.Obsolete && x.Exposure != GH_Exposure.hidden && x.Exposure < GH_Exposure.tertiary))
         {
           if (typeof(IGH_Component).IsAssignableFrom(proxy.Type))
           {
             var obj = proxy.CreateInstance() as IGH_Component;
-            foreach (var input in obj.Params.Input)
+            foreach (var input in obj.Params.Input.Where(i => typeof(GH.Types.IGH_ElementId).IsAssignableFrom(i.Type)))
             {
-              if (input.GetType() == param.GetType())
+              if (input.GetType() == param.GetType() || input.Type.IsAssignableFrom(paramType))
               {
                 components.Add(obj);
                 break;
@@ -359,7 +361,7 @@ namespace RhinoInside.Revit
         var panel = GH_DocumentObject.Menu_AppendItem(connect.DropDown, "Panel", eventHandler, Grasshopper.Instances.ComponentServer.EmitObjectIcon(panedComponentId));
         panel.Tag = panedComponentId;
 
-        var picker = GH_DocumentObject.Menu_AppendItem(connect.DropDown, "Valuse Set Picker", eventHandler, Grasshopper.Instances.ComponentServer.EmitObjectIcon(GH.Parameters.ValueSetPicker.ComponentClassGuid));
+        var picker = GH_DocumentObject.Menu_AppendItem(connect.DropDown, "Value Set Picker", eventHandler, Grasshopper.Instances.ComponentServer.EmitObjectIcon(GH.Parameters.ValueSetPicker.ComponentClassGuid));
         picker.Tag = GH.Parameters.ValueSetPicker.ComponentClassGuid;
 
         if (components.Count > 0)
