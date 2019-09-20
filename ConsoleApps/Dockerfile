@@ -13,7 +13,7 @@ ENV DOTNET_RUNNING_IN_CONTAINER=true `
     NUGET_XMLDOC_MODE=skip `
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true `
     # TODO: edit this if you use a different version of rhino!
-    RHINO_INSTALLER=rhino_en-us_7.0.19228.19215.exe
+    RHINO_INSTALLER=rhino_en-us_7.0.19260.11525.exe
 
 # install .NET 4.6.2 framework via chocolatey
 RUN powershell -Command Set-ExecutionPolicy Bypass -Scope Process -Force; `
@@ -39,7 +39,6 @@ COPY ["settings-Scheme__Default.xml", "C:/Users/ContainerAdministrator/AppData/R
 
 # compile
 COPY ["HelloWorld", "src"]
-RUN powershell -Command " `
-    dotnet build .\src"
+RUN powershell -Command "dotnet build .\src"
 
 CMD .\src\bin\Debug\HelloWorld.exe

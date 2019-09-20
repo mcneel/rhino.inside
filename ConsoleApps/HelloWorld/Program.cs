@@ -23,7 +23,7 @@ namespace HelloWorld
 
         AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
 
-        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino 7 WIP", "System");
         return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }

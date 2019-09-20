@@ -38,7 +38,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="RhinoCommon">
-      <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
+      <HintPath>C:\Program Files\Rhino 7 WIP\System\RhinoCommon.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

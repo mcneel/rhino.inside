@@ -10,6 +10,6 @@ The [_Dockerfile_](Dockerfile) in this directory can be used to build a Docker i
     * _%AppData%/Roaming/McNeel/Rhinoceros/6.0/License Manager/Licenses/cloudzoo.json_
     * _%AppData%/Roaming/McNeel/Rhinoceros/7.0/settings/settings-Scheme__Default.xml_
 1. Run `docker build --isolation process -t rhino-hello-world .`
-1. Run `docker run --isolation process --tty rhino-hello-world` \*
-1. You should see `Mesh with 2145 vertices created`
+1. Run `docker run --isolation process rhino-hello-world`
+1. You should see `Mesh with 2145 vertices created`. Ignore the "Cannot read keys..." error.
 1. Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to exit the running container
