@@ -318,9 +318,10 @@ namespace RhinoInside.Revit
       }
       else if (obj is IGH_Component component)
       {
-        foreach (var input in component.Params.Input)
+        var selfType = self.Type;
+        foreach (var input in component.Params.Input.Where(i => typeof(GH.Types.IGH_ElementId).IsAssignableFrom(i.Type)))
         {
-          if (input.GetType() == self.GetType())
+          if (input.GetType() == self.GetType() || input.Type.IsAssignableFrom(selfType))
           {
             input.AddSource(self);
             break;

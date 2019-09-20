@@ -34,6 +34,9 @@ namespace RhinoInside.Revit.GH.Types
       if (element is Autodesk.Revit.DB.ParameterElement parameterElement)
         return new ParameterKey(parameterElement);
 
+      if (element is Autodesk.Revit.DB.Material material)
+        return new Material(material);
+
       if (element is Autodesk.Revit.DB.SketchPlane sketchPlane)
         return new SketchPlane(sketchPlane);
 

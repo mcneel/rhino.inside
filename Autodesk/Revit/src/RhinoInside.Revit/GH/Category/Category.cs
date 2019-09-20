@@ -299,7 +299,7 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddTextParameter("Name", "N", "Category name", GH_ParamAccess.item);
       manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
       manager.AddColourParameter("LineColor", "LC", "Category line color", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.Element(), "Material", "M", "Category material", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Material(), "Material", "M", "Category material", GH_ParamAccess.item);
       manager.AddBooleanParameter("AllowsParameters", "A", "Category allows bound parameters", GH_ParamAccess.item);
       manager.AddBooleanParameter("HasMaterialQuantities", "M", "Category has material quantities", GH_ParamAccess.item);
     }

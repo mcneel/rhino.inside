@@ -773,7 +773,7 @@ namespace RhinoInside.Revit.GH.Components
       manager[manager.AddBooleanParameter("Visible", "V", string.Empty, GH_ParamAccess.item, false)].Optional = true;
       manager[manager.AddParameter(new Parameters.Category(), "Subcategory", "S", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager[manager.AddIntegerParameter("Visibility", "S", string.Empty, GH_ParamAccess.item, -1)].Optional = true;
-      manager[manager.AddParameter(new Parameters.Element(), "Material", "M", string.Empty, GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.Material(), "Material", "M", string.Empty, GH_ParamAccess.item)].Optional = true;
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
