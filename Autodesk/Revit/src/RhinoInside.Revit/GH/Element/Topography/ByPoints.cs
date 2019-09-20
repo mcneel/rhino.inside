@@ -24,7 +24,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Topography", "T", "New Topography", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Topography", "T", "New Topography", GH_ParamAccess.item);
     }
 
     void ReconstructTopographyByPoints

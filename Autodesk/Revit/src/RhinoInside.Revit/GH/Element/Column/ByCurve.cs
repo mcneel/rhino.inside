@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Column", "C", "New Column", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Column", "C", "New Column", GH_ParamAccess.item);
     }
 
     void ReconstructColumnByCurve

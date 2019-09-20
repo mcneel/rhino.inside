@@ -27,7 +27,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "CurveElement", "C", "New CurveElement", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.GeometricElement(), "CurveElement", "C", "New CurveElement", GH_ParamAccess.list);
     }
 
     void ReconstructModelLineByCurve

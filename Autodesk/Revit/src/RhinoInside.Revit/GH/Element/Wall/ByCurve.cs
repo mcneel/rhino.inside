@@ -25,7 +25,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Wall", "W", "New Wall", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Wall", "W", "New Wall", GH_ParamAccess.item);
     }
 
     protected override void OnAfterStart(Document document, string strTransactionName)

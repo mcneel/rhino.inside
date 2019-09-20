@@ -22,7 +22,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Component", "C", "New AdaptiveComponent", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Component", "C", "New AdaptiveComponent", GH_ParamAccess.item);
     }
 
     void ReconstructAdaptiveComponentByPoints

@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Grid", "G", "New Grid", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Grid", "G", "New Grid", GH_ParamAccess.item);
     }
 
     void ReconstructGridByCurve

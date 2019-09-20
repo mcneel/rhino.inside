@@ -23,7 +23,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Beam", "B", "New Beam", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Beam", "B", "New Beam", GH_ParamAccess.item);
     }
 
     void ReconstructBeamByCurve
