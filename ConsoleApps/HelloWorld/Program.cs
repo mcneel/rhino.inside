@@ -37,8 +37,8 @@ namespace HelloWorld
         using (new RhinoCore(args))
         {
           MeshABrep();
-          Console.WriteLine("press any key to exit");
-          Console.ReadKey();
+          // Console.WriteLine("press any key to exit");
+          // Console.ReadKey();
         }
       }
       catch (Exception ex)
