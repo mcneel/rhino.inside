@@ -4,11 +4,24 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Autodesk.Revit.DB;
+using Grasshopper.Kernel;
 
 namespace RhinoInside.Revit
 {
   public static class Extension
   {
+    #region string
+    public static string FirstCharUpper(this string text)
+    {
+      if (char.IsUpper(text, 0))
+        return text;
+
+      var chars = text.ToCharArray();
+      chars[0] = char.ToUpperInvariant(chars[0]);
+      return new string(chars);
+    }
+    #endregion
+
     #region Curves
     public static bool IsSameKindAs(this Autodesk.Revit.DB.Curve self, Autodesk.Revit.DB.Curve other)
     {
@@ -31,6 +44,55 @@ namespace RhinoInside.Revit
       }
 
       return geometry;
+    }
+    #endregion
+
+    #region ElementId
+    public static bool IsValid(this ElementId id) => id?.IntegerValue != ElementId.InvalidElementId.IntegerValue;
+    public static bool IsBuiltInId(this ElementId id) => id.IntegerValue < 0;
+
+    public static bool TryGetBuiltInParameter(this ElementId id, out BuiltInParameter builtInParameter)
+    {
+      if (Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue))
+      {
+        builtInParameter = (BuiltInParameter) id.IntegerValue;
+        return true;
+      }
+      else
+      {
+        builtInParameter = BuiltInParameter.INVALID;
+        return true;
+      }
+    }
+    public static bool TryGetBuiltInCategory(this ElementId id, out BuiltInCategory builtInParameter)
+    {
+      if (Enum.IsDefined(typeof(BuiltInCategory), id.IntegerValue))
+      {
+        builtInParameter = (BuiltInCategory) id.IntegerValue;
+        return true;
+      }
+      else
+      {
+        builtInParameter = BuiltInCategory.INVALID;
+        return true;
+      }
+    }
+
+    public static bool IsParameterId(this ElementId id, Autodesk.Revit.DB.Document doc)
+    {
+      if (-2000000 < id.IntegerValue && id.IntegerValue < -1000000)
+        return Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue);
+
+      try { return doc.GetElement(id) is ParameterElement; }
+      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
+    }
+    public static bool IsCategoryId(this ElementId id, Autodesk.Revit.DB.Document doc)
+    {
+      if (-3000000 < id.IntegerValue && id.IntegerValue < -2000000)
+        return Enum.IsDefined(typeof(BuiltInCategory), id.IntegerValue);
+
+      try { return Autodesk.Revit.DB.Category.GetCategory(doc, id) != null; }
+      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
     }
     #endregion
 
@@ -69,7 +131,7 @@ namespace RhinoInside.Revit
           return Enum.GetValues(typeof(BuiltInParameter)).
             Cast<BuiltInParameter>().
             Select(x => element.get_Parameter(x)).
-            Where(x => x?.HasValue ?? false).
+            Where(x => x is object).
             Union(element.Parameters.Cast<Autodesk.Revit.DB.Parameter>()).
             GroupBy(x => x.Id).
             Select(x => x.First());
@@ -79,7 +141,7 @@ namespace RhinoInside.Revit
             GroupBy(x => x).
             Select(x => x.First()).
             Select(x => element.get_Parameter(x)).
-            Where(x => x?.HasValue ?? false);
+            Where(x => x is object);
         case ParameterSource.Project:
           return element.Parameters.Cast<Autodesk.Revit.DB.Parameter>().
             Where(p => !p.IsShared);
@@ -121,11 +183,211 @@ namespace RhinoInside.Revit
     }
     #endregion
 
+    #region GeometryBase
+    public static bool GetUserBoolean(this Rhino.Geometry.GeometryBase geometry, string key, out bool value, bool def = default(bool))
+    {
+      if (geometry.GetUserInteger(key, out var idx))
+      {
+        value = idx != 0;
+        return true;
+      }
+
+      value = def;
+      return false;
+    }
+
+    public static bool GetUserInteger(this Rhino.Geometry.GeometryBase geometry, string key, out int value, int def = default(int))
+    {
+      value = def;
+      return geometry.GetUserString(key) is string stringValue && int.TryParse(stringValue, out value);
+    }
+
+    public static bool GetUserEnum<E>(this Rhino.Geometry.GeometryBase geometry, string key, out E value, E def = default(E)) where E : struct
+    {
+      value = def;
+      return geometry.GetUserString(key) is string stringValue && Enum.TryParse<E>(stringValue, out value);
+    }
+
+    public static bool GetUserElementId(this Rhino.Geometry.GeometryBase geometry, string key, out ElementId value) =>
+      GetUserElementId(geometry, key, out value, ElementId.InvalidElementId);
+    public static bool GetUserElementId(this Rhino.Geometry.GeometryBase geometry, string key, out ElementId value, ElementId def)
+    {
+      if (geometry.GetUserInteger(key, out var idx))
+      {
+        value = new ElementId(idx);
+        return true;
+      }
+
+      value = def;
+      return false;
+    }
+    #endregion
+
+    #region Element
+    public static void SetTransform(this Autodesk.Revit.DB.Instance element, XYZ newOrigin, XYZ newBasisX, XYZ newBasisY)
+    {
+      var current = element.GetTransform();
+      var BasisZ = newBasisX.CrossProduct(newBasisY);
+      {
+        if (!current.BasisZ.IsParallelTo(BasisZ))
+        {
+          var axisDirection = current.BasisZ.CrossProduct(BasisZ);
+          double angle = current.BasisZ.AngleTo(BasisZ);
+
+          using (var axis = Autodesk.Revit.DB.Line.CreateUnbound(current.Origin, axisDirection))
+            ElementTransformUtils.RotateElement(element.Document, element.Id, axis, angle);
+
+          current = element.GetTransform();
+        }
+
+        if (!current.BasisX.IsAlmostEqualTo(newBasisX))
+        {
+          double angle = current.BasisX.AngleOnPlaneTo(newBasisX, BasisZ);
+          using (var axis = Autodesk.Revit.DB.Line.CreateUnbound(current.Origin, BasisZ))
+            ElementTransformUtils.RotateElement(element.Document, element.Id, axis, angle);
+        }
+
+        {
+          var trans = newOrigin - current.Origin;
+          if (!trans.IsZeroLength())
+            ElementTransformUtils.MoveElement(element.Document, element.Id, trans);
+        }
+      }
+    }
+    #endregion
+
+    #region Application
+#if !REVIT_2018
+    public static IList<Autodesk.Revit.Utility.Asset> GetAssets(this Autodesk.Revit.ApplicationServices.Application app, Autodesk.Revit.Utility.AssetType assetType)
+    {
+      return new Autodesk.Revit.Utility.Asset[0];
+    }
+
+    public static AppearanceAssetElement Duplicate(this AppearanceAssetElement element, string name)
+    {
+      return AppearanceAssetElement.Create(element.Document, name, element.GetRenderingAsset());
+    }
+#endif
+    #endregion
+
     #region Linq
     public static IEnumerable<K> Select<K, T>(this IEnumerator<T> e, Func<T, K> selector)
     {
       while (e.MoveNext())
         yield return selector(e.Current);
+    }
+    #endregion
+
+    #region Grasshopper
+    public static IGH_DocumentObject ConnectNewObject(this IGH_Param self, Guid componentGuid)
+    {
+      var document = self.OnPingDocument();
+      if (document is null)
+        return null;
+
+      var obj = Grasshopper.Instances.ComponentServer.EmitObject(componentGuid) as IGH_ActiveObject;
+      if (obj is null)
+        return null;
+
+      obj.CreateAttributes();
+      if (Grasshopper.CentralSettings.CanvasFullNames)
+      {
+        var atts = new List<IGH_Attributes>();
+        obj.Attributes.AppendToAttributeTree(atts);
+        foreach (var att in atts)
+          att.DocObject.NickName = att.DocObject.Name;
+      }
+
+      obj.NewInstanceGuid();
+      obj.Attributes.Pivot = new System.Drawing.PointF();
+      obj.Attributes.PerformLayout();
+
+      if (obj is IGH_Param)
+        obj.Attributes.Pivot = new System.Drawing.PointF(self.Attributes.Pivot.X + 120, self.Attributes.Pivot.Y - obj.Attributes.Bounds.Height / 2);
+      else if (obj is IGH_Component)
+        obj.Attributes.Pivot = new System.Drawing.PointF(self.Attributes.Pivot.X + 120, self.Attributes.Pivot.Y);
+
+      obj.Attributes.ExpireLayout();
+
+      document.AddObject(obj, false);
+      document.UndoUtil.RecordAddObjectEvent($"Add {obj.Name}", obj);
+
+      if (obj is IGH_Param param)
+      {
+        param.AddSource(self);
+      }
+      else if (obj is IGH_Component component)
+      {
+        foreach (var input in component.Params.Input)
+        {
+          if (input.GetType() == self.GetType())
+          {
+            input.AddSource(self);
+            break;
+          }
+        }
+      }
+
+      return obj;
+    }
+
+    public static void Menu_AppendConnect(this IGH_Param param, System.Windows.Forms.ToolStripDropDown menu, EventHandler eventHandler)
+    {
+      if ((param.Kind == GH_ParamKind.floating || param.Kind == GH_ParamKind.output) && param.Recipients.Count == 0)
+      {
+        var components = new List<IGH_Component>();
+        var paramType = param.Type;
+
+        foreach (var proxy in Grasshopper.Instances.ComponentServer.ObjectProxies.Where(x => !x.Obsolete && x.Exposure != GH_Exposure.hidden && x.Exposure < GH_Exposure.tertiary))
+        {
+          if (typeof(IGH_Component).IsAssignableFrom(proxy.Type))
+          {
+            var obj = proxy.CreateInstance() as IGH_Component;
+            foreach (var input in obj.Params.Input.Where(i => typeof(GH.Types.IGH_ElementId).IsAssignableFrom(i.Type)))
+            {
+              if (input.GetType() == param.GetType() || input.Type.IsAssignableFrom(paramType))
+              {
+                components.Add(obj);
+                break;
+              }
+            }
+          }
+        }
+
+        GH_DocumentObject.Menu_AppendSeparator(menu);
+        var connect = GH_DocumentObject.Menu_AppendItem(menu, "Connect") as System.Windows.Forms.ToolStripMenuItem;
+
+        var panedComponentId = new Guid("{59E0B89A-E487-49f8-BAB8-B5BAB16BE14C}");
+        var panel = GH_DocumentObject.Menu_AppendItem(connect.DropDown, "Panel", eventHandler, Grasshopper.Instances.ComponentServer.EmitObjectIcon(panedComponentId));
+        panel.Tag = panedComponentId;
+
+        var picker = GH_DocumentObject.Menu_AppendItem(connect.DropDown, "Value Set Picker", eventHandler, Grasshopper.Instances.ComponentServer.EmitObjectIcon(GH.Parameters.ValueSetPicker.ComponentClassGuid));
+        picker.Tag = GH.Parameters.ValueSetPicker.ComponentClassGuid;
+
+        if (components.Count > 0)
+        {
+          GH_DocumentObject.Menu_AppendSeparator(connect.DropDown);
+          var maxComponents = Grasshopper.CentralSettings.CanvasMaxSearchResults;
+          maxComponents = Math.Min(maxComponents, 30);
+          maxComponents = Math.Max(maxComponents, 3);
+
+          int count = 0;
+          foreach (var componentGroup in components.GroupBy(x => x.Exposure).OrderBy(x => x.Key))
+          {
+            foreach (var component in componentGroup.OrderBy(x => x.Category).OrderBy(x => x.SubCategory).OrderBy(x => x.Name))
+            {
+              var item = GH_DocumentObject.Menu_AppendItem(connect.DropDown, component.Name, eventHandler, component.Icon_24x24);
+              item.Tag = component.ComponentGuid;
+
+              if (count >= maxComponents)
+                break;
+            }
+
+            if (count >= maxComponents)
+              break;
+          }
+        }
+      }
     }
     #endregion
   }

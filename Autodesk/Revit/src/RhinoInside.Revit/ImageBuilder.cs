@@ -133,7 +133,60 @@ namespace RhinoInside
       }
     }
 
-    public static Bitmap BuildIcon(string tag, int width = 24, int height = 24, Color color = default(Color))
+    public static Bitmap BuildIcon(string tag, int width = 24, int height = 24)
+    {
+      var bitmap = new Bitmap(width, height);
+      using (var g = Graphics.FromImage(bitmap))
+      {
+        var iconBounds = new RectangleF(0, 0, width, height);
+        iconBounds.Inflate(-0.5f, -0.5f);
+
+        using (var capsule = Grasshopper.GUI.Canvas.GH_Capsule.CreateCapsule(iconBounds, Grasshopper.GUI.Canvas.GH_Palette.Transparent))
+          capsule.Render(g, false, false, false);
+
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        var rect = new RectangleF(0.5f, 1.0f, width, height);
+
+        var format = new StringFormat()
+        {
+          Alignment = StringAlignment.Center,
+          LineAlignment = StringAlignment.Center
+        };
+
+        float emSize = ((float) (width) / ((float) tag.Length));
+        if (width == 24)
+        {
+          switch (tag.Length)
+          {
+            case 1: emSize = 20.0f; break;
+            case 2: emSize = 13.0f; break;
+            case 3: emSize = 11.0f; break;
+            case 4: emSize = 8.0f; break;
+          }
+        }
+
+        // Avoid using ClearType rendering on icons that the user can zoom in like icons on Grashopper components.
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+
+        using (var Calibri = new System.Drawing.Font("Calibri", emSize, GraphicsUnit.Pixel))
+          g.DrawString(tag, Calibri, Brushes.Black, rect, format);
+      }
+
+      return bitmap;
+    }
+
+    public static Bitmap BuildIcon(Action<Graphics, Rectangle> action, int width = 24, int height = 24)
+    {
+      var bitmap = new Bitmap(width, height);
+      using (var graphics = Graphics.FromImage(bitmap))
+        action(graphics, new Rectangle(0, 0, width, height));
+
+      return bitmap;
+    }
+
+    public static Bitmap BuildImage(string tag, int width, int height, Color color)
     {
       var bitmap = new Bitmap(width, height);
       using (var g = Graphics.FromImage(bitmap))
@@ -182,7 +235,7 @@ namespace RhinoInside
       {
         int pixelX = (int) Math.Round((g.DpiX / 96.0) * 16);
         int pixelY = (int) Math.Round((g.DpiY / 96.0) * 16);
-        return BuildIcon(tag, 64, 64, color).ToBitmapImage(pixelX, pixelY);
+        return BuildImage(tag, 64, 64, color).ToBitmapImage(pixelX, pixelY);
       }
     }
 
@@ -192,7 +245,7 @@ namespace RhinoInside
       {
         int pixelX = (int) Math.Round((g.DpiX / 96.0) * 32);
         int pixelY = (int) Math.Round((g.DpiY / 96.0) * 32);
-        return BuildIcon(tag, 64, 64, color).ToBitmapImage(pixelX, pixelY);
+        return BuildImage(tag, 64, 64, color).ToBitmapImage(pixelX, pixelY);
       }
     }
   }

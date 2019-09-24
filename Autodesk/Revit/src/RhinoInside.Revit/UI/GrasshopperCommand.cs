@@ -66,7 +66,6 @@ namespace RhinoInside.Revit.UI
     {
       public override bool IsCommandAvailable(UIApplication applicationData, CategorySet selectedCategories) =>
         base.IsCommandAvailable(applicationData, selectedCategories) &&
-        GH_Document.EnableSolutions &&
         Instances.ActiveCanvas?.Document != null;
     }
 
@@ -86,9 +85,31 @@ namespace RhinoInside.Revit.UI
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       if (Instances.ActiveCanvas?.Document is GH_Document definition)
-        definition.NewSolution(true);
+      {
+        using (var modal = new Rhinoceros.ModalScope())
+        {
+          if(GH_Document.EnableSolutions) definition.NewSolution(true);
+          else
+          {
+            GH_Document.EnableSolutions = true;
+            try { definition.NewSolution(false); }
+            finally { GH_Document.EnableSolutions = false; }
+          }
 
-      return Result.Succeeded;
+          do
+          {
+            var result = modal.Run(false, false);
+            if (result == Result.Failed)
+              return result;
+
+          } while (definition.ScheduleDelay >= GH_Document.ScheduleRecursive);
+
+          if (definition.SolutionState == GH_ProcessStep.PostProcess)
+            return Result.Succeeded;
+        }
+      }
+
+      return Result.Failed;
     }
   }
 

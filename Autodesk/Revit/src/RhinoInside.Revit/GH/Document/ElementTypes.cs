@@ -13,10 +13,11 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class DocumentFamiliesPicker : GH_ValueList
+  public class DocumentFamiliesPicker : DocumentPicker
   {
     public override Guid ComponentGuid => new Guid("45CEE087-4194-4E55-AA20-9CC5D2193CE0");
     public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override Autodesk.Revit.DB.ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementClassFilter(typeof(Family));
 
     public DocumentFamiliesPicker()
     {
@@ -38,9 +39,9 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
         {
-          foreach (var family in collector.OfClass(typeof(Family)).Cast<Family>().OrderBy((x) => x.Name))
+          foreach (var family in collector.OfClass(typeof(Autodesk.Revit.DB.Family)).Cast<Autodesk.Revit.DB.Family>().OrderBy((x) => $"{x.FamilyCategory.Name} : {x.Name}"))
           {
-            var item = new GH_ValueListItem(family.Name, family.Id.IntegerValue.ToString());
+            var item = new GH_ValueListItem($"{family.FamilyCategory.Name} : {family.Name}", family.Id.IntegerValue.ToString());
             item.Selected = selectedItems.Contains(item.Expression);
             ListItems.Add(item);
           }
@@ -59,35 +60,11 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentElementTypes : GH_Component, IGH_PersistentElementComponent
+  public class DocumentElementTypes : DocumentComponent
   {
     public override Guid ComponentGuid => new Guid("7B00F940-4C6E-4F3F-AB81-C3EED430DE96");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    bool IGH_PersistentElementComponent.NeedsToBeExpired(Autodesk.Revit.DB.Events.DocumentChangedEventArgs e)
-    {
-      var filter = new Autodesk.Revit.DB.ElementIsElementTypeFilter(false);
-      var added = e.GetAddedElementIds(filter);
-      if (added.Count > 0)
-        return true;
-
-      var modified = e.GetModifiedElementIds(filter);
-      if (modified.Count > 0)
-        return true;
-
-      var deleted = e.GetDeletedElementIds();
-      if (deleted.Count > 0)
-      {
-        var document = e.GetDocument();
-        var empty = new ElementId[0];
-        foreach (var param in Params.Output.OfType<Parameters.IGH_PersistentElementParam>())
-        {
-          if (param.NeedsToBeExpired(document, empty, deleted, empty))
-            return true;
-        }
-      }
-
-      return false;
-    }
+    protected override ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementIsElementTypeFilter(false);
 
     public DocumentElementTypes() : base(
       "Document.ElementTypes", "ElementTypes",
@@ -98,7 +75,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager[manager.AddParameter(new Parameters.Category(), "FamilyCategory", "C", "Category of the requested element type", GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.ElementFilter(), "Filter", "F", "Filter", GH_ParamAccess.item)].Optional = true;
       manager[manager.AddTextParameter("FamilyName", "F", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager[manager.AddTextParameter("TypeName", "N", string.Empty, GH_ParamAccess.item)].Optional = true;
     }
@@ -110,8 +87,8 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var categoryId = ElementId.InvalidElementId;
-      DA.GetData("FamilyCategory", ref categoryId);
+      Autodesk.Revit.DB.ElementFilter filter = null;
+      DA.GetData("Filter", ref filter);
 
       string familyName = null;
       DA.GetData("FamilyName", ref familyName);
@@ -121,17 +98,17 @@ namespace RhinoInside.Revit.GH.Components
 
       using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
       {
-        var elementCollector = collector.WhereElementIsElementType();
+        var elementCollector = collector.WherePasses(ElementFilter);
 
-        if (categoryId != ElementId.InvalidElementId)
-          elementCollector = elementCollector.OfCategoryId(categoryId);
+        if (filter is object)
+          elementCollector = elementCollector.WherePasses(filter);
 
         var elementTypes = elementCollector.Cast<ElementType>();
 
-        if (familyName != null)
+        if (familyName is object)
           elementTypes = elementTypes.Where(x => x.FamilyName == familyName);
 
-        if (name != null)
+        if (name is object)
           elementTypes = elementTypes.Where(x => x.Name == name);
 
         DA.SetDataList("ElementTypes", elementTypes.Select(x => new Types.ElementType(x)));

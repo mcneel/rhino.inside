@@ -1,48 +1,38 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
-using System.Reflection;
+using System.Windows.Forms;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Selection;
 using GH_IO.Serialization;
 using Grasshopper;
-using Grasshopper.GUI;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Data;
 using Grasshopper.Kernel.Types;
 using Rhino.Geometry;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public interface IGH_GeometricGoo : Grasshopper.Kernel.Types.IGH_GeometricGoo
-  {
-    Reference Reference     { get; }
-    string UniqueID         { get; }
-    bool LoadGeometry(Document doc);
-  }
-
-  public abstract class GH_GeometricGoo<X> : Grasshopper.Kernel.Types.GH_GeometricGoo<X>, IGH_GeometricGoo, IGH_PreviewMeshData where X : GeometryObject
+  public abstract class GeometryObject<X> :
+    GH_Goo<X>,
+    IGH_ElementId,
+    IGH_GeometricGoo,
+    IGH_PreviewMeshData
+    where X : Autodesk.Revit.DB.GeometryObject
   {
     public override string TypeName => "Revit GeometryObject";
     public override string TypeDescription => "Represents a Revit GeometryObject";
-    public override bool IsValid => Value != null;
+    public override bool IsValid => !(Value is null);
     public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
     protected virtual Type ScriptVariableType => typeof(X);
 
-    #region IGH_GeometricGoo
-    Guid Grasshopper.Kernel.Types.IGH_GeometricGoo.ReferenceID
-    {
-      // TODO: Generate a Guid using the Reference.ElementReferenceType and its index
-      // get => Reference == null ? Guid.Empty : new Guid(Reference.ElementId == ElementId.InvalidElementId ? 0 : Reference.ElementId.IntegerValue, Reference.ElementIndex(), Reference.ElementReferenceType, 0, 0, 0, 0, 0, 0, 0, 0);
-      get => Guid.Empty;
-      set => throw new InvalidOperationException();
-    }
-    public Reference Reference { get; private set; }
+    #region IPersistentId
+    public Reference Reference { get; protected set; }
+    public ElementId Id => Reference.ElementId;
+    public bool IsReferencedElement => !string.IsNullOrEmpty(UniqueID);
     public string UniqueID { get; protected set; } = string.Empty;
-    public override bool IsReferencedGeometry => !string.IsNullOrEmpty(UniqueID);
-    public override bool IsGeometryLoaded => Value != null;
-    public override bool LoadGeometry() => LoadGeometry(Revit.ActiveDBDocument);
-    public virtual bool LoadGeometry(Document doc)
+    public bool IsElementLoaded => !(Value is null);
+    public virtual bool LoadElement(Document doc)
     {
       Value = null;
 
@@ -58,13 +48,29 @@ namespace RhinoInside.Revit.GH.Types
       }
       catch (Autodesk.Revit.Exceptions.ArgumentException) { }
 
-      return IsValid;
+      return IsElementLoaded;
     }
+    public void UnloadElement() => Value = null;
+    #endregion
 
-    public override sealed Grasshopper.Kernel.Types.IGH_GeometricGoo DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
-    public override BoundingBox Boundingbox => GetBoundingBox(Rhino.Geometry.Transform.Identity);
-    public override Grasshopper.Kernel.Types.IGH_GeometricGoo Transform(Rhino.Geometry.Transform xform) => null;
-    public override Grasshopper.Kernel.Types.IGH_GeometricGoo Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
+    #region IGH_GeometricGoo
+    BoundingBox IGH_GeometricGoo.Boundingbox => GetBoundingBox(Rhino.Geometry.Transform.Identity);
+    Guid IGH_GeometricGoo.ReferenceID
+    {
+      get => Guid.Empty;
+      set { if (value != Guid.Empty) throw new InvalidOperationException(); }
+    }
+    bool IGH_GeometricGoo.IsReferencedGeometry => IsReferencedElement;
+    bool IGH_GeometricGoo.IsGeometryLoaded => IsElementLoaded;
+
+    void IGH_GeometricGoo.ClearCaches() => UnloadElement();
+    IGH_GeometricGoo IGH_GeometricGoo.DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
+    public abstract BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform);
+    bool IGH_GeometricGoo.LoadGeometry(                  ) => IsElementLoaded || LoadElement(Revit.ActiveDBDocument);
+    bool IGH_GeometricGoo.LoadGeometry(Rhino.RhinoDoc doc) => IsElementLoaded || LoadElement(Revit.ActiveDBDocument);
+    IGH_GeometricGoo IGH_GeometricGoo.Transform(Rhino.Geometry.Transform xform) => null;
+    IGH_GeometricGoo IGH_GeometricGoo.Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
+
     public override sealed string ToString()
     {
       if (!IsValid)
@@ -76,7 +82,7 @@ namespace RhinoInside.Revit.GH.Types
         var element = Revit.ActiveDBDocument.GetElement(Reference);
         if (element != null)
         {
-          typeName = IsReferencedGeometry ? "Referenced " : string.Empty;
+          typeName = "Referenced ";
           switch (Reference.ElementReferenceType)
           {
             case ElementReferenceType.REFERENCE_TYPE_NONE: typeName += "geometry"; break;
@@ -133,26 +139,26 @@ namespace RhinoInside.Revit.GH.Types
     Rhino.Geometry.Mesh[] IGH_PreviewMeshData.GetPreviewMeshes() => meshes;
     #endregion
 
-    protected GH_GeometricGoo() { }
-    protected GH_GeometricGoo(X data) : base(data) { }
-    protected GH_GeometricGoo(Reference reference, Document doc) { Reference = reference; UniqueID = reference.ConvertToStableRepresentation(doc); }
+    protected GeometryObject() { }
+    protected GeometryObject(X data) : base(data) { }
+    protected GeometryObject(Reference reference, Document doc) { Reference = reference; UniqueID = reference.ConvertToStableRepresentation(doc); }
   }
 
-  public class Vertex : GH_GeometricGoo<Autodesk.Revit.DB.Point>, IGH_PreviewData
+  public class Vertex : GeometryObject<Autodesk.Revit.DB.Point>, IGH_PreviewData
   {
     public override string TypeName => "Revit Vertex";
     public override string TypeDescription => "Represents a Revit Vertex";
 
     readonly int VertexIndex = -1;
-    public override bool LoadGeometry(Document doc)
+    public override bool LoadElement(Document doc)
     {
       Value = null;
 
       try
       {
-        var reference = Autodesk.Revit.DB.Reference.ParseFromStableRepresentation(doc, UniqueID);
-        var element = doc.GetElement(reference);
-        var geometry = element?.GetGeometryObjectFromReference(reference);
+        Reference = Autodesk.Revit.DB.Reference.ParseFromStableRepresentation(doc, UniqueID);
+        var element = doc.GetElement(Reference);
+        var geometry = element?.GetGeometryObjectFromReference(Reference);
         if (geometry is Autodesk.Revit.DB.Edge edge)
         {
           var curve = edge.AsCurve();
@@ -259,7 +265,7 @@ namespace RhinoInside.Revit.GH.Types
     #endregion
   }
 
-  public class Edge : GH_GeometricGoo<Autodesk.Revit.DB.Edge>, IGH_PreviewData
+  public class Edge : GeometryObject<Autodesk.Revit.DB.Edge>, IGH_PreviewData
   {
     public override string TypeName => "Revit Edge";
     public override string TypeDescription => "Represents a Revit Edge";
@@ -344,7 +350,7 @@ namespace RhinoInside.Revit.GH.Types
     #endregion
   }
 
-  public class Face : GH_GeometricGoo<Autodesk.Revit.DB.Face>, IGH_PreviewData
+  public class Face : GeometryObject<Autodesk.Revit.DB.Face>, IGH_PreviewData
   {
     public override string TypeName => "Revit Face";
     public override string TypeDescription => "Represents a Revit Face";
@@ -494,40 +500,33 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public interface IGH_PersistentElementParam
+  public abstract class ElementIdGeometryParam<X> : ElementIdParam<X>, IGH_PreviewObject
+    where X : class, Types.IGH_ElementId
   {
-    bool NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified);
+    protected ElementIdGeometryParam(string name, string nickname, string description, string category, string subcategory) :
+    base(name, nickname, description, category, subcategory) { }
+
+    #region IGH_PreviewObject
+    bool IGH_PreviewObject.Hidden { get; set; }
+    bool IGH_PreviewObject.IsPreviewCapable => !VolatileData.IsEmpty;
+    Rhino.Geometry.BoundingBox IGH_PreviewObject.ClippingBox => Preview_ComputeClippingBox();
+    void IGH_PreviewObject.DrawViewportMeshes(IGH_PreviewArgs args) => Preview_DrawMeshes(args);
+    void IGH_PreviewObject.DrawViewportWires(IGH_PreviewArgs args) => Preview_DrawWires(args);
+    #endregion
   }
 
-  public abstract class GH_PersistentGeometryParam<X> :
-  Grasshopper.Kernel.GH_PersistentGeometryParam<X>,
-  IGH_PreviewObject,
-  IGH_PersistentElementParam
-  where X : class, Types.IGH_GeometricGoo
+  public abstract class GeometricElementT<T> : ElementIdGeometryParam<T>, ISelectionFilter where T : Types.Element
   {
-    protected GH_PersistentGeometryParam(string name, string nickname, string description, string category, string subcategory) :
-    base(new GH_InstanceDescription(name, nickname, description, category, subcategory)) { }
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
+    protected GeometricElementT(string name, string nickname, string description, string category, string subcategory) :
+    base(name, nickname, description, category, subcategory)
+    { }
 
     #region UI methods
-    protected override void PrepareForPrompt()  { }
-    protected override void RecoverFromPrompt() { }
-
-    public override void AppendAdditionalMenuItems(System.Windows.Forms.ToolStripDropDown menu)
+    public override void AppendAdditionalElementMenuItems(ToolStripDropDown menu)
     {
-      base.AppendAdditionalMenuItems(menu);
-      Menu_AppendSeparator(menu);
-      Menu_AppendItem(menu, "Highlight elements", Menu_HighlightElements, !VolatileData.IsEmpty, false);
-      Menu_AppendItem(menu, "Delete elements", Menu_DeleteElements, DataType != GH_ParamData.remote && !VolatileData.IsEmpty, false);
+      base.AppendAdditionalElementMenuItems(menu);
+      Menu_AppendItem(menu, $"Highlight {GH_Convert.ToPlural(TypeName)}", Menu_HighlightElements, !VolatileData.IsEmpty, false);
     }
-
-    internal static IEnumerable<ElementId> ToElementIds(IGH_Structure data) =>
-      data.AllData(true).
-      OfType<Types.IGH_GeometricGoo>().
-      Where(x => x.IsReferencedGeometry).
-      Select(x => x.Reference).
-      Where(x => x != null).
-      Select(x => x.ElementId);
 
     void Menu_HighlightElements(object sender, EventArgs e)
     {
@@ -539,123 +538,86 @@ namespace RhinoInside.Revit.GH.Parameters
         Revit.ActiveUIDocument.ShowElements(elements);
       }
     }
+    #endregion
 
-    void Menu_DeleteElements(object sender, EventArgs e)
+    public abstract bool AllowElement(Autodesk.Revit.DB.Element elem);
+    public bool AllowReference(Reference reference, XYZ position)
     {
-      var elementIds = ToElementIds(VolatileData);
-      if (elementIds.Any())
-      {
-        using (new ModalForm.EditScope())
-        {
-          using
-          (
-            var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
-            {
-              MainIcon = TaskDialogIcons.IconWarning,
-              TitleAutoPrefix = false,
-              Title = "Delete Elements",
-              MainInstruction = "Are you sure you want to delete those elements?",
-              CommonButtons = TaskDialogCommonButtons.Yes | TaskDialogCommonButtons.No,
-              DefaultButton = TaskDialogResult.Yes,
-              AllowCancellation = true,
-#if REVIT_2020
-              EnableMarqueeProgressBar = true
-#endif
-            }
-          )
-          {
-            taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Show elements");
-            taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Manage element collection");
-
-            var result = TaskDialogResult.None;
-            bool highlight = false;
-            do
-            {
-              var elements = elementIds.ToArray();
-              taskDialog.ExpandedContent = $"{elements.Length} elements and its depending elements will be deleted.";
-
-              if(highlight)
-                Revit.ActiveUIDocument.Selection.SetElementIds(elements);
-
-              switch (result = taskDialog.Show())
-              {
-                case TaskDialogResult.CommandLink1:
-                  Revit.ActiveUIDocument.ShowElements(elements);
-                  highlight = true;
-                  break;
-
-                case TaskDialogResult.CommandLink2:
-                  using (var dataManager = new GH_PersistentDataEditor())
-                  {
-                    var elementCollection = new GH_Structure<IGH_Goo>();
-                    elementCollection.AppendRange(elementIds.Select(x => Types.Element.Make(x)));
-                    dataManager.SetData(elementCollection, new Types.Element());
-
-                    GH_WindowsFormUtil.CenterFormOnCursor(dataManager, true);
-                    if (dataManager.ShowDialog(ModalForm.OwnerWindow) == System.Windows.Forms.DialogResult.OK)
-                      elementIds = dataManager.GetData<IGH_Goo>().AllData(true).OfType<Types.Element>().Select(x => x.Value);
-                  }
-                  break;
-
-                case TaskDialogResult.Yes:
-                  using (var transaction = new Transaction(Revit.ActiveDBDocument, "Delete elements"))
-                  {
-                    transaction.Start();
-                    Revit.ActiveDBDocument.Delete(elements);
-                    transaction.Commit();
-                  }
-
-                  ExpireDownStreamObjects();
-                  OnPingDocument().NewSolution(false);
-                  break;
-              }
-            }
-            while (result == TaskDialogResult.CommandLink1 || result == TaskDialogResult.CommandLink2);
-          }
-        }
-      }
-    }
-#endregion
-
-#region IGH_PreviewObject
-    bool IGH_PreviewObject.Hidden { get; set; }
-    bool IGH_PreviewObject.IsPreviewCapable => !VolatileData.IsEmpty;
-    Rhino.Geometry.BoundingBox IGH_PreviewObject.ClippingBox => Preview_ComputeClippingBox();
-    void IGH_PreviewObject.DrawViewportMeshes(IGH_PreviewArgs args) => Preview_DrawMeshes(args);
-    void IGH_PreviewObject.DrawViewportWires(IGH_PreviewArgs args) => Preview_DrawWires(args);
-#endregion
-
-#region IGH_PersistentGeometryParam
-    bool IGH_PersistentElementParam.NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified)
-    {
-      foreach (var data in VolatileData.AllData(true).OfType<Types.IGH_GeometricGoo>())
-      {
-        if (!data.IsReferencedGeometry)
-          continue;
-
-        var reference = data.Reference;
-        if (reference == null)
-          continue;
-
-        if (modified.Contains(reference.ElementId))
-          return true;
-
-        if (deleted.Contains(reference.ElementId))
-          return true;
-      }
+      if (reference.ElementReferenceType == ElementReferenceType.REFERENCE_TYPE_NONE)
+        return AllowElement(Revit.ActiveUIDocument.Document.GetElement(reference));
 
       return false;
     }
-#endregion
+
+    protected override GH_GetterResult Prompt_Singular(ref T element)
+    {
+      element = null;
+
+      try
+      {
+        using (new ModalForm.EditScope())
+        {
+#if REVIT_2018
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Subelement, this);
+#else
+          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element, this);
+#endif
+          if (reference is object)
+            element = (T) Types.Element.Make(reference.ElementId);
+        }
+      }
+      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
+
+      return GH_GetterResult.success;
+    }
+
+    protected override GH_GetterResult Prompt_Plural(ref List<T> elements)
+    {
+      elements = null;
+
+      var selection = Revit.ActiveUIDocument.Selection.GetElementIds();
+      if (selection?.Count > 0)
+      {
+        var doc = Revit.ActiveUIDocument.Document;
+        elements = selection.
+          Where(x => AllowElement(doc.GetElement(x))).
+          Select((x) => (T) Types.Element.Make(x)).ToList();
+      }
+      else
+      {
+        try
+        {
+          using (new ModalForm.EditScope())
+          {
+            var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element, this);
+            if (references is object)
+              elements = references.Select((x) => (T) Types.Element.Make(x.ElementId)).ToList();
+          }
+        }
+        catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
+      }
+      return GH_GetterResult.success;
+    }
   }
 
-  public class Vertex : GH_PersistentGeometryParam<Types.Vertex>
+  public class GeometricElement : GeometricElementT<Types.Element>
+  {
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+    public override Guid ComponentGuid => new Guid("EF607C2A-2F44-43F4-9C39-369CE114B51F");
+
+    public GeometricElement() : base("Geometric Element", "Geometric Element", "Represents a Revit document geometric element.", "Params", "Revit") { }
+
+    public override bool AllowElement(Autodesk.Revit.DB.Element elem) => true;
+  }
+
+  public class Vertex : ElementIdGeometryParam<Types.Vertex>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("BC1B160A-DC04-4139-AB7D-1AECBDE7FF88");
     public Vertex() : base("Vertex", "Vertex", "Represents a Revit vertex.", "Params", "Revit") { }
 
-#region UI methods
+    #region UI methods
+    public override void AppendAdditionalElementMenuItems(ToolStripDropDown menu) { }
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Vertex> value)
     {
       try
@@ -705,16 +667,17 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.accept;
     }
-#endregion
+    #endregion
   }
 
-  public class Edge : GH_PersistentGeometryParam<Types.Edge>
+  public class Edge : ElementIdGeometryParam<Types.Edge>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("B79FD0FD-63AE-4776-A0A7-6392A3A58B0D");
     public Edge() : base("Edge", "Edge", "Represents a Revit edge.", "Params", "Revit") { }
 
-#region UI methods
+    #region UI methods
+    public override void AppendAdditionalElementMenuItems(ToolStripDropDown menu) { }
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Edge> value)
     {
       try
@@ -750,16 +713,17 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.success;
     }
-#endregion
+    #endregion
   }
 
-  public class Face : GH_PersistentGeometryParam<Types.Face>
+  public class Face : ElementIdGeometryParam<Types.Face>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("759700ED-BC79-4986-A6AB-84921A7C9293");
     public Face() : base("Face", "Face", "Represents a Revit face.", "Params", "Revit") { }
 
-#region UI methods
+    #region UI methods
+    public override void AppendAdditionalElementMenuItems(ToolStripDropDown menu) { }
     protected override GH_GetterResult Prompt_Plural(ref List<Types.Face> value)
     {
       try
@@ -795,6 +759,6 @@ namespace RhinoInside.Revit.GH.Parameters
 
       return GH_GetterResult.success;
     }
-#endregion
+    #endregion
   }
 }

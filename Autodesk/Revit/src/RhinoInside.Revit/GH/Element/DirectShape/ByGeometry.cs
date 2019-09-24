@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Special;
@@ -72,30 +73,48 @@ namespace RhinoInside.Revit.GH.Components
       Document doc,
       ref Autodesk.Revit.DB.Element element,
 
-      IList<IGH_GeometricGoo> geometry,
+      [Optional] string name,
       Optional<Autodesk.Revit.DB.Category> category,
-      Optional<string> name
+      IList<IGH_GeometricGoo> geometry,
+      [Optional] IList<Autodesk.Revit.DB.Material> material
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
 
       SolveOptionalCategory(ref category, doc, BuiltInCategory.OST_GenericModel, nameof(geometry));
 
-      if(name == Optional.Nothig && geometry.Count == 1 && (geometry[0]?.IsReferencedGeometry ?? false))
-        name = Rhino.RhinoDoc.ActiveDoc.Objects.FindId(geometry[0].ReferenceID)?.Name;
-
       if (element is DirectShape ds && ds.Category.Id == category.Value.Id) { }
       else ds = DirectShape.CreateElement(doc, category.Value.Id);
 
-      var shape = geometry.
-                  Select(x => AsGeometryBase(x)).
-                  Select(x => { ThrowIfNotValid(nameof(geometry), x); return x; }).
-                  SelectMany(x => x.ToHost(scaleFactor)).
-                  SelectMany(x => x.ToDirectShapeGeometry());
+      using (var ga = Convert.GraphicAttributes.Push())
+      {
+        var materialIndex = 0;
+        var materialCount = material?.Count ?? 0;
 
-      ds.SetShape(shape.ToList());
+        var shape = geometry.
+                    Select(x => AsGeometryBase(x)).
+                    Select(x => { ThrowIfNotValid(nameof(geometry), x); return x; }).
+                    SelectMany(x =>
+                    {
+                      if (materialCount > 0)
+                      {
+                        ga.MaterialId = (
+                                         materialIndex < materialCount ?
+                                         material[materialIndex++]?.Id :
+                                         material[materialCount - 1]?.Id
+                                        ) ??
+                                        ElementId.InvalidElementId;
+                      }
 
-      ds.Name = name.IsNullOrNothing ? string.Empty : name.Value;
+                      return x.ToHost(scaleFactor);
+                    }).
+                    SelectMany(x => x.ToDirectShapeGeometry()).
+                    ToArray();
+
+        ds.SetShape(shape);
+      }
+
+      ds.Name = name ?? string.Empty;
 
       ReplaceElement(ref element, ds);
     }
@@ -142,9 +161,10 @@ namespace RhinoInside.Revit.GH.Components
       Document doc,
       ref Autodesk.Revit.DB.ElementType elementType,
 
-      IList<IGH_GeometricGoo> geometry,
       string name,
-      Optional<Autodesk.Revit.DB.Category> category
+      Optional<Autodesk.Revit.DB.Category> category,
+      IList<IGH_GeometricGoo> geometry,
+      [Optional] IList<Autodesk.Revit.DB.Material> material
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
@@ -154,13 +174,34 @@ namespace RhinoInside.Revit.GH.Components
       if (elementType is DirectShapeType directShapeType && directShapeType.Category.Id == category.Value.Id) { }
       else directShapeType = DirectShapeType.Create(doc, name, category.Value.Id);
 
-      var shape = geometry.
-                  Select(x => AsGeometryBase(x)).
-                  Select(x => { ThrowIfNotValid(nameof(geometry), x); return x; }).
-                  SelectMany(x => x.ToHost(scaleFactor)).
-                  SelectMany(x => x.ToDirectShapeGeometry());
+      using (var ga = Convert.GraphicAttributes.Push())
+      {
+        var materialIndex = 0;
+        var materialCount = material?.Count ?? 0;
 
-      directShapeType.SetShape(shape.ToList());
+        var shape = geometry.
+                    Select(x => AsGeometryBase(x)).
+                    Select(x => { ThrowIfNotValid(nameof(geometry), x); return x; }).
+                    SelectMany(x =>
+                    {
+                      if (materialCount > 0)
+                      {
+                        ga.MaterialId = (
+                                         materialIndex < materialCount ?
+                                         material[materialIndex++]?.Id :
+                                         material[materialCount - 1]?.Id
+                                        ) ??
+                                        ElementId.InvalidElementId;
+                      }
+
+                      return x.ToHost(scaleFactor);
+                    }).
+                    SelectMany(x => x.ToDirectShapeGeometry()).
+                    ToArray();
+
+        directShapeType.SetShape(shape);
+      }
+
       directShapeType.Name = name;
 
       ReplaceElement(ref elementType, directShapeType);
@@ -218,7 +259,8 @@ namespace RhinoInside.Revit.GH.Components
       if (element is DirectShape ds && ds.Category.Id == type.Category.Id) { }
       else ds = DirectShape.CreateElement(doc, type.Category.Id);
 
-      ds.SetTypeId(type.Id);
+      if(ds.TypeId != type.Id)
+        ds.SetTypeId(type.Id);
 
       var library = DirectShapeLibrary.GetDirectShapeLibrary(doc);
       if (!library.ContainsType(type.UniqueId))

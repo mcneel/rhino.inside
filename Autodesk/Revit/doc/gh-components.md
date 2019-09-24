@@ -1,7 +1,7 @@
 # Grasshopper components for Revit
 The Rhino Inside® technology allows Rhino and Grasshopper to be embedded within Revit.
 
-It is important to have a basic understanding to the [Revit Data Hierarchy](https://www.modelical.com/en/gdocs/revit-data-hierarchy/) of Category -> Family -> Type -> Instance/Element to create and select elements.
+It is important to have a basic understanding to the [Revit Data Hierarchy](https://www.modelical.com/en/gdocs/revit-data-hierarchy/) of Category -> Family -> Type -> Instance/Element to create and select elements. There is a good guide at [Revit Families: A Step-By-Step Introduction](https://www.autodesk.com/autodesk-university/article/Revit-Families-Step-Step-Introduction-2018)
 
 This guide documents the Grasshopper components that support Revit interaction.
 

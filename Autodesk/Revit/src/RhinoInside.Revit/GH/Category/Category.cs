@@ -19,11 +19,12 @@ namespace RhinoInside.Revit.GH.Types
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Category);
     public static explicit operator Autodesk.Revit.DB.Category(Category self) => GetCategory(Revit.ActiveDBDocument, self.Value);
 
-    public static Category Make(Autodesk.Revit.DB.Category category) => Make(category?.Id);
+    public  static Category Make(Autodesk.Revit.DB.Category category) => Make(category?.Id);
+    private static new Category Make(ElementId id) => new Category(id);
 
     static Autodesk.Revit.DB.Category GetCategory(Document doc, ElementId id)
     {
-      if (doc == null)
+      if (doc is null || id is null)
         return null;
 
       try
@@ -45,69 +46,53 @@ namespace RhinoInside.Revit.GH.Types
 
       return null;
     }
-
     static bool TryGetBuiltInCategory(int id, out BuiltInCategory builtInCategory)
     {
-      if (-2100000 < id && id < -2000000)
+      if (-3000000 < id && id < -2000000 && Enum.IsDefined(typeof(BuiltInCategory), id))
       {
-        if (Enum.IsDefined(typeof(BuiltInCategory), id))
-        {
-          builtInCategory = (BuiltInCategory) id;
-          return true;
-        }
+        builtInCategory = (BuiltInCategory) id;
+        return true;
       }
 
       builtInCategory = BuiltInCategory.INVALID;
       return false;
     }
 
-    static bool IsCategoryId(int id, Document doc)
+    #region IGH_ElementId
+    public override bool LoadElement(Document doc)
     {
-      if (-2100000 < id && id < -2000000)
-        return Enum.IsDefined(typeof(BuiltInCategory), id);
+      if (TryParseUniqueID(UniqueID, out var _, out var index))
+      {
+        Value = new ElementId(index);
+        if (Value.IsCategoryId(Revit.ActiveDBDocument))
+          return true;
+      }
 
-      try { return Autodesk.Revit.DB.Category.GetCategory(doc, new ElementId(id)) != null;  }
-      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
+      Value = ElementId.InvalidElementId;
+      return false;
     }
-
-    static bool IsCategoryId(ElementId id, Document doc)
-    {
-      if (-2100000 < id.IntegerValue && id.IntegerValue < -2000000)
-        return Enum.IsDefined(typeof(BuiltInCategory), id);
-
-      try { return Autodesk.Revit.DB.Category.GetCategory(doc, id) != null; }
-      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
-    }
-
-    static public new Category Make(ElementId id)
-    {
-      return IsCategoryId(id, Revit.ActiveDBDocument) ? new Category(id) : null;
-    }
+    #endregion
 
     public Category() : base() { }
-    protected Category(Autodesk.Revit.DB.ElementId categoryId) : base(categoryId, Enum.GetName(typeof(BuiltInCategory), categoryId.IntegerValue) ?? string.Empty) { }
+    protected Category(ElementId categoryId) : base(categoryId) { }
 
     public override sealed bool CastFrom(object source)
     {
-      Autodesk.Revit.DB.ElementId categoryId = null;
+      var categoryId = ElementId.InvalidElementId;
       if (source is IGH_Goo goo)
         source = goo.ScriptVariable();
 
       switch (source)
       {
         case Autodesk.Revit.DB.Category c:   categoryId = c.Id; break;
-        case Autodesk.Revit.DB.ElementId id: categoryId = IsCategoryId(id, Revit.ActiveDBDocument) ? id : ElementId.InvalidElementId; break;
-        case int integer:                    categoryId = IsCategoryId(integer, Revit.ActiveDBDocument) ? new ElementId(integer) : ElementId.InvalidElementId; break;
-        case string uniqueId:
-          try { categoryId = new ElementId((BuiltInCategory) Enum.Parse(typeof(BuiltInCategory), uniqueId, false)); }
-          catch (ArgumentException) { }
-          break;
+        case Autodesk.Revit.DB.ElementId id: categoryId = id; break;
+        case int integer:                    categoryId = new ElementId(integer); break;
+        case string uniqueId:                categoryId = TryParseUniqueID(uniqueId, out var _, out var index) ? new ElementId(index) : ElementId.InvalidElementId; break;
       }
 
-      if (categoryId != ElementId.InvalidElementId)
+      if (categoryId.IsCategoryId(Revit.ActiveDBDocument))
       {
-        Value = categoryId;
-        UniqueID = Enum.GetName(typeof(BuiltInCategory), Value.IntegerValue) ?? string.Empty;
+        SetValue(Revit.ActiveDBDocument, categoryId);
         return true;
       }
 
@@ -137,7 +122,7 @@ namespace RhinoInside.Revit.GH.Types
       public string MutateString(string str) => str.Trim();
       public string FormatInstance()
       {
-        int value = proxyOwner.Value.IntegerValue;
+        int value = proxyOwner.Value?.IntegerValue ?? -1;
         if (Enum.IsDefined(typeof(Autodesk.Revit.DB.BuiltInCategory), value))
           return ((BuiltInCategory)value).ToString();
 
@@ -195,10 +180,56 @@ namespace RhinoInside.Revit.GH.Types
       if (IsValid)
       {
         var category = (Autodesk.Revit.DB.Category) this;
-        if (category != null)
-          return "Revit " + category.GetType().Name + " \"" + category.Name + "\"";
-        else if(Enum.IsDefined(typeof(BuiltInCategory), Value.IntegerValue))
-          return "Revit BuiltIn Category \"" + ((BuiltInCategory) Value.IntegerValue).ToString() + "\"";
+        if (category is object)
+          return category.Parent is null ? category.Name : $"{category.Parent.Name} : {category.Name}";
+#if REVIT_2020
+        else if (Enum.IsDefined(typeof(BuiltInCategory), Value.IntegerValue))
+          return LabelUtils.GetLabelFor((BuiltInCategory) Value.IntegerValue);
+#endif
+        else
+          return "Revit Category \"" + ((BuiltInCategory) Value.IntegerValue).ToString() + "\"";
+      }
+
+      return base.ToString();
+    }
+  }
+
+  public class GraphicsStyle : Element
+  {
+    public override string TypeName => "Revit Graphics Style";
+    public override string TypeDescription => "Represents a Revit graphics style";
+    protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.GraphicsStyle);
+    public static explicit operator Autodesk.Revit.DB.GraphicsStyle(GraphicsStyle self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.GraphicsStyle;
+
+    public GraphicsStyle() { }
+    public GraphicsStyle(Autodesk.Revit.DB.GraphicsStyle graphicsStyle) : base(graphicsStyle) { }
+
+    public override string ToString()
+    {
+      if (IsValid)
+      {
+        var graphicsStyle = (Autodesk.Revit.DB.GraphicsStyle) this;
+        if (graphicsStyle is object)
+        {
+          var ToolTip = string.Empty;
+          if (graphicsStyle.GraphicsStyleCategory is Autodesk.Revit.DB.Category graphicsStyleCategory)
+          {
+            if(graphicsStyleCategory.Parent is Autodesk.Revit.DB.Category parentCategory)
+              ToolTip += $"{parentCategory.Name} : ";
+
+            ToolTip += $"{graphicsStyleCategory.Name} : ";
+          }
+
+          switch(graphicsStyle.GraphicsStyleType)
+          {
+            case GraphicsStyleType.Projection: ToolTip += "[projection]"; break;
+            case GraphicsStyleType.Cut: ToolTip += "[cut]"; break;
+          }
+
+          return ToolTip;
+        }
+
+        return $"{TypeName} : id {Value.IntegerValue}";
       }
 
       return base.ToString();
@@ -208,16 +239,20 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Category : GH_PersistentParam<Types.Category>
+  public class Category : ElementIdNonGeometryParam<Types.Category>
   {
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("6722C7A5-EFD3-4119-A7FD-6C8BE892FD04");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ((System.Drawing.Bitmap) Properties.Resources.ResourceManager.GetObject(GetType().Name));
 
     public Category() : base("Category", "Category", "Represents a Revit document category.", "Params", "Revit") { }
+  }
 
-    protected override GH_GetterResult Prompt_Plural(ref List<Types.Category> values) => GH_GetterResult.cancel;
-    protected override GH_GetterResult Prompt_Singular(ref Types.Category value) => GH_GetterResult.cancel;
+  public class GraphicsStyle : ElementIdNonGeometryParam<Types.GraphicsStyle>
+  {
+    public override GH_Exposure Exposure => GH_Exposure.tertiary;
+    public override Guid ComponentGuid => new Guid("833E6207-BA60-4C6B-AB8B-96FDA0F91822");
+
+    public GraphicsStyle() : base("Graphics Style", "Graphics Style", "Represents a Revit graphics style.", "Params", "Revit") { }
   }
 }
 
@@ -246,7 +281,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class CategoryDecompose : GH_Component
+  public class CategoryDecompose : Component
   {
     public override Guid ComponentGuid => new Guid("D794361E-DE8C-4D0A-BC77-52293F27D3AA");
 
@@ -284,7 +319,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class CategorySubCategories : GH_Component
+  public class CategorySubCategories : Component
   {
     public override Guid ComponentGuid => new Guid("4915AB87-0BD5-4541-AC43-3FBC450DD883");
 
@@ -310,6 +345,37 @@ namespace RhinoInside.Revit.GH.Components
 
       using (var subCategories = category.SubCategories)
         DA.SetDataList("SubCategories", subCategories.Cast<Autodesk.Revit.DB.Category>());
+    }
+  }
+
+  public class CategoryGraphicsStyle : Component
+  {
+    public override Guid ComponentGuid => new Guid("46139967-74FC-4820-BA20-B1DC7F30ABDE");
+    protected override string IconTag => "G";
+
+    public CategoryGraphicsStyle()
+    : base("Category.GraphicsStyle", "Category.GraphicsStyle", string.Empty, "Revit", "Category")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Category(), "Category", "C", "Category to query", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.GraphicsStyle(), "Projection", "P", string.Empty, GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.GraphicsStyle(), "Cut", "C", string.Empty, GH_ParamAccess.list);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Category category = null;
+      if (!DA.GetData("Category", ref category))
+        return;
+
+      DA.SetData("Projection", category?.GetGraphicsStyle(GraphicsStyleType.Projection));
+      DA.SetData("Cut", category?.GetGraphicsStyle(GraphicsStyleType.Cut));
     }
   }
 }

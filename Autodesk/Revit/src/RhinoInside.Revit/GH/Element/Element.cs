@@ -1,52 +1,60 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows.Forms;
-using Control = System.Windows.Forms.Control;
-
-using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
-using Grasshopper.Kernel.Attributes;
-using Grasshopper.GUI.Canvas;
-using Grasshopper.GUI;
-
 using Autodesk.Revit.DB;
+using Grasshopper.GUI;
+using Grasshopper.GUI.Canvas;
+using Grasshopper.Kernel;
+using Grasshopper.Kernel.Attributes;
+using Grasshopper.Kernel.Types;
+using Control = System.Windows.Forms.Control;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class Element : ID, IGH_GeometricGoo, IGH_PreviewData, IGH_PreviewMeshData
+  public class Element :
+    ID,
+    IGH_GeometricGoo,
+    IGH_PreviewData,
+    IGH_PreviewMeshData
   {
     public override string TypeName => "Revit Element";
     public override string TypeDescription => "Represents a Revit element";
     override public object ScriptVariable() => (Autodesk.Revit.DB.Element) this;
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Element);
-    public static explicit operator Autodesk.Revit.DB.Element(Element self) => Revit.ActiveDBDocument?.GetElement(self);
+    public static explicit operator Autodesk.Revit.DB.Element(Element self) => self.IsValid ? Revit.ActiveDBDocument?.GetElement(self) : null;
 
-    static public Element Make(Autodesk.Revit.DB.Element element)
+    public static Element Make(Autodesk.Revit.DB.Element element)
     {
-      if (element == null)
+      if (element is null)
         return null;
 
       if (element is Autodesk.Revit.DB.ParameterElement parameterElement)
         return new ParameterKey(parameterElement);
 
-      if (element is Autodesk.Revit.DB.ElementType elementType)
-        return new ElementType(elementType);
-
       if (element is Autodesk.Revit.DB.SketchPlane sketchPlane)
         return new SketchPlane(sketchPlane);
+
+      if (element is Autodesk.Revit.DB.HostObject host)
+        return new HostObject(host);
+
+      if (element is Autodesk.Revit.DB.Level level)
+        return new Level(level);
+
+      if (element is Autodesk.Revit.DB.ElementType elementType)
+        return new ElementType(elementType);
 
       return new Element(element);
     }
 
-    static public new Element Make(ElementId Id)    => Make(Revit.ActiveDBDocument.GetElement(Id));
-    static public     Element Make(string uniqueId) => Make(Revit.ActiveDBDocument.GetElement(uniqueId));
+    public static new Element Make(ElementId Id)    => Make(Revit.ActiveDBDocument.GetElement(Id));
+    public static     Element Make(string uniqueId) => Make(Revit.ActiveDBDocument.GetElement(uniqueId));
 
     public Element() : base() { }
     protected Element(Autodesk.Revit.DB.Element element)     : base(element.Id, element.UniqueId) { }
-    protected Element(Autodesk.Revit.DB.ElementId elementId) : base(elementId, Revit.ActiveDBDocument?.GetElement(elementId)?.UniqueId) { }
+    protected Element(Autodesk.Revit.DB.ElementId elementId) : base(elementId) { }
 
     public override bool CastFrom(object source)
     {
@@ -64,8 +72,7 @@ namespace RhinoInside.Revit.GH.Types
 
       if (ScriptVariableType.IsInstanceOfType(element))
       {
-        Value = element.Id;
-        UniqueID = element.UniqueId;
+        SetValue(element);
         return true;
       }
 
@@ -74,105 +81,102 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
+      if (base.CastTo<Q>(ref target))
+        return true;
+
       var element = (Autodesk.Revit.DB.Element) this;
-      if (element == null)
-        return false;
-
-      if (typeof(Q).IsSubclassOf(ScriptVariableType))
+      if (!(element is null))
       {
-        target = (Q) (object) element;
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(ScriptVariableType))
-      {
-        target = (Q) (object) element;
-        return true;
-      }
-
-      if (element.Category?.HasMaterialQuantities ?? false)
-      {
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
+        if (typeof(Q).IsAssignableFrom(element.GetType()))
         {
-          Options options = null;
-          using (var geometry = element.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
+          target = (Q) (object) element;
+          return true;
+        }
+
+        if (element.Category?.HasMaterialQuantities ?? false)
+        {
+          if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
           {
-            if (geometry != null)
+            Options options = null;
+            using (var geometry = element.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
             {
-              var mesh = new Rhino.Geometry.Mesh();
-              mesh.Append(geometry.GetPreviewMeshes().Where(x => x != null));
-              mesh.Normals.ComputeNormals();
-              if (mesh.Faces.Count > 0)
+              if (geometry is object)
               {
-                target = (Q) (object) new GH_Mesh(mesh);
-                return true;
+                var mesh = new Rhino.Geometry.Mesh();
+                mesh.Append(geometry.GetPreviewMeshes().Where(x => x is object));
+                mesh.Normals.ComputeNormals();
+                if (mesh.Faces.Count > 0)
+                {
+                  target = (Q) (object) new GH_Mesh(mesh);
+                  return true;
+                }
               }
             }
           }
         }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
+        {
+          var axis = Axis;
+          if (axis is null)
+            return false;
+
+          target = (Q) (object) new GH_Curve(axis);
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Plane)))
+        {
+          var plane = Plane;
+          if (!plane.IsValid || !plane.Origin.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Plane(plane);
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
+        {
+          var location = Location;
+          if (!location.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Point(location);
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Vector)))
+        {
+          var normal = ZAxis;
+          if (!normal.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Vector(normal);
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Transform)))
+        {
+          var plane = Plane;
+          if (!plane.IsValid || !plane.Origin.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, plane));
+          return true;
+        }
+
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Box)))
+        {
+          var box = Box;
+          if (!box.IsValid)
+            return false;
+
+          target = (Q) (object) new GH_Box(box);
+          return true;
+        }
       }
 
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
-      {
-        var axis = Axis;
-        if (axis == null)
-          return false;
-
-        target = (Q) (object) new GH_Curve(axis);
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Plane)))
-      {
-        var plane = Plane;
-        if (!plane.IsValid || !plane.Origin.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Plane(plane);
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
-      {
-        var location = Location;
-        if (!location.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Point(location);
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Vector)))
-      {
-        var normal = ZAxis;
-        if (!normal.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Vector(normal);
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Transform)))
-      {
-        var plane = Plane;
-        if (!plane.IsValid || !plane.Origin.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, plane));
-        return true;
-      }
-
-      if (typeof(Q).IsAssignableFrom(typeof(GH_Box)))
-      {
-        var box = Box;
-        if (!box.IsValid)
-          return false;
-
-        target = (Q) (object) new GH_Box(box);
-        return true;
-      }
-
-      return base.CastTo<Q>(ref target);
+      return false;
     }
 
     [TypeConverter(typeof(Proxy.ObjectConverter))]
@@ -182,7 +186,7 @@ namespace RhinoInside.Revit.GH.Types
 
       public void Construct() { }
       public string MutateString(string str) => str.Trim();
-      public string FormatInstance() => element != null ? string.Format("{0}:{1}", proxyOwner.Value.IntegerValue, element.Name) : string.Empty;
+      public string FormatInstance() => element is object ? string.Format("{0}:{1}", proxyOwner.Value.IntegerValue, element.Name) : string.Empty;
       public bool FromString(string str)
       {
         int index = str.IndexOf(':');
@@ -204,17 +208,17 @@ namespace RhinoInside.Revit.GH.Types
       bool IGH_GooProxy.IsParsable => true;
       string IGH_GooProxy.UserString { get; set; }
 
-      Autodesk.Revit.DB.Element element => proxyOwner.Value != null ? Revit.ActiveDBDocument?.GetElement(proxyOwner.Value) : null;
+      Autodesk.Revit.DB.Element element => proxyOwner.Value is null ? null : Revit.ActiveDBDocument?.GetElement(proxyOwner.Value);
 
-      public bool Valid => element != null;
+      public bool Valid => proxyOwner.IsValid;
       [System.ComponentModel.Description("The element identifier in this session.")]
-      public int Id => proxyOwner.Value.IntegerValue;
+      public int Id => proxyOwner.Value?.IntegerValue ?? -1;
+      [System.ComponentModel.Description("A stable unique identifier for an element within the document.")]
+      public string UniqueID => proxyOwner.UniqueID;
       [System.ComponentModel.Description("A human readable name for the Element.")]
       public string Name => element?.Name;
       [System.ComponentModel.Description(".NET Object Type.")]
       public string Object => element?.GetType().FullName;
-      [System.ComponentModel.Description("A stable unique identifier for an element within the document.")]
-      public string UniqueID => element?.UniqueId;
 
       class ObjectConverter : ExpandableObjectConverter
       {
@@ -224,7 +228,7 @@ namespace RhinoInside.Revit.GH.Types
           if (value is Proxy proxy)
           {
             var element = proxy.element;
-            if (element != null)
+            if (element is object)
             {
               var builtInParameters = element.GetParameters(Extension.ParameterSource.Any).
                 Select(p => new ParameterPropertyDescriptor(p)).
@@ -279,7 +283,7 @@ namespace RhinoInside.Revit.GH.Types
         public override bool CanResetValue(object component) { return false; }
         public override void SetValue(object component, object value) { }
         public override Type PropertyType   => typeof(string);
-        public override object GetValue(object component) => parameter.Element != null ? (parameter.StorageType == StorageType.String ? parameter.AsString() : parameter.AsValueString()) : null;
+        public override object GetValue(object component) => parameter.Element is object ? (parameter.StorageType == StorageType.String ? parameter.AsString() : parameter.AsValueString()) : null;
       }
     }
 
@@ -290,10 +294,10 @@ namespace RhinoInside.Revit.GH.Types
       if (IsValid)
       {
         var element = (Autodesk.Revit.DB.Element) this;
-        if (element != null)
+        if (element is object)
         {
           var ToolTip = string.Empty;
-          if(element.Category != null)
+          if(element.Category is object)
             ToolTip += $"{element.Category.Name} : ";
 
           if (element.Document.GetElement(element.GetTypeId()) is Autodesk.Revit.DB.ElementType elementType)
@@ -325,7 +329,7 @@ namespace RhinoInside.Revit.GH.Types
       Options options = null;
       using (var geometry = element?.GetGeometry(DetailLevel == ViewDetailLevel.Undefined ? ViewDetailLevel.Medium : DetailLevel, out options)) using (options)
       {
-        if (geometry == null)
+        if (geometry is null)
         {
           materials = null;
           meshes = null;
@@ -340,9 +344,9 @@ namespace RhinoInside.Revit.GH.Types
           {
             ga.MeshingParameters = meshingParameters;
 
-            meshes = geometry.GetPreviewMeshes().Where(x => x != null).ToArray();
-            wires = geometry.GetPreviewWires().Where(x => x != null).ToArray();
-            materials = geometry.GetPreviewMaterials(elementMaterial).Where(x => x != null).ToArray();
+            meshes = geometry.GetPreviewMeshes().Where(x => x is object).ToArray();
+            wires = geometry.GetPreviewWires().Where(x => x is object).ToArray();
+            materials = geometry.GetPreviewMaterials(elementMaterial).Where(x => x is object).ToArray();
 
             foreach (var mesh in meshes)
               mesh.Normals.ComputeNormals();
@@ -364,10 +368,10 @@ namespace RhinoInside.Revit.GH.Types
 
       void Build(Document document)
       {
-        if ((meshes == null && wires == null && materials == null))
+        if ((meshes is null && wires is null && materials is null))
         {
           var element = document.GetElement(elementId);
-          if (element == null)
+          if (element is null)
             return;
 
           BuildPreview(element, MeshingParameters, ViewDetailLevel.Undefined, out materials, out meshes, out wires);
@@ -435,7 +439,7 @@ namespace RhinoInside.Revit.GH.Types
         if (!element.IsValid)
           return null;
 
-        if (previewsQueue == null)
+        if (previewsQueue is null)
         {
           previewsQueue = new List<Preview>();
           Revit.EnqueueReadAction((doc, cancel) => BuildPreviews(doc, cancel));
@@ -472,15 +476,15 @@ namespace RhinoInside.Revit.GH.Types
 
     public Rhino.Geometry.Mesh[] TryGetPreviewMeshes()
     {
-      if (geometryPreview != null)
+      if (geometryPreview is object)
       {
         var newMeshingParameters = Convert.GraphicAttributes.Peek.MeshingParameters;
-        if (newMeshingParameters != null)
+        if (newMeshingParameters is object)
         {
           var currentMeshingParameters = geometryPreview.MeshingParameters;
           if (currentMeshingParameters != newMeshingParameters)
           {
-            if (currentMeshingParameters == null || currentMeshingParameters.RelativeTolerance != newMeshingParameters.RelativeTolerance)
+            if (currentMeshingParameters is null || currentMeshingParameters.RelativeTolerance != newMeshingParameters.RelativeTolerance)
               GeometryPreview = null;
           }
         }
@@ -496,28 +500,22 @@ namespace RhinoInside.Revit.GH.Types
     #endregion
 
     #region IGH_GeometricGoo
-    public Reference Reference { get { var element = (Autodesk.Revit.DB.Element) this; return element != null ? new Reference(element) : null; } }
-    public bool LoadGeometry() => LoadGeometry(Revit.ActiveDBDocument);
-    public bool LoadGeometry(Rhino.RhinoDoc doc) => LoadGeometry(Revit.ActiveDBDocument);
-    public bool LoadGeometry(Document doc)
-    {
-      Value = ElementId.InvalidElementId;
-
-      try { Value = Revit.ActiveDBDocument?.GetElement(UniqueID)?.Id ?? ElementId.InvalidElementId; }
-      catch (ArgumentException) { }
-
-      return IsValid;
-    }
-    public Grasshopper.Kernel.Types.IGH_GeometricGoo DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
-    public void ClearCaches()
-    {
-      if (IsReferencedGeometry)
-        Value = null;
-    }
     public Rhino.Geometry.BoundingBox Boundingbox => ClippingBox;
+    Guid IGH_GeometricGoo.ReferenceID
+    {
+      get => Guid.Empty;
+      set { if (value != Guid.Empty) throw new InvalidOperationException(); }
+    }
+    bool IGH_GeometricGoo.IsReferencedGeometry => IsReferencedElement;
+    bool IGH_GeometricGoo.IsGeometryLoaded => IsElementLoaded;
+
+    void IGH_GeometricGoo.ClearCaches() => UnloadElement();
+    IGH_GeometricGoo IGH_GeometricGoo.DuplicateGeometry() => (IGH_GeometricGoo) MemberwiseClone();
     public Rhino.Geometry.BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform) => ClippingBox;
-    Grasshopper.Kernel.Types.IGH_GeometricGoo Grasshopper.Kernel.Types.IGH_GeometricGoo.Transform(Rhino.Geometry.Transform xform) => null;
-    Grasshopper.Kernel.Types.IGH_GeometricGoo Grasshopper.Kernel.Types.IGH_GeometricGoo.Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
+    bool IGH_GeometricGoo.LoadGeometry(                  ) => IsElementLoaded || LoadElement(Revit.ActiveDBDocument);
+    bool IGH_GeometricGoo.LoadGeometry(Rhino.RhinoDoc doc) => IsElementLoaded || LoadElement(Revit.ActiveDBDocument);
+    IGH_GeometricGoo IGH_GeometricGoo.Transform(Rhino.Geometry.Transform xform) => null;
+    IGH_GeometricGoo IGH_GeometricGoo.Morph(Rhino.Geometry.SpaceMorph xmorph) => null;
     #endregion
 
     #region IGH_PreviewData
@@ -529,7 +527,7 @@ namespace RhinoInside.Revit.GH.Types
         if (!clippingBox.IsValid)
         {
           var element = (Autodesk.Revit.DB.Element) this;
-          if (element != null)
+          if (element is object)
             clippingBox = element.get_BoundingBox(null).ToRhino().Scale(Revit.ModelUnits);
         }
 
@@ -547,12 +545,12 @@ namespace RhinoInside.Revit.GH.Types
         ga.MeshingParameters = args.MeshingParameters;
 
         var meshes = TryGetPreviewMeshes();
-        if (meshes == null)
+        if (meshes is null)
           return;
 
         var material = args.Material;
         var element = Revit.ActiveDBDocument?.GetElement(this);
-        if (element == null)
+        if (element is null)
         {
           const int factor = 3;
 
@@ -610,7 +608,7 @@ namespace RhinoInside.Revit.GH.Types
 
       var color = args.Color;
       var element = Revit.ActiveDBDocument?.GetElement(this);
-      if (element == null)
+      if (element is null)
       {
         // Erased element
         color = System.Drawing.Color.FromArgb(args.Color.R / factor, args.Color.G / factor, args.Color.B / factor);
@@ -623,7 +621,7 @@ namespace RhinoInside.Revit.GH.Types
       }
 
       var wires = TryGetPreviewWires();
-      if (wires != null && wires.Length > 0)
+      if (wires is object && wires.Length > 0)
       {
         foreach (var wire in wires)
           args.Pipeline.DrawCurve(wire, color, thickness);
@@ -631,7 +629,7 @@ namespace RhinoInside.Revit.GH.Types
       else
       {
         var meshes = TryGetPreviewMeshes();
-        if (meshes != null)
+        if (meshes is object)
         {
           // Grasshopper does not show mesh wires.
           //foreach (var mesh in meshes)
@@ -667,7 +665,7 @@ namespace RhinoInside.Revit.GH.Types
         var b = Rhino.Geometry.Box.Empty;
 
         var element = (Autodesk.Revit.DB.Element) this;
-        if (element != null)
+        if (element is object)
         {
           var bbox = element.get_BoundingBox(null);
           b = new Rhino.Geometry.Box(new Rhino.Geometry.BoundingBox(bbox.Min.ToRhino(), bbox.Max.ToRhino()));
@@ -686,7 +684,7 @@ namespace RhinoInside.Revit.GH.Types
         var p = new Rhino.Geometry.Point3d(double.NaN, double.NaN, double.NaN);
 
         var element = (Autodesk.Revit.DB.Element) this;
-        if (element != null)
+        if (element is object)
         {
           if (element is Autodesk.Revit.DB.Instance instance)
             p = instance.GetTransform().Origin.ToRhino();
@@ -696,8 +694,13 @@ namespace RhinoInside.Revit.GH.Types
             case Autodesk.Revit.DB.LocationCurve curveLocation: p = curveLocation.Curve.GetEndPoint(0).ToRhino(); break;
             default:
                 var bbox = element.get_BoundingBox(null);
-                if(bbox != null)
+                if(bbox is object)
                   p = bbox.Min.ToRhino(); break;
+          }
+
+          if (!p.IsValid && element is Autodesk.Revit.DB.Level level)
+          {
+            p = new Rhino.Geometry.Point3d(0.0, 0.0, level.Elevation);
           }
 
           if (p.IsValid)
@@ -721,7 +724,7 @@ namespace RhinoInside.Revit.GH.Types
         var x = Rhino.Geometry.Vector3d.Zero;
 
         var element = (Autodesk.Revit.DB.Element) this;
-        if (element != null)
+        if (element is object)
         {
           if (element is Autodesk.Revit.DB.Instance instance)
             x = (Rhino.Geometry.Vector3d) instance.GetTransform().BasisX.ToRhino();
@@ -751,7 +754,7 @@ namespace RhinoInside.Revit.GH.Types
         var y = Rhino.Geometry.Vector3d.Zero;
 
         var element = (Autodesk.Revit.DB.Element) this;
-        if (element != null)
+        if (element is object)
         {
           if (element is Autodesk.Revit.DB.Instance instance)
             y = (Rhino.Geometry.Vector3d) instance.GetTransform().BasisY.ToRhino();
@@ -790,7 +793,7 @@ namespace RhinoInside.Revit.GH.Types
         var z = Rhino.Geometry.Vector3d.Zero;
 
         var element = (Autodesk.Revit.DB.Element) this;
-        if (element != null)
+        if (element is object)
         {
           if (element is Autodesk.Revit.DB.Instance instance)
             z = (Rhino.Geometry.Vector3d) instance.GetTransform().BasisZ.ToRhino();
@@ -827,7 +830,12 @@ namespace RhinoInside.Revit.GH.Types
         if(element?.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
           c = curveLocation.Curve.ToRhino();
 
-        if (c != null)
+        if (c is null && element is Grid grid)
+        {
+          c = grid.Curve.ToRhino();
+        }
+
+        if (c is object)
         {
           var scaleFactor = Revit.ModelUnits;
           if (scaleFactor != 1.0)
@@ -843,65 +851,18 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Element : GH_PersistentGeometryParam<Types.Element>
+  public class Element : ElementIdNonGeometryParam<Types.Element>
   {
-    public override GH_Exposure Exposure => GH_Exposure.primary;
+    public override GH_Exposure Exposure => GH_Exposure.tertiary | GH_Exposure.obscure;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
 
     public Element() : base("Element", "Element", "Represents a Revit document element.", "Params", "Revit") { }
-
-    protected override GH_GetterResult Prompt_Singular(ref Types.Element element)
-    {
-      element = null;
-
-      try
-      {
-        using (new ModalForm.EditScope())
-        {
-#if REVIT_2018
-          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Subelement);
-#else
-          var reference = Revit.ActiveUIDocument.Selection.PickObject(Autodesk.Revit.UI.Selection.ObjectType.Element);
-#endif
-          if (reference != null)
-            element = Types.Element.Make(reference.ElementId);
-        }
-      }
-      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
-
-      return GH_GetterResult.success;
-    }
-
-    protected override GH_GetterResult Prompt_Plural(ref List<Types.Element> elements)
-    {
-      elements = null;
-
-      var selection = Revit.ActiveUIDocument.Selection.GetElementIds();
-      if (selection?.Count > 0)
-      {
-        elements = selection.Select((x) => Types.Element.Make(x)).ToList();
-      }
-      else
-      {
-        try
-        {
-          using (new ModalForm.EditScope())
-          {
-            var references = Revit.ActiveUIDocument.Selection.PickObjects(Autodesk.Revit.UI.Selection.ObjectType.Element);
-            if (references != null)
-              elements = references.Select((x) => Types.Element.Make(x.ElementId)).ToList();
-          }
-        }
-        catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
-      }
-      return GH_GetterResult.success;
-    }
   }
 }
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public abstract class ElementGetter : GH_Component
+  public abstract class ElementGetter : Component
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     protected static readonly Type ObjectType = typeof(Types.Element);
@@ -917,7 +878,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementIdentity : GH_Component
+  public class ElementIdentity : Component
   {
     public override Guid ComponentGuid => new Guid("D3917D58-7183-4B3F-9D22-03F0FE93B956");
 
@@ -944,8 +905,8 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Element", ref element))
         return;
 
-      DA.SetData("Category", element?.Category);
-      DA.SetData("Type", Revit.ActiveDBDocument.GetElement(element?.GetTypeId()));
+      DA.SetData("Category", element is Family family ? family.FamilyCategory : element?.Category);
+      DA.SetData("Type", element?.GetTypeId());
       DA.SetData("Name", element?.Name);
       DA.SetData("UniqueID", element?.UniqueId);
     }
@@ -975,12 +936,20 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       var elementsToDelete = Parameters.Element.ToElementIds(elementsTree).ToArray();
-      var deletedElements = Revit.ActiveDBDocument.Delete(elementsToDelete);
 
-      if (deletedElements.Count == 0)
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "No elements were deleted");
-      else
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{elementsToDelete.Length} elements and {deletedElements.Count - elementsToDelete.Length} dependant elements were deleted.");
+      try
+      {
+        var deletedElements = Revit.ActiveDBDocument.Delete(elementsToDelete);
+
+        if (deletedElements.Count == 0)
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, "No elements were deleted");
+        else
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"{elementsToDelete.Length} elements and {deletedElements.Count - elementsToDelete.Length} dependant elements were deleted.");
+      }
+      catch (Autodesk.Revit.Exceptions.ArgumentException)
+      {
+        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, "One or more of the elements cannot be deleted.");
+      }
     }
   }
 
@@ -1005,7 +974,7 @@ namespace RhinoInside.Revit.GH.Components
       Options options = null;
       using (var geometry = element?.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
       {
-        var list = geometry?.ToRhino().Where(x => x != null).ToList();
+        var list = geometry?.ToRhino().Where(x => x is object).ToList();
 
         switch (element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING)?.AsInteger())
         {
@@ -1104,7 +1073,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.ParameterKey(), "Parameters", "P", "Element parameters", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.ParameterKey(), "Parameters", "K", "Element parameters", GH_ParamAccess.list);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -1123,7 +1092,7 @@ namespace RhinoInside.Revit.GH.Components
       bool noFilterReadOnly = (!DA.GetData("ReadOnly", ref readOnly) && Params.Input[3].Sources.Count == 0);
 
       List<ElementId> paramIds = null;
-      if (element != null)
+      if (element is object)
       {
         paramIds = new List<ElementId>(element.Parameters.Size);
         foreach (var group in element.GetParameters(Extension.ParameterSource.Any).GroupBy((x) => x.Definition.ParameterGroup).OrderBy((x) => x.Key))
@@ -1148,7 +1117,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementDecompose : GH_Component, IGH_VariableParameterComponent
+  public class ElementDecompose : Component, IGH_VariableParameterComponent
   {
     public override Guid ComponentGuid => new Guid("FAD33C4B-A7C3-479B-B309-8F5363B25599");
     public ElementDecompose() : base("Element.Decompose", "Decompose", "Decomposes an Element into its parameters", "Revit", "Element") { }
@@ -1200,7 +1169,7 @@ namespace RhinoInside.Revit.GH.Components
 
     void AddOutputParameter(IGH_Param param)
     {
-      if (param.Attributes == null)
+      if (param.Attributes is null)
         param.Attributes = new GH_LinkedParamAttributes(param, Attributes);
 
       param.Access = GH_ParamAccess.item;
@@ -1222,7 +1191,7 @@ namespace RhinoInside.Revit.GH.Components
         var definitions = new Dictionary<int, Parameter>();
 
         var element = (Autodesk.Revit.DB.Element) goo;
-        if (element == null)
+        if (element is null)
           continue;
 
         foreach (var param in element.Parameters.OfType<Parameter>())
@@ -1231,13 +1200,13 @@ namespace RhinoInside.Revit.GH.Components
           catch (System.ArgumentException) { }
         }
 
-        if (common == null)
+        if (common is null)
           common = definitions;
         else
           common = common.Intersect(definitions, new EqualityComparer());
       }
 
-      if (common != null)
+      if (common is object)
       {
         RecordUndoEvent("Get Common Parameters");
 
@@ -1262,7 +1231,7 @@ namespace RhinoInside.Revit.GH.Components
       foreach (var goo in Params.Input[0].VolatileData.AllData(true).OfType<Types.Element>())
       {
         var element = (Autodesk.Revit.DB.Element) goo;
-        if (element == null)
+        if (element is null)
           continue;
 
         foreach (var param in element.Parameters.OfType<Parameter>())
@@ -1272,7 +1241,7 @@ namespace RhinoInside.Revit.GH.Components
         }
       }
 
-      if (definitions != null)
+      if (definitions is object)
       {
         RecordUndoEvent("Get All Parameters");
 
@@ -1367,7 +1336,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementParameterGet : GH_Component
+  public class ElementParameterGet : Component
   {
     public override Guid ComponentGuid => new Guid("D86050F2-C774-49B1-9973-FB3AB188DC94");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -1406,46 +1375,46 @@ namespace RhinoInside.Revit.GH.Components
 
         case string parameterName:
           parameter = element.LookupParameter(parameterName);
-          if (parameter == null)
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterName));
+          if (parameter is null)
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Parameter '{parameterName}' not defined in 'Element'");
           break;
 
         case int parameterId:
           if (Enum.IsDefined(typeof(BuiltInParameter), parameterId))
           {
             parameter = element.get_Parameter((BuiltInParameter) parameterId);
-            if (parameter == null)
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", LabelUtils.GetLabelFor((BuiltInParameter) parameterId)));
+            if (parameter is null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Parameter '{LabelUtils.GetLabelFor((BuiltInParameter) parameterId)}' not defined in 'Element'");
           }
           else if (Revit.ActiveDBDocument.GetElement(new ElementId(parameterId)) is ParameterElement parameterElement)
           {
             parameter = element.get_Parameter(parameterElement.GetDefinition());
-            if (parameter == null)
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterElement.Name));
+            if (parameter is null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Parameter '{parameterElement.Name}' not defined in 'Element'");
           }
           else
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Data conversion failed from {parameterKey.TypeName} to Revit Parameter element");
           break;
 
         case ElementId parameterElementId:
           if (Enum.IsDefined(typeof(BuiltInParameter), parameterElementId.IntegerValue))
           {
             parameter = element.get_Parameter((BuiltInParameter) parameterElementId.IntegerValue);
-            if (parameter == null)
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", LabelUtils.GetLabelFor((BuiltInParameter) parameterElementId.IntegerValue)));
+            if (parameter is null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Parameter '{LabelUtils.GetLabelFor((BuiltInParameter) parameterElementId.IntegerValue)}' not defined in 'Element'");
           }
           else if (Revit.ActiveDBDocument.GetElement(parameterElementId) is ParameterElement parameterElement)
           {
             parameter = element.get_Parameter(parameterElement.GetDefinition());
-            if (parameter == null)
-              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterElement.Name));
+            if (parameter is null)
+              AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Parameter '{parameterElement.Name}' not defined in 'Element'");
           }
           else
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+            AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Data conversion failed from {parameterKey.TypeName} to Revit Parameter element");
           break;
 
         default:
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Data conversion failed from {0} to Revit Parameter element", parameterKey.TypeName));
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Data conversion failed from {0} to Revit Parameter element");
           break;
       }
 
@@ -1453,7 +1422,7 @@ namespace RhinoInside.Revit.GH.Components
     }
   }
 
-  public class ElementParameterSet : GH_Component
+  public class ElementParameterSet : Component
   {
     public override Guid ComponentGuid => new Guid("8F1EE110-7FDA-49E0-BED4-E8E0227BC021");
     public override GH_Exposure Exposure => GH_Exposure.primary;
@@ -1497,7 +1466,7 @@ namespace RhinoInside.Revit.GH.Components
 
         case string parameterName:
           parameter = element.LookupParameter(parameterName);
-          if (parameter == null)
+          if (parameter is null)
             AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterName));
           break;
 
@@ -1505,13 +1474,13 @@ namespace RhinoInside.Revit.GH.Components
           if (Enum.IsDefined(typeof(BuiltInParameter), parameterId))
           {
             parameter = element.get_Parameter((BuiltInParameter) parameterId);
-            if (parameter == null)
+            if (parameter is null)
               AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", LabelUtils.GetLabelFor((BuiltInParameter) parameterId)));
           }
           else if (Revit.ActiveDBDocument.GetElement(new ElementId(parameterId)) is ParameterElement parameterElement)
           {
             parameter = element.get_Parameter(parameterElement.GetDefinition());
-            if (parameter == null)
+            if (parameter is null)
               AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterElement.Name));
           }
           else
@@ -1522,13 +1491,13 @@ namespace RhinoInside.Revit.GH.Components
           if (Enum.IsDefined(typeof(BuiltInParameter), parameterElementId.IntegerValue))
           {
             parameter = element.get_Parameter((BuiltInParameter) parameterElementId.IntegerValue);
-            if (parameter == null)
+            if (parameter is null)
               AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", LabelUtils.GetLabelFor((BuiltInParameter) parameterElementId.IntegerValue)));
           }
           else if (Revit.ActiveDBDocument.GetElement(parameterElementId) is ParameterElement parameterElement)
           {
             parameter = element.get_Parameter(parameterElement.GetDefinition());
-            if (parameter == null)
+            if (parameter is null)
               AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, string.Format("Parameter '{0}' not defined in 'Element'", parameterElement.Name));
           }
           else
@@ -1545,13 +1514,13 @@ namespace RhinoInside.Revit.GH.Components
       Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, element, parameter, goo));
     }
 
-    double ToHost(double value, UnitType unit)
+    double ToHost(double value, ParameterType type)
     {
-      switch (unit)
+      switch (type)
       {
-        case UnitType.UT_Length:  return value / Math.Pow(Revit.ModelUnits, 1.0);
-        case UnitType.UT_Area:    return value / Math.Pow(Revit.ModelUnits, 2.0);
-        case UnitType.UT_Volume:  return value / Math.Pow(Revit.ModelUnits, 3.0);
+        case ParameterType.Length:  return value / Math.Pow(Revit.ModelUnits, 1.0);
+        case ParameterType.Area:    return value / Math.Pow(Revit.ModelUnits, 2.0);
+        case ParameterType.Volume:  return value / Math.Pow(Revit.ModelUnits, 3.0);
       }
 
       return value;
@@ -1576,7 +1545,7 @@ namespace RhinoInside.Revit.GH.Components
               {
                 case bool boolean: parameter.Set(boolean ? 1 : 0); break;
                 case int integer: parameter.Set(integer); break;
-                case double real: parameter.Set(Math.Round(ToHost(real, parameter.Definition.UnitType)).Clamp(int.MinValue, int.MaxValue)); break;
+                case double real: parameter.Set(Math.Round(ToHost(real, parameter.Definition.ParameterType)).Clamp(int.MinValue, int.MaxValue)); break;
                 case System.Drawing.Color color: parameter.Set(((int) color.R) | ((int) color.G << 8) | ((int) color.B << 16)); break;
                 default: element = null; break;
               }
@@ -1587,7 +1556,7 @@ namespace RhinoInside.Revit.GH.Components
               switch (value)
               {
                 case int integer: parameter.Set((double) integer); break;
-                case double real: parameter.Set(ToHost(real, parameter.Definition.UnitType)); break;
+                case double real: parameter.Set(ToHost(real, parameter.Definition.ParameterType)); break;
                 default: element = null; break;
               }
               break;
@@ -1619,7 +1588,7 @@ namespace RhinoInside.Revit.GH.Components
             }
         }
 
-        if (element == null && parameter != null)
+        if (element is null && parameter is object)
           AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Unable to cast 'Value' from {0} to {1}.", value.GetType().Name, parameter.StorageType.ToString()));
 
         DA.SetData(0, element, Iteration);
