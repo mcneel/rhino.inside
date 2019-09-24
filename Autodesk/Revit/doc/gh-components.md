@@ -16,39 +16,74 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
+    <td><img src="GH/Element.png" alt="Geometric by Element" width="32"></td>
+    <td>Geometric Element</td>
+    <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
+  </tr>
+  <tr>
+    <td><img src="GH/Host.png" alt="Host" width="32"></td>
+    <td>Host</td>
+    <td>Represents a Revit document host element.</td>
+  </tr>
+  <tr>
+      <td><img src="GH/Edge.png" alt="Edge" width="32"></td>
+      <td>Edge</td>
+      <td>Represents a Revit edge from an element.</td>
+  </tr>
+  <tr>
+      <td><img src="GH/Face.png" alt="Face" width="32"></td>
+      <td>Face</td>
+      <td>Select a Revit Element Face(s)</td>
+  </tr>
+  <tr>
+      <td><img src="GH/SketchPlane.png" alt="SketchPlane" width="32"></td>
+      <td>Sketch Plane</td>
+      <td>Represents a Revit document sketch plane. (Selector in the future)</td>
+   </tr>
+  <tr>
+      <td><img src="GH/Vertex.png" alt="Vertex" width="32"></td>
+      <td>Vertex</td>
+      <td>Select a Revit Element Vertex(s)</td>
+   </tr>
+   <tr>
     <td><img src="GH/Category.png" alt="BeamByCurve" width="32"></td>
     <td>Category</td>
     <td>Revit Category Param used for selecting persistent Category (future)</td>
   </tr>
   <tr>
-    <td><img src="GH/Element.png" alt="BeamByCurve" width="32"></td>
+    <td><img src="GH/Element.png" alt="Element" width="32"></td>
     <td>Element</td>
-    <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
+    <td>Represents a Revit element</td>
   </tr>
   <tr>
-    <td><img src="GH/ElementType.png" alt="ColumnByCurve" width="32"></td>
+    <td><img src="GH/ElementType.png" alt="ElementType" width="32"></td>
     <td>Element Type</td>
     <td>Get Element type from the Element(s) input</td>
   </tr>
   <tr>
-    <td><img src="GH/Edge.png" alt="ColumnByCurve" width="32"></td>
-    <td>Edge Element</td>
-    <td>Select a Revit Element Edge(s)</td>
+    <td><img src="GH/Family.png" alt="Family" width="32"></td>
+    <td>Family</td>
+    <td>Represents a Revit document family.</td>
   </tr>
   <tr>
-    <td><img src="GH/Face.png" alt="BeamByCurve" width="32"></td>
-    <td>Face Element</td>
-    <td>Select a Revit Element Face(s)</td>
+    <td><img src="GH/GraphicStyle.png" alt="GraphicStyle" width="32"></td>
+    <td>Graphic Style</td>
+    <td>Represents a Revit Graphic Style.</td>
   </tr>
   <tr>
-    <td><img src="GH/Vertex.png" alt="ColumnByCurve" width="32"></td>
-    <td>Vertex Element</td>
-    <td>Select a Revit Element Vertex(s)</td>
+    <td><img src="GH/Level.png" alt="Level" width="32"></td>
+    <td>Level</td>
+    <td>Represents a Revit Level</td>
   </tr>
   <tr>
-    <td><img src="GH/SketchPlane.png" alt="BeamByCurve" width="32"></td>
-    <td>Revit SketchPlane</td>
-    <td>Represents a Revit document sketch plane. (Selector in the future)</td>
+    <td><img src="GH/BuiltInParameterGroup.png" alt="BuiltInParameterGroup" width="32"></td>
+    <td>Parameter Group</td>
+    <td>Represents a Revit Parameter Group</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ParameterKey.png" alt="ParameterKey" width="32"></td>
+      <td>Parameter Key</td>
+      <td>Represents a Revit Parameter Key</td>
   </tr>
 </table>
 
