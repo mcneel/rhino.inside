@@ -153,6 +153,16 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Category Decompose</td>
     <td>Break a Revit Category into its component parts.  Name, Parent, Line-Color, Material, Allow Bounds and Material Quantities</td>
   </tr>
+  <tr>
+      <td width="48px"><img src="GH/CategoryGraphicStyle.png" alt="CategoryGraphicStyle" width="32"></td>
+      <td>Category Graphic Style</td>
+      <td>Returns the Projections an Cut of a specifcs categories graphic style.</td>
+  </tr>
+  <tr>
+      <td width="48px"><img src="GH/CategorySubcategory.png" alt="CategorySubcategory" width="32"></td>
+      <td>Category Subcategory</td>
+      <td>Returns a list of all the subcategories of Category</td>
+  </tr>
   <tr>
     <td><img src="GH/CategoryTypes.png" alt="ColumnByCurve" width="32"></td>
     <td>Category Types</td>
