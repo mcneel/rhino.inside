@@ -22,7 +22,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Component", "C", "New AdaptiveComponent", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Component", "C", "New AdaptiveComponent", GH_ParamAccess.item);
     }
 
     void ReconstructAdaptiveComponentByPoints
@@ -35,7 +35,7 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      var adaptivePoints = points.Select(x => x.Scale(scaleFactor).ToHost()).ToArray();
+      var adaptivePoints = points.Select(x => x.ChangeUnits(scaleFactor).ToHost()).ToArray();
 
       if (!type.IsActive)
         type.Activate();

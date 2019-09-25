@@ -38,7 +38,6 @@ namespace RhinoInside.Revit.GH.Types
 
     public ParameterKey() { }
     public ParameterKey(Autodesk.Revit.DB.ParameterElement parameterElement) : base(parameterElement) { }
-    public ParameterKey(Autodesk.Revit.DB.ElementId elementId)               : base(elementId) { }
 
     public override sealed bool CastFrom(object source)
     {
@@ -429,7 +428,7 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class ParameterKey : ElementIdNonGeometryParam<Types.ParameterKey>
+  public class ParameterKey : ElementIdNonGeometryParam<Types.ParameterKey, Autodesk.Revit.DB.ParameterElement>
   {
     public override Guid ComponentGuid => new Guid("A550F532-8C68-460B-91F3-DA0A5A0D42B5");
     public override GH_Exposure Exposure => GH_Exposure.quarternary;

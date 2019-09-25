@@ -197,7 +197,7 @@ namespace RhinoInside.Revit
     public override Autodesk.Revit.DB.Outline GetBoundingBox(View dBView)
     {
       var bbox = rhinoObject.Geometry.GetBoundingBox(false);
-      bbox = bbox.Scale(1.0 / Revit.ModelUnits);
+      bbox = bbox.ChangeUnits(1.0 / Revit.ModelUnits);
       return new Autodesk.Revit.DB.Outline(bbox.Min.ToHost(), bbox.Max.ToHost());
     }
 

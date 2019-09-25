@@ -160,6 +160,10 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Extensions\Grasshopper.cs" />
+    <Compile Include="Extensions\RevitAPI.cs" />
+    <Compile Include="Extensions\RhinoCommon.cs" />
+    <Compile Include="Extensions\System.cs" />
     <Compile Include="GH\Guest.cs" />
     <Compile Include="GH\PreviewServer.cs" />
     <Compile Include="GH\ID.cs" />
@@ -185,6 +189,7 @@
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
     <Compile Include="GH\Element\HostObject\HostObject.cs" />
+    <Compile Include="GH\Element\HostObject\GetFaces.cs" />
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Element\DirectShape\ByMesh.cs" />
     <Compile Include="GH\Element\DirectShape\ByBrep.cs" />
@@ -197,6 +202,7 @@
     <Compile Include="GH\ElementFilter\ElementFilter.cs" />
     <Compile Include="GH\Family\Family.cs" />
     <Compile Include="GH\Parameter\Parameter.cs" />
+    <Compile Include="GH\Material\Material.cs" />
     <Compile Include="GH\Solid.cs" />
     <Compile Include="GH\TransactionalComponent.cs" />
     <Compile Include="GH\ValueList.cs" />
@@ -218,7 +224,6 @@
     <Compile Include="DirectContext3DServer.cs" />
     <Compile Include="ImageBuilder.cs" />
     <Compile Include="Operator.cs" />
-    <Compile Include="Extension.cs" />
     <Compile Include="State.cs" />
     <Compile Include="Convert.cs" />
     <Compile Include="Revit.cs" />

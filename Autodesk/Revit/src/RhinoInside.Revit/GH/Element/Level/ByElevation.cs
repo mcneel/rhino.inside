@@ -6,7 +6,7 @@ using RhinoInside.Runtime.InteropServices;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class Level : Element
+  public class Level : GeometricElement
   {
     public override string TypeName => "Revit Level";
     public override string TypeDescription => "Represents a Revit level";
@@ -20,14 +20,12 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Level : GeometricElementT<Types.Level>
+  public class Level : GeometricElementT<Types.Level, Autodesk.Revit.DB.Level>
   {
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("3238F8BC-8483-4584-B47C-48B4933E478E");
 
     public Level() : base("Level", "Level", "Represents a Revit document level.", "Params", "Revit") { }
-
-    public override bool AllowElement(Autodesk.Revit.DB.Element elem) => elem is Autodesk.Revit.DB.Level;
   }
 }
 

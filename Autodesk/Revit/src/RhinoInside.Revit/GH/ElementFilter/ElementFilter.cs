@@ -156,7 +156,11 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetDataList("Elements", elementIds))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.ExclusionFilter(elementIds));
+      var ids = elementIds.Where(x => x is object).ToArray();
+      if (ids.Length > 0)
+        DA.SetData("Filter", new Autodesk.Revit.DB.ExclusionFilter(ids));
+      else
+        DA.DisableGapLogic();
     }
   }
 
@@ -304,10 +308,15 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      if (categoryIds.Count == 1)
-        DA.SetData("Filter", new Autodesk.Revit.DB.ElementCategoryFilter(categoryIds[0], inverted));
-      else
-        DA.SetData("Filter", new Autodesk.Revit.DB.ElementMulticategoryFilter(categoryIds, inverted));
+      var ids = categoryIds.Select(x => x is null ? ElementId.InvalidElementId : x).ToArray();
+      if (ids.Length > 0)
+      {
+        if (ids.Length == 1)
+          DA.SetData("Filter", new Autodesk.Revit.DB.ElementCategoryFilter(ids[0], inverted));
+        else
+          DA.SetData("Filter", new Autodesk.Revit.DB.ElementMulticategoryFilter(ids, inverted));
+      }
+      else DA.DisableGapLogic();
     }
   }
 
@@ -422,7 +431,7 @@ namespace RhinoInside.Revit.GH.Components
           targets.Add(box);
         }
 
-        pointsBBox = pointsBBox.Scale(scaleFactor);
+        pointsBBox = pointsBBox.ChangeUnits(scaleFactor);
         var outline = new Autodesk.Revit.DB.Outline(pointsBBox.Min.ToHost(), pointsBBox.Max.ToHost());
 
         if (strict)
@@ -442,7 +451,7 @@ namespace RhinoInside.Revit.GH.Components
                          targets.Add(box);
                        }
 
-                       x = x.Scale(scaleFactor);
+                       x = x.ChangeUnits(scaleFactor);
 
                        if (strict)
                        {
@@ -523,10 +532,7 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if(scaleFactor != 1.0)
-        brep.Scale(scaleFactor);
-
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(brep.ToHost(), inverted));
+      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(brep.ChangeUnits(scaleFactor).ToHost(), inverted));
     }
   }
 
@@ -557,10 +563,7 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-        mesh.Scale(scaleFactor);
-
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(Rhino.Geometry.Brep.CreateFromMesh(mesh, true).ToHost(), inverted));
+      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(Rhino.Geometry.Brep.CreateFromMesh(mesh.ChangeUnits(scaleFactor), true).ToHost(), inverted));
     }
   }
   #endregion

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
@@ -21,7 +22,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Form", "F", "New Form", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Form", "F", "New Form", GH_ParamAccess.item);
     }
 
     void ReconstructFormByCurves
@@ -36,12 +37,11 @@ namespace RhinoInside.Revit.GH.Components
         throw new InvalidOperationException("This component can only run in Family editor");
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
+      profiles = profiles.Select(x => x.ChangeUnits(scaleFactor)).ToArray();
+
       var planes = new List<Rhino.Geometry.Plane>();
       foreach (var profile in profiles)
       {
-        if (scaleFactor != 1.0)
-          profile.Scale(scaleFactor);
-
         if (!profile.TryGetPlane(out var plane))
           ThrowArgumentException(nameof(profiles), "All profiles must be planar");
 

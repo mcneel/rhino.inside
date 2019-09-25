@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Point", "P", "New PointShape", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Point", "P", "New PointShape", GH_ParamAccess.item);
     }
 
     void ReconstructDirectShapeByPoint

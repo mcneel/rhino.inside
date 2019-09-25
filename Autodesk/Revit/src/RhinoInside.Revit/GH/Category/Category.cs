@@ -74,6 +74,7 @@ namespace RhinoInside.Revit.GH.Types
     #endregion
 
     public Category() : base() { }
+    public Category(Autodesk.Revit.DB.Category category) : base(category.Id) { }
     protected Category(ElementId categoryId) : base(categoryId) { }
 
     public override sealed bool CastFrom(object source)
@@ -103,8 +104,14 @@ namespace RhinoInside.Revit.GH.Types
     {
       if (typeof(Q).IsAssignableFrom(typeof(Autodesk.Revit.DB.Category)))
       {
+        if (!IsValid)
+        {
+          target = (Q) (object) null;
+          return true;
+        }
+
         var category = (Autodesk.Revit.DB.Category) this;
-        if (category == null)
+        if (category is null)
           return false;
 
         target = (Q) (object) category;
@@ -223,7 +230,7 @@ namespace RhinoInside.Revit.GH.Types
           switch(graphicsStyle.GraphicsStyleType)
           {
             case GraphicsStyleType.Projection: ToolTip += "[projection]"; break;
-            case GraphicsStyleType.Cut: ToolTip += "[cut]"; break;
+            case GraphicsStyleType.Cut:        ToolTip += "[cut]"; break;
           }
 
           return ToolTip;
@@ -239,7 +246,7 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Category : ElementIdNonGeometryParam<Types.Category>
+  public class Category : ElementIdNonGeometryParam<Types.Category, Autodesk.Revit.DB.Category>
   {
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("6722C7A5-EFD3-4119-A7FD-6C8BE892FD04");
@@ -247,7 +254,7 @@ namespace RhinoInside.Revit.GH.Parameters
     public Category() : base("Category", "Category", "Represents a Revit document category.", "Params", "Revit") { }
   }
 
-  public class GraphicsStyle : ElementIdNonGeometryParam<Types.GraphicsStyle>
+  public class GraphicsStyle : ElementIdNonGeometryParam<Types.GraphicsStyle, Autodesk.Revit.DB.GraphicsStyle>
   {
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("833E6207-BA60-4C6B-AB8B-96FDA0F91822");
@@ -281,12 +288,12 @@ namespace RhinoInside.Revit.GH.Parameters
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class CategoryDecompose : Component
+  public class CategoryIdentity : Component
   {
     public override Guid ComponentGuid => new Guid("D794361E-DE8C-4D0A-BC77-52293F27D3AA");
 
-    public CategoryDecompose()
-    : base("Category.Decompose", "Category.Decompose", "Decompose a category", "Revit", "Category")
+    public CategoryIdentity()
+    : base("Category.Identity", "Category.Identity", "Query category identity information", "Revit", "Category")
     { }
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
@@ -298,10 +305,11 @@ namespace RhinoInside.Revit.GH.Components
     {
       manager.AddTextParameter("Name", "N", "Category name", GH_ParamAccess.item);
       manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
-      manager.AddColourParameter("LineColor", "LC", "Category line color", GH_ParamAccess.item);
-      manager.AddParameter(new Parameters.Element(), "Material", "M", "Category material", GH_ParamAccess.item);
+      manager.AddIntegerParameter("Type", "T", "Category type", GH_ParamAccess.item);
       manager.AddBooleanParameter("AllowsParameters", "A", "Category allows bound parameters", GH_ParamAccess.item);
       manager.AddBooleanParameter("HasMaterialQuantities", "M", "Category has material quantities", GH_ParamAccess.item);
+      manager.AddBooleanParameter("Cuttable", "C", "Has material quantities", GH_ParamAccess.item);
+      manager.AddBooleanParameter("Hidden", "H", "Is hidden category", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -312,10 +320,51 @@ namespace RhinoInside.Revit.GH.Components
 
       DA.SetData("Name", category?.Name);
       DA.SetData("Parent", category?.Parent);
-      DA.SetData("LineColor", category?.LineColor.ToRhino());
-      DA.SetData("Material", category?.Material);
+      DA.SetData("Type", category?.CategoryType);
       DA.SetData("AllowsParameters", category?.AllowsBoundParameters);
       DA.SetData("HasMaterialQuantities", category?.HasMaterialQuantities);
+      DA.SetData("Cuttable", category?.IsCuttable);
+      DA.SetData("Hidden", category is null ? (object) null : category.IsHidden());
+    }
+  }
+
+  public class CategoryObjectStyle : Component
+  {
+    public override Guid ComponentGuid => new Guid("1DD8AE78-F7DA-4F26-8353-4CCE6B925DC6");
+
+    public CategoryObjectStyle()
+    : base("Category.ObjectStyle", "Category.ObjectStyle", string.Empty, "Revit", "Category")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Category(), "Category", "C", "Category to query", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddIntegerParameter("LineWeight [projection]", "LWP", "Category line weight [projection]", GH_ParamAccess.item);
+      manager.AddIntegerParameter("LineWeight [cut]", "LWC", "Category line weigth [cut]", GH_ParamAccess.item);
+      manager.AddColourParameter("LineColor", "LC", "Category line color", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Element(), "LinePattern [projection]", "LPP", "Category line pattern [projection]", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Element(), "LinePattern [cut]", "LPC", "Category line pattern [cut]", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Material(), "Material", "M", "Category material", GH_ParamAccess.item);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Category category = null;
+      if (!DA.GetData("Category", ref category))
+        return;
+
+      var doc = Revit.ActiveDBDocument;
+
+      DA.SetData("LineWeight [projection]", category?.GetLineWeight(GraphicsStyleType.Projection));
+      DA.SetData("LineWeight [cut]", category?.GetLineWeight(GraphicsStyleType.Cut));
+      DA.SetData("LineColor", category?.LineColor.ToRhino());
+      DA.SetData("LinePattern [projection]", doc.GetElement(category?.GetLinePatternId(GraphicsStyleType.Projection)));
+      DA.SetData("LinePattern [cut]", doc.GetElement(category?.GetLinePatternId(GraphicsStyleType.Cut)));
+      DA.SetData("Material", category?.Material);
     }
   }
 

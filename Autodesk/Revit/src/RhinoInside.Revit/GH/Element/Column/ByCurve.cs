@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Column", "C", "New Column", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Column", "C", "New Column", GH_ParamAccess.item);
     }
 
     void ReconstructColumnByCurve
@@ -38,8 +38,7 @@ namespace RhinoInside.Revit.GH.Components
         curve.Flip();
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-        curve = curve.Scale(scaleFactor);
+      curve = curve.ChangeUnits(scaleFactor);
 
       SolveOptionalType(ref type, doc, BuiltInCategory.OST_StructuralColumns, nameof(type));
 

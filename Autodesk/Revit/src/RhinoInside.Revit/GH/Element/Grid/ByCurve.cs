@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Grid", "G", "New Grid", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Grid", "G", "New Grid", GH_ParamAccess.item);
     }
 
     void ReconstructGridByCurve
@@ -35,10 +35,7 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-      {
-        curve.Scale(scaleFactor);
-      }
+      curve = curve.ChangeUnits(scaleFactor);
 
       SolveOptionalType(ref type, doc, ElementTypeGroup.GridType, nameof(type));
 

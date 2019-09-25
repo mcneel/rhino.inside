@@ -24,7 +24,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Topography", "T", "New Topography", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Topography", "T", "New Topography", GH_ParamAccess.item);
     }
 
     void ReconstructTopographyByPoints
@@ -37,17 +37,7 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-      {
-        for(int p = 0; p < points.Count; ++p)
-          points[p] = points[p] * scaleFactor;
-
-        if (regions != null)
-        {
-          foreach (var region in regions)
-            region.Scale(scaleFactor);
-        }
-      }
+      var xyz = points.Select(x => x.ChangeUnits(scaleFactor).ToHost()).ToArray();
 
       //if (element is TopographySurface topography)
       //{
@@ -65,12 +55,12 @@ namespace RhinoInside.Revit.GH.Components
       //}
       //else
       {
-        ReplaceElement(ref element, TopographySurface.Create(doc, points.ToHost().ToList()));
+        ReplaceElement(ref element, TopographySurface.Create(doc, xyz));
       }
 
-      if (element != null && regions != null && regions.Count > 0)
+      if (element is object && regions?.Count > 0)
       {
-        var curveLoops = regions.Select(region => CurveLoop.Create(region.ToHost().ToList())).ToList();
+        var curveLoops = regions.Select(region => CurveLoop.Create(region.ChangeUnits(scaleFactor).ToHost().ToArray())).ToArray();
         SiteSubRegion.Create(doc, curveLoops, element.Id);
       }
     }
