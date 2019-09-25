@@ -630,8 +630,12 @@ namespace RhinoInside.Revit
         switch (geometry)
         {
           case Autodesk.Revit.DB.GeometryInstance instance:
-            foreach (var g in instance.GetInstanceGeometry().ToRhino())
+            var xform = instance.Transform.ToRhino().Scale(scaleFactor);
+            foreach (var g in instance.SymbolGeometry.ToRhino())
+            {
+              g?.Transform(xform);
               yield return g;
+            }
             break;
           case Autodesk.Revit.DB.Mesh mesh:
             var m = mesh.ToRhino();
@@ -741,8 +745,12 @@ namespace RhinoInside.Revit
         {
           case Autodesk.Revit.DB.GeometryInstance instance:
           {
-            foreach (var g in instance.GetInstanceGeometry().GetPreviewMeshes())
+            var xform = instance.Transform.ToRhino().Scale(scaleFactor);
+            foreach (var g in instance.SymbolGeometry.GetPreviewMeshes())
+            {
+              g?.Transform(xform);
               yield return g;
+            }
             break;
           }
           case Autodesk.Revit.DB.Mesh mesh:
@@ -800,8 +808,7 @@ namespace RhinoInside.Revit
                 mesh.Append(facesMeshes);
                 yield return mesh;
               }
-
-              yield return null;
+              else yield return null;
             }
             break;
           }
@@ -823,8 +830,12 @@ namespace RhinoInside.Revit
         {
           case Autodesk.Revit.DB.GeometryInstance instance:
           {
-            foreach (var g in instance.GetInstanceGeometry().GetPreviewWires())
+            var xform = instance.Transform.ToRhino().Scale(scaleFactor);
+            foreach (var g in instance.SymbolGeometry.GetPreviewWires())
+            {
+              g?.Transform(xform);
               yield return g;
+            }
             break;
           }
           case Autodesk.Revit.DB.Solid solid:
