@@ -130,7 +130,14 @@ namespace RhinoInside.Revit
         case ParameterSource.Any:
           return Enum.GetValues(typeof(BuiltInParameter)).
             Cast<BuiltInParameter>().
-            Select(x => element.get_Parameter(x)).
+            Select
+            (
+              x =>
+              {
+                try { return element.get_Parameter(x); }
+                catch (Autodesk.Revit.Exceptions.InternalException) { return null; }
+              }
+            ).
             Where(x => x is object).
             Union(element.Parameters.Cast<Autodesk.Revit.DB.Parameter>()).
             GroupBy(x => x.Id).
@@ -140,7 +147,14 @@ namespace RhinoInside.Revit
             Cast<BuiltInParameter>().
             GroupBy(x => x).
             Select(x => x.First()).
-            Select(x => element.get_Parameter(x)).
+            Select
+            (
+              x =>
+              {
+                try { return element.get_Parameter(x); }
+                catch (Autodesk.Revit.Exceptions.InternalException) { return null; }
+              }
+            ).
             Where(x => x is object);
         case ParameterSource.Project:
           return element.Parameters.Cast<Autodesk.Revit.DB.Parameter>().

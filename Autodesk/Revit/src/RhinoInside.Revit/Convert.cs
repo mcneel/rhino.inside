@@ -856,8 +856,6 @@ namespace RhinoInside.Revit
       var scaleFactor = Revit.ModelUnits;
       foreach (var geometry in geometries)
       {
-        var gs = Revit.ActiveDBDocument.GetElement(geometry.GraphicsStyleId) as GraphicsStyle;
-
         if (geometry.Visibility != Visibility.Visible)
           continue;
 
