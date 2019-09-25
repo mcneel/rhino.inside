@@ -37,6 +37,9 @@ namespace RhinoInside.Revit.GH.Types
       if (element is Autodesk.Revit.DB.Material material)
         return new Material(material);
 
+      if (element is Autodesk.Revit.DB.ElementType elementType)
+        return new ElementType(elementType);
+
       if (element is Autodesk.Revit.DB.SketchPlane sketchPlane)
         return new SketchPlane(sketchPlane);
 
@@ -46,8 +49,8 @@ namespace RhinoInside.Revit.GH.Types
       if (element is Autodesk.Revit.DB.Level level)
         return new Level(level);
 
-      if (element is Autodesk.Revit.DB.ElementType elementType)
-        return new ElementType(elementType);
+      if(GeometricElement.IsValidElement(element))
+        return new GeometricElement(element);
 
       return new Element(element);
     }
@@ -56,8 +59,7 @@ namespace RhinoInside.Revit.GH.Types
     public static     Element Make(string uniqueId) => Make(Revit.ActiveDBDocument.GetElement(uniqueId));
 
     public Element() : base() { }
-    protected Element(Autodesk.Revit.DB.Element element)     : base(element.Id, element.UniqueId) { }
-    protected Element(Autodesk.Revit.DB.ElementId elementId) : base(elementId) { }
+    public Element(Autodesk.Revit.DB.Element element)     : base(element.Id, element.UniqueId) { }
 
     public override bool CastFrom(object source)
     {
@@ -71,15 +73,10 @@ namespace RhinoInside.Revit.GH.Types
         case Autodesk.Revit.DB.ElementId id: element = Revit.ActiveDBDocument.GetElement(id); break;
         case int integer:                    element = Revit.ActiveDBDocument.GetElement(new ElementId(integer)); break;
         case string uniqueId:                element = Revit.ActiveDBDocument.GetElement(uniqueId); break;
+        default:                             return false;
       }
 
-      if (ScriptVariableType.IsInstanceOfType(element))
-      {
-        SetValue(element);
-        return true;
-      }
-
-      return false;
+      return SetValue(element);
     }
 
     public override bool CastTo<Q>(ref Q target)
@@ -88,95 +85,103 @@ namespace RhinoInside.Revit.GH.Types
         return true;
 
       var element = (Autodesk.Revit.DB.Element) this;
-      if (!(element is null))
+      if (typeof(Autodesk.Revit.DB.Element).IsAssignableFrom(typeof(Q)))
       {
-        if (typeof(Q).IsAssignableFrom(element.GetType()))
+        if (element is null)
         {
-          target = (Q) (object) element;
-          return true;
+          if (IsValid)
+            return false;
         }
+        else if (!typeof(Q).IsAssignableFrom(element.GetType()))
+          return false;
 
-        if (element.Category?.HasMaterialQuantities ?? false)
+        target = (Q) (object) element;
+        return true;
+      }
+
+      if (element is null)
+        return false;
+
+      if (element.Category?.HasMaterialQuantities ?? false)
+      {
+        if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
         {
-          if (typeof(Q).IsAssignableFrom(typeof(GH_Mesh)))
+          Options options = null;
+          using (var geometry = element.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
           {
-            Options options = null;
-            using (var geometry = element.GetGeometry(ViewDetailLevel.Fine, out options)) using (options)
+            if (geometry is object)
             {
-              if (geometry is object)
+              var mesh = new Rhino.Geometry.Mesh();
+              mesh.Append(geometry.GetPreviewMeshes().Where(x => x is object));
+              mesh.Normals.ComputeNormals();
+              if (mesh.Faces.Count > 0)
               {
-                var mesh = new Rhino.Geometry.Mesh();
-                mesh.Append(geometry.GetPreviewMeshes().Where(x => x is object));
-                mesh.Normals.ComputeNormals();
-                if (mesh.Faces.Count > 0)
-                {
-                  target = (Q) (object) new GH_Mesh(mesh);
-                  return true;
-                }
+                target = (Q) (object) new GH_Mesh(mesh);
+                return true;
               }
             }
           }
         }
+      }
 
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
-        {
-          var axis = Axis;
-          if (axis is null)
-            return false;
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
+      {
+        var axis = Axis;
+        if (axis is null)
+          return false;
 
-          target = (Q) (object) new GH_Curve(axis);
-          return true;
-        }
+        target = (Q) (object) new GH_Curve(axis);
+        return true;
+      }
 
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Plane)))
-        {
-          var plane = Plane;
-          if (!plane.IsValid || !plane.Origin.IsValid)
-            return false;
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Plane)))
+      {
+        var plane = Plane;
+        if (!plane.IsValid || !plane.Origin.IsValid)
+          return false;
 
-          target = (Q) (object) new GH_Plane(plane);
-          return true;
-        }
+        target = (Q) (object) new GH_Plane(plane);
+        return true;
+      }
 
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
-        {
-          var location = Location;
-          if (!location.IsValid)
-            return false;
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
+      {
+        var location = Location;
+        if (!location.IsValid)
+          return false;
 
-          target = (Q) (object) new GH_Point(location);
-          return true;
-        }
+        target = (Q) (object) new GH_Point(location);
+        return true;
+      }
 
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Vector)))
-        {
-          var normal = ZAxis;
-          if (!normal.IsValid)
-            return false;
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Vector)))
+      {
+        var normal = ZAxis;
+        if (!normal.IsValid)
+          return false;
 
-          target = (Q) (object) new GH_Vector(normal);
-          return true;
-        }
+        target = (Q) (object) new GH_Vector(normal);
+        return true;
+      }
 
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Transform)))
-        {
-          var plane = Plane;
-          if (!plane.IsValid || !plane.Origin.IsValid)
-            return false;
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Transform)))
+      {
+        var plane = Plane;
+        if (!plane.IsValid || !plane.Origin.IsValid)
+          return false;
 
-          target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, plane));
-          return true;
-        }
+        target = (Q) (object) new GH_Transform(Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, plane));
+        return true;
+      }
 
-        if (typeof(Q).IsAssignableFrom(typeof(GH_Box)))
-        {
-          var box = Box;
-          if (!box.IsValid)
-            return false;
+      if (typeof(Q).IsAssignableFrom(typeof(GH_Box)))
+      {
+        var box = Box;
+        if (!box.IsValid)
+          return false;
 
-          target = (Q) (object) new GH_Box(box);
-          return true;
-        }
+        target = (Q) (object) new GH_Box(box);
+        return true;
       }
 
       return false;
@@ -252,19 +257,22 @@ namespace RhinoInside.Revit.GH.Types
       private class ParameterPropertyDescriptor : PropertyDescriptor
       {
         readonly Autodesk.Revit.DB.Parameter parameter;
-        public ParameterPropertyDescriptor(Autodesk.Revit.DB.Parameter p) : base(p.Definition.Name, null) { parameter = p; }
+        public ParameterPropertyDescriptor(Autodesk.Revit.DB.Parameter p) : base(p.Definition?.Name ?? p.Id.IntegerValue.ToString(), null) { parameter = p; }
         public override Type   ComponentType => typeof(Proxy);
         public override bool   IsReadOnly    => true;
-        public override string Name          => parameter.Definition.Name;
-        public override string Category      => LabelUtils.GetLabelFor(parameter.Definition.ParameterGroup);
+        public override string Name          => parameter.Definition?.Name ?? string.Empty;
+        public override string Category      => parameter.Definition is null ? string.Empty : LabelUtils.GetLabelFor(parameter.Definition.ParameterGroup);
         public override string Description
         {
           get
           {
             var description = string.Empty;
-            try { description = parameter.StorageType == StorageType.ElementId ? "ElementId" : LabelUtils.GetLabelFor(parameter.Definition.ParameterType); }
-            catch (Autodesk.Revit.Exceptions.InvalidOperationException)
-            { description = parameter.Definition.UnitType == UnitType.UT_Number ? "Enumerate" : LabelUtils.GetLabelFor(parameter.Definition.UnitType); }
+            if (parameter.Element is object && parameter.Definition is object)
+            {
+              try { description = parameter.StorageType == StorageType.ElementId ? "ElementId" : LabelUtils.GetLabelFor(parameter.Definition.ParameterType); }
+              catch (Autodesk.Revit.Exceptions.InvalidOperationException)
+              { description = parameter.Definition.UnitType == UnitType.UT_Number ? "Enumerate" : LabelUtils.GetLabelFor(parameter.Definition.UnitType); }
+            }
 
             if (parameter.IsReadOnly)
               description = "Read only " + description;
@@ -286,7 +294,7 @@ namespace RhinoInside.Revit.GH.Types
         public override bool CanResetValue(object component) { return false; }
         public override void SetValue(object component, object value) { }
         public override Type PropertyType   => typeof(string);
-        public override object GetValue(object component) => parameter.Element is object ? (parameter.StorageType == StorageType.String ? parameter.AsString() : parameter.AsValueString()) : null;
+        public override object GetValue(object component) => parameter.Element is object && parameter.Definition is object ? (parameter.StorageType == StorageType.String ? parameter.AsString() : parameter.AsValueString()) : null;
       }
     }
 
@@ -694,7 +702,7 @@ namespace RhinoInside.Revit.GH.Types
           else switch (element.Location)
           {
             case Autodesk.Revit.DB.LocationPoint pointLocation: p = pointLocation.Point.ToRhino(); break;
-            case Autodesk.Revit.DB.LocationCurve curveLocation: p = curveLocation.Curve.GetEndPoint(0).ToRhino(); break;
+            case Autodesk.Revit.DB.LocationCurve curveLocation: p = curveLocation.Curve.Evaluate(0.0, curveLocation.Curve.IsBound).ToRhino(); break;
             default:
                 var bbox = element.get_BoundingBox(null);
                 if(bbox is object)
@@ -854,12 +862,15 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Element : ElementIdNonGeometryParam<Types.Element>
+  public class Element : ElementIdNonGeometryParam<Types.Element, Autodesk.Revit.DB.Element>
   {
     public override GH_Exposure Exposure => GH_Exposure.tertiary | GH_Exposure.obscure;
     public override Guid ComponentGuid => new Guid("F3EA4A9C-B24F-4587-A358-6A7E6D8C028B");
 
     public Element() : base("Element", "Element", "Represents a Revit document element.", "Params", "Revit") { }
+
+    protected override Types.Element PreferredCast(object data) =>
+      data is Autodesk.Revit.DB.Element element ? new Types.Element(element) : null;
   }
 }
 
@@ -908,8 +919,8 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Element", ref element))
         return;
 
-      DA.SetData("Category", element is Family family ? family.FamilyCategory : element?.Category);
-      DA.SetData("Type", element?.GetTypeId());
+      DA.SetData("Category", element?.Category);
+      DA.SetData("Type", element?.Document.GetElement(element.GetTypeId()));
       DA.SetData("Name", element?.Name);
       DA.SetData("UniqueID", element?.UniqueId);
     }

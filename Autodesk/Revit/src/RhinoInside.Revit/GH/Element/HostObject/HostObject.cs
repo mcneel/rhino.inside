@@ -9,7 +9,7 @@ using Grasshopper.Kernel.Types;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class HostObject : Element
+  public class HostObject : GeometricElement
   {
     public override string TypeName => "Revit Host element";
     public override string TypeDescription => "Represents a Revit host element";
@@ -23,13 +23,11 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class HostObject : GeometricElementT<Types.HostObject>
+  public class HostObject : GeometricElementT<Types.HostObject, Autodesk.Revit.DB.HostObject>
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("E3462915-3C4D-4864-9DD4-5A73F91C6543");
 
     public HostObject() : base("Host", "Host", "Represents a Revit document host element.", "Params", "Revit") { }
-
-    public override bool AllowElement(Autodesk.Revit.DB.Element elem) => elem is Autodesk.Revit.DB.HostObject;
   }
 }
