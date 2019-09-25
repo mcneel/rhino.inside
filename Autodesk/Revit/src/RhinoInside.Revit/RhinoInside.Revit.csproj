@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
@@ -160,6 +160,10 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Extensions\Grasshopper.cs" />
+    <Compile Include="Extensions\RevitAPI.cs" />
+    <Compile Include="Extensions\RhinoCommon.cs" />
+    <Compile Include="Extensions\System.cs" />
     <Compile Include="GH\Guest.cs" />
     <Compile Include="GH\PreviewServer.cs" />
     <Compile Include="GH\ID.cs" />
@@ -220,7 +224,6 @@
     <Compile Include="DirectContext3DServer.cs" />
     <Compile Include="ImageBuilder.cs" />
     <Compile Include="Operator.cs" />
-    <Compile Include="Extension.cs" />
     <Compile Include="State.cs" />
     <Compile Include="Convert.cs" />
     <Compile Include="Revit.cs" />

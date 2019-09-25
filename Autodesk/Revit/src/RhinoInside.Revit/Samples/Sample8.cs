@@ -307,12 +307,7 @@ namespace RhinoInside.Revit.Samples
                 library.AddDefinition(definitionId, GNodes.ToArray());
               }
 
-              var xform = instance.Xform;
-
-              xform.Affineize();
-              xform.DecomposeAffine(out Vector3d translation, out var linear);
-              xform = Rhino.Geometry.Transform.Translation(translation * scaleFactor) * linear;
-
+              var xform = instance.Xform.Scale(scaleFactor);
               return DirectShape.CreateGeometryInstance(doc, definitionId, xform.ToHost());
             }
           }
