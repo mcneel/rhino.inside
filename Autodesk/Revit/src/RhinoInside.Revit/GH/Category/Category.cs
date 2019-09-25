@@ -324,7 +324,7 @@ namespace RhinoInside.Revit.GH.Components
       DA.SetData("AllowsParameters", category?.AllowsBoundParameters);
       DA.SetData("HasMaterialQuantities", category?.HasMaterialQuantities);
       DA.SetData("Cuttable", category?.IsCuttable);
-      DA.SetData("Hidden", category is null ? (object) null : !category.IsVisibleInUI);
+      DA.SetData("Hidden", category is null ? (object) null : category.IsHidden());
     }
   }
 

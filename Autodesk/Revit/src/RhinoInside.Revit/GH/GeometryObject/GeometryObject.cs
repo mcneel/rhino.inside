@@ -24,7 +24,7 @@ namespace RhinoInside.Revit.GH.Types
     public static bool IsValidElement(Autodesk.Revit.DB.Element element)
     {
       if (element?.Category is Autodesk.Revit.DB.Category category && !(element is Autodesk.Revit.DB.ElementType))
-        return category.Parent is null && category.IsVisibleInUI;
+        return category.Parent is null && !category.IsHidden();
 
       return false;
     }

@@ -106,6 +106,13 @@ namespace RhinoInside.Revit
     }
     #endregion
 
+    #region Category
+    public static bool IsHidden(this Category category)
+    {
+      return !category.CanAddSubcategory;
+    }
+    #endregion
+
     #region Parameters
     public enum ParameterSource
     {

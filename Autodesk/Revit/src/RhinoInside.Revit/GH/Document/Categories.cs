@@ -39,7 +39,7 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         foreach (var group in Revit.ActiveDBDocument.Settings.Categories.Cast<Autodesk.Revit.DB.Category>().GroupBy(x => x.CategoryType).OrderBy(x => x.Key))
         {
-          foreach (var category in group.OrderBy(x => x.Name).Where(x => x.IsVisibleInUI))
+          foreach (var category in group.OrderBy(x => x.Name).Where(x => !x.IsHidden()))
           {
             if (CategoryType != CategoryType.Invalid && category.CategoryType != CategoryType)
               continue;
@@ -183,7 +183,7 @@ namespace RhinoInside.Revit.GH.Components
         categories = categories.Where((x) => x.IsCuttable == Cuttable);
 
       if (!nofilterHidden)
-        categories = categories.Where((x) => x.IsVisibleInUI != Hidden);
+        categories = categories.Where((x) => x.IsHidden() == Hidden);
 
       IEnumerable<Category> list = null;
       foreach (var group in categories.GroupBy((x) => x.CategoryType).OrderBy((x) => x.Key))
