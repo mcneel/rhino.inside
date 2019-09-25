@@ -156,7 +156,11 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetDataList("Elements", elementIds))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.ExclusionFilter(elementIds));
+      var ids = elementIds.Where(x => x is object).ToArray();
+      if (ids.Length > 0)
+        DA.SetData("Filter", new Autodesk.Revit.DB.ExclusionFilter(ids));
+      else
+        DA.DisableGapLogic();
     }
   }
 
@@ -304,10 +308,15 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      if (categoryIds.Count == 1)
-        DA.SetData("Filter", new Autodesk.Revit.DB.ElementCategoryFilter(categoryIds[0], inverted));
-      else
-        DA.SetData("Filter", new Autodesk.Revit.DB.ElementMulticategoryFilter(categoryIds, inverted));
+      var ids = categoryIds.Select(x => x is null ? ElementId.InvalidElementId : x).ToArray();
+      if (ids.Length > 0)
+      {
+        if (ids.Length == 1)
+          DA.SetData("Filter", new Autodesk.Revit.DB.ElementCategoryFilter(ids[0], inverted));
+        else
+          DA.SetData("Filter", new Autodesk.Revit.DB.ElementMulticategoryFilter(ids, inverted));
+      }
+      else DA.DisableGapLogic();
     }
   }
 
