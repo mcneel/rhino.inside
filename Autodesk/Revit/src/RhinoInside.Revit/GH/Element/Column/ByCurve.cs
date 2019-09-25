@@ -38,8 +38,7 @@ namespace RhinoInside.Revit.GH.Components
         curve.Flip();
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-        curve = curve.Scale(scaleFactor);
+      curve = curve.ChangeUnits(scaleFactor);
 
       SolveOptionalType(ref type, doc, BuiltInCategory.OST_StructuralColumns, nameof(type));
 

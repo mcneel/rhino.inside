@@ -431,7 +431,7 @@ namespace RhinoInside.Revit.GH.Components
           targets.Add(box);
         }
 
-        pointsBBox = pointsBBox.Scale(scaleFactor);
+        pointsBBox = pointsBBox.ChangeUnits(scaleFactor);
         var outline = new Autodesk.Revit.DB.Outline(pointsBBox.Min.ToHost(), pointsBBox.Max.ToHost());
 
         if (strict)
@@ -451,7 +451,7 @@ namespace RhinoInside.Revit.GH.Components
                          targets.Add(box);
                        }
 
-                       x = x.Scale(scaleFactor);
+                       x = x.ChangeUnits(scaleFactor);
 
                        if (strict)
                        {
@@ -532,10 +532,7 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if(scaleFactor != 1.0)
-        brep.Scale(scaleFactor);
-
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(brep.ToHost(), inverted));
+      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(brep.ChangeUnits(scaleFactor).ToHost(), inverted));
     }
   }
 
@@ -566,10 +563,7 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-        mesh.Scale(scaleFactor);
-
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(Rhino.Geometry.Brep.CreateFromMesh(mesh, true).ToHost(), inverted));
+      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(Rhino.Geometry.Brep.CreateFromMesh(mesh.ChangeUnits(scaleFactor), true).ToHost(), inverted));
     }
   }
   #endregion

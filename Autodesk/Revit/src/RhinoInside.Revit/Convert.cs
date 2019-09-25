@@ -630,7 +630,7 @@ namespace RhinoInside.Revit
         switch (geometry)
         {
           case Autodesk.Revit.DB.GeometryInstance instance:
-            var xform = instance.Transform.ToRhino().Scale(scaleFactor);
+            var xform = instance.Transform.ToRhino().ChangeUnits(scaleFactor);
             foreach (var g in instance.SymbolGeometry.ToRhino())
             {
               g?.Transform(xform);
@@ -640,34 +640,22 @@ namespace RhinoInside.Revit
           case Autodesk.Revit.DB.Mesh mesh:
             var m = mesh.ToRhino();
 
-            if (scaleFactor != 1.0)
-              m?.Scale(scaleFactor);
-
-            yield return m;
+            yield return m?.ChangeUnits(scaleFactor);
             break;
           case Autodesk.Revit.DB.Solid solid:
             var s = solid.ToRhino();
 
-            if (scaleFactor != 1.0)
-              s?.Scale(scaleFactor);
-
-            yield return s;
+            yield return s?.ChangeUnits(scaleFactor);
             break;
           case Autodesk.Revit.DB.Curve curve:
             var c = curve.ToRhino();
 
-            if (scaleFactor != 1.0)
-              c?.Scale(scaleFactor);
-
-            yield return c;
+            yield return c?.ChangeUnits(scaleFactor);
             break;
           case Autodesk.Revit.DB.PolyLine polyline:
             var p = new Rhino.Geometry.PolylineCurve(polyline.GetCoordinates().ToRhino());
 
-            if (scaleFactor != 1.0)
-              p?.Scale(scaleFactor);
-
-            yield return p;
+            yield return p?.ChangeUnits(scaleFactor);
             break;
         }
       }
@@ -745,7 +733,7 @@ namespace RhinoInside.Revit
         {
           case Autodesk.Revit.DB.GeometryInstance instance:
           {
-            var xform = instance.Transform.ToRhino().Scale(scaleFactor);
+            var xform = instance.Transform.ToRhino().ChangeUnits(scaleFactor);
             foreach (var g in instance.SymbolGeometry.GetPreviewMeshes())
             {
               g?.Transform(xform);
@@ -760,10 +748,7 @@ namespace RhinoInside.Revit
 
             var m = mesh.ToRhino();
 
-            if (scaleFactor != 1.0)
-              m?.Scale(scaleFactor);
-
-            yield return m;
+            yield return m?.ChangeUnits(scaleFactor);
             break;
           }
           case Autodesk.Revit.DB.Face face:
@@ -771,10 +756,7 @@ namespace RhinoInside.Revit
             var meshingParameters = GraphicAttributes.Peek.MeshingParameters;
             var f = (meshingParameters is null ? face.Triangulate() : face.Triangulate(meshingParameters.RelativeTolerance)).ToRhino();
 
-            if (scaleFactor != 1.0)
-              f?.Scale(scaleFactor);
-
-            yield return f;
+            yield return f?.ChangeUnits(scaleFactor); ;
             break;
           }
           case Autodesk.Revit.DB.Solid solid:
@@ -789,9 +771,7 @@ namespace RhinoInside.Revit
             foreach (var face in solidFaces)
             {
               var f = (meshingParameters is null ? face.Triangulate() : face.Triangulate(meshingParameters.RelativeTolerance)).ToRhino();
-
-              if (scaleFactor != 1.0)
-                f?.Scale(scaleFactor);
+              f = f?.ChangeUnits(scaleFactor);
 
               if (facesMeshes is null)
                 yield return f;
@@ -830,7 +810,7 @@ namespace RhinoInside.Revit
         {
           case Autodesk.Revit.DB.GeometryInstance instance:
           {
-            var xform = instance.Transform.ToRhino().Scale(scaleFactor);
+            var xform = instance.Transform.ToRhino().ChangeUnits(scaleFactor);
             foreach (var g in instance.SymbolGeometry.GetPreviewWires())
             {
               g?.Transform(xform);
@@ -856,21 +836,13 @@ namespace RhinoInside.Revit
           case Autodesk.Revit.DB.Edge edge:
           {
             var e = edge.AsCurve().ToRhino();
-
-            if (scaleFactor != 1.0)
-              e?.Scale(scaleFactor);
-
-            yield return e;
+            yield return e?.ChangeUnits(scaleFactor);
             break;
           }
           case Autodesk.Revit.DB.Curve curve:
           {
             var c = curve.ToRhino();
-
-            if (scaleFactor != 1.0)
-              c?.Scale(scaleFactor);
-
-            yield return c;
+            yield return c?.ChangeUnits(scaleFactor);
             break;
           }
           case Autodesk.Revit.DB.PolyLine polyline:
@@ -879,11 +851,7 @@ namespace RhinoInside.Revit
               continue;
 
             var p = polyline.ToRhino();
-
-            if (scaleFactor != 1.0)
-              p?.Scale(scaleFactor);
-
-            yield return p;
+            yield return p?.ChangeUnits(scaleFactor);
             break;
           }
         }
@@ -1433,38 +1401,23 @@ namespace RhinoInside.Revit
       switch (geometry)
       {
         case Rhino.Geometry.Point point:
-          point = (Rhino.Geometry.Point) point.DuplicateShallow();
-
-          if (scaleFactor != 1.0)
-            point.Scale(scaleFactor);
+          point = (Rhino.Geometry.Point) point.ChangeUnits(scaleFactor);
 
           return Enumerable.Repeat(point.ToHost(), 1);
         case Rhino.Geometry.PointCloud pointCloud:
-          pointCloud = (Rhino.Geometry.PointCloud) pointCloud.DuplicateShallow();
-
-          if (scaleFactor != 1.0)
-            pointCloud.Scale(scaleFactor);
+          pointCloud = (Rhino.Geometry.PointCloud) pointCloud.ChangeUnits(scaleFactor);
 
           return pointCloud.ToHost();
         case Rhino.Geometry.Curve curve:
-          curve = (Rhino.Geometry.Curve) curve.DuplicateShallow();
-
-          if (scaleFactor != 1.0)
-            curve.Scale(scaleFactor);
+          curve = (Rhino.Geometry.Curve) curve.ChangeUnits(scaleFactor);
 
           return curve.ToHost();
         case Rhino.Geometry.Brep brep:
-          brep = (Rhino.Geometry.Brep) brep.DuplicateShallow();
-
-          if (scaleFactor != 1.0)
-            brep.Scale(scaleFactor);
+          brep = (Rhino.Geometry.Brep) brep.ChangeUnits(scaleFactor);
 
           return brep.ToHostMultiple();
         case Rhino.Geometry.Mesh mesh:
-          mesh = (Rhino.Geometry.Mesh) mesh.DuplicateShallow();
-
-          if (scaleFactor != 1.0)
-            mesh.Scale(scaleFactor);
+          mesh = (Rhino.Geometry.Mesh) mesh.ChangeUnits(scaleFactor);
 
           while (mesh.CollapseFacesByEdgeLength(false, Revit.VertexTolerance) > 0) ;
 

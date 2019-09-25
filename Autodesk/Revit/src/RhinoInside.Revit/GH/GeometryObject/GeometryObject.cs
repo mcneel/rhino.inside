@@ -199,8 +199,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         if (point == null)
         {
-          point = new Rhino.Geometry.Point(Value.Coord.ToRhino());
-          point.Scale(Revit.ModelUnits);
+          point = new Rhino.Geometry.Point(Value.Coord.ToRhino().ChangeUnits(Revit.ModelUnits));
 
           using
           (
@@ -211,10 +210,7 @@ namespace RhinoInside.Revit.GH.Types
           {
             if (element is Instance instance)
             {
-              var transform = instance.GetTransform();
-              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
-              var xform = transform.ToRhino();
-
+              var xform = instance.GetTransform().ToRhino().ChangeUnits(Revit.ModelUnits);
               point.Transform(xform);
             }
           }
@@ -228,7 +224,7 @@ namespace RhinoInside.Revit.GH.Types
     {
       if (source is GH_Point point)
       {
-        Value = Autodesk.Revit.DB.Point.Create(point.Value.Scale(1.0 / Revit.ModelUnits).ToHost());
+        Value = Autodesk.Revit.DB.Point.Create(point.Value.ChangeUnits(1.0 / Revit.ModelUnits).ToHost());
         UniqueID = string.Empty;
         return true;
       }
@@ -308,10 +304,7 @@ namespace RhinoInside.Revit.GH.Types
           {
             if (element is Instance instance)
             {
-              var transform = instance.GetTransform();
-              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
-              var xform = transform.ToRhino();
-
+              var xform = instance.GetTransform().ToRhino().ChangeUnits(Revit.ModelUnits);
               wires[0]?.Transform(xform);
             }
           }
@@ -393,11 +386,9 @@ namespace RhinoInside.Revit.GH.Types
           {
             if (element is Instance instance)
             {
-              var transform = instance.GetTransform();
-              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
-              var xform = transform.ToRhino();
+              var xform = instance.GetTransform().ToRhino().ChangeUnits(Revit.ModelUnits);
 
-              foreach(var wire in wires)
+              foreach (var wire in wires)
                 wire.Transform(xform);
             }
           }

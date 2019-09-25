@@ -238,7 +238,7 @@ namespace RhinoInside.Revit.UI
       IGH_Goo goo = null;
 
       if (PickPoint(doc, prompt + " : ", out var point))
-        goo = new GH_Point(point.ToRhino().Scale(Revit.ModelUnits));
+        goo = new GH_Point(point.ToRhino().ChangeUnits(Revit.ModelUnits));
 
       yield return goo;
     }
@@ -253,7 +253,7 @@ namespace RhinoInside.Revit.UI
         PickPoint(doc, prompt + " : End pont - ", out var to)
       )
       {
-        goo = new GH_Line(new Rhino.Geometry.Line(from.ToRhino().Scale(Revit.ModelUnits), to.ToRhino().Scale(Revit.ModelUnits)));
+        goo = new GH_Line(new Rhino.Geometry.Line(from.ToRhino().ChangeUnits(Revit.ModelUnits), to.ToRhino().ChangeUnits(Revit.ModelUnits)));
       }
 
       yield return goo;
@@ -272,7 +272,7 @@ namespace RhinoInside.Revit.UI
         var min = new Point3d(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y), Math.Min(from.Z, to.Z));
         var max = new Point3d(Math.Max(from.X, to.X), Math.Max(from.Y, to.Y), Math.Max(from.Z, to.Z));
 
-        goo = new GH_Box(new BoundingBox(min.Scale(Revit.ModelUnits), max.Scale(Revit.ModelUnits)));
+        goo = new GH_Box(new BoundingBox(min.ChangeUnits(Revit.ModelUnits), max.ChangeUnits(Revit.ModelUnits)));
       }
 
       yield return goo;
@@ -289,8 +289,7 @@ namespace RhinoInside.Revit.UI
         {
           var element = doc.Document.GetElement(reference);
           var edge = element.GetGeometryObjectFromReference(reference) as Edge;
-          var curve = edge.AsCurve().ToRhino();
-          curve.Scale(Revit.ModelUnits);
+          var curve = edge.AsCurve().ToRhino().ChangeUnits(Revit.ModelUnits);
           goo = new GH_Curve(curve);
         }
       }
@@ -308,8 +307,7 @@ namespace RhinoInside.Revit.UI
         {
           var element = doc.Document.GetElement(reference);
           var face = element.GetGeometryObjectFromReference(reference) as Face;
-          var surface = face.ToRhino();
-          surface.Scale(Revit.ModelUnits);
+          var surface = face.ToRhino().ChangeUnits(Revit.ModelUnits);
           return new GH_Surface[] { new GH_Surface(surface) };
         }
       }

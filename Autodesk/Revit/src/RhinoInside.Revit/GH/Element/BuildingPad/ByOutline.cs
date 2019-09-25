@@ -38,11 +38,7 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-      {
-        foreach (var boundary in boundaries)
-          boundary.Scale(scaleFactor);
-      }
+      boundaries = boundaries.Select(x => x.ChangeUnits(scaleFactor)).ToArray();
 
       var boundaryBBox = Rhino.Geometry.BoundingBox.Empty;
       foreach (var boundary in boundaries)

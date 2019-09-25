@@ -35,7 +35,7 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      var adaptivePoints = points.Select(x => x.Scale(scaleFactor).ToHost()).ToArray();
+      var adaptivePoints = points.Select(x => x.ChangeUnits(scaleFactor).ToHost()).ToArray();
 
       if (!type.IsActive)
         type.Activate();

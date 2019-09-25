@@ -539,7 +539,7 @@ namespace RhinoInside.Revit.GH.Types
         {
           var element = (Autodesk.Revit.DB.Element) this;
           if (element is object)
-            clippingBox = element.get_BoundingBox(null).ToRhino().Scale(Revit.ModelUnits);
+            clippingBox = element.get_BoundingBox(null).ToRhino().ChangeUnits(Revit.ModelUnits);
         }
 
         return clippingBox;
@@ -715,13 +715,7 @@ namespace RhinoInside.Revit.GH.Types
           }
 
           if (p.IsValid)
-          {
-            var scaleFactor = Revit.ModelUnits;
-            if (scaleFactor != 1.0)
-              p = p.Scale(scaleFactor);
-
-            return p;
-          }
+            return p.ChangeUnits(Revit.ModelUnits);
         }
 
         return p;
@@ -846,14 +840,7 @@ namespace RhinoInside.Revit.GH.Types
           c = grid.Curve.ToRhino();
         }
 
-        if (c is object)
-        {
-          var scaleFactor = Revit.ModelUnits;
-          if (scaleFactor != 1.0)
-            c.Scale(scaleFactor);
-        }
-
-        return c;
+        return c?.ChangeUnits(Revit.ModelUnits);
       }
     }
     #endregion

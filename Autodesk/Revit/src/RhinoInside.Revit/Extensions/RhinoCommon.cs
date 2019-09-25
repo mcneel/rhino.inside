@@ -9,29 +9,37 @@ namespace RhinoInside.Revit
   public static partial class Extension
   {
     #region Scale
-    public static Point3d Scale(this Point3d p, double factor)
+    public static Point3d ChangeUnits(this Point3d p, double factor)
     {
       return p * factor;
     }
-    public static Vector3d Scale(this Vector3d p, double factor)
+    public static Vector3d ChangeUnits(this Vector3d p, double factor)
     {
       return p * factor;
     }
-    public static Transform Scale(this Transform t, double factor)
+    public static Transform ChangeUnits(this Transform t, double factor)
     {
-      return Transform.Scale(Point3d.Origin, factor) * t;
+      t.M03 *= factor;
+      t.M13 *= factor;
+      t.M23 *= factor;
+      return t;
     }
-    public static Line Scale(this Line l, double factor)
+    public static Line ChangeUnits(this Line l, double factor)
     {
       return new Line(l.From * factor, l.To * factor);
     }
-    public static Plane Scale(this Plane p, double factor)
+    public static Plane ChangeUnits(this Plane p, double factor)
     {
       return new Plane(p.Origin * factor, p.XAxis, p.YAxis);
     }
-    public static BoundingBox Scale(this BoundingBox bbox, double factor)
+    public static BoundingBox ChangeUnits(this BoundingBox bbox, double factor)
     {
       return new BoundingBox(bbox.Min * factor, bbox.Max * factor);
+    }
+    public static G ChangeUnits<G>(this G geometry, double factor) where G : GeometryBase
+    {
+      geometry = (G) geometry?.DuplicateShallow();
+      return factor != 1.0 && !geometry.Scale(factor) ? null : geometry;
     }
     #endregion
 

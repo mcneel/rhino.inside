@@ -40,7 +40,7 @@ namespace RhinoInside.Revit.GH.Components
 
       if
       (
-        scaleFactor != 1.0 ? !boundary.Scale(scaleFactor) : true &&
+        ((boundary = boundary.ChangeUnits(scaleFactor)) is null) ||
         !boundary.IsClosed ||
         !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
         boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0

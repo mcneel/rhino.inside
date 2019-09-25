@@ -544,11 +544,8 @@ namespace RhinoInside.Revit.GH.Components
                   var planesSet = new List<KeyValuePair<double[], SketchPlane>>();
                   var planesSetComparer = new PlaneComparer();
 
-                  foreach (var geo in geometry.Select(x => AsGeometryBase(x)))
+                  foreach (var geo in geometry.Select(x => AsGeometryBase(x).ChangeUnits(scaleFactor)))
                   {
-                    if (scaleFactor != 1.0)
-                      geo.Scale(scaleFactor);
-
                     try
                     {
                       switch (geo)

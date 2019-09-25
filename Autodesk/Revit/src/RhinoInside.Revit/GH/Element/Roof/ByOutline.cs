@@ -38,7 +38,7 @@ namespace RhinoInside.Revit.GH.Components
 
       if
       (
-        scaleFactor != 1.0 ? !boundary.Scale(scaleFactor) : true &&
+        ((boundary = boundary.ChangeUnits(scaleFactor)) is null) ||
         boundary.IsShort(Revit.ShortCurveTolerance) ||
         !boundary.IsClosed ||
         !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||

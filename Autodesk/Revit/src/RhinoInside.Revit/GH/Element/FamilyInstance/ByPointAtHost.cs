@@ -41,10 +41,7 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-      {
-        location = location.Scale(scaleFactor);
-      }
+      location = location.ChangeUnits(scaleFactor);
 
       if (!location.IsValid)
         ThrowArgumentException(nameof(location), "Should be a valid point or plane.");

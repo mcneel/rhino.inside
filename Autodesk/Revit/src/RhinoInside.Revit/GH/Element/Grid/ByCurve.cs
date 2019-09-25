@@ -35,10 +35,7 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-      {
-        curve.Scale(scaleFactor);
-      }
+      curve = curve.ChangeUnits(scaleFactor);
 
       SolveOptionalType(ref type, doc, ElementTypeGroup.GridType, nameof(type));
 

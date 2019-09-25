@@ -307,7 +307,7 @@ namespace RhinoInside.Revit.Samples
                 library.AddDefinition(definitionId, GNodes.ToArray());
               }
 
-              var xform = instance.Xform.Scale(scaleFactor);
+              var xform = instance.Xform.ChangeUnits(scaleFactor);
               return DirectShape.CreateGeometryInstance(doc, definitionId, xform.ToHost());
             }
           }

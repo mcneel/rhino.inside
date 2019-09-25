@@ -266,7 +266,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!library.ContainsType(type.UniqueId))
         library.AddDefinitionType(type.UniqueId, type.Id);
 
-      var transform = Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, location.Scale(scaleFactor)).ToHost();
+      var transform = Rhino.Geometry.Transform.PlaneToPlane(Rhino.Geometry.Plane.WorldXY, location.ChangeUnits(scaleFactor)).ToHost();
       ds.SetShape(DirectShape.CreateGeometryInstance(doc, type.UniqueId, transform));
 
       var parametersMask = new BuiltInParameter[]

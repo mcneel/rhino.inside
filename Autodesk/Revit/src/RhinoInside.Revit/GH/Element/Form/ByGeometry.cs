@@ -36,8 +36,7 @@ namespace RhinoInside.Revit.GH.Components
         throw new InvalidOperationException("This component can only run in Family editor");
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-        brep.Scale(scaleFactor);
+      brep = brep.ChangeUnits(scaleFactor);
 
       if (brep.Faces.Count == 1 && brep.Faces[0].Loops.Count == 1 && brep.Faces[0].TryGetPlane(out var capPlane))
       {
