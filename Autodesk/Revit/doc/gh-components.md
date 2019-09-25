@@ -230,7 +230,6 @@ This guide documents the Grasshopper components that support Revit interaction.
   </tr>
 </table>
 
-
 #### Elements Components
 
 <table style="width:100%">
@@ -280,6 +279,88 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Deletes the specified element out of Revit.</td>
   </tr>
 </table>
+
+#### Family Components
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/FamilyGetType.png" alt="FamilyGetType" width="32"></td>
+    <td>Family Get Type</td>
+    <td>Obtains a set of types that are owned by Family</td>
+  </tr>
+  <tr>
+    <td><img src="GH/FamilyLoad.png" alt="FamilyLoad" width="32"></td>
+    <td>Load Family</td>
+    <td>Loads a family into the document using optional overrides</td>
+  </tr>
+  <tr>
+    <td><img src="GH/FamilyNew.png" alt="FamilyNew" width="32"></td>
+    <td>Load Family</td>
+    <td>Creates a new Family from a template including optional overrides</td>
+  </tr>
+  <tr>
+    <td><img src="GH/FamilySaveAs.png" alt="FamilySaveAs" width="32"></td>
+    <td>Family Save As...</td>
+    <td>Saves the Family to a given file path.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/AddFamilyElementByBrep.png" alt="AddFamilyElementByBrep" width="32"></td>
+    <td>Add Family By Brep</td>
+    <td>Add a family using a Brep.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/AddFamilyElementByCurve.png" alt="AddFamilyElementByCurve" width="32"></td>
+    <td>Add Family by Curve</td>
+    <td>Add a family using curve objects.</td>
+  </tr>
+  <tr>
+      <td><img src="GH/VisibilityConstruct.png" alt="VisibilityConstruct" width="32"></td>
+      <td>Visibility Construct</td>
+      <td>Create a View Construct for a Family.</td>
+  </tr>
+</table>
+
+
+#### Filter Components
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/DocumentCategories.png" alt="BeamByCurve" width="32"></td>
+    <td>Document Categories</td>
+    <td>Get Active Document Category list Using the Type, and HasMaterial filter.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/DocumentElements.png" alt="BeamByCurve" width="32"></td>
+    <td>Document Elements</td>
+    <td>Get Active Document Elements list using a Category filter</td>
+  </tr>
+  <tr>
+    <td><img src="GH/DocumentElementTypes.png" alt="ColumnByCurve" width="32"></td>
+    <td>Document Element Types</td>
+    <td>Get Active Document Element Types using the Category, Family and Type filter</td>
+  </tr>
+  <tr>
+    <td><img src="GH/DocumentLevels.png" alt="BeamByCurve" width="32"></td>
+    <td>Document Levels</td>
+    <td>Get Active Document levels list from Revit</td>
+  </tr>
+  <tr>
+    <td><img src="GH/DocumentParameters.png" alt="ColumnByCurve" width="32"></td>
+    <td>Document Parameters</td>
+    <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+</table>
+
 
 #### Geometry Components
 
