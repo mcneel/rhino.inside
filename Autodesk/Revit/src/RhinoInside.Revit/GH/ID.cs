@@ -70,10 +70,16 @@ namespace RhinoInside.Revit.GH.Types
                      string.Empty
                  );
     }
-    public void SetValue(Autodesk.Revit.DB.Element element)
+    public virtual bool SetValue(Autodesk.Revit.DB.Element element)
     {
-      Value = element?.Id;
-      UniqueID = element?.UniqueId ?? string.Empty;
+      if (ScriptVariableType.IsInstanceOfType(element))
+      {
+        Value = element?.Id;
+        UniqueID = element?.UniqueId ?? string.Empty;
+        return true;
+      }
+
+      return false;
     }
 
     #region IGH_ElementId
@@ -115,6 +121,12 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
+      if(target is IGH_ElementId)
+      {
+        target = (Q) (object) null;
+        return true;
+      }
+
       if (typeof(Q).IsAssignableFrom(typeof(Autodesk.Revit.DB.ElementId)))
       {
         target = (Q) (object) Value;
@@ -177,6 +189,7 @@ namespace RhinoInside.Revit.GH.Parameters
                                              ImageBuilder.BuildIcon(IconTag);
 
     protected virtual string IconTag => GetType().Name.Substring(0, 1);
+    public override sealed string TypeName => "Revit " + Name;
 
     protected GH_PersistentParam(string name, string nickname, string description, string category, string subcategory) :
       base(name, nickname, description, category, subcategory) { }
@@ -193,7 +206,7 @@ namespace RhinoInside.Revit.GH.Parameters
     bool NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified);
   }
 
-  public abstract class ElementIdParam<T> : GH_PersistentParam<T>, IGH_ElementIdParam
+  public abstract class ElementIdParam<T, R> : GH_PersistentParam<T>, IGH_ElementIdParam
     where T : class, Types.IGH_ElementId
   {
     protected ElementIdParam(string name, string nickname, string description, string category, string subcategory) :
@@ -203,7 +216,7 @@ namespace RhinoInside.Revit.GH.Parameters
     internal static IEnumerable<ElementId> ToElementIds(IGH_Structure data) =>
       data.AllData(true).
       OfType<Types.IGH_ElementId>().
-      Where(x => x != null).
+      Where(x => x is object).
       Select(x => x.Id);
 
     public override void ClearData()
@@ -240,6 +253,8 @@ namespace RhinoInside.Revit.GH.Parameters
 
       base.OnVolatileDataCollected();
     }
+
+    protected override T PreferredCast(object data) => data is R ? (T) Activator.CreateInstance(typeof(T), data) : null;
 
     #region UI
     public virtual void AppendAdditionalElementMenuItems(ToolStripDropDown menu) { }
@@ -336,7 +351,6 @@ namespace RhinoInside.Revit.GH.Parameters
       }
     }
 
-
     protected void Menu_Connect(object sender, EventArgs e)
     {
       if (sender is ToolStripMenuItem item && item.Tag is Guid componentGuid)
@@ -373,7 +387,7 @@ namespace RhinoInside.Revit.GH.Parameters
     #endregion
   }
 
-  public abstract class ElementIdNonGeometryParam<T> : ElementIdParam<T>
+  public abstract class ElementIdNonGeometryParam<T, R> : ElementIdParam<T, R>
     where T : class, Types.IGH_ElementId
   {
     protected ElementIdNonGeometryParam(string name, string nickname, string description, string category, string subcategory) :

@@ -136,9 +136,6 @@
   <data name="Category" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\GH\Category.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="CategoryDecompose" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\GH\CategoryDecompose.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
   <data name="CategoryTypes" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\GH\CategoryTypes.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -153,9 +150,6 @@
   </data>
   <data name="DocumentCategories" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\GH\DocumentCategories.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
-  <data name="DocumentCategoriesPicker" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\GH\DocumentCategoriesPicker.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="DocumentElements" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\GH\DocumentElements.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -267,5 +261,32 @@
   </data>
   <data name="RoofByOutline" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\GH\RoofByOutline.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="AdaptiveComponentByPoints" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\AdaptiveComponentByPoints.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="AnalyticalCategoriesPicker" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\AnalyticalCategoriesPicker.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="AnnotationCategoriesPicker" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\AnnotationCategoriesPicker.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="CategorySubCategories" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\CategorySubCategories.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="DirectShapeByLocation" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\DirectShapeByLocation.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ElementDelete" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ElementDelete.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="GridByCurve" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\GridByCurve.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="LevelByElevation" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\LevelByElevation.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ModelCategoriesPicker" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\GH\ModelCategoriesPicker.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

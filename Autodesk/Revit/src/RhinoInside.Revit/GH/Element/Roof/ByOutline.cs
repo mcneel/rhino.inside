@@ -21,7 +21,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Roof", "R", "New Roof", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Roof", "R", "New Roof", GH_ParamAccess.item);
     }
 
     void ReconstructRoofByOutline
@@ -38,7 +38,7 @@ namespace RhinoInside.Revit.GH.Components
 
       if
       (
-        scaleFactor != 1.0 ? !boundary.Scale(scaleFactor) : true &&
+        ((boundary = boundary.ChangeUnits(scaleFactor)) is null) ||
         boundary.IsShort(Revit.ShortCurveTolerance) ||
         !boundary.IsClosed ||
         !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||

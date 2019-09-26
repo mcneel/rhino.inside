@@ -43,7 +43,7 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Family : ElementIdNonGeometryParam<Types.Family>
+  public class Family : ElementIdNonGeometryParam<Types.Family, Autodesk.Revit.DB.Family>
   {
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("3966ADD8-07C0-43E7-874B-6EFF95598EB0");
@@ -544,11 +544,8 @@ namespace RhinoInside.Revit.GH.Components
                   var planesSet = new List<KeyValuePair<double[], SketchPlane>>();
                   var planesSetComparer = new PlaneComparer();
 
-                  foreach (var geo in geometry.Select(x => AsGeometryBase(x)))
+                  foreach (var geo in geometry.Select(x => AsGeometryBase(x).ChangeUnits(scaleFactor)))
                   {
-                    if (scaleFactor != 1.0)
-                      geo.Scale(scaleFactor);
-
                     try
                     {
                       switch (geo)
@@ -773,7 +770,7 @@ namespace RhinoInside.Revit.GH.Components
       manager[manager.AddBooleanParameter("Visible", "V", string.Empty, GH_ParamAccess.item, false)].Optional = true;
       manager[manager.AddParameter(new Parameters.Category(), "Subcategory", "S", string.Empty, GH_ParamAccess.item)].Optional = true;
       manager[manager.AddIntegerParameter("Visibility", "S", string.Empty, GH_ParamAccess.item, -1)].Optional = true;
-      manager[manager.AddParameter(new Parameters.Element(), "Material", "M", string.Empty, GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.Material(), "Material", "M", string.Empty, GH_ParamAccess.item)].Optional = true;
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)

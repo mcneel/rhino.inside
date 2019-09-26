@@ -25,7 +25,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Element", "E", "New Instance Element", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Instance", "I", "New Instance Element", GH_ParamAccess.item);
     }
 
     void ReconstructFamilyInstanceByLocation
@@ -41,10 +41,7 @@ namespace RhinoInside.Revit.GH.Components
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-      {
-        location = location.Scale(scaleFactor);
-      }
+      location = location.ChangeUnits(scaleFactor);
 
       if (!location.IsValid)
         ThrowArgumentException(nameof(location), "Should be a valid point or plane.");

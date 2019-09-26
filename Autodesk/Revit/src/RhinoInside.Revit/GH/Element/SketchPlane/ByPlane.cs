@@ -28,7 +28,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         var element = (Autodesk.Revit.DB.SketchPlane) this;
         if (element != null)
-          return element.GetPlane().ToRhino().Scale(Revit.ModelUnits);
+          return element.GetPlane().ToRhino().ChangeUnits(Revit.ModelUnits);
 
         return new Rhino.Geometry.Plane(new Rhino.Geometry.Point3d(double.NaN, double.NaN, double.NaN), Rhino.Geometry.Vector3d.Zero, Rhino.Geometry.Vector3d.Zero);
       }
@@ -39,7 +39,7 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class SketchPlane : ElementIdNonGeometryParam<Types.SketchPlane>
+  public class SketchPlane : ElementIdNonGeometryParam<Types.SketchPlane, Autodesk.Revit.DB.SketchPlane>
   {
     public override Guid ComponentGuid => new Guid("93BF1F61-69AD-433F-A202-352C14E4CED8");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
@@ -81,8 +81,7 @@ namespace RhinoInside.Revit.GH.Components
         ThrowArgumentException(nameof(plane), "Plane is not valid.");
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      if (scaleFactor != 1.0)
-        plane = plane.Scale(scaleFactor);
+      plane = plane.ChangeUnits(scaleFactor);
 
       if (element is SketchPlane sketchPlane)
       {

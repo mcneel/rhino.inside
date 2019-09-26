@@ -25,7 +25,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Wall", "W", "New Wall", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Wall", "W", "New Wall", GH_ParamAccess.item);
     }
 
     protected override void OnAfterStart(Document document, string strTransactionName)
@@ -92,7 +92,7 @@ namespace RhinoInside.Revit.GH.Components
 
       if
       (
-        !(scaleFactor != 1.0 ? curve.Scale(scaleFactor) : true) ||
+        ((curve = curve.ChangeUnits(scaleFactor)) is null) ||
         !(curve.IsLinear(Revit.VertexTolerance) || curve.IsArc(Revit.VertexTolerance)) ||
         !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
         axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0

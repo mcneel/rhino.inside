@@ -23,7 +23,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Beam", "B", "New Beam", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Beam", "B", "New Beam", GH_ParamAccess.item);
     }
 
     void ReconstructBeamByCurve
@@ -40,7 +40,7 @@ namespace RhinoInside.Revit.GH.Components
 
       if
       (
-        !(scaleFactor != 1.0 ? curve.Scale(scaleFactor) : true) ||
+        ((curve = curve.ChangeUnits(scaleFactor)) is null) ||
         curve.IsClosed ||
         !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
         curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)

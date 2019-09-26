@@ -13,6 +13,23 @@ using Rhino.Geometry;
 
 namespace RhinoInside.Revit.GH.Types
 {
+  public class GeometricElement : Element
+  {
+    public override string TypeName => "Revit Geometric element";
+    public override string TypeDescription => "Represents a Revit geometric element";
+
+    public GeometricElement() { }
+    public GeometricElement(Autodesk.Revit.DB.Element element) : base(element) { }
+    public override bool SetValue(Autodesk.Revit.DB.Element element) => IsValidElement(element) ? base.SetValue(element) : false;
+    public static bool IsValidElement(Autodesk.Revit.DB.Element element)
+    {
+      if (element?.Category is Autodesk.Revit.DB.Category category && !(element is Autodesk.Revit.DB.ElementType))
+        return category.Parent is null && !category.IsHidden();
+
+      return false;
+    }
+  }
+
   public abstract class GeometryObject<X> :
     GH_Goo<X>,
     IGH_ElementId,
@@ -182,8 +199,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         if (point == null)
         {
-          point = new Rhino.Geometry.Point(Value.Coord.ToRhino());
-          point.Scale(Revit.ModelUnits);
+          point = new Rhino.Geometry.Point(Value.Coord.ToRhino().ChangeUnits(Revit.ModelUnits));
 
           using
           (
@@ -194,10 +210,7 @@ namespace RhinoInside.Revit.GH.Types
           {
             if (element is Instance instance)
             {
-              var transform = instance.GetTransform();
-              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
-              var xform = transform.ToRhino();
-
+              var xform = instance.GetTransform().ToRhino().ChangeUnits(Revit.ModelUnits);
               point.Transform(xform);
             }
           }
@@ -211,7 +224,7 @@ namespace RhinoInside.Revit.GH.Types
     {
       if (source is GH_Point point)
       {
-        Value = Autodesk.Revit.DB.Point.Create(point.Value.Scale(1.0 / Revit.ModelUnits).ToHost());
+        Value = Autodesk.Revit.DB.Point.Create(point.Value.ChangeUnits(1.0 / Revit.ModelUnits).ToHost());
         UniqueID = string.Empty;
         return true;
       }
@@ -221,14 +234,14 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
-      if (Value != null)
+      if (Value is object)
       {
         if (typeof(Q).IsAssignableFrom(typeof(GH_Point)))
         {
           target = (Q) (object) new GH_Point(Point.Location);
           return true;
         }
-        else if (Reference != null && typeof(Q).IsAssignableFrom(typeof(Element)))
+        else if (Reference is object && typeof(Q).IsAssignableFrom(typeof(Element)))
         {
           var element = Revit.ActiveDBDocument.GetElement(Reference);
           target = (Q) (object) Element.Make(element);
@@ -236,7 +249,7 @@ namespace RhinoInside.Revit.GH.Types
         }
       }
 
-      return base.CastTo<Q>(ref target);
+      return base.CastTo(ref target);
     }
 
     public override BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform)
@@ -291,10 +304,7 @@ namespace RhinoInside.Revit.GH.Types
           {
             if (element is Instance instance)
             {
-              var transform = instance.GetTransform();
-              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
-              var xform = transform.ToRhino();
-
+              var xform = instance.GetTransform().ToRhino().ChangeUnits(Revit.ModelUnits);
               wires[0]?.Transform(xform);
             }
           }
@@ -306,14 +316,14 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
-      if (Value != null)
+      if (Value is object)
       {
         if (typeof(Q).IsAssignableFrom(typeof(GH_Curve)))
         {
           target = (Q) (object) new GH_Curve(Curve);
           return true;
         }
-        else if (Reference != null && typeof(Q).IsAssignableFrom(typeof(Element)))
+        else if (Reference is object && typeof(Q).IsAssignableFrom(typeof(Element)))
         {
           var element = Revit.ActiveDBDocument.GetElement(Reference);
           target = (Q) (object) Element.Make(element);
@@ -321,7 +331,7 @@ namespace RhinoInside.Revit.GH.Types
         }
       }
 
-      return base.CastTo<Q>(ref target);
+      return base.CastTo(ref target);
     }
 
     public override BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform)
@@ -376,11 +386,9 @@ namespace RhinoInside.Revit.GH.Types
           {
             if (element is Instance instance)
             {
-              var transform = instance.GetTransform();
-              transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
-              var xform = transform.ToRhino();
+              var xform = instance.GetTransform().ToRhino().ChangeUnits(Revit.ModelUnits);
 
-              foreach(var wire in wires)
+              foreach (var wire in wires)
                 wire.Transform(xform);
             }
           }
@@ -392,7 +400,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
-      if (Value != null)
+      if (Value is object)
       {
         var element = Reference != null ? Revit.ActiveDBDocument.GetElement(Reference) : null;
 
@@ -418,14 +426,14 @@ namespace RhinoInside.Revit.GH.Types
           target = (Q) (object) new GH_Brep(brep);
           return true;
         }
-        else if (element != null && typeof(Q).IsAssignableFrom(typeof(Element)))
+        else if (element is object && typeof(Q).IsAssignableFrom(typeof(Element)))
         {
           target = (Q) (object) Element.Make(element);
           return true;
         }
       }
 
-      return base.CastTo<Q>(ref target);
+      return base.CastTo(ref target);
     }
 
     public override BoundingBox GetBoundingBox(Rhino.Geometry.Transform xform)
@@ -500,7 +508,7 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public abstract class ElementIdGeometryParam<X> : ElementIdParam<X>, IGH_PreviewObject
+  public abstract class ElementIdGeometryParam<X, R> : ElementIdParam<X, R>, IGH_PreviewObject
     where X : class, Types.IGH_ElementId
   {
     protected ElementIdGeometryParam(string name, string nickname, string description, string category, string subcategory) :
@@ -515,7 +523,7 @@ namespace RhinoInside.Revit.GH.Parameters
     #endregion
   }
 
-  public abstract class GeometricElementT<T> : ElementIdGeometryParam<T>, ISelectionFilter where T : Types.Element
+  public abstract class GeometricElementT<T, R> : ElementIdGeometryParam<T, R>, ISelectionFilter where T : Types.Element, new()
   {
     protected GeometricElementT(string name, string nickname, string description, string category, string subcategory) :
     base(name, nickname, description, category, subcategory)
@@ -540,7 +548,7 @@ namespace RhinoInside.Revit.GH.Parameters
     }
     #endregion
 
-    public abstract bool AllowElement(Autodesk.Revit.DB.Element elem);
+    public virtual bool AllowElement(Autodesk.Revit.DB.Element elem) => elem is R;
     public bool AllowReference(Reference reference, XYZ position)
     {
       if (reference.ElementReferenceType == ElementReferenceType.REFERENCE_TYPE_NONE)
@@ -600,17 +608,24 @@ namespace RhinoInside.Revit.GH.Parameters
     }
   }
 
-  public class GeometricElement : GeometricElementT<Types.Element>
+  public class GeometricElement : GeometricElementT<Types.GeometricElement, Autodesk.Revit.DB.Element>
   {
     public override GH_Exposure Exposure => GH_Exposure.primary;
     public override Guid ComponentGuid => new Guid("EF607C2A-2F44-43F4-9C39-369CE114B51F");
 
     public GeometricElement() : base("Geometric Element", "Geometric Element", "Represents a Revit document geometric element.", "Params", "Revit") { }
 
-    public override bool AllowElement(Autodesk.Revit.DB.Element elem) => true;
+    protected override Types.GeometricElement PreferredCast(object data)
+    {
+      return data is Autodesk.Revit.DB.Element element && AllowElement(element) ?
+             new Types.GeometricElement(element) :
+             null;
+    }
+
+    public override bool AllowElement(Autodesk.Revit.DB.Element elem) => Types.GeometricElement.IsValidElement(elem);
   }
 
-  public class Vertex : ElementIdGeometryParam<Types.Vertex>
+  public class Vertex : ElementIdGeometryParam<Types.Vertex, Autodesk.Revit.DB.Point>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("BC1B160A-DC04-4139-AB7D-1AECBDE7FF88");
@@ -670,7 +685,7 @@ namespace RhinoInside.Revit.GH.Parameters
     #endregion
   }
 
-  public class Edge : ElementIdGeometryParam<Types.Edge>
+  public class Edge : ElementIdGeometryParam<Types.Edge, Autodesk.Revit.DB.Edge>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("B79FD0FD-63AE-4776-A0A7-6392A3A58B0D");
@@ -716,7 +731,7 @@ namespace RhinoInside.Revit.GH.Parameters
     #endregion
   }
 
-  public class Face : ElementIdGeometryParam<Types.Face>
+  public class Face : ElementIdGeometryParam<Types.Face, Autodesk.Revit.DB.Face>
   {
     public override GH_Exposure Exposure => GH_Exposure.secondary;
     public override Guid ComponentGuid => new Guid("759700ED-BC79-4986-A6AB-84921A7C9293");

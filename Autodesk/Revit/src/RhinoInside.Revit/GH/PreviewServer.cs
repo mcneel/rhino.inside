@@ -234,7 +234,7 @@ namespace RhinoInside.Revit.GH
 
     public override Outline GetBoundingBox(View dBView)
     {
-      var bbox = primitivesBoundingBox.Scale(1.0 / Revit.ModelUnits);
+      var bbox = primitivesBoundingBox.ChangeUnits(1.0 / Revit.ModelUnits);
       return new Outline(bbox.Min.ToHost(), bbox.Max.ToHost());
     }
 
@@ -246,7 +246,7 @@ namespace RhinoInside.Revit.GH
 
         DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
 
-        var CropBox = new Rhino.Geometry.BoundingBox(dBView.CropBox.Min.ToRhino(), dBView.CropBox.Max.ToRhino()).Scale(Revit.ModelUnits);
+        var CropBox = dBView.CropBox.ToRhino().ChangeUnits(Revit.ModelUnits);
 
         foreach (var primitive in primitives)
         {

@@ -22,7 +22,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Floor", "F", "New Floor", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Floor", "F", "New Floor", GH_ParamAccess.item);
     }
 
     void ReconstructFloorByOutline
@@ -40,7 +40,7 @@ namespace RhinoInside.Revit.GH.Components
 
       if
       (
-        scaleFactor != 1.0 ? !boundary.Scale(scaleFactor) : true &&
+        ((boundary = boundary.ChangeUnits(scaleFactor)) is null) ||
         !boundary.IsClosed ||
         !boundary.TryGetPlane(out var boundaryPlane, Revit.VertexTolerance) ||
         boundaryPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0

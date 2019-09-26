@@ -27,7 +27,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "CurveElement", "C", "New CurveElement", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.GeometricElement(), "CurveElement", "C", "New CurveElement", GH_ParamAccess.list);
     }
 
     void ReconstructModelLineByCurve
@@ -41,10 +41,10 @@ namespace RhinoInside.Revit.GH.Components
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
 
-      var plane = sketchPlane.GetPlane().ToRhino().Scale(scaleFactor);
+      var plane = sketchPlane.GetPlane().ToRhino().ChangeUnits(scaleFactor);
       if
       (
-        !(scaleFactor != 1.0 ? curve.Scale(scaleFactor) : true) ||
+        ((curve = curve.ChangeUnits(scaleFactor)) is null) ||
         ((curve = Rhino.Geometry.Curve.ProjectToPlane(curve, plane)) == null)
       )
         ThrowArgumentException(nameof(curve), "Failed to project curve in the sketchPlane.");
