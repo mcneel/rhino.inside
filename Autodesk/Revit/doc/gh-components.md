@@ -335,29 +335,34 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
-    <td width="48px"><img src="GH/DocumentCategories.png" alt="BeamByCurve" width="32"></td>
-    <td>Document Categories</td>
+    <td width="48px"><img src="GH/ElementExclusionFilter.png" alt="ElementExclusionFilter" width="32"></td>
+    <td>Element Exclusion Filter</td>
     <td>Get Active Document Category list Using the Type, and HasMaterial filter.</td>
   </tr>
   <tr>
-    <td><img src="GH/DocumentElements.png" alt="BeamByCurve" width="32"></td>
-    <td>Document Elements</td>
+    <td><img src="GH/ElementLogicalOrFilter.png" alt="ElementLogicalOrFilter" width="32"></td>
+    <td>Element Logical Or Filter</td>
     <td>Get Active Document Elements list using a Category filter</td>
   </tr>
   <tr>
-    <td><img src="GH/DocumentElementTypes.png" alt="ColumnByCurve" width="32"></td>
-    <td>Document Element Types</td>
+    <td><img src="GH/ElementLogicalAndFilter.png" alt="ElementLogicalAndFilter.png" width="32"></td>
+    <td>Element Logical And Filter.png</td>
     <td>Get Active Document Element Types using the Category, Family and Type filter</td>
   </tr>
   <tr>
-    <td><img src="GH/DocumentLevels.png" alt="BeamByCurve" width="32"></td>
-    <td>Document Levels</td>
+    <td><img src="GH/ElementCategoryFilter.png" alt="ElementCategoryFilter" width="32"></td>
+    <td>Element Category Filter</td>
     <td>Get Active Document levels list from Revit</td>
   </tr>
   <tr>
-    <td><img src="GH/DocumentParameters.png" alt="ColumnByCurve" width="32"></td>
-    <td>Document Parameters</td>
+    <td><img src="GH/ElementExcludeElementType.png" alt="ElementExcludeElementType" width="32"></td>
+    <td>Element Exclude Element Type</td>
     <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementExcludeElementType.png" alt="ElementExcludeElementType" width="32"></td>
+      <td>Element Exclude Element Type</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
   </tr>
 </table>
 
