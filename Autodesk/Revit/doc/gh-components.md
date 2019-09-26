@@ -16,7 +16,7 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
-    <td><img src="GH/Element.png" alt="Geometric by Element" width="32"></td>
+    <td><img src="GH/GeometricElement.png" alt="Geometric by Element" width="32"></td>
     <td>Geometric Element</td>
     <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
   </tr>
@@ -148,15 +148,15 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th width="200">Name</th>
     <th>Description</th>
   </tr>
+  <tr>
+      <td width="48px"><img src="GH/CategoryGraphicStyle.png" alt="CategoryGraphicStyle" width="32"></td>
+      <td>Category Graphic Style</td>
+      <td>Returns the Projections an Cut of a specifcs categories graphic style.</td>
+  </tr>
   <tr>
     <td width="48px"><img src="GH/CategoryIdentity.png" alt="CategoryIdentity" width="32"></td>
     <td>Category Identity</td>
     <td>Break a Revit Category into its component parts.  Name, Parent, Allow Bounds and Material Quantities</td>
-  </tr>
-  <tr>
-    <td width="48px"><img src="GH/CategorySubCategories.png" alt="CategorySubCategories" width="32"></td>
-    <td>Category SubCategories</td>
-    <td>Returns a list of all the subcategories of Category</td>
   </tr>
   <tr>
     <td width="48px"><img src="GH/CategoryObjectStyles.png" alt="CategoryObjectStyles" width="32"></td>
@@ -164,19 +164,9 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Returns category object style attributes like Line-Color, Material…</td>
   </tr>
   <tr>
-    <td width="48px"><img src="GH/CategoryGraphicsStyles.png" alt="CategoryGraphicsStyles" width="32"></td>
-    <td>Category Graphics Styles</td>
-    <td></td>
-  </tr>
-  <tr>
-      <td width="48px"><img src="GH/CategoryGraphicStyle.png" alt="CategoryGraphicStyle" width="32"></td>
-      <td>Category Graphic Style</td>
-      <td>Returns the Projections an Cut of a specifcs categories graphic style.</td>
-  </tr>
-  <tr>
-      <td width="48px"><img src="GH/CategorySubcategory.png" alt="CategorySubcategory" width="32"></td>
-      <td>Category Subcategory</td>
-      <td>Returns a list of all the subcategories of Category</td>
+    <td width="48px"><img src="GH/CategorySubCategories.png" alt="CategorySubCategories" width="32"></td>
+    <td>Category SubCategories</td>
+    <td>Returns a list of all the subcategories of Category</td>
   </tr>
   <tr>
     <td><img src="GH/CategoryTypes.png" alt="ColumnByCurve" width="32"></td>
@@ -593,3 +583,4 @@ This guide documents the Grasshopper components that support Revit interaction.
 </td>
   </tr>
 </table>
+
