@@ -26,9 +26,9 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Create a Revit Column Object using an axial curve</td>
   </tr>
   <tr>
-    <td><img src="GH/FamilyInstanceByPointAtHost.png" alt="AddFamilyInstanceByPoint" width="32"></td>
-    <td>Add Family Instance by Point at Host</td>
-    <td>Given a position, add a FamilyInstance element to the active Revit document in a host element.</td>
+    <td><img src="GH/FamilyInstanceByLocation.png" alt="AddFamilyInstanceByPoint" width="32"></td>
+    <td>Add Family Instance by Location</td>
+    <td>Given a position, add a FamilyInstance element to the active Revit document in an optional host element.</td>
   </tr>
   <tr>
     <td><img src="GH/FloorByOutline.png" alt="AddFloorByOutline" width="32"></td>
@@ -44,11 +44,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td><img src="GH/WallByCurve.png" alt="ColumnByCurve" width="32"></td>
     <td>Wall By Curve</td>
     <td>Create a Revit Wall Object using a plan curve</td>
-  </tr>
-  <tr>
-    <td><img src="GH/DirectShapeByGeometry.png" alt="AddDirectShapeByGeometry" width="32"></td>
-    <td>Add DirectShape Geometry</td>
-    <td>Create a Directshape Element using a plan curve. This is the most generic way to import Geometry.</td>
   </tr>
   <tr>
     <td><img src="GH/DirectShapeCategories.png" alt="DirectShapeCategories" width="32"></td>
@@ -68,14 +63,24 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
-    <td width="48px"><img src="GH/CategoryDecompose.png" alt="BeamByCurve" width="32"></td>
-    <td>Category Decompose</td>
-    <td>Break a Revit Category into its component parts.  Name, Parent, Line-Color, Material, Allow Bounds and Material Quantities</td>
+    <td><img src="GH/Category.png" alt="Category" width="32"></td>
+    <td>Category</td>
+    <td>Revit Category Param used for reference a Category</td>
   </tr>
   <tr>
-    <td><img src="GH/Category.png" alt="BeamByCurve" width="32"></td>
-    <td>Category</td>
-    <td>Revit Category Param used for selecting persistent Category (future)</td>
+    <td width="48px"><img src="GH/CategoryIdentity.png" alt="CategoryIdentity" width="32"></td>
+    <td>Category Identity</td>
+    <td>Break a Revit Category into its component parts.  Name, Parent, Allow Bounds and Material Quantities</td>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/CategorySubCategories.png" alt="CategorySubCategories" width="32"></td>
+    <td>Category SubCategories</td>
+    <td>Returns a list of all the subcategories of a specified category</td>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/CategoryObjectStyle.png" alt="CategoryObjectStyle" width="32"></td>
+    <td>Category Object Style</td>
+    <td>Returns all object style properties related to a specified category.  Line-Color, Material… </td>
   </tr>
   <tr>
     <td><img src="GH/CategoryTypes.png" alt="ColumnByCurve" width="32"></td>
@@ -130,6 +135,11 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
+    <td><img src="GH/GeometricElement.png" alt="GeometricElement" width="32"></td>
+    <td>Geometric Element</td>
+    <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
+  </tr>
+  <tr>
     <td width="48px"><img src="GH/ElementDecompose.png" alt="BeamByCurve" width="32"></td>
     <td>Element Decompose</td>
     <td>Decompose an Element into it's associated data including Constraints, Dimensions, Identity Data, Category, Family, Type, ID, etc...</td>
@@ -165,11 +175,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Create a mesh from an Element using the LOD and the Mesh quality settings</td>
   </tr>
   <tr>
-    <td><img src="GH/Element.png" alt="BeamByCurve" width="32"></td>
-    <td>Element</td>
-    <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
-  </tr>
-  <tr>
     <td><img src="GH/ElementType.png" alt="ColumnByCurve" width="32"></td>
     <td>Element Type</td>
     <td>Get Element type from the Element(s) input</td>
@@ -185,24 +190,9 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
-    <td width="48px"><img src="GH/DirectShapeByBrep.png" alt="DirectShapeByBrep" width="32"></td>
-    <td>Add Brep by Shape</td>
-    <td>Given a Brep, it adds a Brep element to the active Revit document</td>
-  </tr>
-  <tr>
-    <td><img src="GH/DirectShapeByCurve.png" alt="DirectShapeByCurve" width="32"></td>
-    <td>Add Curve Shape</td>
-    <td>Given a Curve, it adds a Curve shape to the active Revit document</td>
-  </tr>
-  <tr>
-    <td><img src="GH/DirectShapeByMesh.png" alt="DirectShapeByMesh" width="32"></td>
-    <td>Add Mesh Shape</td>
-    <td>Given a Mesh, it adds a Mesh element to the active Revit document</td>
-  </tr>
-  <tr>
-    <td><img src="GH/DirectShapeByPoint.png" alt="DirectShapeByPoint" width="32"></td>
-    <td>Add Point Shape</td>
-    <td>Given a Point, it adds a Point element to the active Revit document</td>
+    <td><img src="GH/Vertex.png" alt="ColumnByCurve" width="32"></td>
+    <td>Vertex Element</td>
+    <td>Select a Revit Element Vertex(s)</td>
   </tr>
   <tr>
     <td><img src="GH/Edge.png" alt="ColumnByCurve" width="32"></td>
@@ -215,9 +205,29 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Select a Revit Element Face(s)</td>
   </tr>
   <tr>
-    <td><img src="GH/Vertex.png" alt="ColumnByCurve" width="32"></td>
-    <td>Vertex Element</td>
-    <td>Select a Revit Element Vertex(s)</td>
+    <td><img src="GH/DirectShapeByPoint.png" alt="DirectShapeByPoint" width="32"></td>
+    <td>Add Point Shape</td>
+    <td>Given a Point, it adds a Point element to the active Revit document</td>
+  </tr>
+  <tr>
+    <td><img src="GH/DirectShapeByCurve.png" alt="DirectShapeByCurve" width="32"></td>
+    <td>Add Curve Shape</td>
+    <td>Given a Curve, it adds a Curve shape to the active Revit document</td>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/DirectShapeByBrep.png" alt="DirectShapeByBrep" width="32"></td>
+    <td>Add Brep Shape</td>
+    <td>Given a Brep, it adds a Brep element to the active Revit document</td>
+  </tr>
+  <tr>
+    <td><img src="GH/DirectShapeByMesh.png" alt="DirectShapeByMesh" width="32"></td>
+    <td>Add Mesh Shape</td>
+    <td>Given a Mesh, it adds a Mesh element to the active Revit document</td>
+  </tr>
+  <tr>
+    <td><img src="GH/DirectShapeByGeometry.png" alt="AddDirectShapeByGeometry" width="32"></td>
+    <td>Add Geometry Shape</td>
+    <td>Given its geometry, it adds a DirectShape element to the active Revit document. This is the most generic way to import Geometry.</td>
   </tr>
 </table>
 
@@ -237,11 +247,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Parameter Key from Revit</td>
   </tr>
   <tr>
-    <td><img src="GH/DocumentCategoriesPicker.png" alt="BeamByCurve" width="32"></td>
-    <td>Select a Document Category</td>
-    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a document category from Revit</td>
-  </tr>
-  <tr>
     <td><img src="GH/DocumentFamiliesPicker.png" alt="ColumnByCurve" width="32"></td>
     <td>Select a Family</td>
     <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a family from Revit</td>
@@ -255,6 +260,21 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td><img src="GH/ElementTypeByName.png" alt="ColumnByCurve" width="32"></td>
     <td>Select an Element Type</td>
     <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Element Type from Revit</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ModelCategoriesPicker.png" alt="ModelCategoriesPicker" width="32"></td>
+    <td>Select a Model Category</td>
+    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Model category from Revit</td>
+  </tr>
+  <tr>
+    <td><img src="GH/AnnotationCategoriesPicker.png" alt="AnnotationCategoriesPicker" width="32"></td>
+    <td>Select a Annotation Category</td>
+    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Annotation category from Revit</td>
+  </tr>
+  <tr>
+    <td><img src="GH/AnalyticalCategoriesPicker.png" alt="AnalyticalCategoriesPicker" width="32"></td>
+    <td>Select a Analytical Category</td>
+    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Analytical category from Revit</td>
   </tr>
 </table>
 
