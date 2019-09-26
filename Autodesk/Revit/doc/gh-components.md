@@ -365,8 +365,78 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Get Active Document Parameters attached to a specific category from Revit</td>
   </tr>
   <tr>
-      <td><img src="GH/ElementExcludeElementType.png" alt="ElementExcludeElementType" width="32"></td>
-      <td>Element Exclude Element Type</td>
+      <td><img src="GH/ElementClassFilter.png" alt="EElementClassFilter" width="32"></td>
+      <td>Element Class Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementTypeFilter.png" alt="ElementTypeFilter" width="32"></td>
+      <td>Element Type Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementBoundingBoxFilter.png" alt="lementBoundingBoxFilter" width="32"></td>
+      <td>Element Bounding Box Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementIntersectsElementFilter.png" alt="ElementIntersectsElementFilter" width="32"></td>
+      <td>Element Intersects Elements Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementIntersectsBrepFilter.png" alt="ElementIntersectsBrepFilter" width="32"></td>
+      <td>Element Intersects Brep Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementIntersectsMeshFilter.png" alt="ElementIntersectsMeshFilter" width="32"></td>
+      <td>Element Intersects Mesh Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementDesignOptionFilter.png" alt="ElementDesignOptionFilter" width="32"></td>
+      <td>Element Design Option Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementOwnerViewFilter.png" alt="ElementOwnerViewFilter" width="32"></td>
+      <td>Element Owner View Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementLevelFilter.png" alt="ElementLevelFilter" width="32"></td>
+      <td>Element Level Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementSelectableViewFilter.png" alt="ElementSelectableViewFilter" width="32"></td>
+      <td>Element Selectable View Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementParameterFilter.png" alt="ElementParameterFilter" width="32"></td>
+      <td>Element Parameter Filter</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleEquals.png" alt="ElementRuleEquals" width="32"></td>
+      <td>Element Rule Equals</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleGreater.png" alt="ElementRuleGreater" width="32"></td>
+      <td>Element Rule Greater</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleGreaterOrEqual.png" alt="ElementRuleGreaterOrEqual" width="32"></td>
+      <td>Element Rule Greater Or Equal</td>
+      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleLess.png" alt="ElementRuleLess" width="32"></td>
+      <td>Element Rule Less</td>
       <td>Get Active Document Parameters attached to a specific category from Revit</td>
   </tr>
 </table>
