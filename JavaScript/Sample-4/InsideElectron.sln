@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.572
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InsideElectron", "InsideElectron\InsideElectron.csproj", "{81FE0F59-B3F6-4D9A-A4C9-D7F239365E98}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestInsideElectron", "TestInsideElectron\TestInsideElectron.csproj", "{B9295B66-0F98-4BEF-9DD0-908875ADC523}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{81FE0F59-B3F6-4D9A-A4C9-D7F239365E98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81FE0F59-B3F6-4D9A-A4C9-D7F239365E98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81FE0F59-B3F6-4D9A-A4C9-D7F239365E98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81FE0F59-B3F6-4D9A-A4C9-D7F239365E98}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9295B66-0F98-4BEF-9DD0-908875ADC523}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9295B66-0F98-4BEF-9DD0-908875ADC523}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9295B66-0F98-4BEF-9DD0-908875ADC523}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9295B66-0F98-4BEF-9DD0-908875ADC523}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3B0F97E0-1B6A-48A1-9179-2ECC46C588AF}
+	EndGlobalSection
+EndGlobal
