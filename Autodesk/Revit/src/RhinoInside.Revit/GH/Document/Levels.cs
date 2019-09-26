@@ -85,7 +85,7 @@ namespace RhinoInside.Revit.GH.Components
     protected override void SolveInstance(IGH_DataAccess DA)
     {
       using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
-        DA.SetDataList("Levels", collector.OfClass(typeof(Level)).ToElementIds());
+        DA.SetDataList("Levels", collector.OfClass(typeof(Level)).ToElements());
     }
   }
 }
