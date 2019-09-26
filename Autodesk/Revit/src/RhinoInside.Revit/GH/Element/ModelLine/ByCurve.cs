@@ -49,9 +49,7 @@ namespace RhinoInside.Revit.GH.Components
       )
         ThrowArgumentException(nameof(curve), "Failed to project curve in the sketchPlane.");
 
-      var curves = curve.ToHost().ToArray();
-      Debug.Assert(curves.Length == 1);
-      var centerLine = curves[0];
+      var centerLine = curve.ToHost();
 
       if (element is ModelCurve modelCurve && centerLine.IsSameKindAs(modelCurve.GeometryCurve))
         modelCurve.SetSketchPlaneAndCurve(sketchPlane, centerLine);

@@ -351,7 +351,7 @@ namespace RhinoInside.Revit.GH.Components
         curve.GetUserBoolean(BuiltInParameter.IS_VISIBLE_PARAM.ToString(), out var visible, true);
         curve.GetUserInteger(BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), out var visibility, -1);
 
-        foreach (var c in curve.ToHost())
+        foreach (var c in curve.ToHostMultiple())
         {
           if (symbolic)
           {

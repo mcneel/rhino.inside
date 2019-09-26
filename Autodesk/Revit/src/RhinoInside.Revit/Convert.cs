@@ -903,12 +903,13 @@ namespace RhinoInside.Revit
       return Autodesk.Revit.DB.Arc.Create(circle.Plane.ToHost(), circle.Radius, 0.0, 2.0 * Math.PI);
     }
 
-    public static Autodesk.Revit.DB.Curve ToHost(this Rhino.Geometry.Ellipse ellipse)
+    public static Autodesk.Revit.DB.Curve ToHost(this Rhino.Geometry.Ellipse ellipse) => ellipse.ToHost(new Interval(0.0, 2.0 * Math.PI * 2.0));
+    public static Autodesk.Revit.DB.Curve ToHost(this Rhino.Geometry.Ellipse ellipse, Interval interval)
     {
 #if REVIT_2018
-      return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, 2.0 * Math.PI);
+      return Autodesk.Revit.DB.Ellipse.CreateCurve(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), interval.Min, interval.Max);
 #else
-      return Autodesk.Revit.DB.Ellipse.Create(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), 0.0, 2.0 * Math.PI);
+      return Autodesk.Revit.DB.Ellipse.Create(ellipse.Plane.Origin.ToHost(), ellipse.Radius1, ellipse.Radius2, ellipse.Plane.XAxis.ToHost(), ellipse.Plane.YAxis.ToHost(), interval.Min, interval.Max);
 #endif
     }
 
@@ -974,7 +975,7 @@ namespace RhinoInside.Revit
       return Autodesk.Revit.DB.Point.Create(ToHost(point.Location));
     }
 
-    public static IEnumerable<Autodesk.Revit.DB.Point> ToHost(this Rhino.Geometry.PointCloud pointCloud)
+    public static IEnumerable<Autodesk.Revit.DB.Point> ToHostMultiple(this Rhino.Geometry.PointCloud pointCloud)
     {
       foreach(var p in pointCloud)
         yield return Autodesk.Revit.DB.Point.Create(ToHost(p.Location));
@@ -990,7 +991,102 @@ namespace RhinoInside.Revit
       return curve.Arc.ToHost();
     }
 
-    public static IEnumerable<Autodesk.Revit.DB.Curve> ToHost(this Rhino.Geometry.Curve curve)
+    public static Autodesk.Revit.DB.Curve ToHost(this Rhino.Geometry.NurbsCurve curve)
+    {
+      if (curve.IsClosed)
+      {
+        if (curve.TryGetCircle(out var circle, Revit.VertexTolerance))
+          return circle.ToHost();
+
+        if (curve.TryGetEllipse(out var ellipse, Revit.VertexTolerance))
+          return ellipse.ToHost();
+      }
+      else
+      {
+        if (curve.TryGetArc(out var arc, Revit.VertexTolerance))
+          return arc.ToHost();
+
+        // TODO compute params at ends.
+        //if (curve.TryGetEllipse(out var ellipse, Revit.VertexTolerance))
+        //{
+        //  var interval = new Interval(0.0, Math.PI);
+        //  return ellipse.ToHost(interval);
+        //}
+      }
+
+      curve.Knots.RemoveMultipleKnots(1, curve.Degree, Revit.VertexTolerance);
+
+      var degree = curve.Degree;
+      var knots = curve.Knots.ToHost();
+      var controlPoints = curve.Points.Select(p => p.Location.ToHost()).ToList();
+
+      Debug.Assert(degree >= 1);
+      Debug.Assert(controlPoints.Count > curve.Degree);
+      Debug.Assert(knots.Count == curve.Degree + controlPoints.Count + 1);
+
+      Autodesk.Revit.DB.Curve nurbSpline = null;
+
+      if (curve.IsRational)
+      {
+        var weights = curve.Points.Select(p => p.Weight).ToList();
+        nurbSpline = NurbSpline.CreateCurve(curve.Degree, knots, controlPoints, weights);
+      }
+      else
+      {
+        nurbSpline = NurbSpline.CreateCurve(curve.Degree, knots, controlPoints);
+      }
+
+      return nurbSpline;
+    }
+
+    public static Autodesk.Revit.DB.Curve ToHost(this Rhino.Geometry.Curve curve)
+    {
+      switch (curve)
+      {
+        case Rhino.Geometry.LineCurve line:
+
+          return line.Line.ToHost();
+
+        case Rhino.Geometry.ArcCurve arc:
+
+          return arc.Arc.ToHost();
+
+        case Rhino.Geometry.PolylineCurve polyline:
+
+          curve = curve.Simplify
+          (
+            CurveSimplifyOptions.RebuildLines |
+            CurveSimplifyOptions.Merge,
+            Revit.VertexTolerance,
+            Revit.AngleTolerance
+          )
+          ?? curve;
+
+          return curve.ToNurbsCurve().ToHost();
+
+        case Rhino.Geometry.PolyCurve polyCurve:
+
+          curve = curve.Simplify
+          (
+            CurveSimplifyOptions.AdjustG1 |
+            CurveSimplifyOptions.Merge,
+            Revit.VertexTolerance,
+            Revit.AngleTolerance
+          )
+          ?? curve;
+
+          return curve is Rhino.Geometry.PolyCurve ? curve.ToNurbsCurve().ToHost() : curve.ToHost();
+
+        case Rhino.Geometry.NurbsCurve nurbsCurve:
+
+          return nurbsCurve.ToHost();
+
+        default:
+          return curve.ToNurbsCurve().ToHost();
+      }
+    }
+
+    public static IEnumerable<Autodesk.Revit.DB.Curve> ToHostMultiple(this Rhino.Geometry.Curve curve)
     {
       switch (curve)
       {
@@ -1016,7 +1112,7 @@ namespace RhinoInside.Revit
           polyCurve.RemoveShortSegments(Revit.ShortCurveTolerance);
           for (int s = 0; s < polyCurve.SegmentCount; ++s)
           {
-            foreach (var segment in polyCurve.SegmentCurve(s).ToHost())
+            foreach (var segment in polyCurve.SegmentCurve(s).ToHostMultiple())
               yield return segment;
           }
           yield break;
@@ -1055,13 +1151,13 @@ namespace RhinoInside.Revit
             var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
             if (simplifiedCurve is object)
             {
-              foreach(var simpleCurve in simplifiedCurve.ToHost())
+              foreach(var simpleCurve in simplifiedCurve.ToHostMultiple())
                 yield return simpleCurve;
               yield break;
             }
 
             foreach (var segment in nurbsCurve.Split(nurbsCurve.Domain.Mid))
-              foreach (var c in segment.ToHost())
+              foreach (var c in segment.ToHostMultiple())
                 yield return c;
             yield break;
           }
@@ -1076,7 +1172,7 @@ namespace RhinoInside.Revit
             var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
             if (simplifiedCurve is object)
             {
-              foreach (var simpleCurve in simplifiedCurve.ToHost())
+              foreach (var simpleCurve in simplifiedCurve.ToHostMultiple())
                 yield return simpleCurve;
               yield break;
             }
@@ -1108,10 +1204,17 @@ namespace RhinoInside.Revit
           }
 
         default:
-          foreach (var c in curve.ToNurbsCurve().ToHost())
+          foreach (var c in curve.ToNurbsCurve().ToHostMultiple())
             yield return c;
           yield break;
       }
+    }
+
+    public static IEnumerable<Autodesk.Revit.DB.Curve> ToHostMultiple(this Rhino.Geometry.BrepEdge edge)
+    {
+      return edge.EdgeCurve.ToHostMultiple().
+        Select(x => edge.ProxyCurveIsReversed ? x.CreateReversed() : x).
+        SelectMany(x => x.ToBoundedCurves());
     }
 
     static BRepBuilderSurfaceGeometry ToHost(this Rhino.Geometry.BrepFace faceSurface)
@@ -1263,7 +1366,7 @@ namespace RhinoInside.Revit
                   if (edgeIds is null)
                   {
                     edgeIds = brepEdges[edge.EdgeIndex] = new List<BRepBuilderGeometryId>();
-                    foreach (var e in edge.ToHost().SelectMany(x => x.ToBoundedCurves()))
+                    foreach (var e in edge.ToHostMultiple())
                       edgeIds.Add(builder.AddEdge(BRepBuilderEdgeGeometry.Create(e)));
                   }
 
@@ -1335,12 +1438,12 @@ namespace RhinoInside.Revit
         var brepMesh = new Rhino.Geometry.Mesh();
         brepMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, mp));
 
-        foreach(var g in brepMesh.ToHost())
+        foreach(var g in brepMesh.ToHostMultiple())
           yield return g;
       }
     }
 
-    public static IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.Mesh mesh)
+    public static IEnumerable<GeometryObject> ToHostMultiple(this Rhino.Geometry.Mesh mesh)
     {
       var faceVertices = new List<XYZ>(4);
 
@@ -1396,7 +1499,7 @@ namespace RhinoInside.Revit
       return Enumerable.Empty<GeometryObject>();
     }
 
-    public static IEnumerable<GeometryObject> ToHost(this Rhino.Geometry.GeometryBase geometry, double scaleFactor = 1.0)
+    public static IEnumerable<GeometryObject> ToHostMultiple(this Rhino.Geometry.GeometryBase geometry, double scaleFactor)
     {
       switch (geometry)
       {
@@ -1407,11 +1510,11 @@ namespace RhinoInside.Revit
         case Rhino.Geometry.PointCloud pointCloud:
           pointCloud = (Rhino.Geometry.PointCloud) pointCloud.ChangeUnits(scaleFactor);
 
-          return pointCloud.ToHost();
+          return pointCloud.ToHostMultiple();
         case Rhino.Geometry.Curve curve:
           curve = (Rhino.Geometry.Curve) curve.ChangeUnits(scaleFactor);
 
-          return curve.ToHost();
+          return curve.ToHostMultiple();
         case Rhino.Geometry.Brep brep:
           brep = (Rhino.Geometry.Brep) brep.ChangeUnits(scaleFactor);
 
@@ -1421,13 +1524,13 @@ namespace RhinoInside.Revit
 
           while (mesh.CollapseFacesByEdgeLength(false, Revit.VertexTolerance) > 0) ;
 
-          return mesh.ToHost();
+          return mesh.ToHostMultiple();
         case Rhino.Geometry.Extrusion extrusion:
 
-          return extrusion.ToBrep().ToHost(scaleFactor);
+          return extrusion.ToBrep().ToHostMultiple(scaleFactor);
         case Rhino.Geometry.SubD subD:
 
-          return subD.ToBrep().ToHost(scaleFactor);
+          return subD.ToBrep().ToHostMultiple(scaleFactor);
         default:
           return Enumerable.Empty<GeometryObject>();
       }
@@ -1436,7 +1539,7 @@ namespace RhinoInside.Revit
     public static IEnumerable<IList<GeometryObject>> ToHost(this IEnumerable<Rhino.Geometry.GeometryBase> geometries)
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      return geometries.Select(x => x.ToHost(scaleFactor)).Where(x => x.Any()).Select(x => x.ToList());
+      return geometries.Select(x => x.ToHostMultiple(scaleFactor)).Where(x => x.Any()).Select(x => x.ToList());
     }
     #endregion
 
