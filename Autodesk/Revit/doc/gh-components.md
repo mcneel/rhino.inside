@@ -484,6 +484,20 @@ This guide documents the Grasshopper components that support Revit interaction.
     </tr>
 </table>
 
+#### Host Components
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/HostObjectGetFaces.png" alt="HostObjectGetFaces" width="32"></td>
+    <td>Host Object Get Faces</td>
+    <td>Obtains a set of types that are owned by Family.</td>
+  </tr>
+</table>
 
 #### Revit Input Components
 
@@ -497,21 +511,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td width="48px"><img src="GH/BuiltInParameterByName.png" alt="BeamByCurve" width="32"></td>
     <td>Select a built-in Parameter by Name</td>
     <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Parameter Key from Revit</td>
-  </tr>
-  <tr>
-    <td><img src="GH/ModelCategoriesPicker.png" alt="ModelCategoriesPicker" width="32"></td>
-    <td>Select a Model Category</td>
-    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a model category from Revit</td>
-  </tr>
-  <tr>
-    <td><img src="GH/AnnotationCategoriesPicker.png" alt="AnnotationCategoriesPicker" width="32"></td>
-    <td>Select an Annotation Category</td>
-    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select an annotation category from Revit</td>
-  </tr>
-  <tr>
-    <td><img src="GH/AnalyticalCategoriesPicker.png" alt="AnalyticalCategoriesPicker" width="32"></td>
-    <td>Select a Analytical Category</td>
-    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select an analyticalcategory from Revit</td>
   </tr>
   <tr>
     <td><img src="GH/DocumentFamiliesPicker.png" alt="ColumnByCurve" width="32"></td>
@@ -528,6 +527,21 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Select an Element Type by Name</td>
     <td>Select a specific Element type by its name. This component will be blank unless connected in combination with the Select Document Category or the Select a Family component to select a specific element within a Family or Category. Use a checklist, dropdown, scroll sequence or cycle interface to select a Element Type from Revit <img src="images/element-select-alpha.png" alt="ColumnByCurve"></td>
   </tr>
+  <tr>
+      <td><img src="GH/ModelCategoriesPicker.png" alt="ModelCategoriesPicker" width="32"></td>
+      <td>Select a Model Category</td>
+      <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a model category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/AnnotationCategoriesPicker.png" alt="AnnotationCategoriesPicker" width="32"></td>
+      <td>Select an Annotation Category</td>
+      <td>Use a checklist, dropdown, scroll sequence or cycle interface to select an annotation category from Revit</td>
+  </tr>
+    <tr>
+        <td><img src="GH/AnalyticalCategoriesPicker.png" alt="AnalyticalCategoriesPicker" width="32"></td>
+        <td>Select a Analytical Category</td>
+        <td>Use a checklist, dropdown, scroll sequence or cycle interface to select an analytical category from Revit</td>
+    </tr>
 </table>
 
 #### Massing Components
@@ -603,11 +617,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td><img src="GH/BuiltInParameterGroups.png" alt="BeamByCurve" width="32"></td>
     <td>Selector for a Parameter group</td>
     <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Parameter Group from Revit</td>
-  </tr>
-  <tr>
-    <td><img src="GH/ParameterKey.png" alt="BeamByCurve" width="32"></td>
-    <td>Parameter Key</td>
-    <td>Represents a Revit Parameter Key. (Selector in the future)</td>
   </tr>
 </table>
 
