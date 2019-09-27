@@ -342,103 +342,112 @@ This guide documents the Grasshopper components that support Revit interaction.
   <tr>
     <td width="48px"><img src="GH/ElementExclusionFilter.png" alt="ElementExclusionFilter" width="32"></td>
     <td>Element Exclusion Filter</td>
-    <td>Get Active Document Category list Using the Type, and HasMaterial filter.</td>
+    <td>Filter used to exclude a set of elements.</td>
   </tr>
   <tr>
     <td><img src="GH/ElementLogicalOrFilter.png" alt="ElementLogicalOrFilter" width="32"></td>
     <td>Element Logical Or Filter</td>
-    <td>Get Active Document Elements list using a Category filter</td>
+    <td>Filter used to combine a set of filters that pass when any pass</td>
   </tr>
   <tr>
     <td><img src="GH/ElementLogicalAndFilter.png" alt="ElementLogicalAndFilter.png" width="32"></td>
     <td>Element Logical And Filter.png</td>
-    <td>Get Active Document Element Types using the Category, Family and Type filter</td>
+    <td>Filter used to combine a set of filters that pass when any pass</td>
   </tr>
   <tr>
     <td><img src="GH/ElementCategoryFilter.png" alt="ElementCategoryFilter" width="32"></td>
     <td>Element Category Filter</td>
-    <td>Get Active Document levels list from Revit</td>
+    <td>Filter used to match elements by their category</td>
   </tr>
   <tr>
     <td><img src="GH/ElementExcludeElementType.png" alt="ElementExcludeElementType" width="32"></td>
     <td>Element Exclude Element Type</td>
-    <td>Get Active Document Parameters attached to a specific category from Revit</td>
+    <td>Filter used to exclude element types</td>
   </tr>
   <tr>
       <td><img src="GH/ElementClassFilter.png" alt="EElementClassFilter" width="32"></td>
       <td>Element Class Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements by their API class</td>
   </tr>
   <tr>
       <td><img src="GH/ElementTypeFilter.png" alt="ElementTypeFilter" width="32"></td>
       <td>Element Type Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements by their type</td>
   </tr>
   <tr>
       <td><img src="GH/ElementBoundingBoxFilter.png" alt="lementBoundingBoxFilter" width="32"></td>
       <td>Element Bounding Box Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements by their position and interesction with a bounding area.</td>
   </tr>
   <tr>
       <td><img src="GH/ElementIntersectsElementFilter.png" alt="ElementIntersectsElementFilter" width="32"></td>
       <td>Element Intersects Elements Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements that intersect to the given element</td>
   </tr>
   <tr>
       <td><img src="GH/ElementIntersectsBrepFilter.png" alt="ElementIntersectsBrepFilter" width="32"></td>
       <td>Element Intersects Brep Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements that intersect to the given brep</td>
   </tr>
   <tr>
       <td><img src="GH/ElementIntersectsMeshFilter.png" alt="ElementIntersectsMeshFilter" width="32"></td>
       <td>Element Intersects Mesh Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements that intersect to the given mesh</td>
   </tr>
   <tr>
       <td><img src="GH/ElementDesignOptionFilter.png" alt="ElementDesignOptionFilter" width="32"></td>
       <td>Element Design Option Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements associated to the given Design Option</td>
   </tr>
   <tr>
       <td><img src="GH/ElementOwnerViewFilter.png" alt="ElementOwnerViewFilter" width="32"></td>
       <td>Element Owner View Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements associated to the given View</td>
   </tr>
   <tr>
       <td><img src="GH/ElementLevelFilter.png" alt="ElementLevelFilter" width="32"></td>
       <td>Element Level Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements associated to the given level</td>
   </tr>
   <tr>
       <td><img src="GH/ElementSelectableViewFilter.png" alt="ElementSelectableViewFilter" width="32"></td>
       <td>Element Selectable View Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match seletable elements into the given View</td>
   </tr>
   <tr>
       <td><img src="GH/ElementParameterFilter.png" alt="ElementParameterFilter" width="32"></td>
       <td>Element Parameter Filter</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements by the value of a parameter</td>
   </tr>
   <tr>
       <td><img src="GH/ElementRuleEquals.png" alt="ElementRuleEquals" width="32"></td>
       <td>Element Rule Equals</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements if value of a parameter equals to Value</td>
   </tr>
   <tr>
       <td><img src="GH/ElementRuleGreater.png" alt="ElementRuleGreater" width="32"></td>
       <td>Element Rule Greater</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements if value of a parameter greater than Value</td>
   </tr>
   <tr>
       <td><img src="GH/ElementRuleGreaterOrEqual.png" alt="ElementRuleGreaterOrEqual" width="32"></td>
       <td>Element Rule Greater Or Equal</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements if value of a parameter greater or equal than Value</td>
   </tr>
   <tr>
       <td><img src="GH/ElementRuleLess.png" alt="ElementRuleLess" width="32"></td>
       <td>Element Rule Less</td>
-      <td>Get Active Document Parameters attached to a specific category from Revit</td>
+      <td>Filter used to match elements if value of a parameter less than Value</td>
   </tr>
+  <tr>
+      <td><img src="GH/ElementRuleLessOrEqual.png" alt="ElementRuleLessOrEqual" width="32"></td>
+      <td>Element Rule Less Or Equal</td>
+      <td>Filter used to match elements if value of a parameter less or equal than Value</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleNotEquals.png" alt="ElementRuleNotEquals" width="32"></td>
+      <td>Element Rule Not Equals</td>
+      <td>Filter used to match elements if value of a parameter less than Value</td>    </tr>
 </table>
 
 
