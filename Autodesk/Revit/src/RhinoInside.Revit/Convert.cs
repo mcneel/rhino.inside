@@ -890,6 +890,14 @@ namespace RhinoInside.Revit
       return Autodesk.Revit.DB.Line.CreateBound(line.From.ToHost(), line.To.ToHost());
     }
 
+    public static IEnumerable<Autodesk.Revit.DB.Line> ToHostMultiple(this Rhino.Geometry.Polyline polyline)
+    {
+      polyline.ReduceSegments(Revit.ShortCurveTolerance);
+
+      foreach (var segment in polyline.GetSegments())
+        yield return Autodesk.Revit.DB.Line.CreateBound(segment.From.ToHost(), segment.To.ToHost());
+    }
+
     public static Autodesk.Revit.DB.Arc ToHost(this Rhino.Geometry.Arc arc)
     {
       if (arc.IsCircle)
@@ -993,50 +1001,43 @@ namespace RhinoInside.Revit
 
     public static Autodesk.Revit.DB.Curve ToHost(this Rhino.Geometry.NurbsCurve curve)
     {
-      if (curve.IsClosed)
-      {
-        if (curve.TryGetCircle(out var circle, Revit.VertexTolerance))
-          return circle.ToHost();
+      if (curve.TryGetArc(out var arc, Revit.VertexTolerance))
+        return arc.ToHost();
 
-        if (curve.TryGetEllipse(out var ellipse, Revit.VertexTolerance))
-          return ellipse.ToHost();
-      }
-      else
+      if(curve.IsClosed)
       {
-        if (curve.TryGetArc(out var arc, Revit.VertexTolerance))
-          return arc.ToHost();
-
-        // TODO compute params at ends.
-        //if (curve.TryGetEllipse(out var ellipse, Revit.VertexTolerance))
-        //{
-        //  var interval = new Interval(0.0, Math.PI);
-        //  return ellipse.ToHost(interval);
-        //}
+        var gap = Revit.ShortCurveTolerance * 1.01;
+        var length = curve.GetLength();
+        if
+        (
+          length > gap &&
+          curve.LengthParameter(         (gap / 2.0), out var t0) &&
+          curve.LengthParameter(length - (gap / 2.0), out var t1)
+        )
+        {
+          var segments = curve.Split(new double[] { t0, t1 });
+          curve = segments[0] as NurbsCurve ?? curve;
+        }
+        else return null;
       }
 
       curve.Knots.RemoveMultipleKnots(1, curve.Degree, Revit.VertexTolerance);
 
-      var degree = curve.Degree;
+      var curve_Degree = curve.Degree;
       var knots = curve.Knots.ToHost();
-      var controlPoints = curve.Points.Select(p => p.Location.ToHost()).ToList();
+      var controlPoints = curve.Points.Select(p => p.Location.ToHost()).ToArray();
 
-      Debug.Assert(degree >= 1);
-      Debug.Assert(controlPoints.Count > curve.Degree);
-      Debug.Assert(knots.Count == curve.Degree + controlPoints.Count + 1);
-
-      Autodesk.Revit.DB.Curve nurbSpline = null;
+      Debug.Assert(curve_Degree >= 1);
+      Debug.Assert(controlPoints.Length > curve_Degree);
+      Debug.Assert(knots.Count == curve_Degree + controlPoints.Length + 1);
 
       if (curve.IsRational)
       {
-        var weights = curve.Points.Select(p => p.Weight).ToList();
-        nurbSpline = NurbSpline.CreateCurve(curve.Degree, knots, controlPoints, weights);
-      }
-      else
-      {
-        nurbSpline = NurbSpline.CreateCurve(curve.Degree, knots, controlPoints);
+        var weights = curve.Points.Select(p => p.Weight).ToArray();
+        return NurbSpline.CreateCurve(curve.Degree, knots, controlPoints, weights);
       }
 
-      return nurbSpline;
+      return NurbSpline.CreateCurve(curve.Degree, knots, controlPoints);
     }
 
     public static Autodesk.Revit.DB.Curve ToHost(this Rhino.Geometry.Curve curve)
@@ -1078,6 +1079,9 @@ namespace RhinoInside.Revit
           return curve is Rhino.Geometry.PolyCurve ? curve.ToNurbsCurve().ToHost() : curve.ToHost();
 
         case Rhino.Geometry.NurbsCurve nurbsCurve:
+
+          if (curve.TryGetEllipse(out var ellipse, out var interval, Revit.VertexTolerance))
+            return ellipse.ToHost(interval);
 
           return nurbsCurve.ToHost();
 
@@ -1127,35 +1131,27 @@ namespace RhinoInside.Revit
 
           if (nurbsCurve.TryGetPolyline(out var polylineSegment))
           {
-            polylineSegment.ReduceSegments(Revit.ShortCurveTolerance);
-            foreach (var segment in polylineSegment.GetSegments())
-              yield return Autodesk.Revit.DB.Line.CreateBound(segment.From.ToHost(), segment.To.ToHost());
+            foreach (var line in polylineSegment.ToHostMultiple())
+              yield return line;
+            yield break;
+          }
 
+          if (nurbsCurve.TryGetEllipse(out var ellipse, out var interval, Revit.VertexTolerance))
+          {
+            yield return ellipse.ToHost(interval);
+            yield break;
+          }
+
+          var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
+          if (simplifiedCurve is object)
+          {
+            foreach(var simpleCurve in simplifiedCurve.ToHostMultiple())
+              yield return simpleCurve;
             yield break;
           }
 
           if (nurbsCurve.IsClosed)
           {
-            if (nurbsCurve.TryGetCircle(out var circle, Revit.VertexTolerance))
-            {
-              yield return circle.ToHost();
-              yield break;
-            }
-
-            if (nurbsCurve.TryGetEllipse(out var ellipse, Revit.VertexTolerance))
-            {
-              yield return ellipse.ToHost();
-              yield break;
-            }
-
-            var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
-            if (simplifiedCurve is object)
-            {
-              foreach(var simpleCurve in simplifiedCurve.ToHostMultiple())
-                yield return simpleCurve;
-              yield break;
-            }
-
             foreach (var segment in nurbsCurve.Split(nurbsCurve.Domain.Mid))
               foreach (var c in segment.ToHostMultiple())
                 yield return c;
@@ -1163,35 +1159,21 @@ namespace RhinoInside.Revit
           }
           else
           {
-            if (nurbsCurve.TryGetArc(out var arcSegment, Revit.VertexTolerance))
-            {
-              yield return arcSegment.ToHost();
-              yield break;
-            }
-
-            var simplifiedCurve = curve.Simplify(CurveSimplifyOptions.SplitAtFullyMultipleKnots, Revit.VertexTolerance, Revit.AngleTolerance);
-            if (simplifiedCurve is object)
-            {
-              foreach (var simpleCurve in simplifiedCurve.ToHostMultiple())
-                yield return simpleCurve;
-              yield break;
-            }
-
             nurbsCurve.Knots.RemoveMultipleKnots(1, nurbsCurve.Degree, Revit.VertexTolerance);
 
             var degree = nurbsCurve.Degree;
             var knots = nurbsCurve.Knots.ToHost();
-            var controlPoints = nurbsCurve.Points.Select(p => p.Location.ToHost()).ToList();
+            var controlPoints = nurbsCurve.Points.Select(p => p.Location.ToHost()).ToArray();
 
             Debug.Assert(degree >= 1);
-            Debug.Assert(controlPoints.Count > nurbsCurve.Degree);
-            Debug.Assert(knots.Count == nurbsCurve.Degree + controlPoints.Count + 1);
+            Debug.Assert(controlPoints.Length > nurbsCurve.Degree);
+            Debug.Assert(knots.Count == nurbsCurve.Degree + controlPoints.Length + 1);
 
             Autodesk.Revit.DB.Curve nurbSpline = null;
 
             if (nurbsCurve.IsRational)
             {
-              var weights = nurbsCurve.Points.Select(p => p.Weight).ToList();
+              var weights = nurbsCurve.Points.Select(p => p.Weight).ToArray();
               nurbSpline = NurbSpline.CreateCurve(nurbsCurve.Degree, knots, controlPoints, weights);
             }
             else
@@ -1210,11 +1192,21 @@ namespace RhinoInside.Revit
       }
     }
 
-    public static IEnumerable<Autodesk.Revit.DB.Curve> ToHostMultiple(this Rhino.Geometry.BrepEdge edge)
+    public static IEnumerable<BRepBuilderEdgeGeometry> ToHostMultiple(this Rhino.Geometry.BrepEdge edge)
     {
-      return edge.EdgeCurve.ToHostMultiple().
-        Select(x => edge.ProxyCurveIsReversed ? x.CreateReversed() : x).
-        SelectMany(x => x.ToBoundedCurves());
+      var curve = default(Autodesk.Revit.DB.Curve);
+      switch (edge.EdgeCurve)
+      {
+        case Rhino.Geometry.LineCurve line:   curve = line.Line.ToHost(); break;
+        case Rhino.Geometry.ArcCurve arc:     curve = arc.Arc.ToHost();   break;
+        case Rhino.Geometry.NurbsCurve nurbs: curve = nurbs.ToHost();     break;
+        default: throw new NotImplementedException("Unsuported curve type for Autodesk.Revit.DB.BRepBuilderEdgeGeometry");
+      }
+
+      if (edge.ProxyCurveIsReversed)
+        curve = curve.CreateReversed();
+
+      return curve.ToBoundedCurves().Select(x => BRepBuilderEdgeGeometry.Create(x));
     }
 
     static BRepBuilderSurfaceGeometry ToHost(this Rhino.Geometry.BrepFace faceSurface)
@@ -1367,7 +1359,7 @@ namespace RhinoInside.Revit
                   {
                     edgeIds = brepEdges[edge.EdgeIndex] = new List<BRepBuilderGeometryId>();
                     foreach (var e in edge.ToHostMultiple())
-                      edgeIds.Add(builder.AddEdge(BRepBuilderEdgeGeometry.Create(e)));
+                      edgeIds.Add(builder.AddEdge(e));
                   }
 
                   if (trim.IsReversed())

@@ -33,18 +33,39 @@ namespace RhinoInside.Revit.GH.Components
       base.OnAfterStart(document, strTransactionName);
 
       // Disable all previous walls joins
-      if (PreviousStructure != null)
+      if (PreviousStructure is object)
       {
-        foreach
-        (
-          var unjoinedWall in PreviousStructure.OfType<Types.Element>().
-                              Select(x => document.GetElement(x)).
-                              OfType<Wall>().
-                              Where(x => x.Pinned)
-        )
+        var unjoinedWalls = PreviousStructure.OfType<Types.Element>().
+                            Select(x => document.GetElement(x)).
+                            OfType<Wall>().
+                            Where(x => x.Pinned).
+                            Select
+                            (
+                              x => Tuple.Create
+                              (
+                                x,
+                                (x.Location as LocationCurve).get_JoinType(0),
+                                (x.Location as LocationCurve).get_JoinType(1)
+                              )
+                            ).
+                            ToArray();
+
+        foreach(var unjoinedWall in unjoinedWalls)
         {
-          WallUtils.DisallowWallJoinAtEnd(unjoinedWall, 0);
-          WallUtils.DisallowWallJoinAtEnd(unjoinedWall, 1);
+          var location = unjoinedWall.Item1.Location as LocationCurve;
+          if (!WallUtils.IsWallJoinAllowedAtEnd(unjoinedWall.Item1, 0))
+          {          
+            WallUtils.DisallowWallJoinAtEnd(unjoinedWall.Item1, 0);
+            WallUtils.AllowWallJoinAtEnd(unjoinedWall.Item1, 0);
+            location.set_JoinType(0, unjoinedWall.Item2);
+          }
+
+          if (!WallUtils.IsWallJoinAllowedAtEnd(unjoinedWall.Item1, 0))
+          {
+            WallUtils.DisallowWallJoinAtEnd(unjoinedWall.Item1, 1);
+            WallUtils.AllowWallJoinAtEnd(unjoinedWall.Item1, 1);
+            location.set_JoinType(1, unjoinedWall.Item3);
+          }
         }
 
         document.Regenerate();
@@ -90,6 +111,16 @@ namespace RhinoInside.Revit.GH.Components
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
 
+#if REVIT_2020
+      if
+      (
+        ((curve = curve.ChangeUnits(scaleFactor)) is null) ||
+        !(curve.IsLinear(Revit.VertexTolerance) || curve.IsArc(Revit.VertexTolerance) || curve.IsEllipse(Revit.VertexTolerance)) ||
+        !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
+        axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
+      )
+        ThrowArgumentException(nameof(curve), "Curve must be a horizontal line, arc or ellipse curve.");
+#else
       if
       (
         ((curve = curve.ChangeUnits(scaleFactor)) is null) ||
@@ -98,6 +129,7 @@ namespace RhinoInside.Revit.GH.Components
         axisPlane.ZAxis.IsParallelTo(Rhino.Geometry.Vector3d.ZAxis) == 0
       )
         ThrowArgumentException(nameof(curve), "Curve must be a horizontal line or arc curve.");
+#endif
 
       SolveOptionalType(ref type, doc, ElementTypeGroup.WallType, nameof(type));
 
@@ -172,6 +204,9 @@ namespace RhinoInside.Revit.GH.Components
           structural
         );
 
+        // Walls are created with the last LocationLine used in the Revit editor!!
+        //newWall.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) WallLocationLine.WallCenterline);
+
         var parametersMask = new BuiltInParameter[]
         {
           BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
@@ -184,13 +219,7 @@ namespace RhinoInside.Revit.GH.Components
           BuiltInParameter.WALL_KEY_REF_PARAM
         };
 
-        WallUtils.DisallowWallJoinAtEnd(newWall, 0);
-        WallUtils.DisallowWallJoinAtEnd(newWall, 1);
-
-        // Walls are created with the last LocationLine used in the Revit editor.
-        //newWall.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) WallLocationLine.WallCenterline);
-
-        ReplaceElement(ref element, newWall);
+        ReplaceElement(ref element, newWall, parametersMask);
       }
 
       if (newWall != null)
@@ -205,8 +234,12 @@ namespace RhinoInside.Revit.GH.Components
           newWall.Flip();
 
         // Setup joins in a last step
-        if (allowJoins)
-          joinedWalls.Add(newWall);
+        if (allowJoins) joinedWalls.Add(newWall);
+        else
+        {
+          WallUtils.DisallowWallJoinAtEnd(newWall, 0);
+          WallUtils.DisallowWallJoinAtEnd(newWall, 1);
+        }
       }
     }
   }
