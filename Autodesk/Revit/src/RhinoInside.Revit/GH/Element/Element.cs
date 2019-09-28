@@ -709,11 +709,6 @@ namespace RhinoInside.Revit.GH.Types
                   p = bbox.Min.ToRhino(); break;
           }
 
-          if (!p.IsValid && element is Autodesk.Revit.DB.Level level)
-          {
-            p = new Rhino.Geometry.Point3d(0.0, 0.0, level.Elevation);
-          }
-
           if (p.IsValid)
             return p.ChangeUnits(Revit.ModelUnits);
         }

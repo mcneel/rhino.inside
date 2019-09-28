@@ -15,6 +15,21 @@ namespace RhinoInside.Revit.GH.Types
 
     public Level() { }
     public Level(Autodesk.Revit.DB.Level host) : base(host) { }
+
+    public override Rhino.Geometry.Point3d Location
+    {
+      get
+      {
+        var element = (Autodesk.Revit.DB.Level) this;
+        if (element is Autodesk.Revit.DB.Level level)
+        {
+          var p = new Rhino.Geometry.Point3d(0.0, 0.0, level.Elevation);
+          return p.ChangeUnits(Revit.ModelUnits);
+        }
+
+        return new Rhino.Geometry.Point3d(double.NaN, double.NaN, double.NaN);
+      }
+    }
   }
 }
 
