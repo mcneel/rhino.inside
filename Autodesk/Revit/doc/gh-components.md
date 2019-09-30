@@ -16,6 +16,36 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th>Description</th>
   </tr>
   <tr>
+    <td><img src="GH/GeometricElement.png" alt="Geometric by Element" width="32"></td>
+    <td>Geometric Element</td>
+    <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
+  </tr>
+  <tr>
+    <td><img src="GH/Host.png" alt="Host" width="32"></td>
+    <td>Host</td>
+    <td>Represents a Revit document host element.</td>
+  </tr>
+  <tr>
+      <td><img src="GH/Edge.png" alt="Edge" width="32"></td>
+      <td>Edge</td>
+      <td>Represents a Revit edge from an element.</td>
+  </tr>
+  <tr>
+      <td><img src="GH/Face.png" alt="Face" width="32"></td>
+      <td>Face</td>
+      <td>Select a Revit Element Face(s)</td>
+  </tr>
+  <tr>
+      <td><img src="GH/SketchPlane.png" alt="SketchPlane" width="32"></td>
+      <td>Sketch Plane</td>
+      <td>Represents a Revit document sketch plane. (Selector in the future)</td>
+   </tr>
+  <tr>
+      <td><img src="GH/Vertex.png" alt="Vertex" width="32"></td>
+      <td>Vertex</td>
+      <td>Select a Revit Element Vertex(s)</td>
+   </tr>
+   <tr>
     <td><img src="GH/Category.png" alt="BeamByCurve" width="32"></td>
     <td>Category</td>
     <td>Revit Category Param used for selecting persistent Category (future)</td>
@@ -26,29 +56,34 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Select one or more persistent Element(s) in Revit to be used in Grasshopper. Also can be used to convert a sub-part to the parent element</td>
   </tr>
   <tr>
-    <td><img src="GH/ElementType.png" alt="ColumnByCurve" width="32"></td>
+    <td><img src="GH/ElementType.png" alt="ElementType" width="32"></td>
     <td>Element Type</td>
     <td>Get Element type from the Element(s) input</td>
   </tr>
   <tr>
-    <td><img src="GH/Edge.png" alt="ColumnByCurve" width="32"></td>
-    <td>Edge Element</td>
-    <td>Select a Revit Element Edge(s)</td>
+    <td><img src="GH/Family.png" alt="Family" width="32"></td>
+    <td>Family</td>
+    <td>Represents a Revit document family.</td>
   </tr>
   <tr>
-    <td><img src="GH/Face.png" alt="BeamByCurve" width="32"></td>
-    <td>Face Element</td>
-    <td>Select a Revit Element Face(s)</td>
+    <td><img src="GH/GraphicStyle.png" alt="GraphicStyle" width="32"></td>
+    <td>Graphic Style</td>
+    <td>Represents a Revit Graphic Style.</td>
   </tr>
   <tr>
-    <td><img src="GH/Vertex.png" alt="ColumnByCurve" width="32"></td>
-    <td>Vertex Element</td>
-    <td>Select a Revit Element Vertex(s)</td>
+    <td><img src="GH/Level.png" alt="Level" width="32"></td>
+    <td>Level</td>
+    <td>Represents a Revit Level</td>
   </tr>
   <tr>
-    <td><img src="GH/SketchPlane.png" alt="BeamByCurve" width="32"></td>
-    <td>Revit SketchPlane</td>
-    <td>Represents a Revit document sketch plane. (Selector in the future)</td>
+    <td><img src="GH/BuiltInParameterGroup.png" alt="BuiltInParameterGroup" width="32"></td>
+    <td>Parameter Group</td>
+    <td>Represents a Revit Parameter Group</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ParameterKey.png" alt="ParameterKey" width="32"></td>
+      <td>Parameter Key</td>
+      <td>Represents a Revit Parameter Key</td>
   </tr>
 </table>
 
@@ -113,15 +148,15 @@ This guide documents the Grasshopper components that support Revit interaction.
     <th width="200">Name</th>
     <th>Description</th>
   </tr>
+  <tr>
+      <td width="48px"><img src="GH/CategoryGraphicStyle.png" alt="CategoryGraphicStyle" width="32"></td>
+      <td>Category Graphic Style</td>
+      <td>Returns the Projections an Cut of a specifcs categories graphic style.</td>
+  </tr>
   <tr>
     <td width="48px"><img src="GH/CategoryIdentity.png" alt="CategoryIdentity" width="32"></td>
     <td>Category Identity</td>
     <td>Break a Revit Category into its component parts.  Name, Parent, Allow Bounds and Material Quantities</td>
-  </tr>
-  <tr>
-    <td width="48px"><img src="GH/CategorySubCategories.png" alt="CategorySubCategories" width="32"></td>
-    <td>Category SubCategories</td>
-    <td>Returns a list of all the subcategories of Category</td>
   </tr>
   <tr>
     <td width="48px"><img src="GH/CategoryObjectStyles.png" alt="CategoryObjectStyles" width="32"></td>
@@ -129,9 +164,9 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Returns category object style attributes like Line-Color, Material…</td>
   </tr>
   <tr>
-    <td width="48px"><img src="GH/CategoryGraphicsStyles.png" alt="CategoryGraphicsStyles" width="32"></td>
-    <td>Category Graphics Styles</td>
-    <td></td>
+    <td width="48px"><img src="GH/CategorySubCategories.png" alt="CategorySubCategories" width="32"></td>
+    <td>Category SubCategories</td>
+    <td>Returns a list of all the subcategories of Category</td>
   </tr>
   <tr>
     <td><img src="GH/CategoryTypes.png" alt="ColumnByCurve" width="32"></td>
@@ -200,7 +235,6 @@ This guide documents the Grasshopper components that support Revit interaction.
   </tr>
 </table>
 
-
 #### Elements Components
 
 <table style="width:100%">
@@ -251,6 +285,172 @@ This guide documents the Grasshopper components that support Revit interaction.
   </tr>
 </table>
 
+#### Family Components
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/FamilyGetType.png" alt="FamilyGetType" width="32"></td>
+    <td>Family Get Type</td>
+    <td>Obtains a set of types that are owned by Family</td>
+  </tr>
+  <tr>
+    <td><img src="GH/FamilyLoad.png" alt="FamilyLoad" width="32"></td>
+    <td>Load Family</td>
+    <td>Loads a family into the document using optional overrides</td>
+  </tr>
+  <tr>
+    <td><img src="GH/FamilyNew.png" alt="FamilyNew" width="32"></td>
+    <td>Load Family</td>
+    <td>Creates a new Family from a template including optional overrides</td>
+  </tr>
+  <tr>
+    <td><img src="GH/FamilySaveAs.png" alt="FamilySaveAs" width="32"></td>
+    <td>Family Save As...</td>
+    <td>Saves the Family to a given file path.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/AddFamilyElementByBrep.png" alt="AddFamilyElementByBrep" width="32"></td>
+    <td>Add Family By Brep</td>
+    <td>Add a family using a Brep.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/AddFamilyElementByCurve.png" alt="AddFamilyElementByCurve" width="32"></td>
+    <td>Add Family by Curve</td>
+    <td>Add a family using curve objects.</td>
+  </tr>
+  <tr>
+      <td><img src="GH/VisibilityConstruct.png" alt="VisibilityConstruct" width="32"></td>
+      <td>Visibility Construct</td>
+      <td>Create a View Construct for a Family.</td>
+  </tr>
+</table>
+
+
+#### Filter Components
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/ElementExclusionFilter.png" alt="ElementExclusionFilter" width="32"></td>
+    <td>Element Exclusion Filter</td>
+    <td>Filter used to exclude a set of elements.</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ElementLogicalOrFilter.png" alt="ElementLogicalOrFilter" width="32"></td>
+    <td>Element Logical Or Filter</td>
+    <td>Filter used to combine a set of filters that pass when any pass</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ElementLogicalAndFilter.png" alt="ElementLogicalAndFilter.png" width="32"></td>
+    <td>Element Logical And Filter.png</td>
+    <td>Filter used to combine a set of filters that pass when any pass</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ElementCategoryFilter.png" alt="ElementCategoryFilter" width="32"></td>
+    <td>Element Category Filter</td>
+    <td>Filter used to match elements by their category</td>
+  </tr>
+  <tr>
+    <td><img src="GH/ElementExcludeElementType.png" alt="ElementExcludeElementType" width="32"></td>
+    <td>Element Exclude Element Type</td>
+    <td>Filter used to exclude element types</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementClassFilter.png" alt="EElementClassFilter" width="32"></td>
+      <td>Element Class Filter</td>
+      <td>Filter used to match elements by their API class</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementTypeFilter.png" alt="ElementTypeFilter" width="32"></td>
+      <td>Element Type Filter</td>
+      <td>Filter used to match elements by their type</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementBoundingBoxFilter.png" alt="lementBoundingBoxFilter" width="32"></td>
+      <td>Element Bounding Box Filter</td>
+      <td>Filter used to match elements by their position and interesction with a bounding area.</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementIntersectsElementFilter.png" alt="ElementIntersectsElementFilter" width="32"></td>
+      <td>Element Intersects Elements Filter</td>
+      <td>Filter used to match elements that intersect to the given element</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementIntersectsBrepFilter.png" alt="ElementIntersectsBrepFilter" width="32"></td>
+      <td>Element Intersects Brep Filter</td>
+      <td>Filter used to match elements that intersect to the given brep</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementIntersectsMeshFilter.png" alt="ElementIntersectsMeshFilter" width="32"></td>
+      <td>Element Intersects Mesh Filter</td>
+      <td>Filter used to match elements that intersect to the given mesh</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementDesignOptionFilter.png" alt="ElementDesignOptionFilter" width="32"></td>
+      <td>Element Design Option Filter</td>
+      <td>Filter used to match elements associated to the given Design Option</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementOwnerViewFilter.png" alt="ElementOwnerViewFilter" width="32"></td>
+      <td>Element Owner View Filter</td>
+      <td>Filter used to match elements associated to the given View</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementLevelFilter.png" alt="ElementLevelFilter" width="32"></td>
+      <td>Element Level Filter</td>
+      <td>Filter used to match elements associated to the given level</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementSelectableViewFilter.png" alt="ElementSelectableViewFilter" width="32"></td>
+      <td>Element Selectable View Filter</td>
+      <td>Filter used to match seletable elements into the given View</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementParameterFilter.png" alt="ElementParameterFilter" width="32"></td>
+      <td>Element Parameter Filter</td>
+      <td>Filter used to match elements by the value of a parameter</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleEquals.png" alt="ElementRuleEquals" width="32"></td>
+      <td>Element Rule Equals</td>
+      <td>Filter used to match elements if value of a parameter equals to Value</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleGreater.png" alt="ElementRuleGreater" width="32"></td>
+      <td>Element Rule Greater</td>
+      <td>Filter used to match elements if value of a parameter greater than Value</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleGreaterOrEqual.png" alt="ElementRuleGreaterOrEqual" width="32"></td>
+      <td>Element Rule Greater Or Equal</td>
+      <td>Filter used to match elements if value of a parameter greater or equal than Value</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleLess.png" alt="ElementRuleLess" width="32"></td>
+      <td>Element Rule Less</td>
+      <td>Filter used to match elements if value of a parameter less than Value</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleLessOrEqual.png" alt="ElementRuleLessOrEqual" width="32"></td>
+      <td>Element Rule Less Or Equal</td>
+      <td>Filter used to match elements if value of a parameter less or equal than Value</td>
+  </tr>
+  <tr>
+      <td><img src="GH/ElementRuleNotEquals.png" alt="ElementRuleNotEquals" width="32"></td>
+      <td>Element Rule Not Equals</td>
+      <td>Filter used to match elements if value of a parameter less than Value</td>    </tr>
+</table>
+
+
 #### Geometry Components
 
 <table style="width:100%">
@@ -284,6 +484,20 @@ This guide documents the Grasshopper components that support Revit interaction.
     </tr>
 </table>
 
+#### Host Components
+
+<table style="width:100%">
+  <tr>
+    <th width="48px">Icon</th>
+    <th width="200">Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td width="48px"><img src="GH/HostObjectGetFaces.png" alt="HostObjectGetFaces" width="32"></td>
+    <td>Host Object Get Faces</td>
+    <td>Obtains a set of types that are owned by Family.</td>
+  </tr>
+</table>
 
 #### Revit Input Components
 
@@ -297,21 +511,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td width="48px"><img src="GH/BuiltInParameterByName.png" alt="BeamByCurve" width="32"></td>
     <td>Select a built-in Parameter by Name</td>
     <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Parameter Key from Revit</td>
-  </tr>
-  <tr>
-    <td><img src="GH/ModelCategoriesPicker.png" alt="ModelCategoriesPicker" width="32"></td>
-    <td>Select a Model Category</td>
-    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a model category from Revit</td>
-  </tr>
-  <tr>
-    <td><img src="GH/AnnotationCategoriesPicker.png" alt="AnnotationCategoriesPicker" width="32"></td>
-    <td>Select an Annotation Category</td>
-    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select an annotation category from Revit</td>
-  </tr>
-  <tr>
-    <td><img src="GH/AnalyticalCategoriesPicker.png" alt="AnalyticalCategoriesPicker" width="32"></td>
-    <td>Select a Analytical Category</td>
-    <td>Use a checklist, dropdown, scroll sequence or cycle interface to select an analyticalcategory from Revit</td>
   </tr>
   <tr>
     <td><img src="GH/DocumentFamiliesPicker.png" alt="ColumnByCurve" width="32"></td>
@@ -328,6 +527,21 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td>Select an Element Type by Name</td>
     <td>Select a specific Element type by its name. This component will be blank unless connected in combination with the Select Document Category or the Select a Family component to select a specific element within a Family or Category. Use a checklist, dropdown, scroll sequence or cycle interface to select a Element Type from Revit <img src="images/element-select-alpha.png" alt="ColumnByCurve"></td>
   </tr>
+  <tr>
+      <td><img src="GH/ModelCategoriesPicker.png" alt="ModelCategoriesPicker" width="32"></td>
+      <td>Select a Model Category</td>
+      <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a model category from Revit</td>
+  </tr>
+  <tr>
+      <td><img src="GH/AnnotationCategoriesPicker.png" alt="AnnotationCategoriesPicker" width="32"></td>
+      <td>Select an Annotation Category</td>
+      <td>Use a checklist, dropdown, scroll sequence or cycle interface to select an annotation category from Revit</td>
+  </tr>
+    <tr>
+        <td><img src="GH/AnalyticalCategoriesPicker.png" alt="AnalyticalCategoriesPicker" width="32"></td>
+        <td>Select a Analytical Category</td>
+        <td>Use a checklist, dropdown, scroll sequence or cycle interface to select an analytical category from Revit</td>
+    </tr>
 </table>
 
 #### Massing Components
@@ -403,11 +617,6 @@ This guide documents the Grasshopper components that support Revit interaction.
     <td><img src="GH/BuiltInParameterGroups.png" alt="BeamByCurve" width="32"></td>
     <td>Selector for a Parameter group</td>
     <td>Use a checklist, dropdown, scroll sequence or cycle interface to select a Parameter Group from Revit</td>
-  </tr>
-  <tr>
-    <td><img src="GH/ParameterKey.png" alt="BeamByCurve" width="32"></td>
-    <td>Parameter Key</td>
-    <td>Represents a Revit Parameter Key. (Selector in the future)</td>
   </tr>
 </table>
 
