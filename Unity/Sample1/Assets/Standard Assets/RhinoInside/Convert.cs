@@ -11,6 +11,7 @@ namespace RhinoInside.Unity
   public static class Convert
   {
     #region ToRhino
+
     public static Point3d ToRhino(this Vector3 p) => new Point3d((double) p.x, (double) p.z, (double) p.y);
 
     static public IEnumerable<Point3d> ToRhino(this ICollection<Vector3> points)
@@ -24,7 +25,9 @@ namespace RhinoInside.Unity
 
     #endregion
 
+
     #region ToHost
+
     static public Vector3 ToHost(this Point3d p) => new Vector3((float) p.X, (float) p.Z, (float) p.Y);
     static public Vector3 ToHost(this Point3f p) => new Vector3(p.X, p.Z, p.Y);
     static public Vector3 ToHost(this Vector3d p) => new Vector3((float) p.X, (float) p.Z, (float) p.Y);
@@ -39,7 +42,8 @@ namespace RhinoInside.Unity
       return result;
     }
 
-    static public List<Vector3> ToHost(this ICollection<Vector3f> vectors)
+
+    public static List<Vector3> ToHost(this ICollection<Vector3f> vectors)
     {
       var result = new List<Vector3>(vectors.Count);
       foreach (var p in vectors)
@@ -48,12 +52,13 @@ namespace RhinoInside.Unity
       return result;
     }
 
-    static public UnityEngine.Mesh ToHost(this Rhino.Geometry.Mesh _mesh)
+
+    public static UnityEngine.Mesh ToHost(this Rhino.Geometry.Mesh _mesh, bool triangulate = true)
     {
       var result = new UnityEngine.Mesh();
       using (var mesh = _mesh.DuplicateMesh())
       {
-        mesh.Faces.ConvertQuadsToTriangles();
+        if (triangulate) mesh.Faces.ConvertQuadsToTriangles();
 
         result.SetVertices(mesh.Vertices.ToHost());
         result.SetNormals(mesh.Normals.ToHost());
@@ -72,6 +77,7 @@ namespace RhinoInside.Unity
 
       return result;
     }
+
     #endregion
   }
 }
