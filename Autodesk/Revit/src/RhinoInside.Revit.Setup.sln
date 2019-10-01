@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.572
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "RhinoInside.Revit.Setup", "RhinoInside.Revit.Setup\RhinoInside.Revit.Setup.wixproj", "{25D80B8C-F993-445C-993F-A39C8772F40B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D6C256D4-B518-464F-9E68-CB282202E846} = {D6C256D4-B518-464F-9E68-CB282202E846}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RhinoInside.Revit", "RhinoInside.Revit\RhinoInside.Revit.csproj", "{D6C256D4-B518-464F-9E68-CB282202E846}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug 2017|Any CPU = Debug 2017|Any CPU
+		Debug 2018|Any CPU = Debug 2018|Any CPU
+		Debug 2019|Any CPU = Debug 2019|Any CPU
+		Debug|Any CPU = Debug|Any CPU
+		Release 2017|Any CPU = Release 2017|Any CPU
+		Release 2018|Any CPU = Release 2018|Any CPU
+		Release 2019|Any CPU = Release 2019|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Debug 2017|Any CPU.ActiveCfg = Debug|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Debug 2018|Any CPU.ActiveCfg = Debug|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Debug 2019|Any CPU.ActiveCfg = Debug|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Debug|Any CPU.Build.0 = Debug|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Release 2017|Any CPU.ActiveCfg = Release|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Release 2018|Any CPU.ActiveCfg = Release|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Release 2019|Any CPU.ActiveCfg = Release|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Release|Any CPU.ActiveCfg = Release|x64
+		{25D80B8C-F993-445C-993F-A39C8772F40B}.Release|Any CPU.Build.0 = Release|x64
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Debug 2017|Any CPU.ActiveCfg = Debug 2017|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Debug 2017|Any CPU.Build.0 = Debug 2017|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Debug 2018|Any CPU.ActiveCfg = Debug 2018|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Debug 2018|Any CPU.Build.0 = Debug 2018|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Debug 2019|Any CPU.ActiveCfg = Debug 2019|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Debug 2019|Any CPU.Build.0 = Debug 2019|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Debug|Any CPU.ActiveCfg = Debug 2019|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Release 2017|Any CPU.ActiveCfg = Release 2017|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Release 2017|Any CPU.Build.0 = Release 2017|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Release 2018|Any CPU.ActiveCfg = Release 2018|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Release 2018|Any CPU.Build.0 = Release 2018|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Release 2019|Any CPU.ActiveCfg = Release 2019|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Release 2019|Any CPU.Build.0 = Release 2019|Any CPU
+		{D6C256D4-B518-464F-9E68-CB282202E846}.Release|Any CPU.ActiveCfg = Release 2019|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {20797952-5CFC-48E3-8EF9-B7E9BC48BB9F}
+	EndGlobalSection
+EndGlobal

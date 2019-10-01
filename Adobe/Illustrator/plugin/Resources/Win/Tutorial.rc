@@ -1,0 +1,126 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+#include "RhinoInsideID.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winnt.h"
+#include "afxres.h"
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#define kMySDKPluginName kPluginName
+#define PIPL_PLUGIN_NAME kMySDKPluginName
+
+/////////////////////////////////////////////////////////////////////////////
+// VersionInfo
+//
+
+#include "../../common/win/VersionInfo.rc"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// PIPL
+//
+
+#define LC(a,b,c,d)		#d, #c, #b, #a
+
+16000  PiPL  DISCARDABLE
+BEGIN							
+	0x0001, 					/* Reserved (for Photoshop) */
+	0L, 						/* kCurrentPiPLVersion */
+	4L, 						/* Property Count */
+								
+	LC(A,D,B,E),				/* vendorID */
+	LC(k,i,n,d),				/* propertyKey = PIKindProperty */
+	0L,							/* propertyID */
+	4L,							/* propertyLength */
+	LC(S,P,E,A),				/* propertyData  */
+								
+	LC(A,D,B,E),				/* vendorID */
+	LC(i,v,r,s),				/* propertyKey = PISPVersionProperty */
+	0L,							/* propertyID */
+	4L,							/* propertyLength */
+	2L, 						/* propertyData */
+
+	LC(A,D,B,E),				/* vendorID */
+	LC(w,x,8,6),				/* propertyKey = PIWin32X86CodeProperty */
+	0L,							/* propertyID */
+	12L,						/* propertyLength */
+	"PluginMain\0\0",			/* propertyData = Entry Point  */
+								/* (Long Word padded C String) */
+
+	LC(A,D,B,E),				/* Vendor Key */
+	LC(p,i,n,m),				/* propertyKey = PIPluginNameProperty  */
+	0L,							/* propertyID */
+	12L,						/* propertyLength */
+	PIPL_PLUGIN_NAME "\0\0\0\0"	/* propertyData = Plug-in name (padded to 4 bytes) */
+END
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icons
+//
+
+IDToFile txt   IDToFile.txt	// Maps IDs to names
+S_SDKTutorialLineTool_Lg_N_at_2x svg "S_SDKTutorialLineTool_Lg_N@2x.svg"
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""winuser.h""\r\n"
+    "#include ""winnt.h""\r\n"
+    "#include ""RhinoInsideID.h""\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    kTutorialDialogID, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 142
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 70
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
