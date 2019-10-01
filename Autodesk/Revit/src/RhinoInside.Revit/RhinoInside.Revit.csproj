@@ -204,7 +204,10 @@
     <Compile Include="GH\Material\Material.cs" />
     <Compile Include="GH\Solid.cs" />
     <Compile Include="GH\TransactionalComponent.cs" />
+    <Compile Include="GH\Types\Category.cs" />
+    <Compile Include="GH\Types\ElementType.cs" />
     <Compile Include="GH\Types\GeometryObject.cs" />
+    <Compile Include="GH\Types\ID.cs" />
     <Compile Include="GH\Types\Parameter.cs" />
     <Compile Include="GH\Types\DatumPlane.cs" />
     <Compile Include="GH\Types\SketchPlane.cs" />
