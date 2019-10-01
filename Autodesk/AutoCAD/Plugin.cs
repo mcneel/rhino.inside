@@ -17,25 +17,27 @@ namespace RhinoInside.AutoCAD
     private Rhino.Runtime.InProcess.RhinoCore m_rhino_core;
 
     #region Plugin static constructor
+    static readonly string SystemDir = (string) Microsoft.Win32.Registry.GetValue
+    (
+      @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+    );
 
     static Plugin()
     {
       ResolveEventHandler OnRhinoCommonResolve = null;
       AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
       {
-        const string rhino_common_assembly_name = "RhinoCommon";
+        const string rhinoCommonAssemblyName = "RhinoCommon";
         var assembly_name = new AssemblyName(args.Name).Name;
 
-        if (assembly_name != rhino_common_assembly_name)
+        if (assembly_name != rhinoCommonAssemblyName)
           return null;
 
         AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        var rhino_system_dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhino_system_dir, rhino_common_assembly_name + ".dll"));
+        return Assembly.LoadFrom(Path.Combine(SystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }
-
     #endregion // Plugin static constructor
 
     #region IExtensionApplication Members
@@ -45,8 +47,8 @@ namespace RhinoInside.AutoCAD
       // Load Rhino
       try
       {
-        var scheme_name = ProductName().Replace(' ', '_');
-        m_rhino_core = new Rhino.Runtime.InProcess.RhinoCore(new[] { $"/scheme={scheme_name}" });
+        string SchemeName = $"Inside-{HostApplicationServices.Current.Product}-{HostApplicationServices.Current.releaseMarketVersion}";
+        m_rhino_core = new Rhino.Runtime.InProcess.RhinoCore(new[] { $"/scheme={SchemeName}" });
       }
       catch
       {
@@ -68,20 +70,5 @@ namespace RhinoInside.AutoCAD
     }
 
     #endregion // IExtensionApplication Members
-
-    #region Static Functions
-
-    private static string ProductName()
-    {
-      var root_key = HostApplicationServices.Current.MachineRegistryProductRootKey;
-      string product_name = null;
-      using (var key = Registry.LocalMachine.OpenSubKey(root_key, false))
-      {
-        product_name = key.GetValue("ProductName") as string;
-      }
-      return product_name;
-    }
-
-    #endregion // Static Functions
   }
 }
