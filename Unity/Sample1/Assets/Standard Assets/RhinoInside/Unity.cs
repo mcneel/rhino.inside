@@ -7,13 +7,18 @@ using UnityEditor;
 
 using Rhino;
 using Rhino.Runtime.InProcess;
+using Microsoft.Win32;
 
 namespace RhinoInside.Unity
 {
   [InitializeOnLoad]
   static class Startup
   {
-    static string RhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+    static readonly string RhinoSystemDir = (string) Registry.GetValue
+    (
+      @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+    );
     static bool isLoaded = Environment.GetEnvironmentVariable("PATH").Contains(RhinoSystemDir);
 
     static Startup()
