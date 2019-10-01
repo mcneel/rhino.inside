@@ -17,6 +17,8 @@ Namespace HelloWorld
       RemoveHandler AppDomain.CurrentDomain.AssemblyResolve, OnRhinoCommonResolve
 
       Dim rhinoSystemDir As String = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+      rhinoSystemDir = DirectCast(Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path", rhinoSystemDir), String)
+
       Return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"))
     End Function
 

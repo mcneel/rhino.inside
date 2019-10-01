@@ -11,6 +11,11 @@ namespace HelloWorld
   class Program
   {
     #region Program static constructor
+    static readonly string SystemDir = (string) Microsoft.Win32.Registry.GetValue
+    (
+      @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+    );
     static Program()
     {
       ResolveEventHandler OnRhinoCommonResolve = null;
@@ -23,9 +28,7 @@ namespace HelloWorld
           return null;
 
         AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
+        return Assembly.LoadFrom(Path.Combine(SystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }
     #endregion
