@@ -346,6 +346,63 @@ namespace RhinoInside.Revit
     }
     #endregion
 
+    #region TryGetEllipise
+    public static Ellipse Reverse(this Ellipse ellipse)
+    {
+      var plane = ellipse.Plane;
+      plane.Flip();
+
+      return new Ellipse(plane, ellipse.Radius2, ellipse.Radius1);
+    }
+
+    public static bool TryGetEllipse(this Curve curve, out Ellipse ellipse, out Interval interval, double tolerance)
+    {
+      if (curve.TryGetPlane(out var plane, tolerance))
+      {
+        if (curve.TryGetArc(plane, out var arc, tolerance))
+        {
+          ellipse = new Ellipse(arc.Plane, arc.Radius, arc.Radius);
+          interval = arc.AngleDomain;
+          return true;
+        }
+
+        if (curve.TryGetEllipse(plane, out ellipse, tolerance))
+        {
+          // Curve.TryGetEllipse does not respect curve direction
+          if (plane.Normal.IsParallelTo(ellipse.Plane.Normal) == -1)
+            ellipse = ellipse.Reverse();
+
+          if (curve.IsClosed)
+          {
+            interval = new Interval(0.0, 2.0 * Math.PI);
+            return true;
+          }
+          else
+          {
+            var nurbsEllipse = ellipse.ToNurbsCurve();
+            if
+            (
+              nurbsEllipse.ClosestPoint(curve.PointAtStart, out var t0, 0.0) &&
+              nurbsEllipse.ClosestPoint(curve.PointAtEnd, out var t1, 0.0)
+            )
+            {
+              interval = new Interval(t0, t1);
+
+              if (interval.IsDecreasing)
+                interval.T0 -= Math.PI * 2.0;
+
+              return true;
+            }
+          }
+        }
+      }
+
+      ellipse = default(Ellipse);
+      interval = Interval.Unset;
+      return false;
+    }
+    #endregion
+
     #region GeometryBase
     public static bool GetUserBoolean(this GeometryBase geometry, string key, out bool value, bool def = default(bool))
     {

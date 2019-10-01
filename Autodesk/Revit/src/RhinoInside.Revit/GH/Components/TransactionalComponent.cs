@@ -240,9 +240,10 @@ namespace RhinoInside.Revit.GH.Components
       { typeof(Autodesk.Revit.DB.Material),     Tuple.Create(typeof(Parameters.Material),     typeof(Types.Material))     },
       { typeof(Autodesk.Revit.DB.SketchPlane),  Tuple.Create(typeof(Parameters.SketchPlane),  typeof(Types.SketchPlane))  },
       { typeof(Autodesk.Revit.DB.Level),        Tuple.Create(typeof(Parameters.Level),        typeof(Types.Level))        },
+      { typeof(Autodesk.Revit.DB.Grid),         Tuple.Create(typeof(Parameters.Grid),         typeof(Types.Grid))         },
     };
 
-    protected virtual bool TryGetParamTypes(Type type, out Tuple<Type, Type> paramTypes)
+    protected bool TryGetParamTypes(Type type, out Tuple<Type, Type> paramTypes)
     {
       if (type.IsEnum)
       {

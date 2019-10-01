@@ -709,11 +709,6 @@ namespace RhinoInside.Revit.GH.Types
                   p = bbox.Min.ToRhino(); break;
           }
 
-          if (!p.IsValid && element is Autodesk.Revit.DB.Level level)
-          {
-            p = new Rhino.Geometry.Point3d(0.0, 0.0, level.Elevation);
-          }
-
           if (p.IsValid)
             return p.ChangeUnits(Revit.ModelUnits);
         }
@@ -825,7 +820,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public virtual Rhino.Geometry.Plane Plane => new Rhino.Geometry.Plane(Location, XAxis, YAxis);
 
-    public Rhino.Geometry.Curve Axis
+    public virtual Rhino.Geometry.Curve Axis
     {
       get
       {
@@ -834,11 +829,6 @@ namespace RhinoInside.Revit.GH.Types
 
         if(element?.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
           c = curveLocation.Curve.ToRhino();
-
-        if (c is null && element is Grid grid)
-        {
-          c = grid.Curve.ToRhino();
-        }
 
         return c?.ChangeUnits(Revit.ModelUnits);
       }
@@ -910,6 +900,36 @@ namespace RhinoInside.Revit.GH.Components
       DA.SetData("Type", element?.Document.GetElement(element.GetTypeId()));
       DA.SetData("Name", element?.Name);
       DA.SetData("UniqueID", element?.UniqueId);
+    }
+  }
+
+  public class ElementMaterials : Component
+  {
+    public override Guid ComponentGuid => new Guid("93C18DFD-FAAB-4CF1-A681-C11754C2495D");
+
+    public ElementMaterials()
+    : base("Element.Materials", "Element.Materials", "Query element used materials", "Revit", "Element")
+    { }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Element(), "Element", "E", "Element to query for its materials", GH_ParamAccess.item);
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.Material(), "Materials", "M", "Materials this Element is made of", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.Material(), "Paint", "P", "Materials used to paint this Element", GH_ParamAccess.list);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.Element element = null;
+      if (!DA.GetData("Element", ref element))
+        return;
+
+      DA.SetDataList("Materials", element?.GetMaterialIds(false).Select(x => element.Document.GetElement(x)));
+      DA.SetDataList("Paint",     element?.GetMaterialIds( true).Select(x => element.Document.GetElement(x)));
     }
   }
 

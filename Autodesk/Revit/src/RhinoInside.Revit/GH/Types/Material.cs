@@ -1,11 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Autodesk.Revit.DB;
-using Autodesk.Revit.UI.Selection;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Types;
 
 namespace RhinoInside.Revit.GH.Types
 {
