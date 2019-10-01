@@ -60,7 +60,7 @@ namespace RhinoInside.Revit.GH.Components
         BuiltInParameter.ROOF_LEVEL_OFFSET_PARAM
       };
 
-      using (var curveArray = boundary.ToHost().ToCurveArray())
+      using (var curveArray = boundary.ToHostMultiple().ToCurveArray())
       {
         var modelCurveArray = new ModelCurveArray();
         ReplaceElement(ref element, doc.Create.NewFootPrintRoof(curveArray, level.Value, type.Value, out modelCurveArray), parametersMask);

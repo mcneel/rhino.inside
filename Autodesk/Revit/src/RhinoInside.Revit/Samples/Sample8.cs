@@ -311,7 +311,7 @@ namespace RhinoInside.Revit.Samples
               return DirectShape.CreateGeometryInstance(doc, definitionId, xform.ToHost());
             }
           }
-          else return geometry.ToHost(scaleFactor).ToList();
+          else return geometry.ToHostMultiple(scaleFactor).ToList();
         }
       }
 

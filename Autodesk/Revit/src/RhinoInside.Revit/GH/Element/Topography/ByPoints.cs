@@ -60,7 +60,7 @@ namespace RhinoInside.Revit.GH.Components
 
       if (element is object && regions?.Count > 0)
       {
-        var curveLoops = regions.Select(region => CurveLoop.Create(region.ChangeUnits(scaleFactor).ToHost().ToArray())).ToArray();
+        var curveLoops = regions.Select(region => CurveLoop.Create(region.ChangeUnits(scaleFactor).ToHostMultiple().ToArray())).ToArray();
         SiteSubRegion.Create(doc, curveLoops, element.Id);
       }
     }

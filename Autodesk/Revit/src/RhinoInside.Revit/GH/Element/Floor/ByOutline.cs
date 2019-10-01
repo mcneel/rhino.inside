@@ -51,7 +51,7 @@ namespace RhinoInside.Revit.GH.Components
 
       SolveOptionalLevel(ref level, doc, boundary, nameof(level));
 
-      var curveArray = boundary.ToHost().ToCurveArray();
+      var curveArray = boundary.ToHostMultiple().ToCurveArray();
 
       var parametersMask = new BuiltInParameter[]
       {

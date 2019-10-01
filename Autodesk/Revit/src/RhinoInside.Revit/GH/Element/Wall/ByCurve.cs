@@ -112,9 +112,7 @@ namespace RhinoInside.Revit.GH.Components
       var levelPlane = new Rhino.Geometry.Plane(new Rhino.Geometry.Point3d(0.0, 0.0, level.Value.Elevation), Rhino.Geometry.Vector3d.ZAxis);
       curve = Rhino.Geometry.Curve.ProjectToPlane(curve, levelPlane);
 
-      var curves = curve.ToHost().ToArray();
-      Debug.Assert(curves.Length == 1);
-      var centerLine = curves[0];
+      var centerLine = curve.ToHost();
 
       // LocationLine
       if (locationLine != WallLocationLine.WallCenterline)

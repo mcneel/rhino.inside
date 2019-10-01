@@ -106,7 +106,7 @@ namespace RhinoInside.Revit.GH.Components
                                         ElementId.InvalidElementId;
                       }
 
-                      return x.ToHost(scaleFactor);
+                      return x.ToHostMultiple(scaleFactor);
                     }).
                     SelectMany(x => x.ToDirectShapeGeometry()).
                     ToArray();
@@ -194,7 +194,7 @@ namespace RhinoInside.Revit.GH.Components
                                         ElementId.InvalidElementId;
                       }
 
-                      return x.ToHost(scaleFactor);
+                      return x.ToHostMultiple(scaleFactor);
                     }).
                     SelectMany(x => x.ToDirectShapeGeometry()).
                     ToArray();

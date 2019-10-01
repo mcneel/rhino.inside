@@ -43,9 +43,9 @@ namespace RhinoInside.Revit.GH.Components
         ((curve = curve.ChangeUnits(scaleFactor)) is null) ||
         curve.IsClosed ||
         !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-        curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
+        curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C2_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
       )
-        ThrowArgumentException(nameof(curve), "Curve must be a C1 continuous planar non closed curve.");
+        ThrowArgumentException(nameof(curve), "Curve must be a C2 continuous planar non closed curve.");
 
       SolveOptionalType(ref type, doc, BuiltInCategory.OST_StructuralFraming, nameof(type));
 
@@ -54,9 +54,7 @@ namespace RhinoInside.Revit.GH.Components
 
       SolveOptionalLevel(ref level, doc, curve, nameof(level));
 
-      var curves = curve.ToHost().ToList();
-      Debug.Assert(curves.Count == 1);
-      var centerLine = curves[0];
+      var centerLine = curve.ToHost();
 
       // Type
       ChangeElementTypeId(ref element, type.Value.Id);

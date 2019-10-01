@@ -45,7 +45,7 @@ namespace RhinoInside.Revit.GH.Components
         {
           try
           {
-            foreach (var curve in brep.Faces[0].OuterLoop.To3dCurve().ToHost())
+            foreach (var curve in brep.Faces[0].OuterLoop.To3dCurve().ToHostMultiple())
               referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
 
             ReplaceElement
@@ -73,7 +73,7 @@ namespace RhinoInside.Revit.GH.Components
         {
           try
           {
-            foreach (var curve in extrusion.Profile3d(new Rhino.Geometry.ComponentIndex(Rhino.Geometry.ComponentIndexType.ExtrusionBottomProfile, 0)).ToHost())
+            foreach (var curve in extrusion.Profile3d(new Rhino.Geometry.ComponentIndex(Rhino.Geometry.ComponentIndexType.ExtrusionBottomProfile, 0)).ToHostMultiple())
               referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
 
             ReplaceElement

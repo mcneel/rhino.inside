@@ -40,7 +40,7 @@ namespace RhinoInside.Revit.GH.Components
       else ds = DirectShape.CreateElement(doc, new ElementId(BuiltInCategory.OST_GenericModel));
 
       var shape = brep.
-                  ToHost(scaleFactor).
+                  ToHostMultiple(scaleFactor).
                   SelectMany(x => x.ToDirectShapeGeometry());
 
       ds.SetShape(shape.ToList());

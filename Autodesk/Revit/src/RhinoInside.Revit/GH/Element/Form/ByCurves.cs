@@ -57,7 +57,7 @@ namespace RhinoInside.Revit.GH.Components
         using (var sketchPlane = SketchPlane.Create(doc, plane.ToHost()))
         using (var referenceArray = new ReferenceArray())
         {
-          foreach (var curve in profile.ToHost())
+          foreach (var curve in profile.ToHostMultiple())
             referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
 
           ReplaceElement(ref element, doc.FamilyCreate.NewFormByCap(true, referenceArray));
@@ -74,7 +74,7 @@ namespace RhinoInside.Revit.GH.Components
             {
               var referenceArray = new ReferenceArray();
 
-              foreach (var curve in profile.ToHost())
+              foreach (var curve in profile.ToHostMultiple())
                 referenceArray.Append(new Reference(doc.FamilyCreate.NewModelCurve(curve, sketchPlane)));
 
               referenceArrayArray.Append(referenceArray);

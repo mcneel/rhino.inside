@@ -48,7 +48,7 @@ namespace RhinoInside.Revit.GH.Components
 
       SolveOptionalLevel(ref level, doc, boundaryBBox.Min.Z, nameof(level));
 
-      var curveLoops = boundaries.Select(region => CurveLoop.Create(region.ToHost().SelectMany(x => x.ToBoundedCurves()).ToList()));
+      var curveLoops = boundaries.Select(region => CurveLoop.Create(region.ToHostMultiple().SelectMany(x => x.ToBoundedCurves()).ToList()));
 
       // Type
       ChangeElementTypeId(ref element, type.Value.Id);
