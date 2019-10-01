@@ -186,7 +186,6 @@
     <Compile Include="GH\Element\SketchPlane\ByPlane.cs" />
     <Compile Include="GH\Element\Topography\ByPoints.cs" />
     <Compile Include="GH\Element\Wall\ByCurve.cs" />
-    <Compile Include="GH\Element\HostObject\HostObject.cs" />
     <Compile Include="GH\Element\HostObject\GetFaces.cs" />
     <Compile Include="GH\Element\DirectShape\ByGeometry.cs" />
     <Compile Include="GH\Element\DirectShape\ByMesh.cs" />
@@ -209,6 +208,7 @@
     <Compile Include="GH\Types\DatumPlane.cs" />
     <Compile Include="GH\Types\SketchPlane.cs" />
     <Compile Include="GH\Types\Material.cs" />
+    <Compile Include="GH\Types\HostObject.cs" />
     <Compile Include="GH\Components\Component.cs" />
     <Compile Include="GH\Components\TransactionalComponent.cs" />
     <Compile Include="GH\Components\MaterialQuanitiesByElement.cs" />
