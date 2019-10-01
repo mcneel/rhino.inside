@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,26 +20,27 @@ namespace RhinoInside.Excel
         Rhino.Runtime.InProcess.RhinoCore m_rhino_core;
 
         #region Plugin static constructor
+        static readonly string SystemDir = (string) Registry.GetValue
+        (
+          @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
+          Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+        );
 
         static RhinoInsideAddIn()
         {
-
             ResolveEventHandler OnRhinoCommonResolve = null;
             AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
             {
-                const string rhino_common_assembly_name = "RhinoCommon";
+                const string rhinoCommonAssemblyName = "RhinoCommon";
                 var assembly_name = new AssemblyName(args.Name).Name;
 
-                if (assembly_name != rhino_common_assembly_name)
+                if (assembly_name != rhinoCommonAssemblyName)
                     return null;
 
                 AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-                var rhino_system_dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-                return Assembly.LoadFrom(Path.Combine(rhino_system_dir, rhino_common_assembly_name + ".dll"));
+                return Assembly.LoadFrom(Path.Combine(SystemDir, rhinoCommonAssemblyName + ".dll"));
             };
         }
-
         #endregion // Plugin static constructor
 
         //The Startup event is raised after the VSTO Add-in is loaded
