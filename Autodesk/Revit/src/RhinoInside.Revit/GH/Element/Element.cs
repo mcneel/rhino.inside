@@ -49,7 +49,10 @@ namespace RhinoInside.Revit.GH.Types
       if (element is Autodesk.Revit.DB.Level level)
         return new Level(level);
 
-      if(GeometricElement.IsValidElement(element))
+      if (element is Autodesk.Revit.DB.Grid grid)
+        return new Grid(grid);
+
+      if (GeometricElement.IsValidElement(element))
         return new GeometricElement(element);
 
       return new Element(element);
