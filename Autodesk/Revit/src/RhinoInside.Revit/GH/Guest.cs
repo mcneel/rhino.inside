@@ -21,6 +21,7 @@ namespace RhinoInside.Revit.GH
   [GuestPlugInId("B45A29B1-4343-4035-989E-044E8580D9CF")]
   internal class Guest : IGuest
   {
+    public static Grasshopper.Plugin.GH_RhinoScriptInterface Script = new Grasshopper.Plugin.GH_RhinoScriptInterface();
     PreviewServer previewServer;
     public string Name => "Grasshopper";
     LoadReturnCode IGuest.OnCheckIn(ref string errorMessage)

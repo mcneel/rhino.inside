@@ -17,6 +17,10 @@ namespace RhinoInside.Revit.UI
     public GrasshopperCommand()
     {
       if (!PlugIn.LoadPlugIn(PluginId, true, true))
+        throw new Exception("Failed to load Grasshopper");
+
+      GH.Guest.Script.LoadEditor();
+      if(!GH.Guest.Script.IsEditorLoaded())
         throw new Exception("Failed to startup Grasshopper");
     }
 
@@ -50,7 +54,9 @@ namespace RhinoInside.Revit.UI
     {
       using (var modal = new Rhinoceros.ModalScope())
       {
-        if (!Rhino.RhinoApp.RunScript("!_-Grasshopper _W _S ENTER", false))
+        GH.Guest.Script.ShowEditor();
+
+        if(!GH.Guest.Script.IsEditorLoaded())
           return Result.Failed;
 
         return modal.Run(false);
