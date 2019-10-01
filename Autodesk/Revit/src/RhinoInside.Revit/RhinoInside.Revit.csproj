@@ -197,10 +197,10 @@
     <Compile Include="GH\Element\Form\ByCurves.cs" />
     <Compile Include="GH\Element\AdaptiveComponent\ByPoints.cs" />
     <Compile Include="GH\ElementFilter\ElementFilter.cs" />
-    <Compile Include="GH\Family\Family.cs" />
     <Compile Include="GH\Solid.cs" />
     <Compile Include="GH\Types\Category.cs" />
     <Compile Include="GH\Types\ElementType.cs" />
+    <Compile Include="GH\Types\Family.cs" />
     <Compile Include="GH\Types\GeometryObject.cs" />
     <Compile Include="GH\Types\ID.cs" />
     <Compile Include="GH\Types\Parameter.cs" />
@@ -211,6 +211,7 @@
     <Compile Include="GH\Components\Component.cs" />
     <Compile Include="GH\Components\TransactionalComponent.cs" />
     <Compile Include="GH\Components\Parameter.cs" />
+    <Compile Include="GH\Components\Family.cs" />
     <Compile Include="GH\Components\MaterialQuanitiesByElement.cs" />
     <Compile Include="GH\ValueList.cs" />
     <Compile Include="Rhino\Rhinoceros.cs" />
