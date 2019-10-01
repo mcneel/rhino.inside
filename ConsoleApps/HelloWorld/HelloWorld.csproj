@@ -37,10 +37,7 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="RhinoCommon">
-      <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
+    <PackageReference Include="RhinoCommon" Version="7.0.19183.10495-wip" IncludeAssets="compile; build" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />

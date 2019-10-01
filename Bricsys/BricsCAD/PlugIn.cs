@@ -15,22 +15,26 @@ namespace RhinoInside.BricsCAD
 
     #region Plugin static constructor
 
+    static readonly string SystemDir = (string) Microsoft.Win32.Registry.GetValue
+    (
+      @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+    );
+
     static PlugIn()
     {
       // Add an assembly resolver for RhinoCommon.dll
       ResolveEventHandler OnRhinoCommonResolve = null;
       AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
       {
-        const string rhino_common_assembly_name = "RhinoCommon";
+        const string rhinoCommonAssemblyName = "RhinoCommon";
         var assembly_name = new AssemblyName(args.Name).Name;
 
-        if (assembly_name != rhino_common_assembly_name)
+        if (assembly_name != rhinoCommonAssemblyName)
           return null;
 
         AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        var rhino_system_dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhino_system_dir, rhino_common_assembly_name + ".dll"));
+        return Assembly.LoadFrom(Path.Combine(SystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }
 
@@ -43,7 +47,7 @@ namespace RhinoInside.BricsCAD
       // Load Rhino
       try
       {
-        var scheme_name = string.Format("BricsCAD {0}", Application.Version).Replace(' ', '_');
+        var scheme_name = string.Format("Inside-BricsCAD-{0}", Application.Version).Replace(' ', '-');
         m_rhino_core = new Rhino.Runtime.InProcess.RhinoCore(new[] { $"/scheme={scheme_name}" });
       }
       catch
