@@ -173,7 +173,6 @@
     <Compile Include="GH\Document\ElementTypes.cs" />
     <Compile Include="GH\Document\Levels.cs" />
     <Compile Include="GH\Document\Parameters.cs" />
-    <Compile Include="GH\ElementType\ElementType.cs" />
     <Compile Include="GH\Element\Element.cs" />
     <Compile Include="GH\Element\Grid\ByCurve.cs" />
     <Compile Include="GH\Element\Level\ByElevation.cs" />
@@ -212,6 +211,7 @@
     <Compile Include="GH\Components\TransactionalComponent.cs" />
     <Compile Include="GH\Components\Parameter.cs" />
     <Compile Include="GH\Components\Family.cs" />
+    <Compile Include="GH\Components\ElementType.cs" />
     <Compile Include="GH\Components\MaterialQuanitiesByElement.cs" />
     <Compile Include="GH\ValueList.cs" />
     <Compile Include="Rhino\Rhinoceros.cs" />
