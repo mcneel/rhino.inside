@@ -820,7 +820,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public virtual Rhino.Geometry.Plane Plane => new Rhino.Geometry.Plane(Location, XAxis, YAxis);
 
-    public Rhino.Geometry.Curve Axis
+    public virtual Rhino.Geometry.Curve Axis
     {
       get
       {
@@ -829,11 +829,6 @@ namespace RhinoInside.Revit.GH.Types
 
         if(element?.Location is Autodesk.Revit.DB.LocationCurve curveLocation)
           c = curveLocation.Curve.ToRhino();
-
-        if (c is null && element is Grid grid)
-        {
-          c = grid.Curve.ToRhino();
-        }
 
         return c?.ChangeUnits(Revit.ModelUnits);
       }

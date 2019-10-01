@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
@@ -167,7 +167,6 @@
     <Compile Include="GH\Guest.cs" />
     <Compile Include="GH\PreviewServer.cs" />
     <Compile Include="GH\ID.cs" />
-    <Compile Include="GH\GeometryObject\GeometryObject.cs" />
     <Compile Include="GH\Document\Document.cs" />
     <Compile Include="GH\Category\Category.cs" />
     <Compile Include="GH\Document\Categories.cs" />
@@ -205,6 +204,10 @@
     <Compile Include="GH\Material\Material.cs" />
     <Compile Include="GH\Solid.cs" />
     <Compile Include="GH\TransactionalComponent.cs" />
+    <Compile Include="GH\Types\GeometryObject.cs" />
+    <Compile Include="GH\Types\Parameter.cs" />
+    <Compile Include="GH\Types\DatumPlane.cs" />
+    <Compile Include="GH\Types\SketchPlane.cs" />
     <Compile Include="GH\ValueList.cs" />
     <Compile Include="Rhino\Rhinoceros.cs" />
     <Compile Include="Rhino\DocumentPreviewServer.cs" />
@@ -327,6 +330,7 @@
     <EmbeddedResource Include="Resources\GH\Toolbar\SolverOn_24x24.png" />
     <EmbeddedResource Include="Resources\GH\Toolbar\Bake_24x24.png" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild" Condition="$(Configuration.Contains('Debug'))">
     <Copy UseHardlinksIfPossible="true" SkipUnchangedFiles="true" SourceFiles="$(ProjectDir)$(OutDir)RhinoInside.Revit.dll" DestinationFolder="$(APPDATA)\Autodesk\Revit\Addins\$(RevitVersion)\RhinoInside.Revit" />
