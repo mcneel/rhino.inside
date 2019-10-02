@@ -65,9 +65,7 @@
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\WinFormsApp\packages\RhinoCommon.7.0.19274.12465-wip\build\net45\RhinoCommon.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\WinFormsApp\packages\RhinoCommon.7.0.19274.12465-wip\build\net45\RhinoCommon.targets'))" />
     <Error Condition="!Exists('packages\RhinoCommon.7.0.19274.12465-wip\build\net45\RhinoCommon.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\RhinoCommon.7.0.19274.12465-wip\build\net45\RhinoCommon.targets'))" />
   </Target>
-  <Import Project="..\WinFormsApp\packages\RhinoCommon.7.0.19274.12465-wip\build\net45\RhinoCommon.targets" Condition="Exists('..\WinFormsApp\packages\RhinoCommon.7.0.19274.12465-wip\build\net45\RhinoCommon.targets')" />
   <Import Project="packages\RhinoCommon.7.0.19274.12465-wip\build\net45\RhinoCommon.targets" Condition="Exists('packages\RhinoCommon.7.0.19274.12465-wip\build\net45\RhinoCommon.targets')" />
 </Project>
