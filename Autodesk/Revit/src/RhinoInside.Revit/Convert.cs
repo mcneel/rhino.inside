@@ -678,7 +678,7 @@ namespace RhinoInside.Revit
       return false;
     }
 
-    internal static IEnumerable<Rhino.Display.DisplayMaterial> GetPreviewMaterials(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries, Rhino.Display.DisplayMaterial defaultMaterial)
+    internal static IEnumerable<Rhino.Display.DisplayMaterial> GetPreviewMaterials(this IEnumerable<Autodesk.Revit.DB.GeometryObject> geometries, Document doc, Rhino.Display.DisplayMaterial defaultMaterial)
     {
       var scaleFactor = Revit.ModelUnits;
       foreach (var geometry in geometries)
@@ -689,14 +689,14 @@ namespace RhinoInside.Revit
         switch (geometry)
         {
           case Autodesk.Revit.DB.GeometryInstance instance:
-            foreach (var g in instance.GetInstanceGeometry().GetPreviewMaterials(instance.GetInstanceGeometry().MaterialElement.ToRhino(defaultMaterial)))
+            foreach (var g in instance.GetInstanceGeometry().GetPreviewMaterials(doc, instance.GetInstanceGeometry().MaterialElement.ToRhino(defaultMaterial)))
               yield return g;
             break;
           case Autodesk.Revit.DB.Mesh mesh:
             if (mesh.NumTriangles <= 0)
               continue;
 
-            var sm = Revit.ActiveDBDocument.GetElement(mesh.MaterialElementId) as Material;
+            var sm = doc.GetElement(mesh.MaterialElementId) as Material;
             yield return sm.ToRhino(defaultMaterial);
             break;
           case Autodesk.Revit.DB.Solid solid:
@@ -708,7 +708,7 @@ namespace RhinoInside.Revit
 
             foreach (var face in solidFaces)
             {
-              var fm = Revit.ActiveDBDocument.GetElement(face.MaterialElementId) as Material;
+              var fm = doc.GetElement(face.MaterialElementId) as Material;
               yield return fm.ToRhino(defaultMaterial);
 
               if (!useMultipleMaterials)
