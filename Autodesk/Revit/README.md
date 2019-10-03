@@ -12,7 +12,7 @@ This folder contains a sample project that demonstrates:
 3. Includes a Revit Toolbar in Grasshopper with Revit specific components
 3. Object can be natively created by Rhino or Grasshopper within Revit.
 
-[**Questions?** *Visit the discussion forum...*](https://discourse.mcneel.com/c/serengeti/inside)
+[**Questions?** *Visit the discussion forum...*](https://discourse.mcneel.com/c/rhino-inside/Revit)
 
 ## Getting started
 Grab the **[latest installer](https://www.rhino3d.com/download/rhino.inside-revit/7/wip)** (requires [Rhino WIP](https://www.rhino3d.com/download/rhino/wip) and Revit 2017-2020)
