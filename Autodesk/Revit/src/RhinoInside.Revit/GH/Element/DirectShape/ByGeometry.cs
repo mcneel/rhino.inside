@@ -28,10 +28,8 @@ namespace RhinoInside.Revit.GH.Parameters
       ListItems.Clear();
 
       var ActiveDBDocument = Revit.ActiveDBDocument;
-      if (ActiveDBDocument == null)
+      if (ActiveDBDocument is null)
         return;
-
-      var genericModel = Autodesk.Revit.DB.Category.GetCategory(ActiveDBDocument, BuiltInCategory.OST_GenericModel);
 
       var directShapeCategories = ActiveDBDocument.Settings.Categories.Cast<Autodesk.Revit.DB.Category>().Where((x) => DirectShape.IsValidCategoryId(x.Id, ActiveDBDocument));
       foreach (var group in directShapeCategories.GroupBy((x) => x.CategoryType).OrderBy((x) => x.Key))
