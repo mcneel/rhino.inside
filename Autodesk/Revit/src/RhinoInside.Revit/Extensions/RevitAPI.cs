@@ -168,31 +168,32 @@ namespace RhinoInside.Revit
 
     public static void CopyParametersFrom(this Element to, Element from, ICollection<BuiltInParameter> parametersMask = null)
     {
-      if (from != null && to != null)
-      {
-        foreach (var previousParameter in from.GetParameters(ParameterSource.Any))
-          using (previousParameter)
-          using (var param = to.get_Parameter(previousParameter.Definition))
+      if (ReferenceEquals(to, from) || from is null || to is null)
+        return;
+
+      foreach (var previousParameter in from.GetParameters(ParameterSource.Any))
+        using (previousParameter)
+        using (var param = to.get_Parameter(previousParameter.Definition))
+        {
+          if (param is null || param.IsReadOnly)
+            continue;
+
+          if
+          (
+            parametersMask is object &&
+            param.Definition is InternalDefinition internalDefinition &&
+            parametersMask.Contains(internalDefinition.BuiltInParameter)
+          )
+            continue;
+
+          switch (previousParameter.StorageType)
           {
-            if (param == null || param.IsReadOnly)
-              continue;
-
-            if (parametersMask != null)
-              if (param.Definition is InternalDefinition internalDefinition)
-              {
-                if (parametersMask.Contains(internalDefinition.BuiltInParameter))
-                  continue;
-              }
-
-            switch (previousParameter.StorageType)
-            {
-              case StorageType.Integer: param.Set(previousParameter.AsInteger()); break;
-              case StorageType.Double: param.Set(previousParameter.AsDouble()); break;
-              case StorageType.String: param.Set(previousParameter.AsString()); break;
-              case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
-            }
+            case StorageType.Integer:   param.Set(previousParameter.AsInteger());   break;
+            case StorageType.Double:    param.Set(previousParameter.AsDouble());    break;
+            case StorageType.String:    param.Set(previousParameter.AsString());    break;
+            case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
           }
-      }
+        }
     }
     #endregion
 

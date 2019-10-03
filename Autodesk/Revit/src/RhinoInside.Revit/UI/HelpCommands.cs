@@ -93,7 +93,7 @@ namespace RhinoInside.Revit.UI
   {
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      using (System.Diagnostics.Process.Start("https://discourse.mcneel.com/c/serengeti/inside")) { }
+      using (System.Diagnostics.Process.Start("https://discourse.mcneel.com/c/rhino-inside/Revit")) { }
 
       return Result.Succeeded;
     }
