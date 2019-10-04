@@ -14,8 +14,9 @@ with open(path.join(this_directory, 'README.md')) as f:
 
 setuptools.setup(
     name="rhinoinside",
-    version="0.4.3",
+    version="0.5.0",
     packages=['rhinoinside'],
+    include_package_data=True,
     author="Robert McNeel & Associates",
     author_email="steve@mcneel.com",
     description="Embed Rhino in CPython",

@@ -1,6 +1,5 @@
 import os
 import clr
-import sys
 import struct
 
 
@@ -9,7 +8,8 @@ import struct
 __rhino_core = None
 __load_called = False
 
-def load(rhino_dir = None):
+
+def load(rhino_dir=None):
     """
     Load Rhino into the python process
     :param rhino_dir: optional path to directory where Rhino is installed
@@ -20,13 +20,6 @@ def load(rhino_dir = None):
         return
     __load_called = True
 
-    # Adding to sys.path will make pythonnet find the
-    # appropriate DLLs to load
-    if rhino_dir is None:
-        rhino_dir = os.path.join(os.environ["ProgramFiles"], "Rhino WIP", "System")
-    sys.path.append(rhino_dir)
-
-    """call load to load RhinoCore.DLL into the current process"""
     if os.name != 'nt':
         raise Exception('rhinoinside only works on Windows')
     bitness = 8 * struct.calcsize("P")
@@ -35,6 +28,14 @@ def load(rhino_dir = None):
 
     global __rhino_core
     if __rhino_core is None:
+        path_to_this = os.path.abspath(__file__)
+        dir_name = os.path.dirname(path_to_this)
+        resolver_dll = os.path.join(dir_name, "RhinoInside.dll")
+        clr.AddReference(resolver_dll)
+        import RhinoInside
+        RhinoInside.Resolver.Initialize()
+        if rhino_dir:
+            RhinoInside.Resolver.RhinoSystemDirectory = rhino_dir
         clr.AddReference("RhinoCommon")
         import Rhino
         __rhino_core = Rhino.Runtime.InProcess.RhinoCore()
