@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Rhino7DefaultInstallDir>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install', 'Path', null, RegistryView.Registry64))</Rhino7DefaultInstallDir>
+    <Rhino7DebugInstallDir>$([MSBuild]::GetRegistryValueFromView('HKEY_CURRENT_USER\Software\McNeel\Rhinoceros\7.0-WIP-Developer-Debug-trunk\Install', 'Path', null, RegistryView.Registry64))</Rhino7DebugInstallDir>
+    <Rhino7InstallDir>$([MSBuild]::ValueOrDefault('$(Rhino7DebugInstallDir)', '$(Rhino7DefaultInstallDir)'))</Rhino7InstallDir>
+    <Rhino7DefaultPluginsDir>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install', 'Default Plug-ins Folder', null, RegistryView.Registry64))</Rhino7DefaultPluginsDir>
+    <Rhino7DebugPluginsDir>$([MSBuild]::GetRegistryValueFromView('HKEY_CURRENT_USER\Software\McNeel\Rhinoceros\7.0-WIP-Developer-Debug-trunk\Install', 'Default Plug-ins Folder', null, RegistryView.Registry64))</Rhino7DebugPluginsDir>
+    <Rhino7PluginsDir>$([MSBuild]::ValueOrDefault('$(Rhino7DebugPluginsDir)', '$(Rhino7DefaultPluginsDir)'))</Rhino7PluginsDir>
+  </PropertyGroup>
   <PropertyGroup Condition="$(Configuration.Contains('2017'))">
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <RevitVersion>2017</RevitVersion>
@@ -118,23 +126,23 @@
     <When Condition="$(Configuration.Contains('Debug'))">
       <ItemGroup>
         <Reference Include="Eto">
-          <HintPath>C:\Program Files\Rhino WIP\System\Eto.dll</HintPath>
+          <HintPath>$(Rhino7InstallDir)Eto.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="RhinoCommon">
-          <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
+          <HintPath>$(Rhino7InstallDir)RhinoCommon.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="Rhino.UI">
-          <HintPath>C:\Program Files\Rhino WIP\System\Rhino.UI.dll</HintPath>
+          <HintPath>$(Rhino7InstallDir)Rhino.UI.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="GH_IO">
-          <HintPath>C:\Program Files\Rhino WIP\Plug-ins\Grasshopper\GH_IO.dll</HintPath>
+          <HintPath>$(Rhino7PluginsDir)Grasshopper\GH_IO.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="Grasshopper">
-          <HintPath>C:\Program Files\Rhino WIP\Plug-ins\Grasshopper\Grasshopper.dll</HintPath>
+          <HintPath>$(Rhino7PluginsDir)Grasshopper\Grasshopper.dll</HintPath>
           <Private>False</Private>
         </Reference>
         <Reference Include="RevitAPI">

@@ -360,7 +360,7 @@ namespace RhinoInside.Revit.GH.Types
 
             meshes = geometry.GetPreviewMeshes().Where(x => x is object).ToArray();
             wires = geometry.GetPreviewWires().Where(x => x is object).ToArray();
-            materials = geometry.GetPreviewMaterials(elementMaterial).Where(x => x is object).ToArray();
+            materials = geometry.GetPreviewMaterials(element.Document, elementMaterial).Where(x => x is object).ToArray();
 
             foreach (var mesh in meshes)
               mesh.Normals.ComputeNormals();
