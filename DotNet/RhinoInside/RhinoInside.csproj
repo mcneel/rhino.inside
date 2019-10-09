@@ -51,7 +51,7 @@
   <ItemGroup>
     <PackageReference Include="RhinoCommon">
       <Version>7.0.19274.12465-wip</Version>
-      <ExcludeAssets>runtime</ExcludeAssets>
+      <IncludeAssets>compile; build</IncludeAssets>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
