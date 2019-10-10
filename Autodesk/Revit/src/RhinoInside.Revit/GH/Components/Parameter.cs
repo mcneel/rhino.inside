@@ -126,32 +126,31 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddTextParameter("Name", "N", "Parameter name", GH_ParamAccess.item);
-      manager.AddIntegerParameter("StorageType", "T", "Parameter value type", GH_ParamAccess.item);
+      manager.AddIntegerParameter("StorageType", "S", "Parameter value type", GH_ParamAccess.item);
       manager.AddBooleanParameter("Visible", "V", "Parameter is visible in UI", GH_ParamAccess.item);
       manager.AddParameter(new Param_Guid(), "Guid", "ID", "Shared Parameter global identifier", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Types.ParameterKey parameter = null;
-      if (!DA.GetData("ParameterKey", ref parameter))
+      Types.ParameterKey parameterKey = null;
+      if (!DA.GetData("ParameterKey", ref parameterKey))
         return;
 
-      if (Enum.IsDefined(typeof(BuiltInParameter), parameter.Value.IntegerValue))
+      if (parameterKey.Value.TryGetBuiltInParameter(out var builtInParameter))
       {
-        var builtInParameter = (BuiltInParameter) parameter.Value.IntegerValue;
         DA.SetData("Name", LabelUtils.GetLabelFor(builtInParameter));
-        DA.SetData("StorageType", Revit.ActiveDBDocument.get_TypeOfStorage(builtInParameter));
+        DA.SetData("StorageType", parameterKey.Document?.get_TypeOfStorage(builtInParameter));
         DA.SetData("Visible", true);
-        DA.SetData("Guid", Guid.Empty);
+        DA.SetData("Guid", null);
       }
-      else if (Revit.ActiveDBDocument.GetElement(parameter.Value) is ParameterElement parameterElement)
+      else if (parameterKey.Document?.GetElement(parameterKey.Value) is ParameterElement parameterElement)
       {
         var definition = parameterElement.GetDefinition();
         DA.SetData("Name", definition?.Name);
         DA.SetData("StorageType", definition?.ParameterType.ToStorageType());
         DA.SetData("Visible", definition?.Visible);
-        DA.SetData("Guid", (parameterElement as SharedParameterElement)?.GuidValue ?? Guid.Empty);
+        DA.SetData("Guid", (parameterElement as SharedParameterElement)?.GuidValue ?? null);
       }
     }
   }
@@ -215,40 +214,41 @@ namespace RhinoInside.Revit.GH.Components
     void ReconstructParameterByName
     (
       Document doc,
-      ref Autodesk.Revit.DB.Element element,
+      ref SharedParameterElement element,
 
       [Description("Parameter Name")] string name,
       [Description("Overwrite Parameter definition if found"), Optional, DefaultValue(false)] bool overwrite
     )
     {
-      var app = Revit.ActiveUIApplication.Application;
-
+      var parameterGUID = default(Guid?);
       var parameterType = ParameterType.Text;
       var parameterGroup = BuiltInParameterGroup.PG_DATA;
       bool instance = true;
       bool visible = true;
 
-      if (!overwrite)
+      using (var bindings = doc.ParameterBindings.ReverseIterator())
       {
-        using (var bindings = doc.ParameterBindings.ReverseIterator())
+        while (bindings.MoveNext())
         {
-          while (bindings.MoveNext())
+          if (bindings.Key is InternalDefinition def)
           {
-            if (bindings.Key is InternalDefinition def)
+            if
+            (
+              def.Name == name &&
+              def.Visible == visible &&
+              def.ParameterType == parameterType &&
+              def.ParameterGroup == parameterGroup &&
+              (instance ? bindings.Current is InstanceBinding : bindings.Current is TypeBinding)
+            )
             {
-              if
-              (
-                def.Name == name &&
-                def.Visible == visible &&
-                def.ParameterType == parameterType &&
-                def.ParameterGroup == parameterGroup &&
-                bindings.Current is InstanceBinding)
+              if (doc.GetElement(def.Id) is SharedParameterElement parameterElement)
               {
-                if (doc.GetElement(def.Id) is ParameterElement parameterElement)
+                if (!overwrite)
                 {
                   ReplaceElement(ref element, parameterElement);
                   throw new WarningException($"A parameter called \"{name}\" is already in the document");
                 }
+                parameterGUID = parameterElement.GuidValue;
               }
             }
           }
@@ -257,41 +257,34 @@ namespace RhinoInside.Revit.GH.Components
 
       using (var defOptions = new ExternalDefinitionCreationOptions(name, parameterType) { Visible = visible })
       {
-        string sharedParametersFilename = app.SharedParametersFilename;
-        string tempParametersFilename = Path.GetTempFileName() + ".txt";
+        if (parameterGUID.HasValue)
+          defOptions.GUID = parameterGUID.Value;
 
-        ExternalDefinition definition = null;
-        try
+        using (var definitionFile = Revit.ActiveUIApplication.Application.CreateSharedParameterFile())
         {
-          // Create Temp Shared Parameters File
+          if (definitionFile?.Groups.Create(LabelUtils.GetLabelFor(parameterGroup)).Definitions.Create(defOptions) is ExternalDefinition definition)
           {
-            using (File.Create(tempParametersFilename)) { }
-            app.SharedParametersFilename = tempParametersFilename;
+            // TODO : Ask for categories
+            using (var categorySet = new CategorySet())
+            {
+              foreach (var category in doc.Settings.Categories.Cast<Category>().Where(category => category.AllowsBoundParameters))
+                categorySet.Insert(category);
+
+              var binding = instance ? (ElementBinding) new InstanceBinding(categorySet) : (ElementBinding) new TypeBinding(categorySet);
+
+              if (!doc.ParameterBindings.Insert(definition, binding, parameterGroup))
+              {
+                if (!overwrite || !doc.ParameterBindings.ReInsert(definition, binding, parameterGroup))
+                  throw new InvalidOperationException("Failed while creating the parameter binding.");
+              }
+            }
+
+            parameterGUID = definition.GUID;
           }
-          definition = app.OpenSharedParameterFile().Groups.Create(parameterGroup.ToString()).Definitions.Create(defOptions) as ExternalDefinition;
         }
-        finally
-        {
-          // Restore User Shared Parameters File
-          app.SharedParametersFilename = sharedParametersFilename;
-          File.Delete(tempParametersFilename);
-        }
-
-        if (overwrite || !doc.ParameterBindings.Contains(definition))
-        {
-          // TODO : Ask for categories
-          var categorySet = new CategorySet();
-          foreach (var category in doc.Settings.Categories.Cast<Category>().Where(category => category.AllowsBoundParameters))
-            categorySet.Insert(category);
-
-          var binding = instance ? (ElementBinding) new InstanceBinding(categorySet) : (ElementBinding) new TypeBinding(categorySet);
-
-          if (!doc.ParameterBindings.Insert(definition, binding, parameterGroup))
-            throw new InvalidOperationException("Failed while creating the parameter binding.");
-        }
-
-        ReplaceElement(ref element, SharedParameterElement.Lookup(doc, definition.GUID));
       }
+
+      ReplaceElement(ref element, SharedParameterElement.Lookup(doc, parameterGUID.Value));
     }
   }
 }

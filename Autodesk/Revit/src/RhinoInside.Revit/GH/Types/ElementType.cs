@@ -8,7 +8,8 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeName => "Revit Element Type";
     public override string TypeDescription => "Represents a Revit element type";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.ElementType);
-    public static explicit operator Autodesk.Revit.DB.ElementType(ElementType self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.ElementType;
+    public static explicit operator Autodesk.Revit.DB.ElementType(ElementType self) =>
+      self.Document?.GetElement(self) as Autodesk.Revit.DB.ElementType;
 
     public ElementType() { }
     public ElementType(Autodesk.Revit.DB.ElementType elementType) : base(elementType) { }
@@ -29,7 +30,7 @@ namespace RhinoInside.Revit.GH.Types
 
           ToolTip += $"{elementType.Name} : ";
 
-          return $"{ToolTip}id {elementType.Id}";
+          return $"{ToolTip}{Identity}";
         }
       }
 

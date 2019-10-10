@@ -1,9 +1,8 @@
 using System;
 using System.Linq;
-
-using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Special;
+using DB = Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Parameters
 {
@@ -21,9 +20,9 @@ namespace RhinoInside.Revit.GH.Parameters
       Description = "Provides a picker of a CategoryType";
 
       ListItems.Clear();
-      ListItems.Add(new GH_ValueListItem("Model", ((int) Autodesk.Revit.DB.CategoryType.Model).ToString()));
-      ListItems.Add(new GH_ValueListItem("Annotation", ((int) Autodesk.Revit.DB.CategoryType.Annotation).ToString()));
-      ListItems.Add(new GH_ValueListItem("Analytical", ((int) Autodesk.Revit.DB.CategoryType.AnalyticalModel).ToString()));
+      ListItems.Add(new GH_ValueListItem("Model", ((int) DB.CategoryType.Model).ToString()));
+      ListItems.Add(new GH_ValueListItem("Annotation", ((int) DB.CategoryType.Annotation).ToString()));
+      ListItems.Add(new GH_ValueListItem("Analytical", ((int) DB.CategoryType.AnalyticalModel).ToString()));
     }
   }
 }
@@ -48,25 +47,23 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddTextParameter("Name", "N", "Category name", GH_ParamAccess.item);
       manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
       manager.AddIntegerParameter("Type", "T", "Category type", GH_ParamAccess.item);
+      manager.AddBooleanParameter("AllowsSubcategories", "A", "Category allows subcategories to be added", GH_ParamAccess.item);
       manager.AddBooleanParameter("AllowsParameters", "A", "Category allows bound parameters", GH_ParamAccess.item);
       manager.AddBooleanParameter("HasMaterialQuantities", "M", "Category has material quantities", GH_ParamAccess.item);
-      manager.AddBooleanParameter("Cuttable", "C", "Has material quantities", GH_ParamAccess.item);
-      manager.AddBooleanParameter("Hidden", "H", "Is hidden category", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
+      DB.Category category = null;
       if (!DA.GetData("Category", ref category))
         return;
 
       DA.SetData("Name", category?.Name);
       DA.SetData("Parent", category?.Parent);
       DA.SetData("Type", category?.CategoryType);
+      DA.SetData("AllowsSubcategories", category?.CanAddSubcategory);
       DA.SetData("AllowsParameters", category?.AllowsBoundParameters);
       DA.SetData("HasMaterialQuantities", category?.HasMaterialQuantities);
-      DA.SetData("Cuttable", category?.IsCuttable);
-      DA.SetData("Hidden", category is null ? (object) null : category.IsHidden());
     }
   }
 
@@ -91,22 +88,24 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.Element(), "LinePattern [projection]", "LPP", "Category line pattern [projection]", GH_ParamAccess.item);
       manager.AddParameter(new Parameters.Element(), "LinePattern [cut]", "LPC", "Category line pattern [cut]", GH_ParamAccess.item);
       manager.AddParameter(new Parameters.Material(), "Material", "M", "Category material", GH_ParamAccess.item);
+      manager.AddBooleanParameter("Cuttable", "C", "Indicates if the category is cuttable or not", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
+      DB.Category category = null;
       if (!DA.GetData("Category", ref category))
         return;
 
-      var doc = Revit.ActiveDBDocument;
+      var doc = category?.Document();
 
-      DA.SetData("LineWeight [projection]", category?.GetLineWeight(GraphicsStyleType.Projection));
-      DA.SetData("LineWeight [cut]", category?.GetLineWeight(GraphicsStyleType.Cut));
+      DA.SetData("LineWeight [projection]", category?.GetLineWeight(DB.GraphicsStyleType.Projection));
+      DA.SetData("LineWeight [cut]", category?.GetLineWeight(DB.GraphicsStyleType.Cut));
       DA.SetData("LineColor", category?.LineColor.ToRhino());
-      DA.SetData("LinePattern [projection]", doc.GetElement(category?.GetLinePatternId(GraphicsStyleType.Projection)));
-      DA.SetData("LinePattern [cut]", doc.GetElement(category?.GetLinePatternId(GraphicsStyleType.Cut)));
+      DA.SetData("LinePattern [projection]", doc?.GetElement(category.GetLinePatternId(DB.GraphicsStyleType.Projection)));
+      DA.SetData("LinePattern [cut]", doc?.GetElement(category.GetLinePatternId(DB.GraphicsStyleType.Cut)));
       DA.SetData("Material", category?.Material);
+      DA.SetData("Cuttable", category?.IsCuttable);
     }
   }
 
@@ -130,12 +129,12 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
+      DB.Category category = null;
       if (!DA.GetData("Category", ref category))
         return;
 
       using (var subCategories = category.SubCategories)
-        DA.SetDataList("SubCategories", subCategories.Cast<Autodesk.Revit.DB.Category>());
+        DA.SetDataList("SubCategories", subCategories.Cast<DB.Category>());
     }
   }
 
@@ -161,12 +160,12 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
+      DB.Category category = null;
       if (!DA.GetData("Category", ref category))
         return;
 
-      DA.SetData("Projection", category?.GetGraphicsStyle(GraphicsStyleType.Projection));
-      DA.SetData("Cut", category?.GetGraphicsStyle(GraphicsStyleType.Cut));
+      DA.SetData("Projection", category?.GetGraphicsStyle(DB.GraphicsStyleType.Projection));
+      DA.SetData("Cut", category?.GetGraphicsStyle(DB.GraphicsStyleType.Cut));
     }
   }
 }

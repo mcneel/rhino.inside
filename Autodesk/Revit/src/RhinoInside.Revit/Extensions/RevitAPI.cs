@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit
 {
-  public static partial class Extension
+  public static partial class RevitAPI
   {
     #region XYZ
     public static bool IsParallelTo(this XYZ a, XYZ b)
@@ -40,34 +41,16 @@ namespace RhinoInside.Revit
     #endregion
 
     #region ElementId
-    public static bool IsValid(this ElementId id) => id?.IntegerValue != ElementId.InvalidElementId.IntegerValue;
-    public static bool IsBuiltInId(this ElementId id) => id.IntegerValue < 0;
+    public static bool IsValid(this ElementId id)     => id is object && id != ElementId.InvalidElementId;
+    public static bool IsBuiltInId(this ElementId id) => id is object && id <= ElementId.InvalidElementId;
 
-    public static bool TryGetBuiltInParameter(this ElementId id, out BuiltInParameter builtInParameter)
+    public static bool IsCategoryId(this ElementId id, Document doc)
     {
-      if (Enum.IsDefined(typeof(BuiltInParameter), id.IntegerValue))
-      {
-        builtInParameter = (BuiltInParameter) id.IntegerValue;
-        return true;
-      }
-      else
-      {
-        builtInParameter = BuiltInParameter.INVALID;
-        return true;
-      }
-    }
-    public static bool TryGetBuiltInCategory(this ElementId id, out BuiltInCategory builtInParameter)
-    {
-      if (Enum.IsDefined(typeof(BuiltInCategory), id.IntegerValue))
-      {
-        builtInParameter = (BuiltInCategory) id.IntegerValue;
-        return true;
-      }
-      else
-      {
-        builtInParameter = BuiltInCategory.INVALID;
-        return true;
-      }
+      if (-3000000 < id.IntegerValue && id.IntegerValue < -2000000)
+        return Enum.IsDefined(typeof(BuiltInCategory), id.IntegerValue);
+
+      try { return Category.GetCategory(doc, id) is object; }
+      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
     }
 
     public static bool IsParameterId(this ElementId id, Document doc)
@@ -78,31 +61,39 @@ namespace RhinoInside.Revit
       try { return doc.GetElement(id) is ParameterElement; }
       catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
     }
-    public static bool IsCategoryId(this ElementId id, Document doc)
-    {
-      if (-3000000 < id.IntegerValue && id.IntegerValue < -2000000)
-        return Enum.IsDefined(typeof(BuiltInCategory), id.IntegerValue);
 
-      try { return Category.GetCategory(doc, id) != null; }
-      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
-    }
-    #endregion
-
-    #region Levels
-    public static Level FindLevelByElevation(this Document doc, double elevation)
+    public static bool TryGetBuiltInCategory(this ElementId id, out BuiltInCategory builtInParameter)
     {
-      Level level = null;
-      using (var collector = new FilteredElementCollector(doc))
+      var IntegerValue = id.IntegerValue;
+      if
+      (
+        -3000000 < IntegerValue && IntegerValue < -2000000 &&
+        Enum.IsDefined(typeof(BuiltInCategory), IntegerValue)
+      )
       {
-        foreach (var levelN in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderBy(c => c.Elevation))
-        {
-          if (level == null)
-            level = levelN;
-          else if (elevation >= levelN.Elevation)
-            level = levelN;
-        }
+        builtInParameter = (BuiltInCategory) IntegerValue;
+        return true;
       }
-      return level;
+
+      builtInParameter = BuiltInCategory.INVALID;
+      return false;
+    }
+
+    public static bool TryGetBuiltInParameter(this ElementId id, out BuiltInParameter builtInParameter)
+    {
+      var IntegerValue = id.IntegerValue;
+      if
+      (
+        -2000000 < IntegerValue && IntegerValue < -1000000 &&
+        Enum.IsDefined(typeof(BuiltInParameter), IntegerValue)
+      )
+      {
+        builtInParameter = (BuiltInParameter) IntegerValue;
+        return true;
+      }
+
+      builtInParameter = BuiltInParameter.INVALID;
+      return false;
     }
     #endregion
 
@@ -110,6 +101,11 @@ namespace RhinoInside.Revit
     public static bool IsHidden(this Category category)
     {
       return !category.CanAddSubcategory;
+    }
+
+    public static Document Document(this Category category)
+    {
+      return category?.GetGraphicsStyle(GraphicsStyleType.Projection).Document;
     }
     #endregion
 
@@ -230,7 +226,255 @@ namespace RhinoInside.Revit
     }
     #endregion
 
+    #region Document
+
+    public static string GetFilePath(this Document doc)
+    {
+      if (doc is null)
+        return string.Empty;
+
+      if(string.IsNullOrEmpty(doc.PathName))
+        return (doc.Title + (doc.IsFamilyDocument ? ".rfa" : ".rvt"));
+
+      return doc.PathName;
+    }
+
+    public static Guid GetFingerprintGUID(this Document doc)
+    {
+      if (doc?.IsValidObject != true)
+        return Guid.Empty;
+
+      return doc.IsWorkshared ? doc.WorksharingCentralGUID : ExportUtils.GetGBXMLDocumentId(doc);
+    }
+
+    private static bool TryGetDocument(this IEnumerable<Document> set, Guid guid, out Document document, Document activeDBDocument = default(Document))
+    {
+      if (guid != Guid.Empty)
+      {
+        if (activeDBDocument?.IsWorkshared == true)
+
+        {
+          // For performance reasons and also in case of conflict the ActiveDBDocument will have priority
+          if (activeDBDocument.WorksharingCentralGUID == guid)
+          {
+            document = activeDBDocument;
+            return true;
+          }
+        }
+
+        foreach (var doc in set.Where(x => x.IsWorkshared && x.WorksharingCentralGUID == guid))
+        {
+          document = doc;
+          return true;
+        }
+
+        if (activeDBDocument?.IsWorkshared == false)
+        {
+          // For performance reasons and also in case of conflict the ActiveDBDocument will have priority
+          if (ExportUtils.GetGBXMLDocumentId(activeDBDocument) == guid)
+          {
+            document = activeDBDocument;
+            return true;
+          }
+        }
+
+        foreach (var doc in set.Where(x => !x.IsWorkshared && ExportUtils.GetGBXMLDocumentId(x) == guid))
+        {
+          document = doc;
+          return true;
+        }
+      }
+
+      document = default(Document);
+      return false;
+    }
+
+    public static bool TryGetDocument(this Autodesk.Revit.UI.UIApplication app, Guid guid, out Document document) =>
+      TryGetDocument(app.Application.Documents.Cast<Document>(), guid, out document, app.ActiveUIDocument.Document);
+
+    public static bool TryGetCategoryId(this Document doc, string uniqueId, out ElementId categoryId)
+    {
+      categoryId = default(ElementId);
+
+      if (UniqueId.TryParse(uniqueId, out var EpisodeId, out var id))
+      {
+        if (EpisodeId == Guid.Empty)
+        {
+          if (-3000000 < id && id < -2000000 && Enum.IsDefined(typeof(BuiltInCategory), id))
+            categoryId = new ElementId((BuiltInCategory) id);
+        }
+        else
+        {
+          if (doc.GetElement(uniqueId) is Element category)
+          {
+            try{ categoryId = Category.GetCategory(doc, category.Id)?.Id; }
+            catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
+          }
+        }
+      }
+
+      return categoryId is object;
+    }
+
+    public static bool TryGetParameterId(this Document doc, string uniqueId, out ElementId parameterId)
+    {
+      parameterId = default(ElementId);
+
+      if (UniqueId.TryParse(uniqueId, out var EpisodeId, out var id))
+      {
+        if (EpisodeId == Guid.Empty)
+        {
+          if (-2000000 < id && id < -1000000 && Enum.IsDefined(typeof(BuiltInParameter), id))
+            parameterId = new ElementId((BuiltInParameter) id);
+        }
+        else
+        {
+          if (doc.GetElement(uniqueId) is ParameterElement parameter)
+            parameterId = parameter.Id;
+        }
+      }
+
+      return parameterId is object;
+    }
+
+    public static bool TryGetElementId(this Document doc, string uniqueId, out ElementId elementId)
+    {
+      elementId = default(ElementId);
+
+      try
+      {
+        if (Reference.ParseFromStableRepresentation(doc, uniqueId) is Reference reference)
+          elementId = reference.ElementId;
+      }
+      catch (Autodesk.Revit.Exceptions.ArgumentException) { }
+
+      return elementId is object;
+    }
+
+    public static Category GetCategory(this Document doc, string uniqueId)
+    {
+      if (doc is null || string.IsNullOrEmpty(uniqueId))
+        return null;
+
+      if (UniqueId.TryParse(uniqueId, out var EpisodeId, out var id))
+      {
+        if (EpisodeId == Guid.Empty)
+        {
+          if (-3000000 < id && id < -2000000 && Enum.IsDefined(typeof(BuiltInCategory), id))
+          {
+            try { return Category.GetCategory(doc, (BuiltInCategory) id); }
+            catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
+
+            // Some categories like BuiltInCategory.OST_StackedWalls produce that exception
+            // Here we look for an element that is in that Category and return it.
+            using (var collector = new FilteredElementCollector(doc))
+            {
+              var element = collector.OfCategory((BuiltInCategory) id).FirstElement();
+              return element?.Category;
+            }
+          }
+        }
+        else
+        {
+          if (doc.GetElement(uniqueId) is Element category)
+          {
+            try { return Category.GetCategory(doc, category.Id); }
+            catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
+          }
+        }
+      }
+
+      return null;
+    }
+
+    public static Category GetCategory(this Document doc, ElementId id)
+    {
+      if (doc is null || id is null)
+        return null;
+
+      try
+      {
+        var category = Category.GetCategory(doc, id);
+        if (category is object)
+          return category;
+      }
+      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
+
+      if (id.TryGetBuiltInCategory(out var builtInCategory))
+      {
+        using (var collector = new FilteredElementCollector(doc))
+        {
+          var element = collector.OfCategory(builtInCategory).FirstElement();
+          return element?.Category;
+        }
+      }
+
+      return null;
+    }
+
+    public static IEnumerable<BuiltInCategory> GetBuiltInCategories() =>
+      Enum.GetValues(typeof(BuiltInCategory)).
+      Cast<BuiltInCategory>().
+      Where(x => Category.IsBuiltInCategoryValid(x));
+
+    static BuiltInCategory[] BuiltInCategoriesWithParameters;
+    static Document BuiltInCategoriesWithParametersDocument;
+    internal static ICollection<BuiltInCategory> GetBuiltInCategoriesWithParameters(this Document doc)
+    {
+      if (BuiltInCategoriesWithParameters is null && !BuiltInCategoriesWithParametersDocument.Equals(doc))
+      {
+        BuiltInCategoriesWithParametersDocument = doc;
+        BuiltInCategoriesWithParameters =
+          GetBuiltInCategories().
+          Where
+          (
+            bic =>
+            {
+              try { return Category.GetCategory(doc, bic)?.AllowsBoundParameters == true; }
+              catch (Autodesk.Revit.Exceptions.InvalidOperationException) { return false; }
+            }
+          ).
+          ToArray();
+      }
+
+      return BuiltInCategoriesWithParameters;
+    }
+
+    public static Level FindLevelByElevation(this Document doc, double elevation)
+    {
+      Level level = null;
+      using (var collector = new FilteredElementCollector(doc))
+      {
+        foreach (var levelN in collector.OfClass(typeof(Level)).ToElements().Cast<Level>().OrderBy(c => c.Elevation))
+        {
+          if (level == null)
+            level = levelN;
+          else if (elevation >= levelN.Elevation)
+            level = levelN;
+        }
+      }
+      return level;
+    }
+    #endregion
+
     #region Application
+    public static DefinitionFile CreateSharedParameterFile(this Autodesk.Revit.ApplicationServices.Application app)
+    {
+      string sharedParametersFilename = app.SharedParametersFilename;
+      try
+      {
+        // Create Temp Shared Parameters File
+        app.SharedParametersFilename = Path.GetTempFileName();
+        return app.OpenSharedParameterFile();
+      }
+      finally
+      {
+        // Restore User Shared Parameters File
+        try { File.Delete(app.SharedParametersFilename); }
+        finally { app.SharedParametersFilename = sharedParametersFilename; }
+      }
+    }
+
 #if !REVIT_2018
     public static IList<Autodesk.Revit.Utility.Asset> GetAssets(this Autodesk.Revit.ApplicationServices.Application app, Autodesk.Revit.Utility.AssetType assetType)
     {
@@ -243,5 +487,21 @@ namespace RhinoInside.Revit
     }
 #endif
     #endregion
+  }
+
+  public static class UniqueId
+  {
+    public static string Format(Guid episodeId, int index) => $"{episodeId:D}-{index,8:x}";
+    public static bool TryParse(string s, out Guid episodeId, out int id)
+    {
+      episodeId = Guid.Empty;
+      id = -1;
+      if (s.Length != 36 + 1 + 8)
+        return false;
+
+      return Guid.TryParseExact(s.Substring(0, 36), "D", out episodeId) &&
+             s[36] == '-' &&
+             int.TryParse(s.Substring(36 + 1, 8), System.Globalization.NumberStyles.AllowHexSpecifier, null, out id);
+    }
   }
 }

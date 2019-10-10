@@ -1,22 +1,25 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Autodesk.Revit.DB;
+using DB = Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Parameters
 {
   public abstract class DocumentPicker : GH_ValueList, IGH_ElementIdParam
   {
     #region IGH_ElementIdParam
-    protected virtual Autodesk.Revit.DB.ElementFilter ElementFilter => null;
-    public virtual bool PassesFilter(Document document, ElementId id)
+    protected virtual DB.ElementFilter ElementFilter => null;
+    public virtual bool PassesFilter(DB.Document document, Autodesk.Revit.DB.ElementId id)
     {
       return ElementFilter?.PassesFilter(document, id) ?? true;
     }
 
-    bool IGH_ElementIdParam.NeedsToBeExpired(Document doc, ICollection<ElementId> added, ICollection<ElementId> deleted, ICollection<ElementId> modified)
+    bool IGH_ElementIdParam.NeedsToBeExpired
+    (
+      DB.Document doc,
+      ICollection<DB.ElementId> added,
+      ICollection<DB.ElementId> deleted,
+      ICollection<DB.ElementId> modified
+    )
     {
       // If anything of that type is added we need to update ListItems
       if (added.Where(id => PassesFilter(doc, id)).Any())
@@ -35,7 +38,7 @@ namespace RhinoInside.Revit.GH.Parameters
       // If an item in ListItems is deleted we need to update ListItems
       foreach (var item in ListItems.Select(x => x.Value).OfType<Grasshopper.Kernel.Types.GH_Integer>())
       {
-        var id = new ElementId(item.Value);
+        var id = new DB.ElementId(item.Value);
 
         if (deleted.Contains(id))
           return true;
@@ -58,8 +61,8 @@ namespace RhinoInside.Revit.GH.Components
     {
       var elementFilter = ElementFilter;
       var filters = Params.Input.Count > 0 ?
-                    Params.Input[0].VolatileData.AllData(true).OfType<Types.ElementFilter>().Select(x => new LogicalAndFilter(x.Value, elementFilter)) :
-                    Enumerable.Empty<ElementFilter>();
+                    Params.Input[0].VolatileData.AllData(true).OfType<Types.ElementFilter>().Select(x => new DB.LogicalAndFilter(x.Value, elementFilter)) :
+                    Enumerable.Empty<DB.ElementFilter>();
 
       foreach (var filter in filters.Any() ? filters : Enumerable.Repeat(elementFilter, 1))
       {
@@ -75,7 +78,7 @@ namespace RhinoInside.Revit.GH.Components
         if (deleted.Count > 0)
         {
           var document = e.GetDocument();
-          var empty = new ElementId[0];
+          var empty = new DB.ElementId[0];
           foreach (var param in Params.Output.OfType<Parameters.IGH_ElementIdParam>())
           {
             if (param.NeedsToBeExpired(document, empty, deleted, empty))

@@ -3,12 +3,13 @@ using Grasshopper.Kernel;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class DatumPlane : Element
+  public class DatumPlane : GeometricElement
   {
     public override string TypeName => "Revit DatumPlane";
     public override string TypeDescription => "Represents a Revit DatumPlane";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.DatumPlane);
-    public static explicit operator Autodesk.Revit.DB.DatumPlane(DatumPlane self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.DatumPlane;
+    public static explicit operator Autodesk.Revit.DB.DatumPlane(DatumPlane self) =>
+      self.Document?.GetElement(self) as Autodesk.Revit.DB.DatumPlane;
 
     public DatumPlane() { }
     public DatumPlane(Autodesk.Revit.DB.DatumPlane plane) : base(plane) { }
@@ -19,7 +20,8 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeName => "Revit Level";
     public override string TypeDescription => "Represents a Revit level";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Level);
-    public static explicit operator Autodesk.Revit.DB.Level(Level self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.Level;
+    public static explicit operator Autodesk.Revit.DB.Level(Level self) =>
+      self.Document?.GetElement(self) as Autodesk.Revit.DB.Level;
 
     public Level() { }
     public Level(Autodesk.Revit.DB.Level level) : base(level) { }
@@ -45,7 +47,8 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeName => "Revit Level";
     public override string TypeDescription => "Represents a Revit level";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Grid);
-    public static explicit operator Autodesk.Revit.DB.Grid(Grid self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.Grid;
+    public static explicit operator Autodesk.Revit.DB.Grid(Grid self) =>
+      self.Document?.GetElement(self) as Autodesk.Revit.DB.Grid;
 
     public Grid() { }
     public Grid(Autodesk.Revit.DB.Grid grid) : base(grid) { }

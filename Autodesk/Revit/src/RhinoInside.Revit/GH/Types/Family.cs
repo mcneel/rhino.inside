@@ -8,7 +8,8 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeName => "Revit Family";
     public override string TypeDescription => "Represents a Revit family";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Family);
-    public static explicit operator Autodesk.Revit.DB.Family(Family self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.Family;
+    public static explicit operator Autodesk.Revit.DB.Family(Family self) =>
+      self.Document?.GetElement(self) as Autodesk.Revit.DB.Family;
 
     public Family() { }
     public Family(Autodesk.Revit.DB.Family family) : base(family) { }
@@ -27,7 +28,7 @@ namespace RhinoInside.Revit.GH.Types
           if (!string.IsNullOrEmpty(family.Name))
             ToolTip += $"{family.Name} : ";
 
-          return $"{ToolTip}id {family.Id}";
+          return $"{ToolTip}{Identity}";
         }
       }
 

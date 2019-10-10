@@ -71,7 +71,7 @@ namespace RhinoInside.Revit.GH.Parameters
           foreach (var typeGroup in Enum.GetValues(typeof(ElementTypeGroup)).Cast<ElementTypeGroup>())
           {
             var elementTypeId = Revit.ActiveDBDocument.GetDefaultElementTypeId(typeGroup);
-            if (elementTypeId != ElementId.InvalidElementId)
+            if (elementTypeId != Autodesk.Revit.DB.ElementId.InvalidElementId)
               defaultElementTypeIds.Add(elementTypeId.IntegerValue.ToString());
           }
 
@@ -162,7 +162,7 @@ namespace RhinoInside.Revit.GH.Parameters
           foreach (var typeGroup in Enum.GetValues(typeof(ElementTypeGroup)).Cast<ElementTypeGroup>())
           {
             var elementTypeId = Revit.ActiveDBDocument.GetDefaultElementTypeId(typeGroup);
-            if (elementTypeId != ElementId.InvalidElementId)
+            if (elementTypeId != Autodesk.Revit.DB.ElementId.InvalidElementId)
               defaultElementTypeIds.Add(elementTypeId.IntegerValue.ToString());
           }
 
@@ -204,7 +204,7 @@ namespace RhinoInside.Revit.GH.Components
   public class ElementTypeIdentity : Component
   {
     public override Guid ComponentGuid => new Guid("7DEA1BA3-D9BC-4E94-9E1C-0E527187C9DC");
-    protected override string IconTag => "ID";
+    protected override string IconTag => "T";
 
     public ElementTypeIdentity()
     : base("ElementType.Identity", "ElementType.Identity", "Query type identity information", "Revit", "Type")
@@ -220,7 +220,6 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.Category(), "Category", "C", "Category in which the ElementType resides", GH_ParamAccess.item);
       manager.AddTextParameter("FamilyName", "F", "The family name of the ElementType", GH_ParamAccess.item);
       manager.AddTextParameter("Name", "N", "A human readable name for the ElementType", GH_ParamAccess.item);
-      manager.AddTextParameter("UniqueID", "UUID", "A stable unique identifier for the ElementType within the document", GH_ParamAccess.item);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
@@ -232,7 +231,6 @@ namespace RhinoInside.Revit.GH.Components
       DA.SetData("Category", elementType?.Category);
       DA.SetData("FamilyName", elementType?.FamilyName);
       DA.SetData("Name", elementType?.Name);
-      DA.SetData("UniqueID", elementType?.UniqueId);
     }
   }
 

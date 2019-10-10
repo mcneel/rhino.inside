@@ -1,89 +1,81 @@
 using System;
-
-using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
+using DB = Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class Category : ID
+  public class Category : Element
   {
     public override string TypeName => "Revit Category";
     public override string TypeDescription => "Represents a Revit category";
-    override public object ScriptVariable() => (Autodesk.Revit.DB.Category) this;
-    protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Category);
-    public static explicit operator Autodesk.Revit.DB.Category(Category self) => GetCategory(Revit.ActiveDBDocument, self.Value);
-
-    public  static Category Make(Autodesk.Revit.DB.Category category) => Make(category?.Id);
-    private static new Category Make(ElementId id) => new Category(id);
-
-    static Autodesk.Revit.DB.Category GetCategory(Document doc, ElementId id)
-    {
-      if (doc is null || id is null)
-        return null;
-
-      try
-      {
-        var category = Autodesk.Revit.DB.Category.GetCategory(doc, id);
-        if (category != null)
-          return category;
-      }
-      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
-
-      if (TryGetBuiltInCategory(id.IntegerValue, out var builtInCategory))
-      {
-        using (var collector = new FilteredElementCollector(doc))
-        {
-          var element = collector.OfCategory(builtInCategory).FirstElement();
-          return element?.Category;
-        }
-      }
-
-      return null;
-    }
-    static bool TryGetBuiltInCategory(int id, out BuiltInCategory builtInCategory)
-    {
-      if (-3000000 < id && id < -2000000 && Enum.IsDefined(typeof(BuiltInCategory), id))
-      {
-        builtInCategory = (BuiltInCategory) id;
-        return true;
-      }
-
-      builtInCategory = BuiltInCategory.INVALID;
-      return false;
-    }
+    override public object ScriptVariable() => (DB.Category) this;
+    protected override Type ScriptVariableType => typeof(DB.Category);
+    public static explicit operator DB.Category(Category self) => self.Document?.GetCategory(self.Value);
 
     #region IGH_ElementId
-    public override bool LoadElement(Document doc)
+    public override bool LoadElement()
     {
-      if (TryParseUniqueID(UniqueID, out var _, out var index))
+      if (Document is null)
       {
-        Value = new ElementId(index);
-        if (Value.IsCategoryId(Revit.ActiveDBDocument))
-          return true;
-      }
+        Value = null;
+        if (!Revit.ActiveUIApplication.TryGetDocument(DocumentGUID, out var doc))
+        {
+          Document = null;
+          return false;
+        }
 
-      Value = ElementId.InvalidElementId;
+        Document = doc;
+      }
+      else if (IsElementLoaded)
+        return true;
+
+      if (Document is object)
+        return Document.TryGetCategoryId(UniqueID, out m_value);
+
       return false;
     }
     #endregion
 
     public Category() : base() { }
-    public Category(Autodesk.Revit.DB.Category category) : base(category.Id) { }
-    protected Category(ElementId categoryId) : base(categoryId) { }
+    public Category(DB.Document doc, DB.ElementId id) : base(doc, id) { }
+    public Category(DB.Category category)             : base(category.Document(), category.Id) { }
+
+    new public static Category FromValue(object data)
+    {
+      if (data is DB.Element element)
+        data = DB.Category.GetCategory(element.Document, element.Id);
+
+      return FromCategory(data as DB.Category);
+    }
+
+    public static Category FromCategory(DB.Category category)
+    {
+      if (category is null)
+        return null;
+
+      return new Category(category);
+    }
+
+    new public static Category FromElementId(DB.Document doc, DB.ElementId id)
+    {
+      if (id.IsCategoryId(doc))
+        return new Category(doc, id);
+
+      return null;
+    }
 
     public override sealed bool CastFrom(object source)
     {
-      var categoryId = ElementId.InvalidElementId;
       if (source is IGH_Goo goo)
         source = goo.ScriptVariable();
 
+      var categoryId = DB.ElementId.InvalidElementId;
       switch (source)
       {
-        case Autodesk.Revit.DB.Category c:   categoryId = c.Id; break;
-        case Autodesk.Revit.DB.ElementId id: categoryId = id; break;
-        case int integer:                    categoryId = new ElementId(integer); break;
-        case string uniqueId:                categoryId = TryParseUniqueID(uniqueId, out var _, out var index) ? new ElementId(index) : ElementId.InvalidElementId; break;
+        case DB.Category c:   SetValue(c.Document(), c.Id); return true;
+        case DB.ElementId id: categoryId = id; break;
+        case int integer:     categoryId = new DB.ElementId(integer); break;
       }
 
       if (categoryId.IsCategoryId(Revit.ActiveDBDocument))
@@ -97,7 +89,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
-      if (typeof(Q).IsAssignableFrom(typeof(Autodesk.Revit.DB.Category)))
+      if (typeof(Q).IsAssignableFrom(typeof(DB.Category)))
       {
         if (!IsValid)
         {
@@ -105,7 +97,7 @@ namespace RhinoInside.Revit.GH.Types
           return true;
         }
 
-        var category = (Autodesk.Revit.DB.Category) this;
+        var category = (DB.Category) this;
         if (category is null)
           return false;
 
@@ -116,41 +108,32 @@ namespace RhinoInside.Revit.GH.Types
       return base.CastTo<Q>(ref target);
     }
 
-    class Proxy : IGH_GooProxy
+    new class Proxy : ID.Proxy
     {
-      public Proxy(Category owner) { proxyOwner = owner; (this as IGH_GooProxy).UserString = FormatInstance(); }
+      public Proxy(Category c) : base(c) { (this as IGH_GooProxy).UserString = FormatInstance(); }
 
-      public void Construct() { }
-      public string MutateString(string str) => str.Trim();
-      public string FormatInstance()
+      public override bool IsParsable() => true;
+      public override string FormatInstance()
       {
-        int value = proxyOwner.Value?.IntegerValue ?? -1;
-        if (Enum.IsDefined(typeof(Autodesk.Revit.DB.BuiltInCategory), value))
-          return ((BuiltInCategory)value).ToString();
+        int value = owner.Value?.IntegerValue ?? -1;
+        if (Enum.IsDefined(typeof(DB.BuiltInCategory), value))
+          return ((DB.BuiltInCategory)value).ToString();
 
         return value.ToString();
       }
-      public bool FromString(string str)
+      public override bool FromString(string str)
       {
-        if (Enum.TryParse(str, out Autodesk.Revit.DB.BuiltInCategory builtInCategory))
+        if (Enum.TryParse(str, out DB.BuiltInCategory builtInCategory))
         {
-          proxyOwner.Value = new ElementId(builtInCategory);
+          owner.Value = new DB.ElementId(builtInCategory);
           return true;
         }
 
         return false;
       }
 
-      readonly Category proxyOwner;
-      IGH_Goo IGH_GooProxy.ProxyOwner => proxyOwner;
-      bool IGH_GooProxy.IsParsable => true;
-      string IGH_GooProxy.UserString { get; set; }
+      DB.Category category => owner.IsElementLoaded ? owner.Document?.GetCategory(owner.Id) : null;
 
-      Autodesk.Revit.DB.Category category => proxyOwner.Value != null ? (Autodesk.Revit.DB.Category) proxyOwner : null;
-
-      public bool Valid => category != null;
-      [System.ComponentModel.Description("The category identifier in this session.")]
-      public int Id => proxyOwner.Value.IntegerValue;
       [System.ComponentModel.Description("The category Name.")]
       public string Name => category?.Name;
 
@@ -167,7 +150,7 @@ namespace RhinoInside.Revit.GH.Types
       public bool HasMaterialQuantities => category?.HasMaterialQuantities ?? false;
 
       [System.ComponentModel.Category("Geometry"), System.ComponentModel.Description("Category type of this category.")]
-      public CategoryType CategoryType => category?.CategoryType ?? CategoryType.Invalid;
+      public DB.CategoryType CategoryType => category?.CategoryType ?? DB.CategoryType.Invalid;
       [System.ComponentModel.Category("Geometry"), System.ComponentModel.Description("Indicates if the category is cuttable or not.")]
       public bool IsCuttable => category?.IsCuttable ?? false;
 
@@ -181,15 +164,15 @@ namespace RhinoInside.Revit.GH.Types
     {
       if (IsValid)
       {
-        var category = (Autodesk.Revit.DB.Category) this;
+        var category = (DB.Category) this;
         if (category is object)
           return category.Parent is null ? category.Name : $"{category.Parent.Name} : {category.Name}";
 #if REVIT_2020
-        else if (Enum.IsDefined(typeof(BuiltInCategory), Value.IntegerValue))
-          return LabelUtils.GetLabelFor((BuiltInCategory) Value.IntegerValue);
+        else if (Enum.IsDefined(typeof(DB.BuiltInCategory), Value.IntegerValue))
+          return DB.LabelUtils.GetLabelFor((DB.BuiltInCategory) Value.IntegerValue);
 #endif
         else
-          return "Revit Category \"" + ((BuiltInCategory) Value.IntegerValue).ToString() + "\"";
+          return "Revit Category \"" + ((DB.BuiltInCategory) Value.IntegerValue).ToString() + "\"";
       }
 
       return base.ToString();
@@ -200,23 +183,24 @@ namespace RhinoInside.Revit.GH.Types
   {
     public override string TypeName => "Revit Graphics Style";
     public override string TypeDescription => "Represents a Revit graphics style";
-    protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.GraphicsStyle);
-    public static explicit operator Autodesk.Revit.DB.GraphicsStyle(GraphicsStyle self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.GraphicsStyle;
+    protected override Type ScriptVariableType => typeof(DB.GraphicsStyle);
+    public static explicit operator DB.GraphicsStyle(GraphicsStyle self) =>
+      self.Document?.GetElement(self) as DB.GraphicsStyle;
 
     public GraphicsStyle() { }
-    public GraphicsStyle(Autodesk.Revit.DB.GraphicsStyle graphicsStyle) : base(graphicsStyle) { }
+    public GraphicsStyle(DB.GraphicsStyle graphicsStyle) : base(graphicsStyle) { }
 
     public override string ToString()
     {
       if (IsValid)
       {
-        var graphicsStyle = (Autodesk.Revit.DB.GraphicsStyle) this;
+        var graphicsStyle = (DB.GraphicsStyle) this;
         if (graphicsStyle is object)
         {
           var ToolTip = string.Empty;
-          if (graphicsStyle.GraphicsStyleCategory is Autodesk.Revit.DB.Category graphicsStyleCategory)
+          if (graphicsStyle.GraphicsStyleCategory is DB.Category graphicsStyleCategory)
           {
-            if(graphicsStyleCategory.Parent is Autodesk.Revit.DB.Category parentCategory)
+            if(graphicsStyleCategory.Parent is DB.Category parentCategory)
               ToolTip += $"{parentCategory.Name} : ";
 
             ToolTip += $"{graphicsStyleCategory.Name} : ";
@@ -224,14 +208,12 @@ namespace RhinoInside.Revit.GH.Types
 
           switch(graphicsStyle.GraphicsStyleType)
           {
-            case GraphicsStyleType.Projection: ToolTip += "[projection]"; break;
-            case GraphicsStyleType.Cut:        ToolTip += "[cut]"; break;
+            case DB.GraphicsStyleType.Projection: ToolTip += "[projection]"; break;
+            case DB.GraphicsStyleType.Cut:        ToolTip += "[cut]"; break;
           }
 
           return ToolTip;
         }
-
-        return $"{TypeName} : id {Value.IntegerValue}";
       }
 
       return base.ToString();
@@ -241,15 +223,17 @@ namespace RhinoInside.Revit.GH.Types
 
 namespace RhinoInside.Revit.GH.Parameters
 {
-  public class Category : ElementIdNonGeometryParam<Types.Category, Autodesk.Revit.DB.Category>
+  public class Category : ElementIdNonGeometryParam<Types.Category, DB.Category>
   {
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("6722C7A5-EFD3-4119-A7FD-6C8BE892FD04");
 
     public Category() : base("Category", "Category", "Represents a Revit document category.", "Params", "Revit") { }
+
+    protected override Types.Category PreferredCast(object data) => Types.Category.FromValue(data);
   }
 
-  public class GraphicsStyle : ElementIdNonGeometryParam<Types.GraphicsStyle, Autodesk.Revit.DB.GraphicsStyle>
+  public class GraphicsStyle : ElementIdNonGeometryParam<Types.GraphicsStyle, DB.GraphicsStyle>
   {
     public override GH_Exposure Exposure => GH_Exposure.tertiary;
     public override Guid ComponentGuid => new Guid("833E6207-BA60-4C6B-AB8B-96FDA0F91822");
