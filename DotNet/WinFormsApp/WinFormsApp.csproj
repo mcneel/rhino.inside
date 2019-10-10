@@ -85,19 +85,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\RhinoInside\RhinoInside.csproj">
-      <Project>{dca05c2e-00a2-48c5-ae52-43bfdca63c15}</Project>
-      <Name>RhinoInside</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="RhinoCommon">
-      <Version>7.0.19274.12465-wip</Version>
-      <IncludeAssets>compile; build</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="RhinoWindows">
-      <Version>7.0.19274.12465-wip</Version>
-      <IncludeAssets>compile; build</IncludeAssets>
+    <PackageReference Include="Rhino.Inside">
+      <Version>0.1.1</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
