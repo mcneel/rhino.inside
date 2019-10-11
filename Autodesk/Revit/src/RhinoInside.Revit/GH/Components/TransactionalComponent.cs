@@ -586,12 +586,12 @@ namespace RhinoInside.Revit.GH.Components
     }
     #endregion
 
-    // Step 6.
+    // Step 5.2
     #region ITransactionFinalizer
-    // Step 6.A
+    // Step 5.2.A
     public virtual void OnCommitted(Document document, string strTransactionName) { }
 
-    // Step 6.B
+    // Step 5.2.B
     public virtual void OnRolledBack(Document document, string strTransactionName)
     {
       foreach (var param in Params.Output)
@@ -949,9 +949,9 @@ namespace RhinoInside.Revit.GH.Components
       // Remove extra unused elements
       while (PreviousStructureEnumerator?.MoveNext() ?? false)
       {
-        if (PreviousStructureEnumerator.Current is Types.Element elementId)
+        if (PreviousStructureEnumerator.Current is Types.Element elementId && document.Equals(elementId.Document))
         {
-          if (document.GetElement(elementId) is Element element)
+          if (document.GetElement(elementId.Id) is Element element)
           {
             try { document.Delete(element.Id); }
             catch (Autodesk.Revit.Exceptions.ApplicationException) { }
@@ -967,7 +967,7 @@ namespace RhinoInside.Revit.GH.Components
       finally { PreviousStructureEnumerator = null; }
     }
 
-    // Step 6.A
+    // Step 5.2.A
     public override void OnCommitted(Document document, string strTransactionName)
     {
       // Update previous elements
