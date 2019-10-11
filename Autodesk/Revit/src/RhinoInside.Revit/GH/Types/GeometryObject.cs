@@ -1002,7 +1002,7 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         using (new ModalForm.EditScope())
         {
-          if(uiDocument.Selection.PickObjects(ObjectType.Element, this, $"Add or remove {GH_Convert.ToPlural(TypeName)}", preselection) is IList<DB.Reference> references)
+          if(uiDocument.Selection.PickObjects(ObjectType.Element, this, null, preselection) is IList<DB.Reference> references)
             elements = references.Select(r => (T) Types.Element.FromElementId(doc, r.ElementId)).ToList();
         }
       }
