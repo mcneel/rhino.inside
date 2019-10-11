@@ -112,16 +112,25 @@ namespace RhinoInside.Revit
       if (RhinoVersion >= MinimumRhinoVersion)
         return IsExpired() ? Result.Cancelled : Result.Succeeded;
 
+      var app = Revit.ApplicationUI.ControlledApplication;
+
       using
       (
         var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
         {
-          Title = "Update Rhino",
+          Title = $"Rhino Inside {app.VersionName} - Update Rhino",
           MainIcon = TaskDialogIcons.IconInformation,
-          TitleAutoPrefix = true,
+          TitleAutoPrefix = false,
           AllowCancellation = true,
           MainInstruction = "Unsupported Rhino WIP version",
           MainContent = $"Expected Rhino version is ({MinimumRhinoVersion}) or above",
+          ExpandedContent =
+          "Rhino\n" +
+          $"Version: {RhinoVersion}\n" +
+          $"Path: '{SystemDir}'" + (!File.Exists(RhinoExePath) ? " (not found)" : string.Empty) + "\n" +
+          "\nRevit\n" +
+          $"Version: {app.SubVersionNumber} ({app.VersionBuild})\n" +
+          $"Language: {app.Language.ToString()}",
           FooterText = $"Current Rhino WIP version: {RhinoVersion}"
         }
       )
