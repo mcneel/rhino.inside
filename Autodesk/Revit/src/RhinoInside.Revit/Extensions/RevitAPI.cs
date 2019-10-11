@@ -103,6 +103,14 @@ namespace RhinoInside.Revit
       return !category.CanAddSubcategory;
     }
 
+    static bool IsBuiltInCategoryValid(this BuiltInCategory category)
+    {
+      if (-3000000 < (int) category && (int) category < -2000000)
+        return Enum.IsDefined(typeof(BuiltInCategory), (int) category);
+
+      return false;
+    }
+
     public static Document Document(this Category category)
     {
       return category?.GetGraphicsStyle(GraphicsStyleType.Projection).Document;
@@ -415,7 +423,7 @@ namespace RhinoInside.Revit
     public static IEnumerable<BuiltInCategory> GetBuiltInCategories() =>
       Enum.GetValues(typeof(BuiltInCategory)).
       Cast<BuiltInCategory>().
-      Where(x => Category.IsBuiltInCategoryValid(x));
+      Where(x => x.IsBuiltInCategoryValid());
 
     static BuiltInCategory[] BuiltInCategoriesWithParameters;
     static Document BuiltInCategoriesWithParametersDocument;
