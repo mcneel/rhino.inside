@@ -842,7 +842,7 @@ namespace RhinoInside.Revit.GH.Components
       {
         SolveInstance(DA, doc, ref element);
 
-        if (element != null) element.Pinned = true;
+        if (element is object) element.Pinned = true;
         DA.SetData(0, element);
       });
     }
@@ -850,10 +850,14 @@ namespace RhinoInside.Revit.GH.Components
     void Iterate(IGH_DataAccess DA, Document doc, Action<Document, Element> action)
     {
       var element = PreviousStructureEnumerator?.MoveNext() ?? false ?
-                    doc.GetElement(PreviousStructureEnumerator.Current as Types.Element ?? ElementId.InvalidElementId) :
+                    (
+                      PreviousStructureEnumerator.Current is Types.Element x && doc.Equals(x.Document) ?
+                      doc.GetElement(x.Id) :
+                      null
+                    ) :
                     null;
 
-      if (element?.Pinned ?? true)
+      if (element?.Pinned != false)
       {
         try
         {
