@@ -37,8 +37,12 @@ namespace RhinoInside.Revit.GH.Types
 
       if (element.GetType() == typeof(DB.Element))
       {
-        if (DB.Category.GetCategory(element.Document, element.Id) is DB.Category category)
-          return new Category(category);
+        try
+        {
+          if (DB.Category.GetCategory(element.Document, element.Id) is DB.Category category)
+            return new Category(category);
+        }
+        catch (Autodesk.Revit.Exceptions.InternalException) { }
       }
       else
       {
@@ -313,9 +317,8 @@ namespace RhinoInside.Revit.GH.Types
         var b = Rhino.Geometry.Box.Empty;
 
         var element = (DB.Element) this;
-        if (element is object)
+        if (element?.get_BoundingBox(null) is DB.BoundingBoxXYZ bbox)
         {
-          var bbox = element.get_BoundingBox(null);
           b = new Rhino.Geometry.Box(new Rhino.Geometry.BoundingBox(bbox.Min.ToRhino(), bbox.Max.ToRhino()));
           if (!b.Transform(Rhino.Geometry.Transform.Scale(Rhino.Geometry.Point3d.Origin, Revit.ModelUnits) * bbox.Transform.ToRhino()))
             b = new Rhino.Geometry.Box(ClippingBox);
