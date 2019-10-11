@@ -175,6 +175,9 @@ namespace RhinoInside.Revit
       if (ReferenceEquals(to, from) || from is null || to is null)
         return;
 
+      if(!from.Document.Equals(to.Document))
+        throw new InvalidOperationException();
+
       foreach (var previousParameter in from.GetParameters(ParameterSource.Any))
         using (previousParameter)
         using (var param = to.get_Parameter(previousParameter.Definition))
