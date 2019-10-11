@@ -985,6 +985,65 @@ namespace RhinoInside.Revit.GH.Parameters
       }
       return GH_GetterResult.success;
     }
+
+    protected GH_GetterResult Prompt_More(ref List<T> elements)
+    {
+      var uiDocument = Revit.ActiveUIDocument;
+      var doc = uiDocument.Document;
+      var preselection = elements.OfType<Types.IGH_ElementId>().
+                         Select(x => { if (!x.IsValid && x.IsReferencedElement) x.LoadElement(); return x; }).
+                         Where(x => x.IsValid && x.Document.Equals(doc)).
+                         Select(x => x.Document.GetElement(x.Id)).
+                         Where(x => x is object).
+                         Select(x => new DB.Reference(x)).
+                         ToArray();
+
+      try
+      {
+        using (new ModalForm.EditScope())
+        {
+          if(uiDocument.Selection.PickObjects(ObjectType.Element, this, $"Add or remove {GH_Convert.ToPlural(TypeName)}", preselection) is IList<DB.Reference> references)
+            elements = references.Select(r => (T) Types.Element.FromElementId(doc, r.ElementId)).ToList();
+        }
+      }
+      catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
+      return GH_GetterResult.success;
+    }
+
+    protected override void Menu_AppendPromptMore(ToolStripDropDown menu)
+    {
+      base.Menu_AppendPromptMore(menu);
+      var name_plural = GH_Convert.ToPlural(TypeName);
+      Menu_AppendItem(menu, $"Change {name_plural} collection", Menu_PromptMore, SourceCount == 0, false);
+    }
+
+    private void Menu_PromptMore(object sender, EventArgs e)
+    {
+      try
+      {
+        PrepareForPrompt();
+        var data = PersistentData.AllData(true).OfType<T>().ToList();
+        if (Prompt_More(ref data) == GH_GetterResult.success)
+        {
+          RecordPersistentDataEvent("Change data");
+
+          PersistentData.Clear();
+          if (data is object)
+            PersistentData.AppendRange(data);
+
+          OnObjectChanged(GH_ObjectEventType.PersistentData);
+        }
+      }
+      finally
+      {
+        RecoverFromPrompt();
+
+        if (OnPingDocument() is GH_Document doc)
+          doc.ClearReferenceTable();
+
+        ExpireSolution(true);
+      }
+    }
   }
 
   public class GeometricElement : GeometricElementT<Types.GeometricElement, DB.Element>
