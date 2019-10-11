@@ -8,7 +8,8 @@ namespace RhinoInside.Revit.GH.Types
     public override string TypeName => "Revit Material";
     public override string TypeDescription => "Represents a Revit material";
     protected override Type ScriptVariableType => typeof(Autodesk.Revit.DB.Material);
-    public static explicit operator Autodesk.Revit.DB.Material(Material self) => Revit.ActiveDBDocument?.GetElement(self) as Autodesk.Revit.DB.Material;
+    public static explicit operator Autodesk.Revit.DB.Material(Material self) =>
+      self.Document?.GetElement(self) as Autodesk.Revit.DB.Material;
 
     public Material() { }
     public Material(Autodesk.Revit.DB.Material material) : base(material) { }

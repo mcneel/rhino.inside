@@ -1,16 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
+using DB = Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Types
 {
-  public class ElementFilter : GH_Goo<Autodesk.Revit.DB.ElementFilter>
+  public class ElementFilter : GH_Goo<DB.ElementFilter>
   {
     public override string TypeName => "Revit Element Filter";
     public override string TypeDescription => "Represents a Revit element filter";
@@ -18,11 +15,11 @@ namespace RhinoInside.Revit.GH.Types
     public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
 
     public ElementFilter() { }
-    public ElementFilter(Autodesk.Revit.DB.ElementFilter filter) : base(filter) { }
+    public ElementFilter(DB.ElementFilter filter) : base(filter) { }
 
     public override bool CastFrom(object source)
     {
-      if (source is Autodesk.Revit.DB.ElementFilter filter)
+      if (source is DB.ElementFilter filter)
       {
         Value = filter;
         return true;
@@ -33,7 +30,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
-      if (typeof(Q).IsAssignableFrom(typeof(Autodesk.Revit.DB.ElementFilter)))
+      if (typeof(Q).IsAssignableFrom(typeof(DB.ElementFilter)))
       {
         target = (Q) (object) Value;
         return true;
@@ -51,7 +48,7 @@ namespace RhinoInside.Revit.GH.Types
     }
   }
 
-  public class FilterRule : GH_Goo<Autodesk.Revit.DB.FilterRule>
+  public class FilterRule : GH_Goo<DB.FilterRule>
   {
     public override string TypeName => "Revit Filter Rule";
     public override string TypeDescription => "Represents a Revit filter rule";
@@ -59,11 +56,11 @@ namespace RhinoInside.Revit.GH.Types
     public override sealed IGH_Goo Duplicate() => (IGH_Goo) MemberwiseClone();
 
     public FilterRule() { }
-    public FilterRule(Autodesk.Revit.DB.FilterRule filter) : base(filter) { }
+    public FilterRule(DB.FilterRule filter) : base(filter) { }
 
     public override bool CastFrom(object source)
     {
-      if (source is Autodesk.Revit.DB.FilterRule rule)
+      if (source is DB.FilterRule rule)
       {
         Value = rule;
         return true;
@@ -74,7 +71,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public override bool CastTo<Q>(ref Q target)
     {
-      if (typeof(Q).IsAssignableFrom(typeof(Autodesk.Revit.DB.FilterRule)))
+      if (typeof(Q).IsAssignableFrom(typeof(DB.FilterRule)))
       {
         target = (Q) (object) Value;
         return true;
@@ -152,13 +149,13 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var elementIds = new List<Autodesk.Revit.DB.ElementId>();
+      var elementIds = new List<DB.ElementId>();
       if (!DA.GetDataList("Elements", elementIds))
         return;
 
       var ids = elementIds.Where(x => x is object).ToArray();
       if (ids.Length > 0)
-        DA.SetData("Filter", new Autodesk.Revit.DB.ExclusionFilter(ids));
+        DA.SetData("Filter", new DB.ExclusionFilter(ids));
       else
         DA.DisableGapLogic();
     }
@@ -181,11 +178,11 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var filters = new List<Autodesk.Revit.DB.ElementFilter>();
+      var filters = new List<DB.ElementFilter>();
       if (!DA.GetDataList("Filters", filters))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.LogicalAndFilter(filters));
+      DA.SetData("Filter", new DB.LogicalAndFilter(filters));
     }
   }
 
@@ -206,11 +203,11 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var filters = new List<Autodesk.Revit.DB.ElementFilter>();
+      var filters = new List<DB.ElementFilter>();
       if (!DA.GetDataList("Filters", filters))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.LogicalOrFilter(filters));
+      DA.SetData("Filter", new DB.LogicalOrFilter(filters));
     }
   }
   #endregion
@@ -232,7 +229,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIsElementTypeFilter(!inverted));
+      DA.SetData("Filter", new DB.ElementIsElementTypeFilter(!inverted));
     }
   }
 
@@ -267,9 +264,9 @@ namespace RhinoInside.Revit.GH.Components
         var classes = classNames.Select(x => Type.GetType($"{x},RevitAPI", true)).ToList();
 
         if (classes.Count == 1)
-          DA.SetData("Filter", new Autodesk.Revit.DB.ElementClassFilter(classes[0], inverted));
+          DA.SetData("Filter", new DB.ElementClassFilter(classes[0], inverted));
         else
-          DA.SetData("Filter", new Autodesk.Revit.DB.ElementMulticlassFilter(classes, inverted));
+          DA.SetData("Filter", new DB.ElementMulticlassFilter(classes, inverted));
       }
       catch (System.TypeLoadException e)
       {
@@ -300,7 +297,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var categoryIds = new List<Autodesk.Revit.DB.ElementId>();
+      var categoryIds = new List<DB.ElementId>();
       if (!DA.GetDataList("Categories", categoryIds))
         return;
 
@@ -308,13 +305,13 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      var ids = categoryIds.Select(x => x is null ? ElementId.InvalidElementId : x).ToArray();
+      var ids = categoryIds.Select(x => x is null ? DB.ElementId.InvalidElementId : x).ToArray();
       if (ids.Length > 0)
       {
         if (ids.Length == 1)
-          DA.SetData("Filter", new Autodesk.Revit.DB.ElementCategoryFilter(ids[0], inverted));
+          DA.SetData("Filter", new DB.ElementCategoryFilter(ids[0], inverted));
         else
-          DA.SetData("Filter", new Autodesk.Revit.DB.ElementMulticategoryFilter(ids, inverted));
+          DA.SetData("Filter", new DB.ElementMulticategoryFilter(ids, inverted));
       }
       else DA.DisableGapLogic();
     }
@@ -338,7 +335,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var typeIds = new List<Autodesk.Revit.DB.ElementId>();
+      var typeIds = new List<DB.ElementId>();
       if (!DA.GetDataList("Types", typeIds))
         return;
 
@@ -346,23 +343,23 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      var provider = new ParameterValueProvider(new ElementId(BuiltInParameter.ELEM_TYPE_PARAM));
+      var provider = new DB.ParameterValueProvider(new DB.ElementId(DB.BuiltInParameter.ELEM_TYPE_PARAM));
       if (typeIds.Count == 1)
       {
-        var rule = new FilterElementIdRule(provider, new FilterNumericEquals(), typeIds[0]);
-        DA.SetData("Filter", new Autodesk.Revit.DB.ElementParameterFilter(rule, inverted));
+        var rule = new DB.FilterElementIdRule(provider, new DB.FilterNumericEquals(), typeIds[0]);
+        DA.SetData("Filter", new DB.ElementParameterFilter(rule, inverted));
       }
       else
       {
         if (inverted)
         {
-          var rules = typeIds.Select(x => new FilterInverseRule(new FilterElementIdRule(provider, new FilterNumericEquals(), x))).ToArray();
-          DA.SetData("Filter", new Autodesk.Revit.DB.ElementParameterFilter(rules));
+          var rules = typeIds.Select(x => new DB.FilterInverseRule(new DB.FilterElementIdRule(provider, new DB.FilterNumericEquals(), x))).ToArray();
+          DA.SetData("Filter", new DB.ElementParameterFilter(rules));
         }
         else
         {
-          var filters = typeIds.Select(x => new FilterElementIdRule(provider, new FilterNumericEquals(), x)).Select(x => new Autodesk.Revit.DB.ElementParameterFilter(x)).ToArray();
-          DA.SetData("Filter", new LogicalOrFilter(filters));
+          var filters = typeIds.Select(x => new DB.FilterElementIdRule(provider, new DB.FilterNumericEquals(), x)).Select(x => new DB.ElementParameterFilter(x)).ToArray();
+          DA.SetData("Filter", new DB.LogicalOrFilter(filters));
         }
       }
     }
@@ -420,7 +417,7 @@ namespace RhinoInside.Revit.GH.Components
       var scaleFactor = 1.0 / Revit.ModelUnits;
 
       var targets = new List<Rhino.Geometry.Box>();
-      Autodesk.Revit.DB.ElementFilter filter = null;
+      DB.ElementFilter filter = null;
 
       if (boundingBox)
       {
@@ -432,16 +429,16 @@ namespace RhinoInside.Revit.GH.Components
         }
 
         pointsBBox = pointsBBox.ChangeUnits(scaleFactor);
-        var outline = new Autodesk.Revit.DB.Outline(pointsBBox.Min.ToHost(), pointsBBox.Max.ToHost());
+        var outline = new DB.Outline(pointsBBox.Min.ToHost(), pointsBBox.Max.ToHost());
 
         if (strict)
-          filter = new Autodesk.Revit.DB.BoundingBoxIsInsideFilter(outline, tolerance * scaleFactor, inverted);
+          filter = new DB.BoundingBoxIsInsideFilter(outline, tolerance * scaleFactor, inverted);
         else
-          filter = new Autodesk.Revit.DB.BoundingBoxIntersectsFilter(outline, tolerance * scaleFactor, inverted);
+          filter = new DB.BoundingBoxIntersectsFilter(outline, tolerance * scaleFactor, inverted);
       }
       else
       {
-        var filters = points.Select<Rhino.Geometry.Point3d, Autodesk.Revit.DB.ElementFilter>
+        var filters = points.Select<Rhino.Geometry.Point3d, DB.ElementFilter>
                      (x =>
                      {
                        var pointsBBox = new Rhino.Geometry.BoundingBox(x, x);
@@ -455,19 +452,19 @@ namespace RhinoInside.Revit.GH.Components
 
                        if (strict)
                        {
-                         var outline = new Autodesk.Revit.DB.Outline(x.ToHost(), x.ToHost());
-                         return new Autodesk.Revit.DB.BoundingBoxIsInsideFilter(outline, tolerance * scaleFactor, inverted);
+                         var outline = new DB.Outline(x.ToHost(), x.ToHost());
+                         return new DB.BoundingBoxIsInsideFilter(outline, tolerance * scaleFactor, inverted);
                        }
                        else
                        {
-                         return new Autodesk.Revit.DB.BoundingBoxContainsPointFilter(x.ToHost(), tolerance * scaleFactor, inverted);
+                         return new DB.BoundingBoxContainsPointFilter(x.ToHost(), tolerance * scaleFactor, inverted);
                        }
                      });
 
         var filterList = filters.ToArray();
         filter = filterList.Length == 1 ?
                  filterList[0] :
-                 new Autodesk.Revit.DB.LogicalOrFilter(filterList);
+                 new DB.LogicalOrFilter(filterList);
       }
 
       DA.SetData("Filter", filter);
@@ -493,7 +490,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Element element = null;
+      DB.Element element = null;
       if (!DA.GetData("Element", ref element))
         return;
 
@@ -501,7 +498,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsElementFilter(element, inverted));
+      DA.SetData("Filter", new DB.ElementIntersectsElementFilter(element, inverted));
     }
   }
 
@@ -532,7 +529,7 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(brep.ChangeUnits(scaleFactor).ToHost(), inverted));
+      DA.SetData("Filter", new DB.ElementIntersectsSolidFilter(brep.ChangeUnits(scaleFactor).ToHost(), inverted));
     }
   }
 
@@ -563,7 +560,7 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       var scaleFactor = 1.0 / Revit.ModelUnits;
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementIntersectsSolidFilter(Rhino.Geometry.Brep.CreateFromMesh(mesh.ChangeUnits(scaleFactor), true).ToHost(), inverted));
+      DA.SetData("Filter", new DB.ElementIntersectsSolidFilter(Rhino.Geometry.Brep.CreateFromMesh(mesh.ChangeUnits(scaleFactor), true).ToHost(), inverted));
     }
   }
   #endregion
@@ -587,7 +584,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var levelId = Autodesk.Revit.DB.ElementId.InvalidElementId;
+      var levelId = DB.ElementId.InvalidElementId;
       if (!DA.GetData("Level", ref levelId))
         return;
 
@@ -595,7 +592,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementLevelFilter(levelId, inverted));
+      DA.SetData("Filter", new DB.ElementLevelFilter(levelId, inverted));
     }
   }
 
@@ -617,15 +614,24 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var designOptionId = Autodesk.Revit.DB.ElementId.InvalidElementId;
-      if (!DA.GetData("Design Option", ref designOptionId))
-        designOptionId = Autodesk.Revit.DB.DesignOption.GetActiveDesignOptionId(Revit.ActiveDBDocument);
+      var doc = Revit.ActiveDBDocument;
+      var designOptionId = DB.DesignOption.GetActiveDesignOptionId(doc);
+
+      var designOption = default(DB.DesignOption);
+      if (DA.GetData("Design Option", ref designOption))
+      {
+        doc = designOption?.Document;
+        designOptionId = designOption?.Id;
+      }
+
+      if (doc is null || designOptionId is null)
+        return;
 
       var inverted = false;
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementDesignOptionFilter(designOptionId, inverted));
+      DA.SetData("Filter", new DB.ElementDesignOptionFilter(designOptionId, inverted));
     }
   }
 
@@ -647,14 +653,14 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var viewId = Autodesk.Revit.DB.ElementId.InvalidElementId;
+      var viewId = DB.ElementId.InvalidElementId;
       DA.GetData("View", ref viewId);
 
       var inverted = false;
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementOwnerViewFilter(viewId, inverted));
+      DA.SetData("Filter", new DB.ElementOwnerViewFilter(viewId, inverted));
     }
   }
 
@@ -676,14 +682,24 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var viewId = Revit.ActiveDBDocument.ActiveView.Id;
-      DA.GetData("View", ref viewId);
+      var doc = Revit.ActiveDBDocument;
+      var viewId = doc.ActiveView.Id;
+
+      DB.View view = null;
+      if (DA.GetData("View", ref view))
+      {
+        doc = view?.Document;
+        viewId = view?.Id;
+      }
+
+      if (doc is null || viewId is null)
+        return;
 
       var inverted = false;
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.UI.Selection.SelectableInViewFilter(Revit.ActiveDBDocument, viewId, inverted));
+      DA.SetData("Filter", new Autodesk.Revit.UI.Selection.SelectableInViewFilter(doc, viewId, inverted));
     }
   }
   #endregion
@@ -707,7 +723,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var rules = new List<Autodesk.Revit.DB.FilterRule>();
+      var rules = new List<DB.FilterRule>();
       if (!DA.GetDataList("Rules", rules))
         return;
 
@@ -715,7 +731,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Inverted", ref inverted))
         return;
 
-      DA.SetData("Filter", new Autodesk.Revit.DB.ElementParameterFilter(rules, inverted));
+      DA.SetData("Filter", new DB.ElementParameterFilter(rules, inverted));
     }
   }
 
@@ -738,61 +754,60 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.FilterRule(), "Rule", "R", string.Empty, GH_ParamAccess.item);
     }
 
-    static double ToHost(double value, ParameterType parameterType)
+    static double ToHost(double value, DB.ParameterType parameterType)
     {
       switch (parameterType)
       {
-        case ParameterType.Length:  return value / Math.Pow(Revit.ModelUnits, 1.0);
-        case ParameterType.Area:    return value / Math.Pow(Revit.ModelUnits, 2.0);
-        case ParameterType.Volume:  return value / Math.Pow(Revit.ModelUnits, 3.0);
+        case DB.ParameterType.Length:  return value / Math.Pow(Revit.ModelUnits, 1.0);
+        case DB.ParameterType.Area:    return value / Math.Pow(Revit.ModelUnits, 2.0);
+        case DB.ParameterType.Volume:  return value / Math.Pow(Revit.ModelUnits, 3.0);
       }
 
       return value;
     }
 
-    static readonly Dictionary<BuiltInParameter, ParameterType> BuiltInParametersTypes = new Dictionary<BuiltInParameter, ParameterType>();
+    static readonly Dictionary<DB.BuiltInParameter, DB.ParameterType> BuiltInParametersTypes = new Dictionary<DB.BuiltInParameter, DB.ParameterType>();
 
-    static bool TryGetParameterDefinition(Document doc, ElementId id, out StorageType storageType, out ParameterType parameterType)
+    static bool TryGetParameterDefinition(DB.Document doc, DB.ElementId id, out DB.StorageType storageType, out DB.ParameterType parameterType)
     {
       if (id.TryGetBuiltInParameter(out var builtInParameter))
       {
         storageType = doc.get_TypeOfStorage(builtInParameter);
 
-        if (storageType == StorageType.ElementId)
+        if (storageType == DB.StorageType.ElementId)
         {
-          if (builtInParameter == BuiltInParameter.ELEM_TYPE_PARAM)
+          if (builtInParameter == DB.BuiltInParameter.ELEM_TYPE_PARAM)
           {
-            parameterType = ParameterType.FamilyType;
+            parameterType = DB.ParameterType.FamilyType;
             return true;
           }
 
-          if (builtInParameter == BuiltInParameter.ELEM_CATEGORY_PARAM || builtInParameter == BuiltInParameter.ELEM_CATEGORY_PARAM_MT)
+          if (builtInParameter == DB.BuiltInParameter.ELEM_CATEGORY_PARAM || builtInParameter == DB.BuiltInParameter.ELEM_CATEGORY_PARAM_MT)
           {
-            parameterType = (ParameterType) int.MaxValue;
+            parameterType = (DB.ParameterType) int.MaxValue;
             return true;
           }
         }
 
-        if (storageType == StorageType.Double)
+        if (storageType == DB.StorageType.Double)
         {
           if (BuiltInParametersTypes.TryGetValue(builtInParameter, out parameterType))
             return true;
 
-          var categoriesWhereDefined = Enum.GetValues(typeof(BuiltInCategory)).
-            Cast<BuiltInCategory>().
-            Select(bic => new ElementId(bic)).
-            Where(cid => TableView.GetAvailableParameters(doc, cid).Contains(id)).
+          var categoriesWhereDefined = doc.GetBuiltInCategoriesWithParameters().
+            Select(bic => new DB.ElementId(bic)).
+            Where(cid => DB.TableView.GetAvailableParameters(doc, cid).Contains(id)).
             ToArray();
 
-          using (var collector = new FilteredElementCollector(doc))
+          using (var collector = new DB.FilteredElementCollector(doc))
           {
             using
             (
               var filteredCollector = categoriesWhereDefined.Length == 0 ?
-              collector.WherePasses(new Autodesk.Revit.DB.ElementClassFilter(typeof(ParameterElement), false)) :
+              collector.WherePasses(new DB.ElementClassFilter(typeof(DB.ParameterElement), false)) :
               categoriesWhereDefined.Length > 1 ?
-                collector.WherePasses(new Autodesk.Revit.DB.ElementMulticategoryFilter(categoriesWhereDefined)) :
-                collector.WherePasses(new Autodesk.Revit.DB.ElementCategoryFilter(categoriesWhereDefined[0]))
+                collector.WherePasses(new DB.ElementMulticategoryFilter(categoriesWhereDefined)) :
+                collector.WherePasses(new DB.ElementCategoryFilter(categoriesWhereDefined[0]))
             )
             {
               foreach (var element in filteredCollector)
@@ -808,18 +823,18 @@ namespace RhinoInside.Revit.GH.Components
             }
           }
 
-          parameterType = ParameterType.Invalid;
+          parameterType = DB.ParameterType.Invalid;
           return false;
         }
 
-        parameterType = ParameterType.Invalid;
+        parameterType = DB.ParameterType.Invalid;
         return true;
       }
       else
       {
         try
         {
-          if (doc.GetElement(id) is ParameterElement parameter)
+          if (doc.GetElement(id) is DB.ParameterElement parameter)
           {
             storageType = parameter.GetDefinition().ParameterType.ToStorageType();
             parameterType = parameter.GetDefinition().ParameterType;
@@ -829,8 +844,8 @@ namespace RhinoInside.Revit.GH.Components
         catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
       }
 
-      storageType = StorageType.None;
-      parameterType = ParameterType.Invalid;
+      storageType = DB.StorageType.None;
+      parameterType = DB.ParameterType.Invalid;
       return false;
     }
 
@@ -848,104 +863,111 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var parameterId = ElementId.InvalidElementId;
-      if (!DA.GetData("ParameterKey", ref parameterId))
+      var parameterKey = default(Types.ParameterKey);
+      if (!DA.GetData("ParameterKey", ref parameterKey))
         return;
 
       DA.DisableGapLogic();
 
-      if (!TryGetParameterDefinition(Revit.ActiveDBDocument, parameterId, out var storageType, out var parameterType))
+      if (!TryGetParameterDefinition(parameterKey.Document, parameterKey.Id, out var storageType, out var parameterType))
       {
-        if (parameterId.TryGetBuiltInParameter(out var builtInParameter))
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to found parameter '{LabelUtils.GetLabelFor(builtInParameter)}' in Revit document.");
+        if (parameterKey.Id.TryGetBuiltInParameter(out var builtInParameter))
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to found parameter '{DB.LabelUtils.GetLabelFor(builtInParameter)}' in Revit document.");
         else
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to found parameter '{parameterId.IntegerValue}' in Revit document.");
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Failed to found parameter '{parameterKey.Id.IntegerValue}' in Revit document.");
 
         return;
       }
 
-      var provider = new ParameterValueProvider(parameterId);
+      var provider = new DB.ParameterValueProvider(parameterKey);
 
-      Autodesk.Revit.DB.FilterRule rule = null;
-      if (storageType == StorageType.String)
+      DB.FilterRule rule = null;
+      if (storageType == DB.StorageType.String)
       {
-        FilterStringRuleEvaluator ruleEvaluator = null;
+        DB.FilterStringRuleEvaluator ruleEvaluator = null;
         switch (Condition)
         {
           case ConditionType.NotEquals:
-          case ConditionType.Equals:          ruleEvaluator = new FilterStringEquals(); break;
-          case ConditionType.Greater:         ruleEvaluator = new FilterStringGreater(); break;
-          case ConditionType.GreaterOrEqual:  ruleEvaluator = new FilterStringGreaterOrEqual(); break;
-          case ConditionType.Less:            ruleEvaluator = new FilterStringLess(); break;
-          case ConditionType.LessOrEqual:     ruleEvaluator = new FilterStringLessOrEqual(); break;
+          case ConditionType.Equals:          ruleEvaluator = new DB.FilterStringEquals(); break;
+          case ConditionType.Greater:         ruleEvaluator = new DB.FilterStringGreater(); break;
+          case ConditionType.GreaterOrEqual:  ruleEvaluator = new DB.FilterStringGreaterOrEqual(); break;
+          case ConditionType.Less:            ruleEvaluator = new DB.FilterStringLess(); break;
+          case ConditionType.LessOrEqual:     ruleEvaluator = new DB.FilterStringLessOrEqual(); break;
         }
 
         var goo = default(GH_String);
         if (DA.GetData("Value", ref goo))
-          rule = new FilterStringRule(provider, ruleEvaluator, goo.Value, true);
+          rule = new DB.FilterStringRule(provider, ruleEvaluator, goo.Value, true);
       }
       else
       {
-        FilterNumericRuleEvaluator ruleEvaluator = null;
+        DB.FilterNumericRuleEvaluator ruleEvaluator = null;
         switch (Condition)
         {
           case ConditionType.NotEquals:
-          case ConditionType.Equals:          ruleEvaluator = new FilterNumericEquals(); break;
-          case ConditionType.Greater:         ruleEvaluator = new FilterNumericGreater(); break;
-          case ConditionType.GreaterOrEqual:  ruleEvaluator = new FilterNumericGreaterOrEqual(); break;
-          case ConditionType.Less:            ruleEvaluator = new FilterNumericLess(); break;
-          case ConditionType.LessOrEqual:     ruleEvaluator = new FilterNumericLessOrEqual(); break;
+          case ConditionType.Equals:          ruleEvaluator = new DB.FilterNumericEquals(); break;
+          case ConditionType.Greater:         ruleEvaluator = new DB.FilterNumericGreater(); break;
+          case ConditionType.GreaterOrEqual:  ruleEvaluator = new DB.FilterNumericGreaterOrEqual(); break;
+          case ConditionType.Less:            ruleEvaluator = new DB.FilterNumericLess(); break;
+          case ConditionType.LessOrEqual:     ruleEvaluator = new DB.FilterNumericLessOrEqual(); break;
         }
 
         switch (storageType)
         {
-          case StorageType.Integer:
+          case DB.StorageType.Integer:
             {
               var goo = default(GH_Integer);
               if (DA.GetData("Value", ref goo))
-                rule = new FilterIntegerRule(provider, ruleEvaluator, goo.Value);
+                rule = new DB.FilterIntegerRule(provider, ruleEvaluator, goo.Value);
             }
             break;
-          case StorageType.Double:
+          case DB.StorageType.Double:
             {
               var goo = default(GH_Number);
               if (DA.GetData("Value", ref goo))
               {
                 if (Condition == ConditionType.Equals || Condition == ConditionType.NotEquals)
                 {
-                  if (parameterType == ParameterType.Length || parameterType == ParameterType.Area || parameterType == ParameterType.Volume)
-                    rule = new FilterDoubleRule(provider, ruleEvaluator, ToHost(goo.Value, parameterType), ToHost(Revit.VertexTolerance, parameterType));
+                  if (parameterType == DB.ParameterType.Length || parameterType == DB.ParameterType.Area || parameterType == DB.ParameterType.Volume)
+                    rule = new DB.FilterDoubleRule(provider, ruleEvaluator, ToHost(goo.Value, parameterType), ToHost(Revit.VertexTolerance, parameterType));
                   else
-                    rule = new FilterDoubleRule(provider, ruleEvaluator, ToHost(goo.Value, parameterType), 1e-6);
+                    rule = new DB.FilterDoubleRule(provider, ruleEvaluator, ToHost(goo.Value, parameterType), 1e-6);
                 }
                 else
-                  rule = new FilterDoubleRule(provider, ruleEvaluator, ToHost(goo.Value, parameterType), 0.0);
+                  rule = new DB.FilterDoubleRule(provider, ruleEvaluator, ToHost(goo.Value, parameterType), 0.0);
               }
             }
             break;
-          case StorageType.ElementId:
+          case DB.StorageType.ElementId:
             {
               switch(parameterType)
               {
-                case (ParameterType) int.MaxValue: // Category
+                case (DB.ParameterType) int.MaxValue: // Category
                   {
                     var value = default(Types.Category);
                     if (DA.GetData("Value", ref value))
-                      rule = new FilterElementIdRule(provider, ruleEvaluator, value);
+                      rule = new DB.FilterElementIdRule(provider, ruleEvaluator, value);
                   }
                   break;
-                case ParameterType.FamilyType:
+                case DB.ParameterType.Material:
+                  {
+                    var value = default(Types.Material);
+                    if (DA.GetData("Value", ref value))
+                      rule = new DB.FilterElementIdRule(provider, ruleEvaluator, value);
+                  }
+                  break;
+                case DB.ParameterType.FamilyType:
                   {
                     var value = default(Types.ElementType);
                     if (DA.GetData("Value", ref value))
-                      rule = new FilterElementIdRule(provider, ruleEvaluator, value);
+                      rule = new DB.FilterElementIdRule(provider, ruleEvaluator, value);
                   }
                   break;
                 default:
                   {
                     var value = default(Types.Element);
                     if (DA.GetData("Value", ref value))
-                      rule = new FilterElementIdRule(provider, ruleEvaluator, value);
+                      rule = new DB.FilterElementIdRule(provider, ruleEvaluator, value);
                   }
                   break;
               }
@@ -957,7 +979,7 @@ namespace RhinoInside.Revit.GH.Components
       if (rule is object)
       {
         if(Condition == ConditionType.NotEquals)
-          DA.SetData("Rule", new FilterInverseRule(rule));
+          DA.SetData("Rule", new DB.FilterInverseRule(rule));
         else
           DA.SetData("Rule", rule);
       }

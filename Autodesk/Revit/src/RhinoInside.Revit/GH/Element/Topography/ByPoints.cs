@@ -12,7 +12,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("E8D8D05A-8703-4F75-B106-12B40EC9DF7B");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public TopographyByPoints() : base
     (

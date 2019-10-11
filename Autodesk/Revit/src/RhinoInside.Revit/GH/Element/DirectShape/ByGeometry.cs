@@ -51,7 +51,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("0bfbda45-49cc-4ac6-8d6d-ecd2cfed062a");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public DirectShapeByGeometry() : base
     (
@@ -139,7 +138,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("25DCFE8E-5BE9-460C-80E8-51B7041D8FED");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public DirectShapeTypeByGeometry() : base
     (
@@ -227,7 +225,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("A811EFA4-8DE2-46F3-9F88-3D4F13FE40BE");
     public override GH_Exposure Exposure => GH_Exposure.secondary;
-    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public DirectShapeByLocation() : base
     (

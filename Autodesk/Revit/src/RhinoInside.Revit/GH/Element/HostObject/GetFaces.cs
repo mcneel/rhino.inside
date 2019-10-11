@@ -37,7 +37,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Host", ref host) || host is null)
         return;
 
-      var doc = Revit.ActiveDBDocument;
+      var doc = host.Document;
       try
       {
         var bottom = HostObjectUtils.GetBottomFaces(host).Select(reference => new Types.Face(reference, doc));

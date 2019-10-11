@@ -9,7 +9,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("77F4FBDD-8A05-44A3-AC54-E52A79CF3E5A");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public DirectShapeByCurve() : base
     (

@@ -35,17 +35,21 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.ParameterKey(), "ParameterKeys", "ParameterKeys", "Parameter definitions list", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.ParameterKey(), "ParameterKeys", "K", "Parameter definitions list", GH_ParamAccess.list);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      var categoryId = ElementId.InvalidElementId;
-      if (!DA.GetData("Category", ref categoryId))
+      var category = default(Category);
+      if (!DA.GetData("Category", ref category))
         return;
 
-      var parameterKeys = TableView.GetAvailableParameters(Revit.ActiveDBDocument, categoryId);
-      DA.SetDataList("ParameterKeys", parameterKeys);
+      var doc = category.Document();
+      if(doc is object)
+      {
+        var parameterKeys = TableView.GetAvailableParameters(doc, category.Id);
+        DA.SetDataList("ParameterKeys", parameterKeys.Select(paramId => Types.ParameterKey.FromElementId(doc, paramId)));
+      }
     }
   }
 }

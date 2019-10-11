@@ -231,12 +231,10 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       if (PersistentDataCount == 0) return;
 
-      RecordPersistentDataEvent("Clear selection");
-      PersistentData.Clear();
-      OnObjectChanged(GH_ObjectEventType.PersistentData);
+      foreach (var item in ListItems)
+        item.Selected = false;
 
-      OnPingDocument()?.ClearReferenceTable();
-      ExpireSolution(true);
+      ResetPersistentData(null, "Clear selection");
     }
 
     protected override void Menu_AppendInternaliseData(ToolStripDropDown menu) =>
@@ -248,38 +246,33 @@ namespace RhinoInside.Revit.GH.Parameters
 
       RecordUndoEvent("Internalise selection");
 
-      RemoveAllSources();
-      ExpireSolution(true);
+      ListItems = SelectedItems.ToList();
+
+      foreach (var param in Sources)
+        param.Recipients.Remove(this);
+
+      Sources.Clear();
+      OnObjectChanged(GH_ObjectEventType.Sources);
+
+      OnDisplayExpired(false);
     }
 
     protected override void Menu_AppendExtractParameter(ToolStripDropDown menu) { }
 
     protected void Menu_InvertSelectionClicked(object sender, EventArgs e)
     {
-      RecordUndoEvent("Invert selection");
-
       foreach (var item in ListItems)
         item.Selected = !item.Selected;
 
-      PersistentData.Clear();
-      PersistentData.AppendRange(SelectedItems.Select(x => x.Value), new GH_Path(0));
-      OnObjectChanged(GH_ObjectEventType.PersistentData);
-
-      ExpireSolution(true);
+      ResetPersistentData(SelectedItems.Select(x => x.Value), "Invert selection");
     }
 
     protected void Menu_SelectAllClicked(object sender, EventArgs e)
     {
-      RecordUndoEvent("Select all");
-
       foreach (var item in ListItems)
         item.Selected = true;
 
-      PersistentData.Clear();
-      PersistentData.AppendRange(SelectedItems.Select(x => x.Value), new GH_Path(0));
-      OnObjectChanged(GH_ObjectEventType.PersistentData);
-
-      ExpireSolution(true);
+      ResetPersistentData(ListItems.Select(x => x.Value), "Select all");
     }
 
     new class Attributes : GH_ResizableAttributes<ValueSet>
@@ -463,8 +456,6 @@ namespace RhinoInside.Revit.GH.Parameters
         edge.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
         graphics.FillPolygon(new SolidBrush(System.Drawing.Color.FromArgb(150, color)), corners);
         graphics.DrawPolygon(edge, corners);
-
-        //RenderShape(canvas, graphics, corners, color);
       }
 
       System.Drawing.Rectangle ListBounds => new System.Drawing.Rectangle
@@ -552,8 +543,6 @@ namespace RhinoInside.Revit.GH.Parameters
                   bool rangeSelection = System.Windows.Input.Keyboard.IsKeyDown(System.Windows.Input.Key.LeftShift);
                   int lastItemIndex = 0;
 
-                  Owner.RecordUndoEvent("Change selection");
-
                   bool sel = LastItemIndex < Owner.ListItems.Count ? Owner.ListItems[LastItemIndex].Selected : false;
                   for (int i = 0; i < Owner.ListItems.Count; i++)
                   {
@@ -578,12 +567,8 @@ namespace RhinoInside.Revit.GH.Parameters
                   }
 
                   LastItemIndex = lastItemIndex;
+                  Owner.ResetPersistentData(Owner.SelectedItems.Select(x => x.Value), "Change selection");
 
-                  Owner.PersistentData.Clear();
-                  Owner.PersistentData.AppendRange(Owner.SelectedItems.Select(x => x.Value), new GH_Path(0));
-                  Owner.OnObjectChanged(GH_ObjectEventType.PersistentData);
-
-                  Owner.ExpireSolution(true);
                   return GH_ObjectResponse.Handled;
                 }
               }
@@ -644,13 +629,11 @@ namespace RhinoInside.Revit.GH.Parameters
               var listBounds = new RectangleF(ListBounds.X, ListBounds.Y, ListBounds.Width, ListBounds.Height);
               if (listBounds.Contains(e.CanvasLocation))
               {
-                Owner.RecordUndoEvent("Change selection");
+                foreach (var item in Owner.ListItems)
+                  item.Selected = true;
 
-                Owner.PersistentData.Clear();
-                Owner.PersistentData.AppendRange(Owner.ListItems.Select(x => x.Value), new GH_Path(0));
-                Owner.OnObjectChanged(GH_ObjectEventType.PersistentData);
+                Owner.ResetPersistentData(Owner.ListItems.Select(x => x.Value), "Select all");
 
-                Owner.ExpireSolution(true);
                 return GH_ObjectResponse.Handled;
               }
             }
@@ -681,6 +664,32 @@ namespace RhinoInside.Revit.GH.Parameters
       }
     }
 
+    protected void ResetPersistentData(IEnumerable<IGH_Goo> list, string name)
+    {
+      RecordPersistentDataEvent(name);
+
+      PersistentData.Clear();
+      if(list is object)
+        PersistentData.AppendRange(list, new GH_Path(0));
+
+      OnObjectChanged(GH_ObjectEventType.PersistentData);
+
+      base.ClearData();
+      ExpireDownStreamObjects();
+      OnSolutionExpired(false);
+
+      Phase = GH_SolutionPhase.Collecting;
+      AddVolatileDataTree(PersistentData.Duplicate());
+      PostProcessVolatileData();
+      Phase = GH_SolutionPhase.Collected;
+
+      if (OnPingDocument() is GH_Document doc)
+      {
+        doc.ClearReferenceTable();
+        doc.NewSolution(false);
+      }
+    }
+
     public abstract void ProcessData();
     public override sealed void PostProcessData()
     {
@@ -690,7 +699,7 @@ namespace RhinoInside.Revit.GH.Parameters
         {
           var goo = branch[i];
 
-          if (goo is Types.IGH_ElementId id && id.IsReferencedElement && !id.IsElementLoaded && !id.LoadElement(Revit.ActiveDBDocument))
+          if (goo is Types.IGH_ElementId id && id.IsReferencedElement && !id.IsElementLoaded && !id.LoadElement())
           {
             AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"A referenced element could not be found in the Revit document.");
             branch[i] = null;
@@ -711,8 +720,10 @@ namespace RhinoInside.Revit.GH.Parameters
       m_data.Clear();
       m_data.AppendRange(SelectedItems.Select(x => x.Value), new GH_Path(0));
 
-      base.PostProcessData();
+      PostProcessVolatileData();
     }
+
+    protected void PostProcessVolatileData() => base.PostProcessData();
 
     protected override string HtmlHelp_Source()
     {
@@ -750,8 +761,8 @@ namespace RhinoInside.Revit.GH.Parameters
       public static bool IsComparable(IGH_Goo goo)
       {
         return
-        (goo is Types.ID id && id.IsReferencedElement) ||
-        (goo is IGH_GeometricGoo geometry && geometry.IsReferencedGeometry) ||
+        (goo is Types.IGH_ElementId id) ||
+        (goo is IGH_GeometricGoo geometry) ||
         goo is IGH_QuickCast ||
         goo is GH_StructurePath ||
         goo is GH_Culture ||
@@ -767,19 +778,30 @@ namespace RhinoInside.Revit.GH.Parameters
       public bool Equals(IGH_Goo x, IGH_Goo y)
       {
         if (x is Types.IGH_ElementId idX && y is Types.IGH_ElementId idY)
-          return idX.IsReferencedElement && idY.IsReferencedElement && idX.UniqueID == idY.UniqueID;
+        {
+          if (idX.IsReferencedElement || idY.IsReferencedElement)
+            return idX.DocumentGUID == idY.DocumentGUID && idX.UniqueID == idY.UniqueID;
 
-        if (x is IGH_GeometricGoo geoX && geoX.IsReferencedGeometry && y is IGH_GeometricGoo geoY && geoY.IsReferencedGeometry)
-          return geoX.ReferenceID == geoY.ReferenceID;
+          return idX.Document.Equals(idY.Document) && idX.Id.IntegerValue == idY.Id.IntegerValue;
+        }
 
         if (x is IGH_QuickCast qcX && y is IGH_QuickCast qcY)
           return qcX.QC_CompareTo(qcY) == 0;
 
+        if (x is IGH_GeometricGoo geoX && y is IGH_GeometricGoo geoY)
+        {
+          if (geoX.IsReferencedGeometry || geoY.IsReferencedGeometry)
+            return geoX.ReferenceID == geoY.ReferenceID;
+
+          if(geoX.ScriptVariable() is Rhino.Geometry.GeometryBase geometryX && geoY.ScriptVariable() is Rhino.Geometry.GeometryBase geometryY)
+            return Rhino.Geometry.GeometryBase.GeometryEquals(geometryX, geometryY);
+        }
+
         if (x is GH_StructurePath pathX && y is GH_StructurePath pathY)
-          return pathX.Value.CompareTo(pathX.Value) == 0;
+          return pathX.Value == pathX.Value;
 
         if (x is GH_Culture cultureX && y is GH_Culture cultureY)
-          return cultureX.Value.LCID == cultureY.Value.LCID;
+          return cultureX.Value == cultureY.Value;
 
         if (x.ScriptVariable() is object objX && y.ScriptVariable() is object objY)
         {

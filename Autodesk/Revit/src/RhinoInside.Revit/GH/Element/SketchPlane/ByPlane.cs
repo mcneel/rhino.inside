@@ -8,7 +8,6 @@ namespace RhinoInside.Revit.GH.Components
   {
     public override Guid ComponentGuid => new Guid("1FA679E4-1821-483A-99F8-DC166B0595F4");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     public SketchPlaneByPlane() : base
     (

@@ -13,7 +13,7 @@ using RhinoInside.Runtime.InteropServices;
 
 namespace RhinoInside.Runtime.InteropServices
 {
-  public enum Optional { Nothig = -1 }
+  public enum Optional { Nothig = 0 }
 
   public struct Optional<T>
   {
@@ -35,19 +35,21 @@ namespace RhinoInside.Runtime.InteropServices
       }
     }
 
-    public bool IsNullOrNothing => !HasValue || value == null;
+    public bool IsNullOrNothing => !HasValue || !(value is object);
 
     public override bool Equals(object other)
     {
-      return (other is Optional<T> otherEmpty) ? this == otherEmpty : false;
+      return (other is Optional<T> optional) ? this == optional :
+             (other is Optional) ? !HasValue :
+             false;
     }
 
-    public override int GetHashCode() => HasValue ? value.GetHashCode() : (int) Optional.Nothig;
-    public override string ToString() => HasValue ? value.ToString() : "";
+    public override int GetHashCode() => IsNullOrNothing ? (int) Optional.Nothig : value.GetHashCode();
+    public override string ToString() => IsNullOrNothing ?       string.Empty    : value.ToString();
 
     public static implicit operator Optional<T>(Optional _) => new Optional<T>();
     public static bool operator ==(Optional<T> value, Optional _) => !value.HasValue;
-    public static bool operator !=(Optional<T> value, Optional _) => value.HasValue;
+    public static bool operator !=(Optional<T> value, Optional _) =>  value.HasValue;
 
     public static implicit operator Optional<T>(T value) => new Optional<T>(value);
     public static bool operator ==(Optional<T> value, T other) => value.HasValue ? value == other : false;
@@ -68,7 +70,7 @@ namespace RhinoInside.Runtime.InteropServices
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public abstract class TransactionalComponent : Component, ITransactionFinalizer, IFailuresPreprocessor
+  public abstract class TransactionalComponent : Component, IFailuresPreprocessor, ITransactionFinalizer
   {
     protected TransactionalComponent(string name, string nickname, string description, string category, string subCategory)
     : base(name, nickname, description, category, subCategory) { }
@@ -109,15 +111,9 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
-    protected static T CopyParametersFrom<T>(T to, Element from) where T : Element
-    {
-      to.CopyParametersFrom(from);
-      return to;
-    }
-
     protected static void ReplaceElement<T>(ref T previous, T next, ICollection<BuiltInParameter> parametersMask = null) where T : Element
     {
-      if (previous != null && previous != next)
+      if (previous is object && !ReferenceEquals(previous, next))
       {
         next.CopyParametersFrom(previous, parametersMask);
         previous.Document.Delete(previous.Id);
@@ -146,8 +142,18 @@ namespace RhinoInside.Revit.GH.Components
       bool wasOptional = category == Optional.Nothig;
 
       if (wasOptional)
-        category = Autodesk.Revit.DB.Category.GetCategory(doc, builtInCategory) ??
-        throw new ArgumentException($"No suitable Category is been found.", paramName);
+      {
+        if (doc.IsFamilyDocument)
+        {
+          category = doc.OwnerFamily?.FamilyCategory;
+        }
+
+        if(category.IsNullOrNothing)
+        {
+          category = Autodesk.Revit.DB.Category.GetCategory(doc, builtInCategory) ??
+          throw new ArgumentException($"No suitable Category is been found.", paramName);
+        }
+      }
 
       else if (category.Value == null)
         throw new ArgumentNullException(paramName);
@@ -284,7 +290,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!TryGetParamTypes(argumentType, out var paramTypes))
         return null;
 
-      return (IGH_Goo) Activator.CreateInstance(paramTypes.Item2, new object[] { value });
+      return (IGH_Goo) Activator.CreateInstance(paramTypes.Item2, value);
     }
 
     protected Type GetParameterType(ParameterInfo parameter, out GH_ParamAccess access, out bool optional)
@@ -457,79 +463,8 @@ namespace RhinoInside.Revit.GH.Components
     }
     #endregion
 
-    #region Autodesk.Revit.DB.Transacion support
-    protected enum TransactionStrategy
-    {
-      PerSolution,
-      PerComponent
-    }
-    protected virtual TransactionStrategy TransactionalStrategy => TransactionStrategy.PerSolution;
-
-    protected Transaction CurrentTransaction;
-    protected TransactionStatus TransactionStatus => CurrentTransaction?.GetStatus() ?? TransactionStatus.Uninitialized;
-
-    protected void BeginTransaction(Document document)
-    {
-      CurrentTransaction = new Transaction(document, Name);
-      if (CurrentTransaction.Start() != TransactionStatus.Started)
-      {
-        CurrentTransaction.Dispose();
-        CurrentTransaction = null;
-        throw new InvalidOperationException($"Unable to start Transaction '{Name}'");
-      }
-    }
-
-    protected void CommitTransaction()
-    {
-      var options = CurrentTransaction.GetFailureHandlingOptions();
-#if !DEBUG
-      options = options.SetClearAfterRollback(true);
-#endif
-      options = options.SetDelayedMiniWarnings(true);
-      options = options.SetForcedModalHandling(true);
-      options = options.SetFailuresPreprocessor(this);
-      options = options.SetTransactionFinalizer(this);
-
-      // Disable Rhino UI if any warning-error dialog popup
-      {
-        ModalForm.EditScope editScope = null;
-        EventHandler<DialogBoxShowingEventArgs> _ = null;
-        try
-        {
-          Revit.ApplicationUI.DialogBoxShowing += _ = (sender, args) =>
-          {
-            if (editScope is null)
-              editScope = new ModalForm.EditScope();
-          };
-
-          if (TransactionStatus == TransactionStatus.Started)
-          {
-            OnBeforeCommit(Revit.ActiveDBDocument, CurrentTransaction.GetName());
-
-            CurrentTransaction.Commit(options);
-          }
-          else CurrentTransaction.RollBack(options);
-        }
-        finally
-        {
-          Revit.ApplicationUI.DialogBoxShowing -= _;
-
-          if (editScope is IDisposable disposable)
-            disposable.Dispose();
-        }
-      }
-    }
-
     // Step 1.
-    protected override void BeforeSolveInstance()
-    {
-      if (TransactionalStrategy != TransactionStrategy.PerComponent)
-        return;
-
-      BeginTransaction(Revit.ActiveDBDocument);
-
-      OnAfterStart(Revit.ActiveDBDocument, CurrentTransaction.GetName());
-    }
+    // protected override void BeforeSolveInstance() { }
 
     // Step 2.
     protected virtual void OnAfterStart(Document document, string strTransactionName) { }
@@ -540,6 +475,11 @@ namespace RhinoInside.Revit.GH.Components
     // Step 4.
     protected virtual void OnBeforeCommit(Document document, string strTransactionName) { }
 
+    // Step 5.
+    //protected override void AfterSolveInstance() {}
+
+    // Step 5.1
+    #region IFailuresPreprocessor
     void AddRuntimeMessage(FailureMessageAccessor error, bool? solved = null)
     {
       var level = GH_RuntimeMessageLevel.Remark;
@@ -603,7 +543,6 @@ namespace RhinoInside.Revit.GH.Components
       return FailureProcessingResult.Continue;
     }
 
-    // Step 4.
     FailureProcessingResult IFailuresPreprocessor.PreprocessFailures(FailuresAccessor failuresAccessor)
     {
       if (!failuresAccessor.IsTransactionBeingCommitted())
@@ -645,8 +584,114 @@ namespace RhinoInside.Revit.GH.Components
 
       return FailureProcessingResult.Continue;
     }
+    #endregion
 
-    // Step 6.
+    // Step 5.2
+    #region ITransactionFinalizer
+    // Step 5.2.A
+    public virtual void OnCommitted(Document document, string strTransactionName) { }
+
+    // Step 5.2.B
+    public virtual void OnRolledBack(Document document, string strTransactionName)
+    {
+      foreach (var param in Params.Output)
+        param.Phase = GH_SolutionPhase.Failed;
+    }
+    #endregion
+
+    protected void CommitTransaction(Document doc, Transaction transaction)
+    {
+      var options = transaction.GetFailureHandlingOptions();
+#if !DEBUG
+      options = options.SetClearAfterRollback(true);
+#endif
+      options = options.SetDelayedMiniWarnings(true);
+      options = options.SetForcedModalHandling(true);
+      options = options.SetFailuresPreprocessor(this);
+      options = options.SetTransactionFinalizer(this);
+
+      // Disable Rhino UI if any warning-error dialog popup
+      {
+        ModalForm.EditScope editScope = null;
+        EventHandler<DialogBoxShowingEventArgs> _ = null;
+        try
+        {
+          Revit.ApplicationUI.DialogBoxShowing += _ = (sender, args) =>
+          {
+            if (editScope is null)
+              editScope = new ModalForm.EditScope();
+          };
+
+          if (transaction.GetStatus() == TransactionStatus.Started)
+          {
+            OnBeforeCommit(doc, transaction.GetName());
+
+            transaction.Commit(options);
+          }
+          else transaction.RollBack(options);
+        }
+        finally
+        {
+          Revit.ApplicationUI.DialogBoxShowing -= _;
+
+          if (editScope is IDisposable disposable)
+            disposable.Dispose();
+        }
+      }
+    }
+  }
+
+  public abstract class TransactionComponent : TransactionalComponent
+  {
+    protected TransactionComponent(string name, string nickname, string description, string category, string subCategory)
+    : base(name, nickname, description, category, subCategory) { }
+
+    #region Autodesk.Revit.DB.Transacion support
+    protected enum TransactionStrategy
+    {
+      PerSolution,
+      PerComponent
+    }
+    protected virtual TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
+
+    protected Transaction CurrentTransaction;
+    protected TransactionStatus TransactionStatus => CurrentTransaction?.GetStatus() ?? TransactionStatus.Uninitialized;
+
+    protected void BeginTransaction(Document document)
+    {
+      CurrentTransaction = new Transaction(document, Name);
+      if (CurrentTransaction.Start() != TransactionStatus.Started)
+      {
+        CurrentTransaction.Dispose();
+        CurrentTransaction = null;
+        throw new InvalidOperationException($"Unable to start Transaction '{Name}'");
+      }
+    }
+
+    protected void CommitTransaction() => base.CommitTransaction(Revit.ActiveDBDocument, CurrentTransaction);
+    #endregion
+
+    // Step 1.
+    protected override void BeforeSolveInstance()
+    {
+      if (TransactionalStrategy != TransactionStrategy.PerComponent)
+        return;
+
+      BeginTransaction(Revit.ActiveDBDocument);
+
+      OnAfterStart(Revit.ActiveDBDocument, CurrentTransaction.GetName());
+    }
+
+    // Step 2.
+    //protected override void OnAfterStart(Document document, string strTransactionName) { }
+
+    // Step 3.
+    //protected override void SolveInstance(IGH_DataAccess DA) { }
+
+    // Step 4.
+    //protected override void OnBeforeCommit(Document document, string strTransactionName) { }
+
+    // Step 5.
     protected override void AfterSolveInstance()
     {
       if (TransactionalStrategy != TransactionStrategy.PerComponent)
@@ -682,21 +727,92 @@ namespace RhinoInside.Revit.GH.Components
         CurrentTransaction = null;
       }
     }
-
-    // Step 6.A
-    public virtual void OnCommitted(Document document, string strTransactionName)
-    {
-    }
-
-    // Step 6.B
-    public virtual void OnRolledBack(Document document, string strTransactionName)
-    {
-      Params.Output[0].Phase = GH_SolutionPhase.Failed;
-    }
-    #endregion
   }
 
-  public abstract class ReconstructElementComponent : TransactionalComponent
+  public abstract class TransactionsComponent : TransactionalComponent
+  {
+    protected TransactionsComponent(string name, string nickname, string description, string category, string subCategory)
+    : base(name, nickname, description, category, subCategory) { }
+
+    #region Autodesk.Revit.DB.Transacion support
+    protected enum TransactionStrategy
+    {
+      PerSolution,
+      PerComponent
+    }
+    protected virtual TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
+
+    Dictionary<Document, Transaction> CurrentTransactions;
+
+    protected void BeginTransaction(Document document)
+    {
+      if (CurrentTransactions?.ContainsKey(document) != true)
+      {
+        var transaction = new Transaction(document, Name);
+        if (transaction.Start() != TransactionStatus.Started)
+        {
+          transaction.Dispose();
+          throw new InvalidOperationException($"Unable to start Transaction '{Name}'");
+        }
+
+        if (CurrentTransactions is null)
+          CurrentTransactions = new Dictionary<Document, Transaction>();
+
+        CurrentTransactions.Add(document, transaction);
+      }
+    }
+
+    // Step 5.
+    protected override void AfterSolveInstance()
+    {
+      if (TransactionalStrategy != TransactionStrategy.PerComponent)
+        return;
+
+      if (CurrentTransactions is null)
+        return;
+
+      try
+      {
+        if (RunCount <= 0)
+          return;
+
+        foreach (var transaction in CurrentTransactions)
+        {
+          try
+          {
+            if (Phase != GH_SolutionPhase.Failed && transaction.Value.GetStatus() != TransactionStatus.Uninitialized)
+            {
+              CommitTransaction(transaction.Key, transaction.Value);
+            }
+          }
+          finally
+          {
+            var transactionStatus = transaction.Value.GetStatus();
+            switch (transactionStatus)
+            {
+              case TransactionStatus.Uninitialized:
+              case TransactionStatus.Started:
+              case TransactionStatus.Committed:
+                break;
+              default:
+                AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Transaction {transactionStatus} and aborted.");
+                break;
+            }
+          }
+        }
+      }
+      finally
+      {
+        foreach (var transaction in CurrentTransactions)
+          transaction.Value.Dispose();
+
+        CurrentTransactions = null;
+      }
+    }
+#endregion
+  }
+
+  public abstract class ReconstructElementComponent : TransactionComponent
   {
     protected IGH_Goo[] PreviousStructure;
     System.Collections.IEnumerator PreviousStructureEnumerator;
@@ -726,7 +842,7 @@ namespace RhinoInside.Revit.GH.Components
       {
         SolveInstance(DA, doc, ref element);
 
-        if (element != null) element.Pinned = true;
+        if (element is object) element.Pinned = true;
         DA.SetData(0, element);
       });
     }
@@ -734,10 +850,14 @@ namespace RhinoInside.Revit.GH.Components
     void Iterate(IGH_DataAccess DA, Document doc, Action<Document, Element> action)
     {
       var element = PreviousStructureEnumerator?.MoveNext() ?? false ?
-                    doc.GetElement(PreviousStructureEnumerator.Current as Types.Element ?? ElementId.InvalidElementId) :
+                    (
+                      PreviousStructureEnumerator.Current is Types.Element x && doc.Equals(x.Document) ?
+                      doc.GetElement(x.Id) :
+                      null
+                    ) :
                     null;
 
-      if (element?.Pinned ?? true)
+      if (element?.Pinned != false)
       {
         try
         {
@@ -829,9 +949,9 @@ namespace RhinoInside.Revit.GH.Components
       // Remove extra unused elements
       while (PreviousStructureEnumerator?.MoveNext() ?? false)
       {
-        if (PreviousStructureEnumerator.Current is Types.Element elementId)
+        if (PreviousStructureEnumerator.Current is Types.Element elementId && document.Equals(elementId.Document))
         {
-          if (document.GetElement(elementId) is Element element)
+          if (document.GetElement(elementId.Id) is Element element)
           {
             try { document.Delete(element.Id); }
             catch (Autodesk.Revit.Exceptions.ApplicationException) { }
@@ -840,14 +960,14 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
-    // Step 6.
+    // Step 5.
     protected override void AfterSolveInstance()
     {
       try { base.AfterSolveInstance(); }
       finally { PreviousStructureEnumerator = null; }
     }
 
-    // Step 6.A
+    // Step 5.2.A
     public override void OnCommitted(Document document, string strTransactionName)
     {
       // Update previous elements
