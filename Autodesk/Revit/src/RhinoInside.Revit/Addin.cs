@@ -129,7 +129,11 @@ namespace RhinoInside.Revit
           $"Version: {RhinoVersion}\n" +
           $"Path: '{SystemDir}'" + (!File.Exists(RhinoExePath) ? " (not found)" : string.Empty) + "\n" +
           "\nRevit\n" +
+#if REVIT_2018
           $"Version: {app.SubVersionNumber} ({app.VersionBuild})\n" +
+#else
+          $"Version: {app.VersionNumber} ({app.VersionBuild})\n" +
+#endif
           $"Language: {app.Language.ToString()}",
           FooterText = $"Current Rhino WIP version: {RhinoVersion}"
         }
