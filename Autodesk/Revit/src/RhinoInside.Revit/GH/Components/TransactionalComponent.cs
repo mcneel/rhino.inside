@@ -639,7 +639,6 @@ namespace RhinoInside.Revit.GH.Components
         }
       }
     }
-
   }
 
   public abstract class TransactionComponent : TransactionalComponent
@@ -653,7 +652,7 @@ namespace RhinoInside.Revit.GH.Components
       PerSolution,
       PerComponent
     }
-    protected virtual TransactionStrategy TransactionalStrategy => TransactionStrategy.PerSolution;
+    protected virtual TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     protected Transaction CurrentTransaction;
     protected TransactionStatus TransactionStatus => CurrentTransaction?.GetStatus() ?? TransactionStatus.Uninitialized;
@@ -741,16 +740,15 @@ namespace RhinoInside.Revit.GH.Components
       PerSolution,
       PerComponent
     }
-    protected virtual TransactionStrategy TransactionalStrategy => TransactionStrategy.PerSolution;
+    protected virtual TransactionStrategy TransactionalStrategy => TransactionStrategy.PerComponent;
 
     Dictionary<Document, Transaction> CurrentTransactions;
 
     protected void BeginTransaction(Document document)
     {
-      var transaction = default(Transaction);
-      if (CurrentTransactions?.TryGetValue(document, out transaction) != true)
+      if (CurrentTransactions?.ContainsKey(document) != true)
       {
-        transaction = new Transaction(document, Name);
+        var transaction = new Transaction(document, Name);
         if (transaction.Start() != TransactionStatus.Started)
         {
           transaction.Dispose();
@@ -811,7 +809,7 @@ namespace RhinoInside.Revit.GH.Components
         CurrentTransactions = null;
       }
     }
-    #endregion
+#endregion
   }
 
   public abstract class ReconstructElementComponent : TransactionComponent
