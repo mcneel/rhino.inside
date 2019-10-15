@@ -40,28 +40,28 @@ namespace RhinoInside.Revit.GH.Components
       var doc = host.Document;
       try
       {
-        var bottom = HostObjectUtils.GetBottomFaces(host).Select(reference => new Types.Face(reference, doc));
+        var bottom = HostObjectUtils.GetBottomFaces(host).Select(reference => new Types.Face(doc, reference));
         DA.SetDataList("Bottom", bottom);
       }
       catch (Autodesk.Revit.Exceptions.ArgumentException) { }
 
       try
       {
-        var top = HostObjectUtils.GetTopFaces(host).Select(reference => new Types.Face(reference, doc));
+        var top = HostObjectUtils.GetTopFaces(host).Select(reference => new Types.Face(doc, reference));
         DA.SetDataList("Top", top);
       }
       catch (Autodesk.Revit.Exceptions.ArgumentException) { }
 
       try
       {
-        var interior = HostObjectUtils.GetSideFaces(host, ShellLayerType.Interior).Select(reference => new Types.Face(reference, doc));
+        var interior = HostObjectUtils.GetSideFaces(host, ShellLayerType.Interior).Select(reference => new Types.Face(doc, reference));
         DA.SetDataList("Interior", interior);
       }
       catch (Autodesk.Revit.Exceptions.ArgumentException) { }
 
       try
       {
-        var exterior = HostObjectUtils.GetSideFaces(host, ShellLayerType.Exterior).Select(reference => new Types.Face(reference, doc));
+        var exterior = HostObjectUtils.GetSideFaces(host, ShellLayerType.Exterior).Select(reference => new Types.Face(doc, reference));
         DA.SetDataList("Exterior", exterior);
       }
       catch (Autodesk.Revit.Exceptions.ArgumentException) { }

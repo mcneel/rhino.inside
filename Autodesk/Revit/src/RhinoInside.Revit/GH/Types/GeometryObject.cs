@@ -397,16 +397,22 @@ namespace RhinoInside.Revit.GH.Types
     public bool IsElementLoaded => !(Value is default(X));
     public virtual bool LoadElement()
     {
-      if (Document is null && Revit.ActiveUIApplication.TryGetDocument(DocumentGUID, out var doc))
+      if (Document is null)
+      {
+        Value = null;
+        if (!Revit.ActiveUIApplication.TryGetDocument(DocumentGUID, out var doc))
+        {
+          Document = null;
+          return false;
+        }
+
         Document = doc;
+      }
+      else if (IsElementLoaded)
+        return true;
 
       if (Document is object)
       {
-        DocumentGUID = Document.GetFingerprintGUID();
-
-        if (IsElementLoaded)
-          return true;
-
         try
         {
           Reference = Reference ?? DB.Reference.ParseFromStableRepresentation(Document, UniqueID);
@@ -451,8 +457,7 @@ namespace RhinoInside.Revit.GH.Types
       try
       {
         string typeName = TypeName;
-        var element = Document?.GetElement(Reference);
-        if (element != null)
+        if (Document?.GetElement(Reference) is DB.DisplacementElement element)
         {
           typeName = "Referenced ";
           switch (Reference.ElementReferenceType)
@@ -504,7 +509,9 @@ namespace RhinoInside.Revit.GH.Types
       if (DocumentGUID != Guid.Empty)
         writer.SetGuid("DocumentGUID", DocumentGUID);
 
-      writer.SetString("UniqueID", UniqueID);
+      if(!string.IsNullOrEmpty(UniqueID))
+        writer.SetString("UniqueID", UniqueID);
+
       return true;
     }
     #endregion
@@ -526,7 +533,11 @@ namespace RhinoInside.Revit.GH.Types
 
     protected GeometryObject() { }
     protected GeometryObject(X data) : base(data) { }
-    protected GeometryObject(DB.Reference reference, DB.Document doc) { Reference = reference; UniqueID = reference.ConvertToStableRepresentation(doc); }
+    protected GeometryObject(DB.Document doc, DB.Reference reference)
+    {
+      DocumentGUID = doc.GetFingerprintGUID();
+      UniqueID = reference.ConvertToStableRepresentation(doc);
+    }
   }
 
   public class Vertex : GeometryObject<DB.Point>, IGH_PreviewData
@@ -564,20 +575,19 @@ namespace RhinoInside.Revit.GH.Types
 
     public Vertex() { }
     public Vertex(DB.Point data) : base(data) { }
-    public Vertex(DB.Reference reference, DB.Document doc) : base(reference, doc) { }
-    public Vertex(int index, DB.Reference reference, DB.Document doc) : base(reference, doc) { VertexIndex = index; }
+    public Vertex(DB.Document doc, DB.Reference reference, int index) : base(doc, reference) { VertexIndex = index; }
 
     Point Point
     {
       get
       {
-        if (point == null)
+        if (point is null)
         {
           point = new Point(Value.Coord.ToRhino().ChangeUnits(Revit.ModelUnits));
 
           using
           (
-            var element = Reference != null ?
+            var element = Reference is object ?
             Document?.GetElement(Reference) :
             null
           )
@@ -627,7 +637,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public override BoundingBox GetBoundingBox(Transform xform)
     {
-      if (Value == null)
+      if (Value is null)
         return BoundingBox.Empty;
 
       return xform == Transform.Identity ?
@@ -658,13 +668,13 @@ namespace RhinoInside.Revit.GH.Types
 
     public Edge() { }
     public Edge(DB.Edge edge) : base(edge) { }
-    public Edge(DB.Reference reference, DB.Document doc) : base(reference, doc) { }
+    public Edge(DB.Document doc, DB.Reference reference) : base(doc, reference) { }
 
     Curve Curve
     {
       get
       {
-        if (wires == null)
+        if (wires is null)
         {
           wires = Enumerable.Repeat(Value, 1).GetPreviewWires().ToArray();
 
@@ -708,7 +718,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public override BoundingBox GetBoundingBox(Transform xform)
     {
-      if (Value == null)
+      if (Value is null)
         return BoundingBox.Empty;
 
       return xform == Transform.Identity ?
@@ -739,19 +749,19 @@ namespace RhinoInside.Revit.GH.Types
 
     public Face() { }
     public Face(DB.Face face) : base(face) { }
-    public Face(DB.Reference reference, DB.Document doc) : base(reference, doc) { }
+    public Face(DB.Document doc, DB.Reference reference) : base(doc, reference) { }
 
     Curve[] Curves
     {
       get
       {
-        if (wires == null)
+        if (wires is null)
         {
           wires = Value.GetEdgesAsCurveLoops().SelectMany(x => x.GetPreviewWires()).ToArray();
 
           using
           (
-            var element = Reference != null ?
+            var element = Reference is object ?
             Document?.GetElement(Reference) :
             null
           )
@@ -774,7 +784,7 @@ namespace RhinoInside.Revit.GH.Types
     {
       if (Value is object)
       {
-        var element = Reference != null ? Document?.GetElement(Reference) : null;
+        var element = Reference is object ? Document?.GetElement(Reference) : null;
 
         if (typeof(Q).IsAssignableFrom(typeof(GH_Surface)))
         {
@@ -810,7 +820,7 @@ namespace RhinoInside.Revit.GH.Types
 
     public override BoundingBox GetBoundingBox(Transform xform)
     {
-      if (Value == null)
+      if (Value is null)
         return BoundingBox.Empty;
 
       var bbox = BoundingBox.Empty;
@@ -845,7 +855,7 @@ namespace RhinoInside.Revit.GH.Types
       if (!IsValid)
         return;
 
-      if (meshes == null)
+      if (meshes is null)
       {
         using (var ga = Convert.GraphicAttributes.Push())
         {
@@ -1098,19 +1108,17 @@ namespace RhinoInside.Revit.GH.Parameters
       {
         using (new ModalForm.EditScope())
         {
-          var reference = Revit.ActiveUIDocument.Selection.PickObject(ObjectType.Edge, "Click on an edge near an end to select a vertex, TAB for alternates, ESC quit.");
-          if (reference != null)
+          if(Revit.ActiveUIDocument.Selection.PickObject(ObjectType.Edge, "Click on an edge near an end to select a vertex, TAB for alternates, ESC quit.") is DB.Reference reference)
           {
             var element = Revit.ActiveUIDocument.Document.GetElement(reference);
-            var geometry = element?.GetGeometryObjectFromReference(reference);
-            if (geometry is DB.Edge edge)
+            if (element?.GetGeometryObjectFromReference(reference) is DB.Edge edge)
             {
               var curve = edge.AsCurve();
               var result = curve.Project(reference.GlobalPoint);
               var points = new DB.XYZ[] { curve.GetEndPoint(0), curve.GetEndPoint(1) };
               int index = result.XYZPoint.DistanceTo(points[0]) < result.XYZPoint.DistanceTo(points[1]) ? 0 : 1;
 
-              value = new Types.Vertex(index, reference, Revit.ActiveUIDocument.Document);
+              value = new Types.Vertex(Revit.ActiveUIDocument.Document, reference, index);
               return GH_GetterResult.success;
             }
           }
@@ -1140,7 +1148,7 @@ namespace RhinoInside.Revit.GH.Parameters
           var references = Revit.ActiveUIDocument.Selection.PickObjects(ObjectType.Edge);
           if (references?.Count > 0)
           {
-            value = references.Select((x) => new Types.Edge(x, Revit.ActiveUIDocument.Document)).ToList();
+            value = references.Select((x) => new Types.Edge(Revit.ActiveUIDocument.Document, x)).ToList();
             return GH_GetterResult.success;
           }
         }
@@ -1156,10 +1164,10 @@ namespace RhinoInside.Revit.GH.Parameters
         using (new ModalForm.EditScope())
         {
           var reference = Revit.ActiveUIDocument.Selection.PickObject(ObjectType.Edge);
-          if (reference == null)
+          if (reference is null)
             return GH_GetterResult.accept;
 
-          value = new Types.Edge(reference, Revit.ActiveUIDocument.Document);
+          value = new Types.Edge(Revit.ActiveUIDocument.Document, reference);
         }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
@@ -1186,7 +1194,7 @@ namespace RhinoInside.Revit.GH.Parameters
           var references = Revit.ActiveUIDocument.Selection.PickObjects(ObjectType.Face);
           if (references?.Count > 0)
           {
-            value = references.Select((x) => new Types.Face(x, Revit.ActiveUIDocument.Document)).ToList();
+            value = references.Select((x) => new Types.Face(Revit.ActiveUIDocument.Document, x)).ToList();
             return GH_GetterResult.success;
           }
         }
@@ -1202,10 +1210,10 @@ namespace RhinoInside.Revit.GH.Parameters
         using (new ModalForm.EditScope())
         {
           var reference = Revit.ActiveUIDocument.Selection.PickObject(ObjectType.Face);
-          if (reference == null)
+          if (reference is null)
             return GH_GetterResult.accept;
 
-          value = new Types.Face(reference, Revit.ActiveUIDocument.Document);
+          value = new Types.Face(Revit.ActiveUIDocument.Document, reference);
         }
       }
       catch (Autodesk.Revit.Exceptions.OperationCanceledException) { return GH_GetterResult.cancel; }
