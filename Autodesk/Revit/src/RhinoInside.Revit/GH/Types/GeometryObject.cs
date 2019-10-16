@@ -27,13 +27,14 @@ namespace RhinoInside.Revit.GH.Types
     protected override bool SetValue(DB.Element element) => IsValidElement(element) ? base.SetValue(element) : false;
     public static bool IsValidElement(DB.Element element)
     {
-      return element.Category is object &&
-            (
-              element is DB.DirectShape ||
-              element is DB.CurveElement ||
-              element is DB.Architecture.TopographySurface ||
-              element.CanHaveTypeAssigned()
-            );
+      return
+      (
+        element is DB.DirectShape ||
+        element is DB.CurveElement ||
+        element is DB.CombinableElement ||
+        element is DB.Architecture.TopographySurface ||
+        (element.Category is object && element.CanHaveTypeAssigned())
+      );
     }
     #region Preview
     public static void BuildPreview
