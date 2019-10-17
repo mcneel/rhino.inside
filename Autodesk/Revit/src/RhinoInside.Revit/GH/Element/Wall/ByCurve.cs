@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using RhinoInside.Runtime.InteropServices;
+using DB = Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
@@ -27,7 +26,7 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.GeometricElement(), "Wall", "W", "New Wall", GH_ParamAccess.item);
     }
 
-    protected override void OnAfterStart(Document document, string strTransactionName)
+    protected override void OnAfterStart(DB.Document document, string strTransactionName)
     {
       base.OnAfterStart(document, strTransactionName);
 
@@ -36,74 +35,72 @@ namespace RhinoInside.Revit.GH.Components
       {
         var unjoinedWalls = PreviousStructure.OfType<Types.Element>().
                             Select(x => document.GetElement(x)).
-                            OfType<Wall>().
+                            OfType<DB.Wall>().
                             Where(x => x.Pinned).
                             Select
                             (
                               x => Tuple.Create
                               (
                                 x,
-                                (x.Location as LocationCurve).get_JoinType(0),
-                                (x.Location as LocationCurve).get_JoinType(1)
+                                (x.Location as DB.LocationCurve).get_JoinType(0),
+                                (x.Location as DB.LocationCurve).get_JoinType(1)
                               )
                             ).
                             ToArray();
 
         foreach(var unjoinedWall in unjoinedWalls)
         {
-          var location = unjoinedWall.Item1.Location as LocationCurve;
-          if (!WallUtils.IsWallJoinAllowedAtEnd(unjoinedWall.Item1, 0))
-          {          
-            WallUtils.DisallowWallJoinAtEnd(unjoinedWall.Item1, 0);
-            WallUtils.AllowWallJoinAtEnd(unjoinedWall.Item1, 0);
+          var location = unjoinedWall.Item1.Location as DB.LocationCurve;
+          if (DB.WallUtils.IsWallJoinAllowedAtEnd(unjoinedWall.Item1, 0))
+          {
+            DB.WallUtils.DisallowWallJoinAtEnd(unjoinedWall.Item1, 0);
+            DB.WallUtils.AllowWallJoinAtEnd(unjoinedWall.Item1, 0);
             location.set_JoinType(0, unjoinedWall.Item2);
           }
 
-          if (!WallUtils.IsWallJoinAllowedAtEnd(unjoinedWall.Item1, 0))
+          if (DB.WallUtils.IsWallJoinAllowedAtEnd(unjoinedWall.Item1, 1))
           {
-            WallUtils.DisallowWallJoinAtEnd(unjoinedWall.Item1, 1);
-            WallUtils.AllowWallJoinAtEnd(unjoinedWall.Item1, 1);
+            DB.WallUtils.DisallowWallJoinAtEnd(unjoinedWall.Item1, 1);
+            DB.WallUtils.AllowWallJoinAtEnd(unjoinedWall.Item1, 1);
             location.set_JoinType(1, unjoinedWall.Item3);
           }
         }
-
-        document.Regenerate();
       }
     }
 
-    List<Wall> joinedWalls = new List<Wall>();
-    protected override void OnBeforeCommit(Document document, string strTransactionName)
+    List<DB.Wall> joinedWalls = new List<DB.Wall>();
+    protected override void OnBeforeCommit(DB.Document document, string strTransactionName)
     {
       base.OnBeforeCommit(document, strTransactionName);
 
       // Reenable new joined walls
       foreach (var wallToJoin in joinedWalls)
       {
-        WallUtils.AllowWallJoinAtEnd(wallToJoin, 0);
-        WallUtils.AllowWallJoinAtEnd(wallToJoin, 1);
+        DB.WallUtils.AllowWallJoinAtEnd(wallToJoin, 0);
+        DB.WallUtils.AllowWallJoinAtEnd(wallToJoin, 1);
       }
 
-      joinedWalls = new List<Wall>();
+      joinedWalls = new List<DB.Wall>();
     }
 
-    static readonly FailureDefinitionId[] failureDefinitionIdsToFix = new FailureDefinitionId[]
+    static readonly DB.FailureDefinitionId[] failureDefinitionIdsToFix = new DB.FailureDefinitionId[]
     {
-      BuiltInFailures.CreationFailures.CannotDrawWallsError,
-      BuiltInFailures.JoinElementsFailures.CannotJoinElementsError,
+      DB.BuiltInFailures.CreationFailures.CannotDrawWallsError,
+      DB.BuiltInFailures.JoinElementsFailures.CannotJoinElementsError,
     };
-    protected override IEnumerable<FailureDefinitionId> FailureDefinitionIdsToFix => failureDefinitionIdsToFix;
+    protected override IEnumerable<DB.FailureDefinitionId> FailureDefinitionIdsToFix => failureDefinitionIdsToFix;
 
     void ReconstructWallByCurve
     (
-      Document doc,
-      ref Autodesk.Revit.DB.Element element,
+      DB.Document doc,
+      ref DB.Element element,
 
       Rhino.Geometry.Curve curve,
-      Optional<Autodesk.Revit.DB.WallType> type,
-      Optional<Autodesk.Revit.DB.Level> level,
+      Optional<DB.WallType> type,
+      Optional<DB.Level> level,
       [Optional] bool structural,
       [Optional] double height,
-      [Optional] WallLocationLine locationLine,
+      [Optional] DB.WallLocationLine locationLine,
       [Optional] bool flipped,
       [Optional, NickName("J")] bool allowJoins
     )
@@ -130,7 +127,7 @@ namespace RhinoInside.Revit.GH.Components
         ThrowArgumentException(nameof(curve), "Curve must be a horizontal line or arc curve.");
 #endif
 
-      SolveOptionalType(ref type, doc, ElementTypeGroup.WallType, nameof(type));
+      SolveOptionalType(ref type, doc, DB.ElementTypeGroup.WallType, nameof(type));
 
       double axisMinZ = Math.Min(curve.PointAtStart.Z, curve.PointAtEnd.Z);
       bool levelIsEmpty = SolveOptionalLevel(ref level, doc, curve, nameof(level));
@@ -146,7 +143,7 @@ namespace RhinoInside.Revit.GH.Components
       var centerLine = curve.ToHost();
 
       // LocationLine
-      if (locationLine != WallLocationLine.WallCenterline)
+      if (locationLine != DB.WallLocationLine.WallCenterline)
       {
         double offsetDist = 0.0;
         var compoundStructure = type.Value.GetCompoundStructure();
@@ -154,15 +151,15 @@ namespace RhinoInside.Revit.GH.Components
         {
           switch (locationLine)
           {
-            case WallLocationLine.WallCenterline:
-            case WallLocationLine.CoreCenterline:
+            case DB.WallLocationLine.WallCenterline:
+            case DB.WallLocationLine.CoreCenterline:
               break;
-            case WallLocationLine.FinishFaceExterior:
-            case WallLocationLine.CoreExterior:
+            case DB.WallLocationLine.FinishFaceExterior:
+            case DB.WallLocationLine.CoreExterior:
               offsetDist = type.Value.Width / +2.0;
               break;
-            case WallLocationLine.FinishFaceInterior:
-            case WallLocationLine.CoreInterior:
+            case DB.WallLocationLine.FinishFaceInterior:
+            case DB.WallLocationLine.CoreInterior:
               offsetDist = type.Value.Width / -2.0;
               break;
           }
@@ -170,20 +167,20 @@ namespace RhinoInside.Revit.GH.Components
         else
         {
           if (!compoundStructure.IsVerticallyHomogeneous())
-            compoundStructure = CompoundStructure.CreateSimpleCompoundStructure(compoundStructure.GetLayers());
+            compoundStructure = DB.CompoundStructure.CreateSimpleCompoundStructure(compoundStructure.GetLayers());
 
           offsetDist = compoundStructure.GetOffsetForLocationLine(locationLine);
         }
 
         if (offsetDist != 0.0)
-          centerLine = centerLine.CreateOffset(flipped ? -offsetDist : offsetDist, XYZ.BasisZ);
+          centerLine = centerLine.CreateOffset(flipped ? -offsetDist : offsetDist, DB.XYZ.BasisZ);
       }
 
       // Type
       ChangeElementTypeId(ref element, type.Value.Id);
 
-      Wall newWall = null;
-      if (element is Wall previousWall && previousWall.Location is LocationCurve locationCurve && centerLine.IsSameKindAs(locationCurve.Curve))
+      DB.Wall newWall = null;
+      if (element is DB.Wall previousWall && previousWall.Location is DB.LocationCurve locationCurve && centerLine.IsSameKindAs(locationCurve.Curve))
       {
         newWall = previousWall;
 
@@ -191,7 +188,7 @@ namespace RhinoInside.Revit.GH.Components
       }
       else
       {
-        newWall = Wall.Create
+        newWall = DB.Wall.Create
         (
           doc,
           centerLine,
@@ -206,16 +203,16 @@ namespace RhinoInside.Revit.GH.Components
         // Walls are created with the last LocationLine used in the Revit editor!!
         //newWall.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) WallLocationLine.WallCenterline);
 
-        var parametersMask = new BuiltInParameter[]
+        var parametersMask = new DB.BuiltInParameter[]
         {
-          BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
-          BuiltInParameter.ELEM_FAMILY_PARAM,
-          BuiltInParameter.ELEM_TYPE_PARAM,
-          BuiltInParameter.WALL_BASE_CONSTRAINT,
-          BuiltInParameter.WALL_USER_HEIGHT_PARAM,
-          BuiltInParameter.WALL_BASE_OFFSET,
-          BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT,
-          BuiltInParameter.WALL_KEY_REF_PARAM
+          DB.BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+          DB.BuiltInParameter.ELEM_FAMILY_PARAM,
+          DB.BuiltInParameter.ELEM_TYPE_PARAM,
+          DB.BuiltInParameter.WALL_BASE_CONSTRAINT,
+          DB.BuiltInParameter.WALL_USER_HEIGHT_PARAM,
+          DB.BuiltInParameter.WALL_BASE_OFFSET,
+          DB.BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT,
+          DB.BuiltInParameter.WALL_KEY_REF_PARAM
         };
 
         ReplaceElement(ref element, newWall, parametersMask);
@@ -223,11 +220,11 @@ namespace RhinoInside.Revit.GH.Components
 
       if (newWall != null)
       {
-        newWall.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT).Set(level.Value.Id);
-        newWall.get_Parameter(BuiltInParameter.WALL_BASE_OFFSET).Set(levelIsEmpty ? axisMinZ - level.Value.Elevation : 0.0);
-        newWall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
-        newWall.get_Parameter(BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT).Set(structural ? 1 : 0);
-        newWall.get_Parameter(BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) locationLine);
+        newWall.get_Parameter(DB.BuiltInParameter.WALL_BASE_CONSTRAINT).Set(level.Value.Id);
+        newWall.get_Parameter(DB.BuiltInParameter.WALL_BASE_OFFSET).Set(levelIsEmpty ? axisMinZ - level.Value.Elevation : 0.0);
+        newWall.get_Parameter(DB.BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(height);
+        newWall.get_Parameter(DB.BuiltInParameter.WALL_STRUCTURAL_SIGNIFICANT).Set(structural ? 1 : 0);
+        newWall.get_Parameter(DB.BuiltInParameter.WALL_KEY_REF_PARAM).Set((int) locationLine);
 
         if (newWall.Flipped != flipped)
           newWall.Flip();
@@ -236,8 +233,8 @@ namespace RhinoInside.Revit.GH.Components
         if (allowJoins) joinedWalls.Add(newWall);
         else
         {
-          WallUtils.DisallowWallJoinAtEnd(newWall, 0);
-          WallUtils.DisallowWallJoinAtEnd(newWall, 1);
+          DB.WallUtils.DisallowWallJoinAtEnd(newWall, 0);
+          DB.WallUtils.DisallowWallJoinAtEnd(newWall, 1);
         }
       }
     }
