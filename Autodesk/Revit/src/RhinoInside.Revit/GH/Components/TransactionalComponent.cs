@@ -122,16 +122,16 @@ namespace RhinoInside.Revit.GH.Components
       previous = next;
     }
 
-    protected static void ChangeElementTypeId(ref Element element, ElementId elementTypeId)
+    protected static void ChangeElementTypeId<T>(ref T element, ElementId elementTypeId) where T: Element
     {
-      if (element != null && elementTypeId != element.GetTypeId())
+      if (element is object && elementTypeId != element.GetTypeId())
       {
         var doc = element.Document;
         if (element.IsValidType(elementTypeId))
         {
           var newElmentId = element.ChangeTypeId(elementTypeId);
           if (newElmentId != ElementId.InvalidElementId)
-            element = doc.GetElement(newElmentId);
+            element = (T) doc.GetElement(newElmentId);
         }
         else element = null;
       }

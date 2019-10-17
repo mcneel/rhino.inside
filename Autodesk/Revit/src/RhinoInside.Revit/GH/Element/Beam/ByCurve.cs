@@ -1,9 +1,8 @@
 using System;
-using System.Diagnostics;
 using System.Linq;
-using Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using RhinoInside.Runtime.InteropServices;
+using DB = Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
@@ -25,14 +24,43 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.GeometricElement(), "Beam", "B", "New Beam", GH_ParamAccess.item);
     }
 
+    protected override void OnAfterStart(DB.Document document, string strTransactionName)
+    {
+      base.OnAfterStart(document, strTransactionName);
+
+      // Reset all previous beams joins
+      if (PreviousStructure is object)
+      {
+        var beamsToUnjoin = PreviousStructure.OfType<Types.Element>().
+                            Select(x => document.GetElement(x)).
+                            OfType<DB.FamilyInstance>().
+                            Where(x => x.Pinned);
+
+        foreach (var unjoinedBeam in beamsToUnjoin)
+        {
+          if (DB.Structure.StructuralFramingUtils.IsJoinAllowedAtEnd(unjoinedBeam, 0))
+          {
+            DB.Structure.StructuralFramingUtils.DisallowJoinAtEnd(unjoinedBeam, 0);
+            DB.Structure.StructuralFramingUtils.AllowJoinAtEnd(unjoinedBeam, 0);
+          }
+
+          if (DB.Structure.StructuralFramingUtils.IsJoinAllowedAtEnd(unjoinedBeam, 1))
+          {
+            DB.Structure.StructuralFramingUtils.DisallowJoinAtEnd(unjoinedBeam, 1);
+            DB.Structure.StructuralFramingUtils.AllowJoinAtEnd(unjoinedBeam, 1);
+          }
+        }
+      }
+    }
+
     void ReconstructBeamByCurve
     (
-      Document doc,
-      ref Autodesk.Revit.DB.Element element,
+      DB.Document doc,
+      ref DB.FamilyInstance element,
 
-                 Rhino.Geometry.Curve curve,
-      Optional<Autodesk.Revit.DB.FamilySymbol> type,
-      Optional<Autodesk.Revit.DB.Level> level
+               Rhino.Geometry.Curve curve,
+      Optional<DB.FamilySymbol> type,
+      Optional<DB.Level> level
     )
     {
       var scaleFactor = 1.0 / Revit.ModelUnits;
@@ -42,11 +70,11 @@ namespace RhinoInside.Revit.GH.Components
         ((curve = curve.ChangeUnits(scaleFactor)) is null) ||
         curve.IsClosed ||
         !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-        curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C2_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
+        curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C2_continuous, curve.Domain.Min, curve.Domain.Max, out var _)
       )
         ThrowArgumentException(nameof(curve), "Curve must be a C2 continuous planar non closed curve.");
 
-      SolveOptionalType(ref type, doc, BuiltInCategory.OST_StructuralFraming, nameof(type));
+      SolveOptionalType(ref type, doc, DB.BuiltInCategory.OST_StructuralFraming, nameof(type));
 
       if (!type.Value.IsActive)
         type.Value.Activate();
@@ -58,29 +86,47 @@ namespace RhinoInside.Revit.GH.Components
       // Type
       ChangeElementTypeId(ref element, type.Value.Id);
 
-      if (element is FamilyInstance && element.Location is LocationCurve locationCurve && centerLine.IsSameKindAs(locationCurve.Curve))
+      DB.FamilyInstance newBeam = null;
+      if (element is DB.FamilyInstance previousBeam && element.Location is DB.LocationCurve locationCurve && centerLine.IsSameKindAs(locationCurve.Curve))
       {
+        newBeam = previousBeam;
+
         locationCurve.Curve = centerLine;
       }
       else
       {
-        var newBeam = doc.Create.NewFamilyInstance
+        newBeam = doc.Create.NewFamilyInstance
         (
           centerLine,
           type.Value,
           level.Value,
-          Autodesk.Revit.DB.Structure.StructuralType.Beam
+          DB.Structure.StructuralType.Beam
         );
 
-        var parametersMask = new BuiltInParameter[]
+        newBeam.get_Parameter(DB.BuiltInParameter.Y_JUSTIFICATION).Set((int) DB.Structure.YJustification.Origin);
+        newBeam.get_Parameter(DB.BuiltInParameter.Z_JUSTIFICATION).Set((int) DB.Structure.ZJustification.Origin);
+
+        var beam = element as DB.FamilyInstance;
+
+        if(beam is object && DB.Structure.StructuralFramingUtils.IsJoinAllowedAtEnd(beam, 0))
+          DB.Structure.StructuralFramingUtils.AllowJoinAtEnd(newBeam, 0);
+        else
+          DB.Structure.StructuralFramingUtils.DisallowJoinAtEnd(newBeam, 0);
+
+        if (beam is object && DB.Structure.StructuralFramingUtils.IsJoinAllowedAtEnd(beam, 1))
+          DB.Structure.StructuralFramingUtils.AllowJoinAtEnd(newBeam, 1);
+        else
+          DB.Structure.StructuralFramingUtils.DisallowJoinAtEnd(newBeam, 1);
+
+        var parametersMask = new DB.BuiltInParameter[]
         {
-          BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
-          BuiltInParameter.ELEM_FAMILY_PARAM,
-          BuiltInParameter.ELEM_TYPE_PARAM,
-          BuiltInParameter.LEVEL_PARAM
+          DB.BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+          DB.BuiltInParameter.ELEM_FAMILY_PARAM,
+          DB.BuiltInParameter.ELEM_TYPE_PARAM,
+          DB.BuiltInParameter.LEVEL_PARAM
         };
 
-        ReplaceElement(ref element, newBeam);
+        ReplaceElement(ref element, newBeam, parametersMask);
       }
     }
   }
