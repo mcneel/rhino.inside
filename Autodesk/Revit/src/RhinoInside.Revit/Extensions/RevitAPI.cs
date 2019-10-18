@@ -254,42 +254,22 @@ namespace RhinoInside.Revit
     {
       if (doc?.IsValidObject != true)
         return Guid.Empty;
-
-      return doc.IsWorkshared ? doc.WorksharingCentralGUID : ExportUtils.GetGBXMLDocumentId(doc);
+      
+      return ExportUtils.GetGBXMLDocumentId(doc);
     }
 
     private static bool TryGetDocument(this IEnumerable<Document> set, Guid guid, out Document document, Document activeDBDocument = default(Document))
     {
       if (guid != Guid.Empty)
       {
-        if (activeDBDocument?.IsWorkshared == true)
-
+        // For performance reasons and also in case of conflict the ActiveDBDocument will have priority
+        if (ExportUtils.GetGBXMLDocumentId(activeDBDocument) == guid)
         {
-          // For performance reasons and also in case of conflict the ActiveDBDocument will have priority
-          if (activeDBDocument.WorksharingCentralGUID == guid)
-          {
-            document = activeDBDocument;
-            return true;
-          }
-        }
-
-        foreach (var doc in set.Where(x => x.IsWorkshared && x.WorksharingCentralGUID == guid))
-        {
-          document = doc;
+          document = activeDBDocument;
           return true;
         }
 
-        if (activeDBDocument?.IsWorkshared == false)
-        {
-          // For performance reasons and also in case of conflict the ActiveDBDocument will have priority
-          if (ExportUtils.GetGBXMLDocumentId(activeDBDocument) == guid)
-          {
-            document = activeDBDocument;
-            return true;
-          }
-        }
-
-        foreach (var doc in set.Where(x => !x.IsWorkshared && ExportUtils.GetGBXMLDocumentId(x) == guid))
+        foreach (var doc in set.Where(x => ExportUtils.GetGBXMLDocumentId(x) == guid))
         {
           document = doc;
           return true;
