@@ -30,15 +30,21 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <StartAction>Program</StartAction>
+    <StartProgram>C:\Program Files\Epic Games\UE_4.23\Engine\Binaries\Win64\UE4Editor.exe</StartProgram>
+    <StartArguments>"$(SolutionDir)..\Sample1.uproject"</StartArguments>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="RhinoCommon">
-      <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="RhinoInsideGameMode.cs" />
+    <Compile Include="Sample1GameMode.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Rhino.Inside">
+      <Version>0.1.1</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
