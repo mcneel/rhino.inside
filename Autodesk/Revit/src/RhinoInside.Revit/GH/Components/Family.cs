@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Autodesk.Revit.DB;
+using DB = Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 
@@ -30,7 +30,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Family family = null;
+      DB.Family family = null;
       if (!DA.GetData("Family", ref family))
         return;
 
@@ -39,7 +39,7 @@ namespace RhinoInside.Revit.GH.Components
   }
 
   #region FamilyLoadOptions
-  class FamilyLoadOptions : IFamilyLoadOptions
+  class FamilyLoadOptions : DB.IFamilyLoadOptions
   {
     public FamilyLoadOptions(bool overrideFamily, bool overrideParameters)
     {
@@ -50,15 +50,15 @@ namespace RhinoInside.Revit.GH.Components
     readonly bool OverrideFamily;
     readonly bool OverrideParameters;
 
-    bool IFamilyLoadOptions.OnFamilyFound(bool familyInUse, out bool overwriteParameterValues)
+    bool DB.IFamilyLoadOptions.OnFamilyFound(bool familyInUse, out bool overwriteParameterValues)
     {
       overwriteParameterValues = !familyInUse | OverrideParameters;
       return !familyInUse | OverrideFamily;
     }
 
-    bool IFamilyLoadOptions.OnSharedFamilyFound(Family sharedFamily, bool familyInUse, out FamilySource source, out bool overwriteParameterValues)
+    bool DB.IFamilyLoadOptions.OnSharedFamilyFound(DB.Family sharedFamily, bool familyInUse, out DB.FamilySource source, out bool overwriteParameterValues)
     {
-      source = FamilySource.Family;
+      source = DB.FamilySource.Family;
       overwriteParameterValues = !familyInUse | OverrideParameters;
       return !familyInUse | OverrideFamily;
     }
@@ -95,10 +95,10 @@ namespace RhinoInside.Revit.GH.Components
       manager.AddParameter(new Parameters.Family(), "Family", "F", string.Empty, GH_ParamAccess.item);
     }
 
-    public static Dictionary<string, ElementId> GetMaterialIdsByName(Document doc)
+    public static Dictionary<string, DB.ElementId> GetMaterialIdsByName(DB.Document doc)
     {
-      var collector = new FilteredElementCollector(doc);
-      return collector.OfClass(typeof(Autodesk.Revit.DB.Material)).OfType<Autodesk.Revit.DB.Material>().
+      var collector = new DB.FilteredElementCollector(doc);
+      return collector.OfClass(typeof(DB.Material)).OfType<DB.Material>().
         GroupBy(x => x.Name).
         ToDictionary(x => x.Key, x => x.First().Id);
     }
@@ -120,11 +120,11 @@ namespace RhinoInside.Revit.GH.Components
       return (scriptVariable as Rhino.Geometry.GeometryBase)?.DuplicateShallow();
     }
 
-    class PlaneComparer : IComparer<KeyValuePair<double[], SketchPlane>>
+    class PlaneComparer : IComparer<KeyValuePair<double[], DB.SketchPlane>>
     {
       public static PlaneComparer Instance = new PlaneComparer();
 
-      int IComparer<KeyValuePair<double[], SketchPlane>>.Compare(KeyValuePair<double[], SketchPlane> x, KeyValuePair<double[], SketchPlane> y)
+      int IComparer<KeyValuePair<double[], DB.SketchPlane>>.Compare(KeyValuePair<double[], DB.SketchPlane> x, KeyValuePair<double[], DB.SketchPlane> y)
       {
         var abcdX = x.Key;
         var abcdY = y.Key;
@@ -151,16 +151,16 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
-    Category MapCategory(Document project, Document family, ElementId categoryId, bool createIfNotExist = false)
+    DB.Category MapCategory(DB.Document project, DB.Document family, DB.ElementId categoryId, bool createIfNotExist = false)
     {
       if (-3000000 < categoryId.IntegerValue && categoryId.IntegerValue < -2000000)
-        return Autodesk.Revit.DB.Category.GetCategory(family, categoryId);
+        return DB.Category.GetCategory(family, categoryId);
 
       try
       {
-        if (Autodesk.Revit.DB.Category.GetCategory(project, categoryId) is Category category)
+        if (DB.Category.GetCategory(project, categoryId) is DB.Category category)
         {
-          if (family.OwnerFamily.FamilyCategory.SubCategories.Contains(category.Name) && family.OwnerFamily.FamilyCategory.SubCategories.get_Item(category.Name) is Category subCategory)
+          if (family.OwnerFamily.FamilyCategory.SubCategories.Contains(category.Name) && family.OwnerFamily.FamilyCategory.SubCategories.get_Item(category.Name) is DB.Category subCategory)
             return subCategory;
 
           if(createIfNotExist)
@@ -172,13 +172,13 @@ namespace RhinoInside.Revit.GH.Components
       return null;
     }
 
-    GraphicsStyle MapGraphicsStyle(Document project, Document family, ElementId graphicsStyleId, bool createIfNotExist = false)
+    DB.GraphicsStyle MapGraphicsStyle(DB.Document project, DB.Document family, DB.ElementId graphicsStyleId, bool createIfNotExist = false)
     {
       try
       {
-        if (project.GetElement(graphicsStyleId) is GraphicsStyle graphicsStyle)
+        if (project.GetElement(graphicsStyleId) is DB.GraphicsStyle graphicsStyle)
         {
-          if (family.OwnerFamily.FamilyCategory.SubCategories.Contains(graphicsStyle.GraphicsStyleCategory.Name) && family.OwnerFamily.FamilyCategory.SubCategories.get_Item(graphicsStyle.GraphicsStyleCategory.Name) is Category subCategory)
+          if (family.OwnerFamily.FamilyCategory.SubCategories.Contains(graphicsStyle.GraphicsStyleCategory.Name) && family.OwnerFamily.FamilyCategory.SubCategories.get_Item(graphicsStyle.GraphicsStyleCategory.Name) is DB.Category subCategory)
             return subCategory.GetGraphicsStyle(graphicsStyle.GraphicsStyleType);
 
           if (createIfNotExist)
@@ -191,28 +191,28 @@ namespace RhinoInside.Revit.GH.Components
       return null;
     }
 
-    static ElementId MapMaterial(Document project, Document family, ElementId materialId, bool createIfNotExist = false)
+    static DB.ElementId MapMaterial(DB.Document project, DB.Document family, DB.ElementId materialId, bool createIfNotExist = false)
     {
-      if (project.GetElement(materialId) is Material material)
+      if (project.GetElement(materialId) is DB.Material material)
       {
-        using (var collector = new FilteredElementCollector(family).OfClass(typeof(Material)))
+        using (var collector = new DB.FilteredElementCollector(family).OfClass(typeof(DB.Material)))
         {
-          if (collector.ToElements().Cast<Material>().Where(x => x.Name == material.Name).FirstOrDefault() is Material familyMaterial)
+          if (collector.ToElements().Cast<DB.Material>().Where(x => x.Name == material.Name).FirstOrDefault() is DB.Material familyMaterial)
             return familyMaterial.Id;
         }
 
         if (createIfNotExist)
-          return Material.Create(family, material.Name);
+          return DB.Material.Create(family, material.Name);
       }
 
-      return ElementId.InvalidElementId;
+      return DB.ElementId.InvalidElementId;
     }
 
-    class DeleteElementEnumerator<T> : IEnumerator<T> where T : Element
+    class DeleteElementEnumerator<T> : IEnumerator<T> where T : DB.Element
     {
       readonly IEnumerator<T> enumerator;
       public DeleteElementEnumerator(IEnumerable<T> e) { enumerator = e.GetEnumerator(); }
-      readonly List<Element> elementsToDelete = new List<Element>();
+      readonly List<DB.Element> elementsToDelete = new List<DB.Element>();
 
       public void Dispose()
       {
@@ -240,10 +240,10 @@ namespace RhinoInside.Revit.GH.Components
 
     bool Add
     (
-      Document doc,
-      Document familyDoc,
+      DB.Document doc,
+      DB.Document familyDoc,
       Rhino.Geometry.Brep brep,
-      DeleteElementEnumerator<GenericForm> forms
+      DeleteElementEnumerator<DB.GenericForm> forms
     )
     {
       bool isCutting = brep.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Inward;
@@ -251,27 +251,27 @@ namespace RhinoInside.Revit.GH.Components
         brep.Flip();
 
       forms.MoveNext();
-      if (brep.ToHost() is Solid solid)
+      if (brep.ToHost() is DB.Solid solid)
       {
-        if (forms.Current is FreeFormElement freeForm)
+        if (forms.Current is DB.FreeFormElement freeForm)
         {
           freeForm.UpdateSolidGeometry(solid);
           forms.DeleteCurrent = false;
         }
-        else freeForm = FreeFormElement.Create(familyDoc, solid);
+        else freeForm = DB.FreeFormElement.Create(familyDoc, solid);
 
         if (isCutting)
         {
-          freeForm.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING).Set(1);
+          freeForm.get_Parameter(DB.BuiltInParameter.ELEMENT_IS_CUTTING).Set(1);
           return true;
         }
         else
         {
-          Category familySubCategory = null;
+          DB.Category familySubCategory = null;
           if
           (
-            brep.GetUserElementId(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY.ToString(), out var subCategoryId) &&
-            Autodesk.Revit.DB.Category.GetCategory(doc, subCategoryId) is Category subCategory
+            brep.GetUserElementId(DB.BuiltInParameter.FAMILY_ELEM_SUBCATEGORY.ToString(), out var subCategoryId) &&
+            DB.Category.GetCategory(doc, subCategoryId) is DB.Category subCategory
           )
           {
             if (subCategory.Parent.Id == familyDoc.OwnerFamily.FamilyCategory.Id)
@@ -290,19 +290,19 @@ namespace RhinoInside.Revit.GH.Components
           if(familySubCategory is object)
             freeForm.Subcategory = familySubCategory;
 
-          if(brep.GetUserBoolean(BuiltInParameter.IS_VISIBLE_PARAM.ToString(), out var visible))
-            freeForm.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
+          if(brep.GetUserBoolean(DB.BuiltInParameter.IS_VISIBLE_PARAM.ToString(), out var visible))
+            freeForm.get_Parameter(DB.BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
 
-          if (brep.GetUserInteger(BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), out var visibility))
-            freeForm.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
+          if (brep.GetUserInteger(DB.BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), out var visibility))
+            freeForm.get_Parameter(DB.BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
 
           if
           (
-            brep.GetUserElementId(BuiltInParameter.MATERIAL_ID_PARAM.ToString(), out var materialId) &&
+            brep.GetUserElementId(DB.BuiltInParameter.MATERIAL_ID_PARAM.ToString(), out var materialId) &&
             MapMaterial(doc, familyDoc, materialId, true) is var familyMaterialId
           )
           {
-            freeForm.get_Parameter(BuiltInParameter.MATERIAL_ID_PARAM).Set(familyMaterialId);
+            freeForm.get_Parameter(DB.BuiltInParameter.MATERIAL_ID_PARAM).Set(familyMaterialId);
           }
         }
       }
@@ -312,30 +312,30 @@ namespace RhinoInside.Revit.GH.Components
 
     void Add
     (
-      Document doc,
-      Document familyDoc,
+      DB.Document doc,
+      DB.Document familyDoc,
       Rhino.Geometry.Curve curve,
-      List<KeyValuePair<double[], SketchPlane>> planesSet,
-      DeleteElementEnumerator<CurveElement> curves
+      List<KeyValuePair<double[], DB.SketchPlane>> planesSet,
+      DeleteElementEnumerator<DB.CurveElement> curves
     )
     {
       if (curve.TryGetPlane(out var plane))
       {
         var abcd = plane.GetPlaneEquation();
-        int index = planesSet.BinarySearch(new KeyValuePair<double[], SketchPlane>(abcd, null), PlaneComparer.Instance);
+        int index = planesSet.BinarySearch(new KeyValuePair<double[], DB.SketchPlane>(abcd, null), PlaneComparer.Instance);
         if (index < 0)
         {
-          var entry = new KeyValuePair<double[], SketchPlane>(abcd, SketchPlane.Create(familyDoc, plane.ToHost()));
+          var entry = new KeyValuePair<double[], DB.SketchPlane>(abcd, DB.SketchPlane.Create(familyDoc, plane.ToHost()));
           index = ~index;
           planesSet.Insert(index, entry);
         }
         var sketchPlane = planesSet[index].Value;
 
-        GraphicsStyle familyGraphicsStyle = null;
+        DB.GraphicsStyle familyGraphicsStyle = null;
         if
         (
-          curve.GetUserElementId(BuiltInParameter.FAMILY_CURVE_GSTYLE_PLUS_INVISIBLE.ToString(), out var graphicsStyleId) &&
-          doc.GetElement(graphicsStyleId) is GraphicsStyle graphicsStyle
+          curve.GetUserElementId(DB.BuiltInParameter.FAMILY_CURVE_GSTYLE_PLUS_INVISIBLE.ToString(), out var graphicsStyleId) &&
+          doc.GetElement(graphicsStyleId) is DB.GraphicsStyle graphicsStyle
         )
         {
           if (graphicsStyle.GraphicsStyleCategory.Parent.Id == familyDoc.OwnerFamily.FamilyCategory.Id)
@@ -351,9 +351,9 @@ namespace RhinoInside.Revit.GH.Components
           }
         }
 
-        curve.GetUserBoolean(BuiltInParameter.MODEL_OR_SYMBOLIC.ToString(), out var symbolic);
-        curve.GetUserBoolean(BuiltInParameter.IS_VISIBLE_PARAM.ToString(), out var visible, true);
-        curve.GetUserInteger(BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), out var visibility, -1);
+        curve.GetUserBoolean(DB.BuiltInParameter.MODEL_OR_SYMBOLIC.ToString(), out var symbolic);
+        curve.GetUserBoolean(DB.BuiltInParameter.IS_VISIBLE_PARAM.ToString(), out var visible, true);
+        curve.GetUserInteger(DB.BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), out var visibility, -1);
 
         foreach (var c in curve.ToHostMultiple())
         {
@@ -361,34 +361,34 @@ namespace RhinoInside.Revit.GH.Components
 
           if (symbolic)
           {
-            if (curves.Current is SymbolicCurve symbolicCurve && symbolicCurve.GeometryCurve.IsSameKindAs(c))
+            if (curves.Current is DB.SymbolicCurve symbolicCurve && symbolicCurve.GeometryCurve.IsSameKindAs(c))
             {
               symbolicCurve.SetSketchPlaneAndCurve(sketchPlane, c);
               curves.DeleteCurrent = false;
             }
             else symbolicCurve = familyDoc.FamilyCreate.NewSymbolicCurve(c, sketchPlane);
 
-            symbolicCurve.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
+            symbolicCurve.get_Parameter(DB.BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
 
             if (visibility != -1)
-              symbolicCurve.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
+              symbolicCurve.get_Parameter(DB.BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
 
             if (familyGraphicsStyle is object)
               symbolicCurve.Subcategory = familyGraphicsStyle;
           }
           else
           {
-            if (curves.Current is ModelCurve modelCurve && modelCurve.GeometryCurve.IsSameKindAs(c))
+            if (curves.Current is DB.ModelCurve modelCurve && modelCurve.GeometryCurve.IsSameKindAs(c))
             {
               modelCurve.SetSketchPlaneAndCurve(sketchPlane, c);
               curves.DeleteCurrent = false;
             }
             else modelCurve = familyDoc.FamilyCreate.NewModelCurve(c, sketchPlane);
 
-            modelCurve.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
+            modelCurve.get_Parameter(DB.BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
 
             if (visibility != -1)
-              modelCurve.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
+              modelCurve.get_Parameter(DB.BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
 
             if (familyGraphicsStyle is object)
               modelCurve.Subcategory = familyGraphicsStyle;
@@ -397,11 +397,11 @@ namespace RhinoInside.Revit.GH.Components
       }
     }
 
-    static string GetFamilyTemplateFileName(ElementId categoryId, Autodesk.Revit.ApplicationServices.LanguageType language)
+    static string GetFamilyTemplateFileName(DB.ElementId categoryId, Autodesk.Revit.ApplicationServices.LanguageType language)
     {
       if(categoryId.TryGetBuiltInCategory(out var builtInCategory))
       {
-        if(builtInCategory == BuiltInCategory.OST_Mass)
+        if(builtInCategory == DB.BuiltInCategory.OST_Mass)
         {
           switch (language)
           {
@@ -452,7 +452,7 @@ namespace RhinoInside.Revit.GH.Components
       return null;
     }
 
-    static string GetFamilyTemplateFilePath(ElementId categoryId, Autodesk.Revit.ApplicationServices.Application app)
+    static string GetFamilyTemplateFilePath(DB.ElementId categoryId, Autodesk.Revit.ApplicationServices.Application app)
     {
       string fileName = GetFamilyTemplateFileName(categoryId, app.Language);
       var templateFilePath = fileName is null ? string.Empty : Path.Combine(app.FamilyTemplatePath, $"{fileName}.rft");
@@ -490,16 +490,16 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Name", ref name))
         return;
 
-      var categoryId = ElementId.InvalidElementId;
+      var categoryId = DB.ElementId.InvalidElementId;
       DA.GetData("Category", ref categoryId);
-      var updateCategory = categoryId != ElementId.InvalidElementId;
+      var updateCategory = categoryId != DB.ElementId.InvalidElementId;
 
       var geometry = new List<IGH_GeometricGoo>();
       var updateGeometry = !(!DA.GetDataList("Geometry", geometry) && Params.Input[Params.IndexOfInputParam("Geometry")].SourceCount == 0);
 
-      var family = default(Family);
-      using (var collector = new FilteredElementCollector(doc).OfClass(typeof(Family)))
-        family = collector.ToElements().Cast<Family>().Where(x => x.Name == name).FirstOrDefault();
+      var family = default(DB.Family);
+      using (var collector = new DB.FilteredElementCollector(doc).OfClass(typeof(DB.Family)))
+        family = collector.ToElements().Cast<DB.Family>().Where(x => x.Name == name).FirstOrDefault();
 
       bool familyIsNew = family is null;
 
@@ -536,7 +536,7 @@ namespace RhinoInside.Revit.GH.Components
           {
             try
             {
-              using (var transaction = new Transaction(familyDoc))
+              using (var transaction = new DB.Transaction(familyDoc))
               {
                 transaction.Start(Name);
 
@@ -552,11 +552,11 @@ namespace RhinoInside.Revit.GH.Components
 
                 if (updateGeometry)
                 {
-                  using (var forms = new DeleteElementEnumerator<GenericForm>(new FilteredElementCollector(familyDoc).OfClass(typeof(GenericForm)).Cast<GenericForm>()))
-                  using (var curves = new DeleteElementEnumerator<CurveElement>(new FilteredElementCollector(familyDoc).OfClass(typeof(CurveElement)).Cast<CurveElement>()))
+                  using (var forms = new DeleteElementEnumerator<DB.GenericForm>(new DB.FilteredElementCollector(familyDoc).OfClass(typeof(DB.GenericForm)).Cast<DB.GenericForm>()))
+                  using (var curves = new DeleteElementEnumerator<DB.CurveElement>(new DB.FilteredElementCollector(familyDoc).OfClass(typeof(DB.CurveElement)).Cast<DB.CurveElement>()))
                   {
                     bool hasVoids = false;
-                    var planesSet = new List<KeyValuePair<double[], SketchPlane>>();
+                    var planesSet = new List<KeyValuePair<double[], DB.SketchPlane>>();
                     var planesSetComparer = new PlaneComparer();
 
                     foreach (var geo in geometry.Select(x => AsGeometryBase(x).ChangeUnits(scaleFactor)))
@@ -576,7 +576,7 @@ namespace RhinoInside.Revit.GH.Components
                       }
                     }
 
-                    familyDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS).Set(hasVoids ? 1 : 0);
+                    familyDoc.OwnerFamily.get_Parameter(DB.BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS).Set(hasVoids ? 1 : 0);
                   }
                 }
 
@@ -592,13 +592,13 @@ namespace RhinoInside.Revit.GH.Components
 
             if (familyIsNew)
             {
-              using (var transaction = new Transaction(doc))
+              using (var transaction = new DB.Transaction(doc))
               {
                 transaction.Start(Name);
                 try { family.Name = name; }
                 catch (Autodesk.Revit.Exceptions.ArgumentException e) { AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, e.Message); }
 
-                if (doc.GetElement(family.GetFamilySymbolIds().First()) is FamilySymbol symbol)
+                if (doc.GetElement(family.GetFamilySymbolIds().First()) is DB.FamilySymbol symbol)
                   symbol.Name = name;
 
                 transaction.Commit();
@@ -658,7 +658,7 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("OverrideParameters", ref overrideParameters))
         return;
 
-      using (var transaction = new Transaction(Revit.ActiveDBDocument))
+      using (var transaction = new DB.Transaction(Revit.ActiveDBDocument))
       {
         transaction.Start(Name);
 
@@ -669,8 +669,8 @@ namespace RhinoInside.Revit.GH.Components
         else
         {
           var name = Path.GetFileNameWithoutExtension(filePath);
-          using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument).OfClass(typeof(Family)))
-            family = collector.ToElements().Cast<Family>().Where(x => x.Name == name).FirstOrDefault();
+          using (var collector = new DB.FilteredElementCollector(Revit.ActiveDBDocument).OfClass(typeof(DB.Family)))
+            family = collector.ToElements().Cast<DB.Family>().Where(x => x.Name == name).FirstOrDefault();
 
           if (family is object && overrideFamily == false)
             AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, $"Family '{name}' already loaded!");
@@ -710,7 +710,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Family family = null;
+      DB.Family family = null;
       if (!DA.GetData("Family", ref family))
         return;
 
@@ -729,11 +729,11 @@ namespace RhinoInside.Revit.GH.Components
       if (!DA.GetData("Backups", ref backups))
         return;
 
-      if (Revit.ActiveDBDocument.EditFamily(family) is Document familyDoc) using (familyDoc)
+      if (Revit.ActiveDBDocument.EditFamily(family) is DB.Document familyDoc) using (familyDoc)
       {
         try
         {
-          var options = new SaveAsOptions() { OverwriteExistingFile = overrideFile, Compact = compact };
+          var options = new DB.SaveAsOptions() { OverwriteExistingFile = overrideFile, Compact = compact };
           if (backups > -1)
             options.MaximumBackups = backups;
 
@@ -802,19 +802,19 @@ namespace RhinoInside.Revit.GH.Components
 
       var visible = true;
       if (DA.GetData("Visible", ref visible))
-        brep.SetUserString(BuiltInParameter.IS_VISIBLE_PARAM.ToString(), visible ? null : "0");
+        brep.SetUserString(DB.BuiltInParameter.IS_VISIBLE_PARAM.ToString(), visible ? null : "0");
 
-      var subCategoryId = ElementId.InvalidElementId;
+      var subCategoryId = DB.ElementId.InvalidElementId;
       if(DA.GetData("Subcategory", ref subCategoryId))
-        brep.SetUserString(BuiltInParameter.FAMILY_ELEM_SUBCATEGORY.ToString(), subCategoryId.IsValid() ? subCategoryId.ToString() : null);
+        brep.SetUserString(DB.BuiltInParameter.FAMILY_ELEM_SUBCATEGORY.ToString(), subCategoryId.IsValid() ? subCategoryId.ToString() : null);
 
       var visibility = -1;
       if (DA.GetData("Visibility", ref visibility))
-        brep.SetUserString(BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), visibility == -1 ? null : visibility.ToString());
+        brep.SetUserString(DB.BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), visibility == -1 ? null : visibility.ToString());
 
-      var materialId = ElementId.InvalidElementId;
+      var materialId = DB.ElementId.InvalidElementId;
       if(DA.GetData("Material", ref materialId))
-        brep.SetUserString(BuiltInParameter.MATERIAL_ID_PARAM.ToString(), materialId.IsValid() ? materialId.ToString() : null);
+        brep.SetUserString(DB.BuiltInParameter.MATERIAL_ID_PARAM.ToString(), materialId.IsValid() ? materialId.ToString() : null);
 
       DA.SetData("Brep", brep);
     }
@@ -853,19 +853,19 @@ namespace RhinoInside.Revit.GH.Components
 
       var visible = true;
       if (DA.GetData("Visible", ref visible))
-        curve.SetUserString(BuiltInParameter.IS_VISIBLE_PARAM.ToString(), visible ? null : "0");
+        curve.SetUserString(DB.BuiltInParameter.IS_VISIBLE_PARAM.ToString(), visible ? null : "0");
 
-      var subCategoryId = ElementId.InvalidElementId;
+      var subCategoryId = DB.ElementId.InvalidElementId;
       if(DA.GetData("Subcategory", ref subCategoryId))
-        curve.SetUserString(BuiltInParameter.FAMILY_CURVE_GSTYLE_PLUS_INVISIBLE.ToString(), subCategoryId.IsValid() ? subCategoryId.ToString() : null);
+        curve.SetUserString(DB.BuiltInParameter.FAMILY_CURVE_GSTYLE_PLUS_INVISIBLE.ToString(), subCategoryId.IsValid() ? subCategoryId.ToString() : null);
 
       var visibility = -1;
       if (DA.GetData("Visibility", ref visibility))
-        curve.SetUserString(BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), visibility == -1 ? null : visibility.ToString());
+        curve.SetUserString(DB.BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), visibility == -1 ? null : visibility.ToString());
 
       var symbolic = false;
       if (DA.GetData("Symbolic", ref symbolic))
-        curve.SetUserString(BuiltInParameter.MODEL_OR_SYMBOLIC.ToString(), symbolic ? "1" : null);
+        curve.SetUserString(DB.BuiltInParameter.MODEL_OR_SYMBOLIC.ToString(), symbolic ? "1" : null);
 
       DA.SetData("Curve", curve);
     }
