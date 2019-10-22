@@ -2,6 +2,8 @@
 Rhino Inside® technology allows Rhino and Grasshopper to be embedded within other products.
 ### Running Rhino and Grasshopper inside Epic Games' Unreal Engine (4.23)
 
+![gif](https://user-images.githubusercontent.com/1014562/67323123-52dde100-f512-11e9-89f8-e76f884612d6.gif)
+
 ## Samples
 
 1. [Sample 1](Sample-1): This sample runs Rhino inside Unreal Engine using the USharp Library. Check the Unreal Engine console (`Window > Developer Tools > Output Log`) for the results of a basic operation with RhinoCommon.
