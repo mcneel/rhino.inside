@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -207,19 +208,61 @@ namespace RhinoInside.Revit.GH.Components
       return ElementId.InvalidElementId;
     }
 
-    bool Add(Document doc, Document familyDoc, Rhino.Geometry.Brep brep)
+    class DeleteElementEnumerator<T> : IEnumerator<T> where T : Element
+    {
+      readonly IEnumerator<T> enumerator;
+      public DeleteElementEnumerator(IEnumerable<T> e) { enumerator = e.GetEnumerator(); }
+      readonly List<Element> elementsToDelete = new List<Element>();
+
+      public void Dispose()
+      {
+        while (MoveNext()) ;
+
+        foreach (var element in elementsToDelete)
+          element.Document.Delete(element.Id);
+
+        enumerator.Dispose();
+        DeleteCurrent = false;
+      }
+
+      public bool DeleteCurrent;
+      public T Current => DeleteCurrent ? enumerator.Current : null;
+      object IEnumerator.Current => Current;
+      void IEnumerator.Reset() { enumerator.Reset(); DeleteCurrent = false; }
+      public bool MoveNext()
+      {
+        if (DeleteCurrent)
+          elementsToDelete.Add(Current);
+
+        return DeleteCurrent = enumerator.MoveNext();
+      }
+    }
+
+    bool Add
+    (
+      Document doc,
+      Document familyDoc,
+      Rhino.Geometry.Brep brep,
+      DeleteElementEnumerator<GenericForm> forms
+    )
     {
       bool isCutting = brep.SolidOrientation == Rhino.Geometry.BrepSolidOrientation.Inward;
       if (isCutting)
         brep.Flip();
 
+      forms.MoveNext();
       if (brep.ToHost() is Solid solid)
       {
-        var element = FreeFormElement.Create(familyDoc, solid);
+        if (forms.Current is FreeFormElement freeForm)
+        {
+          freeForm.UpdateSolidGeometry(solid);
+          forms.DeleteCurrent = false;
+        }
+        else freeForm = FreeFormElement.Create(familyDoc, solid);
 
         if (isCutting)
         {
-          element.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING).Set(1);
+          freeForm.get_Parameter(BuiltInParameter.ELEMENT_IS_CUTTING).Set(1);
           return true;
         }
         else
@@ -245,13 +288,13 @@ namespace RhinoInside.Revit.GH.Components
           }
 
           if(familySubCategory is object)
-            element.Subcategory = familySubCategory;
+            freeForm.Subcategory = familySubCategory;
 
           if(brep.GetUserBoolean(BuiltInParameter.IS_VISIBLE_PARAM.ToString(), out var visible))
-            element.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
+            freeForm.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
 
           if (brep.GetUserInteger(BuiltInParameter.GEOM_VISIBILITY_PARAM.ToString(), out var visibility))
-            element.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
+            freeForm.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
 
           if
           (
@@ -259,7 +302,7 @@ namespace RhinoInside.Revit.GH.Components
             MapMaterial(doc, familyDoc, materialId, true) is var familyMaterialId
           )
           {
-            element.get_Parameter(BuiltInParameter.MATERIAL_ID_PARAM).Set(familyMaterialId);
+            freeForm.get_Parameter(BuiltInParameter.MATERIAL_ID_PARAM).Set(familyMaterialId);
           }
         }
       }
@@ -267,7 +310,14 @@ namespace RhinoInside.Revit.GH.Components
       return false;
     }
 
-    void Add(Document doc, Document familyDoc, Rhino.Geometry.Curve curve, List<KeyValuePair<double[], SketchPlane>> planesSet)
+    void Add
+    (
+      Document doc,
+      Document familyDoc,
+      Rhino.Geometry.Curve curve,
+      List<KeyValuePair<double[], SketchPlane>> planesSet,
+      DeleteElementEnumerator<CurveElement> curves
+    )
     {
       if (curve.TryGetPlane(out var plane))
       {
@@ -307,27 +357,41 @@ namespace RhinoInside.Revit.GH.Components
 
         foreach (var c in curve.ToHostMultiple())
         {
+          curves.MoveNext();
+
           if (symbolic)
           {
-            var element = familyDoc.FamilyCreate.NewSymbolicCurve(c, sketchPlane);
-            element.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
+            if (curves.Current is SymbolicCurve symbolicCurve && symbolicCurve.GeometryCurve.IsSameKindAs(c))
+            {
+              symbolicCurve.SetSketchPlaneAndCurve(sketchPlane, c);
+              curves.DeleteCurrent = false;
+            }
+            else symbolicCurve = familyDoc.FamilyCreate.NewSymbolicCurve(c, sketchPlane);
+
+            symbolicCurve.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
 
             if (visibility != -1)
-              element.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
+              symbolicCurve.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
 
             if (familyGraphicsStyle is object)
-              element.Subcategory = familyGraphicsStyle;
+              symbolicCurve.Subcategory = familyGraphicsStyle;
           }
           else
           {
-            var element = familyDoc.FamilyCreate.NewModelCurve(c, sketchPlane);
-            element.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
+            if (curves.Current is ModelCurve modelCurve && modelCurve.GeometryCurve.IsSameKindAs(c))
+            {
+              modelCurve.SetSketchPlaneAndCurve(sketchPlane, c);
+              curves.DeleteCurrent = false;
+            }
+            else modelCurve = familyDoc.FamilyCreate.NewModelCurve(c, sketchPlane);
+
+            modelCurve.get_Parameter(BuiltInParameter.IS_VISIBLE_PARAM).Set(visible ? 1 : 0);
 
             if (visibility != -1)
-              element.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
+              modelCurve.get_Parameter(BuiltInParameter.GEOM_VISIBILITY_PARAM).Set(visibility);
 
             if (familyGraphicsStyle is object)
-              element.Subcategory = familyGraphicsStyle;
+              modelCurve.Subcategory = familyGraphicsStyle;
           }
         }
       }
@@ -488,34 +552,32 @@ namespace RhinoInside.Revit.GH.Components
 
                 if (updateGeometry)
                 {
-                  using (var collector = new FilteredElementCollector(familyDoc).OfClass(typeof(GenericForm)))
-                    familyDoc.Delete(collector.ToElementIds());
-
-                  using (var collector = new FilteredElementCollector(familyDoc).OfClass(typeof(CurveElement)))
-                    familyDoc.Delete(collector.ToElementIds());
-
-                  bool hasVoids = false;
-                  var planesSet = new List<KeyValuePair<double[], SketchPlane>>();
-                  var planesSetComparer = new PlaneComparer();
-
-                  foreach (var geo in geometry.Select(x => AsGeometryBase(x).ChangeUnits(scaleFactor)))
+                  using (var forms = new DeleteElementEnumerator<GenericForm>(new FilteredElementCollector(familyDoc).OfClass(typeof(GenericForm)).Cast<GenericForm>()))
+                  using (var curves = new DeleteElementEnumerator<CurveElement>(new FilteredElementCollector(familyDoc).OfClass(typeof(CurveElement)).Cast<CurveElement>()))
                   {
-                    try
+                    bool hasVoids = false;
+                    var planesSet = new List<KeyValuePair<double[], SketchPlane>>();
+                    var planesSetComparer = new PlaneComparer();
+
+                    foreach (var geo in geometry.Select(x => AsGeometryBase(x).ChangeUnits(scaleFactor)))
                     {
-                      switch (geo)
+                      try
                       {
-                        case Rhino.Geometry.Brep brep: hasVoids |= Add(doc, familyDoc, brep); break;
-                        case Rhino.Geometry.Curve curve: Add(doc, familyDoc, curve, planesSet); break;
-                        default: AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{geo.GetType().Name} is not supported and will be ignored"); break;
+                        switch (geo)
+                        {
+                          case Rhino.Geometry.Brep brep: hasVoids |= Add(doc, familyDoc, brep, forms); break;
+                          case Rhino.Geometry.Curve curve: Add(doc, familyDoc, curve, planesSet, curves); break;
+                          default: AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"{geo.GetType().Name} is not supported and will be ignored"); break;
+                        }
+                      }
+                      catch (Autodesk.Revit.Exceptions.InvalidOperationException e)
+                      {
+                        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
                       }
                     }
-                    catch (Autodesk.Revit.Exceptions.InvalidOperationException e)
-                    {
-                      AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-                    }
-                  }
 
-                  familyDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS).Set(hasVoids ? 1 : 0);
+                    familyDoc.OwnerFamily.get_Parameter(BuiltInParameter.FAMILY_ALLOW_CUT_WITH_VOIDS).Set(hasVoids ? 1 : 0);
+                  }
                 }
 
                 transaction.Commit();
