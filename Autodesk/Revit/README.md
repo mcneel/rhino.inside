@@ -1,8 +1,8 @@
-# Rhino Inside Revit
+# Rhino.Inside® for Revit
 
 [![Build status](https://ci.appveyor.com/api/projects/status/9ot0iyjqwb1jdn6m/branch/master?svg=true)](https://ci.appveyor.com/project/mcneel/rhino-inside/branch/master)
 
-The Rhino Inside® technology allows Rhino and Grasshopper to be embedded within other products.
+The Rhino.Inside® technology allows Rhino and Grasshopper to be embedded within other products.
 
 This folder contains a sample project that demonstrates:
 
