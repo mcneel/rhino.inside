@@ -21,7 +21,9 @@
     <Property Id="ARPHELPLINK" Value="https://discourse.mcneel.com/c/rhino-inside" />
     <Property Id="ARPCONTACT" Value="tech@mcneel.com"/>
     <Property Id="ARPHELPTELEPHONE" Value="+1 (206) 545-7000"/>
-    <!--<Property Id='ARPNOMODIFY'>1</Property>-->
+    <Property Id="ALLUSERS" Value="2" />
+    <Property Id="MSIINSTALLPERUSER" Value="1" />
+    <Property Id='ARPNOMODIFY'>1</Property>
 
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of RhinoInside.Revit is already installed." />
     <MediaTemplate EmbedCab="yes" />
@@ -43,29 +45,56 @@
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
     <WixVariable Id="WixUIDialogBmp" Value="Dialog.png" />
     <WixVariable Id="WixUIBannerBmp" Value="Banner.png" />
-    <UIRef Id="WixUI_Minimal"/>
+    <UIRef Id="WixUI_Advanced"/>
+    
+    <CustomAction
+            Id="OverwriteWixSetDefaultPerMachineFolder"
+            Property="WixPerMachineFolder"
+            Value="[CommonAppDataFolder]\Autodesk\Revit\Addins"
+            Execute="immediate"
+    />
+    <CustomAction
+            Id="OverwriteWixSetDefaultPerUserFolder"
+            Property="WixPerUserFolder"
+            Value="[AppDataFolder]\Autodesk\Revit\Addins"
+            Execute="immediate"
+    />
+    
+    <CustomAction Id="SetARPINSTALLLOCATION" Property="ARPINSTALLLOCATION" Value="[APPLICATIONFOLDER]"/>
+    
+    <InstallUISequence>
+        <Custom Action="OverwriteWixSetDefaultPerUserFolder" After="WixSetDefaultPerUserFolder" />
+        <Custom Action="OverwriteWixSetDefaultPerMachineFolder" After="WixSetDefaultPerMachineFolder" />
+    </InstallUISequence>
+
+    <InstallExecuteSequence>
+        <Custom Action="OverwriteWixSetDefaultPerUserFolder" After="WixSetDefaultPerUserFolder" />
+        <Custom Action="OverwriteWixSetDefaultPerMachineFolder" After="WixSetDefaultPerMachineFolder" />
+        <Custom Action="SetARPINSTALLLOCATION" After="InstallValidate"/>
+    </InstallExecuteSequence>
   </Product>
 
   <Fragment>
+    <Property Id="ApplicationFolderName" Value="RhinoInside.Revit" />
+    <Property Id="WixAppFolder" Value="WixPerMachineFolder" />
+
+    <!--<SetDirectory Id="APPLICATIONFOLDER" Value="[CommonAppDataFolder]\Autodesk\Revit\Addins">
+      APPLICATIONFOLDER=""
+    </SetDirectory>-->
+
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="AppDataFolder" Name="AppData">
-        <Directory Id="AutodeskDirectory" Name="Autodesk">
-          <Directory Id="RevitDirectory" Name="Revit">
-            <Directory Id="AddinsDirectory" Name="Addins">
-              <Directory Id="_2017Directory" Name="2017">
-                <Directory Id="INSTALLFOLDER2017" Name="RhinoInside.Revit"/>
-              </Directory>
-              <Directory Id="_2018Directory" Name="2018">
-                <Directory Id="INSTALLFOLDER2018" Name="RhinoInside.Revit"/>
-              </Directory>
-              <Directory Id="_2019Directory" Name="2019">
-                <Directory Id="INSTALLFOLDER2019" Name="RhinoInside.Revit"/>
-              </Directory>
-              <Directory Id="_2020Directory" Name="2020">
-                <Directory Id="INSTALLFOLDER2020" Name="RhinoInside.Revit"/>
-              </Directory>
-            </Directory>
-          </Directory>
+      <Directory Id="APPLICATIONFOLDER">
+        <Directory Id="_2017Directory" Name="2017">
+          <Directory Id="INSTALLFOLDER2017" Name="RhinoInside.Revit"/>
+        </Directory>
+        <Directory Id="_2018Directory" Name="2018">
+          <Directory Id="INSTALLFOLDER2018" Name="RhinoInside.Revit"/>
+        </Directory>
+        <Directory Id="_2019Directory" Name="2019">
+          <Directory Id="INSTALLFOLDER2019" Name="RhinoInside.Revit"/>
+        </Directory>
+        <Directory Id="_2020Directory" Name="2020">
+          <Directory Id="INSTALLFOLDER2020" Name="RhinoInside.Revit" />
         </Directory>
       </Directory>
     </Directory>
@@ -73,80 +102,84 @@
 
   <Fragment>
     <ComponentGroup Id="ProductComponents2017" Directory="INSTALLFOLDER2017">
-      <Component>
-        <File Id="RhinoInside.Revit.2017.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2017\RhinoInside.Revit.dll"/>
-        <File Id="Sample2.2017" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
-        <File Id="Sample3.2017" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
-        <File Id="Sample4.2017" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
-        <File Id="Sample5.2017" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
-        <File Id="Sample7.2017" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
-        <RemoveFolder Id="INSTALLFOLDER2017" On="uninstall"/>
+      <Component Guid="{ABEFC97A-FC97-4DBA-BCC0-6502A762BB36}">
+        <File Id="_2017_RhinoInside.Revit.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2017\RhinoInside.Revit.dll" KeyPath="yes"/>
+        <File Id="_2017_Sample2" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
+        <File Id="_2017_Sample3" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
+        <File Id="_2017_Sample4" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
+        <File Id="_2017_Sample5" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
+        <File Id="_2017_Sample7" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
+        <RemoveFile Id="_2017_RhinoInside.Revit_AnyFile" Name="*.*" On="both"/>
+        <RemoveFolder Id="_2017_RhinoInside.Revit" On="both"/>
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductAddin2017" Directory="_2017Directory">
-      <Component>
-        <File Id="RhinoInside.Revit.2017.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
-        <RemoveFile Id="RhinoInside.Revit.2017.addin" Name="RhinoInside.Revit.addin" On="both"/>
+      <Component Guid="{F2CDF7A8-F7E2-423B-91F8-6223332A9428}">
+        <File Id="_2017_RhinoInside.Revit.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin" KeyPath="yes"/>
+        <RemoveFile Id="_2017_RhinoInside.Revit.addin" Name="RhinoInside.Revit.addin" On="both"/>
       </Component>
     </ComponentGroup>
   </Fragment>
 
   <Fragment>
     <ComponentGroup Id="ProductComponents2018" Directory="INSTALLFOLDER2018">
-      <Component>
-        <File Id="RhinoInside.Revit.2018.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2018\RhinoInside.Revit.dll"/>
-        <File Id="Sample2.2018" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
-        <File Id="Sample3.2018" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
-        <File Id="Sample4.2018" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
-        <File Id="Sample5.2018" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
-        <File Id="Sample7.2018" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
-        <RemoveFolder Id="INSTALLFOLDER2018" On="uninstall"/>
+      <Component Guid="{425DE5DB-2E76-4EAC-8CA9-F348965000F2}">
+        <File Id="_2018_RhinoInside.Revit.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2018\RhinoInside.Revit.dll" KeyPath="yes"/>
+        <File Id="_2018_Sample2" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
+        <File Id="_2018_Sample3" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
+        <File Id="_2018_Sample4" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
+        <File Id="_2018_Sample5" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
+        <File Id="_2018_Sample7" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
+        <RemoveFile Id="_2018_RhinoInside.Revit_AnyFile" Name="*.*" On="both"/>
+        <RemoveFolder Id="_2018_RhinoInside.Revit" On="both"/>
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductAddin2018" Directory="_2018Directory">
-      <Component>
-        <File Id="RhinoInside.Revit.2018.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
-        <RemoveFile Id="RhinoInside.Revit.2018.addin" Name="RhinoInside.Revit.addin" On="both"/>
+      <Component Guid="{D49A455F-C51E-451B-B1B8-2AA62E6A9D1C}">
+        <File Id="_2018_RhinoInside.Revit.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin" KeyPath="yes"/>
+        <RemoveFile Id="_2018_RhinoInside.Revit.addin" Name="RhinoInside.Revit.addin" On="both"/>
       </Component>
     </ComponentGroup>
   </Fragment>
 
   <Fragment>
     <ComponentGroup Id="ProductComponents2019" Directory="INSTALLFOLDER2019">
-      <Component>
-        <File Id="RhinoInside.Revit.2019.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2019\RhinoInside.Revit.dll"/>
-        <File Id="Sample2.2019" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
-        <File Id="Sample3.2019" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
-        <File Id="Sample4.2019" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
-        <File Id="Sample5.2019" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
-        <File Id="Sample7.2019" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
-        <RemoveFolder Id="INSTALLFOLDER2019" On="uninstall"/>
+      <Component Guid="{C1D9E7B6-0DE7-4640-82C1-B475065E5024}">
+        <File Id="_2019_RhinoInside.Revit.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2019\RhinoInside.Revit.dll" KeyPath="yes"/>
+        <File Id="_2019_Sample2" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
+        <File Id="_2019_Sample3" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
+        <File Id="_2019_Sample4" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
+        <File Id="_2019_Sample5" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
+        <File Id="_2019_Sample7" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
+        <RemoveFile Id="_2019_RhinoInside.Revit_AnyFile" Name="*.*" On="both"/>
+        <RemoveFolder Id="_2019_RhinoInside.Revit" On="both"/>
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductAddin2019" Directory="_2019Directory">
-      <Component>
-        <File Id="RhinoInside.Revit.2019.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
-        <RemoveFile Id="RhinoInside.Revit.2019.addin" Name="RhinoInside.Revit.addin" On="both"/>
+      <Component Guid="{4C2C8AC5-3DD6-4B2C-B568-35BA015F8A66}">
+        <File Id="_2019_RhinoInside.Revit.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin" KeyPath="yes"/>
+        <RemoveFile Id="_2019_RhinoInside.Revit.addin" Name="RhinoInside.Revit.addin" On="both"/>
       </Component>
     </ComponentGroup>
   </Fragment>
 
   <Fragment>
     <ComponentGroup Id="ProductComponents2020" Directory="INSTALLFOLDER2020">
-      <Component>
-        <File Id="RhinoInside.Revit.2020.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2020\RhinoInside.Revit.dll"/>
-        <File Id="Sample2.2020" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
-        <File Id="Sample3.2020" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
-        <File Id="Sample4.2020" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
-        <File Id="Sample5.2020" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
-        <File Id="Sample7.2020" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
-        <RemoveFolder Id="INSTALLFOLDER2020" On="uninstall"/>
+      <Component Guid="{6C890637-2DFD-4E0A-98BC-D3CAAA4EDE0E}">
+        <File Id="_2020_RhinoInside.Revit.dll" Source="..\RhinoInside.Revit\bin\$(var.Configuration) 2020\RhinoInside.Revit.dll" KeyPath="yes"/>
+        <File Id="_2020_Sample2" Source="..\RhinoInside.Revit\Samples\Sample2.ghx"/>
+        <File Id="_2020_Sample3" Source="..\RhinoInside.Revit\Samples\Sample3.ghx"/>
+        <File Id="_2020_Sample4" Source="..\RhinoInside.Revit\Samples\Sample4.ghx"/>
+        <File Id="_2020_Sample5" Source="..\RhinoInside.Revit\Samples\Sample5.ghx"/>
+        <File Id="_2020_Sample7" Source="..\RhinoInside.Revit\Samples\Sample7.py"/>
+        <RemoveFile Id="_2020_RhinoInside.Revit_AnyFile" Name="*.*" On="both"/>
+        <RemoveFolder Id="_2020_RhinoInside.Revit" On="both"/>
       </Component>
     </ComponentGroup>
     <ComponentGroup Id="ProductAddin2020" Directory="_2020Directory">
-      <Component>
-        <File Id="RhinoInside.Revit.2020.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin"/>
-        <RemoveFile Id="RhinoInside.Revit.2020.addin" Name="RhinoInside.Revit.addin" On="both"/>
+      <Component Guid="{F35F4F5C-B259-4E02-A615-807630BB23C4}">
+        <File Id="_2020_RhinoInside.Revit.addin" Source="..\RhinoInside.Revit\Properties\RhinoInside.Revit.addin" KeyPath="yes"/>
+        <RemoveFile Id="_2020_RhinoInside.Revit.addin" Name="RhinoInside.Revit.addin" On="both"/>
       </Component>
     </ComponentGroup>
   </Fragment>
