@@ -3,11 +3,11 @@
   <Product Id="*"
            UpgradeCode="634a05f2-4511-445a-89c1-7305d83d34c7"
            Manufacturer="Robert McNeel &amp; Associates"
-           Name="RhinoInside.Revit"
+           Name="Rhino.Inside® for Revit"
            Version="0.0.0.0"
            Language="1033">
     <Package Manufacturer="Robert McNeel &amp; Associates"
-             Description="RhinoInside Revit"
+             Description="Rhino.Inside® for Revit"
              InstallerVersion="301"
              Platform="$(var.Platform)"
              InstallScope="perUser"
@@ -25,7 +25,7 @@
     <Property Id="MSIINSTALLPERUSER" Value="1" />
     <Property Id='ARPNOMODIFY'>1</Property>
 
-    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of RhinoInside.Revit is already installed." />
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of Rhino.Inside® for Revit is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <Feature Id="ProductFeature" Title="RhinoInside.Revit" Level="1">
