@@ -105,34 +105,33 @@ namespace RhinoInside.Revit
 
       return DaysUntilExpiration < 1;
     }
-    internal static Result CheckSetup()
+    internal static Result CheckSetup(Autodesk.Revit.ApplicationServices.Application app)
     {
       if (RhinoVersion >= MinimumRhinoVersion)
         return IsExpired() ? Result.Cancelled : Result.Succeeded;
-
-      var app = Revit.ApplicationUI.ControlledApplication;
 
       using
       (
         var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
         {
-          Title = $"Rhino Inside {app.VersionName} - Update Rhino",
+          Title = "Update Rhino",
           MainIcon = TaskDialogIcons.IconInformation,
-          TitleAutoPrefix = false,
           AllowCancellation = true,
           MainInstruction = "Unsupported Rhino WIP version",
-          MainContent = $"Expected Rhino version is ({MinimumRhinoVersion}) or above",
+          MainContent = $"Expected Rhino version is ({MinimumRhinoVersion}) or above.",
           ExpandedContent =
-          "Rhino\n" +
-          $"Version: {RhinoVersion}\n" +
-          $"Path: '{SystemDir}'" + (!File.Exists(RhinoExePath) ? " (not found)" : string.Empty) + "\n" +
-          "\nRevit\n" +
+          RhinoVersionInfo is null ? "Rhino\n" :
+          $"{RhinoVersionInfo.ProductName} {RhinoVersionInfo.ProductMajorPart}\n" +
+          $"• Version: {RhinoVersion}\n" +
+          $"• Path: '{SystemDir}'" + (!File.Exists(RhinoExePath) ? " (not found)" : string.Empty) + "\n" +
+          $"\n{app.VersionName}\n" +
 #if REVIT_2018
-          $"Version: {app.SubVersionNumber} ({app.VersionBuild})\n" +
+          $"• Version: {app.SubVersionNumber} ({app.VersionBuild})\n" +
 #else
-          $"Version: {app.VersionNumber} ({app.VersionBuild})\n" +
+          $"• Version: {app.VersionNumber} ({app.VersionBuild})\n" +
 #endif
-          $"Language: {app.Language.ToString()}",
+          $"• Path: {Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)}\n" +
+          $"• Language: {app.Language.ToString()}",
           FooterText = $"Current Rhino WIP version: {RhinoVersion}"
         }
       )
@@ -327,7 +326,7 @@ namespace RhinoInside.Revit.UI
         return result;
       }
 
-      result = Addin.CheckSetup();
+      result = Addin.CheckSetup(data.Application.Application);
       if (result != Result.Succeeded)
         return result;
 
