@@ -28,20 +28,26 @@
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of Rhino.Inside® for Revit is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
-    <Feature Id="ProductFeature" Title="RhinoInside.Revit" Level="1">
+    <Feature Id="_2017_RhinoInside.Revit" Title="Rhino.Inside for Revit 2017" Level="1">
       <ComponentGroupRef Id="ProductComponents2017" />
       <ComponentGroupRef Id="ProductAddin2017" />
-      
+    </Feature>
+
+    <Feature Id="_2018_RhinoInside.Revit" Title="Rhino.Inside for Revit 2018" Level="1">
       <ComponentGroupRef Id="ProductComponents2018" />
       <ComponentGroupRef Id="ProductAddin2018" />
-      
+    </Feature>
+
+    <Feature Id="_2019_RhinoInside.Revit" Title="Rhino.Inside for Revit 2019" Level="1">
       <ComponentGroupRef Id="ProductComponents2019" />
       <ComponentGroupRef Id="ProductAddin2019" />
+    </Feature>
 
+    <Feature Id="_2020_RhinoInside.Revit" Title="Rhino.Inside for Revit 2020" Level="1">
       <ComponentGroupRef Id="ProductComponents2020" />
       <ComponentGroupRef Id="ProductAddin2020" />
     </Feature>
-    
+
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
     <WixVariable Id="WixUIDialogBmp" Value="Dialog.png" />
     <WixVariable Id="WixUIBannerBmp" Value="Banner.png" />
@@ -77,10 +83,6 @@
   <Fragment>
     <Property Id="ApplicationFolderName" Value="RhinoInside.Revit" />
     <Property Id="WixAppFolder" Value="WixPerMachineFolder" />
-
-    <!--<SetDirectory Id="APPLICATIONFOLDER" Value="[CommonAppDataFolder]\Autodesk\Revit\Addins">
-      APPLICATIONFOLDER=""
-    </SetDirectory>-->
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="APPLICATIONFOLDER">
