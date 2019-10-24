@@ -99,7 +99,7 @@ namespace RhinoInside.Revit
         taskDialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Check for updates...");
         if (taskDialog.Show() == TaskDialogResult.CommandLink1)
         {
-          using (Process.Start(@"https://github.com/mcneel/rhino.inside/releases/latest")) { }
+          using (Process.Start(@"https://www.rhino3d.com/download/rhino.inside-revit/7/wip")) { }
         }
       }
 
