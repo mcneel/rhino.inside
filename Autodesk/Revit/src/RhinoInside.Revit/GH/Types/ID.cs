@@ -398,8 +398,90 @@ namespace RhinoInside.Revit.GH.Parameters
       base.AppendAdditionalMenuItems(menu);
       Menu_AppendSeparator(menu);
       AppendAdditionalElementMenuItems(menu);
-      Menu_AppendItem(menu, $"Delete {GH_Convert.ToPlural(TypeName)}", Menu_DeleteElements, DataType != GH_ParamData.remote && !VolatileData.IsEmpty, false);
+
+      var doc = Revit.ActiveUIDocument.Document;
+
+      if (Kind == GH_ParamKind.output && Attributes.GetTopLevel.DocObject is Components.ReconstructElementComponent)
+      {
+        var pinned = ToElementIds(VolatileData).
+                     Where(x => x.Document.Equals(doc)).
+                     Select(x => x.Document.GetElement(x.Id)).
+                     Where(x => x.Pinned).Any();
+
+        if (pinned)
+          Menu_AppendItem(menu, $"Unpin {GH_Convert.ToPlural(TypeName)}", Menu_UnpinElements, DataType != GH_ParamData.remote, false);
+
+        var unpinned = ToElementIds(VolatileData).
+                     Where(x => x.Document.Equals(doc)).
+                     Select(x => x.Document.GetElement(x.Id)).
+                     Where(x => x.Pinned == false).Any();
+
+        if (unpinned)
+          Menu_AppendItem(menu, $"Pin {GH_Convert.ToPlural(TypeName)}", Menu_PinElements, DataType != GH_ParamData.remote, false);
+      }
+
+      bool delete = ToElementIds(VolatileData).Where(x => x.Document.Equals(doc)).Any();
+
+      Menu_AppendItem(menu, $"Delete {GH_Convert.ToPlural(TypeName)}", Menu_DeleteElements, delete, false);
       this.Menu_AppendConnect(menu, Menu_Connect);
+    }
+
+    void Menu_PinElements(object sender, EventArgs args)
+    {
+      var doc = Revit.ActiveUIDocument.Document;
+      var elements = ToElementIds(VolatileData).
+                       Where(x => x.Document.Equals(doc)).
+                       Select(x => x.Document.GetElement(x.Id)).
+                       Where(x => x.Pinned == false);
+
+      if (elements.Any())
+      {
+        try
+        {
+          using (var transaction = new DB.Transaction(doc, "Pin elements"))
+          {
+            transaction.Start();
+
+            foreach (var element in elements)
+              element.Pinned = true;
+
+            transaction.Commit();
+          }
+        }
+        catch (Autodesk.Revit.Exceptions.ArgumentException)
+        {
+          TaskDialog.Show("Pin elements", $"One or more of the {TypeName} cannot be pinned.");
+        }
+      }
+    }
+
+    void Menu_UnpinElements(object sender, EventArgs args)
+    {
+      var doc = Revit.ActiveUIDocument.Document;
+      var elements = ToElementIds(VolatileData).
+                       Where(x => x.Document.Equals(doc)).
+                       Select(x => x.Document.GetElement(x.Id)).
+                       Where(x => x.Pinned == true);
+
+      if (elements.Any())
+      {
+        try
+        {
+          using (var transaction = new DB.Transaction(doc, "Unpin elements"))
+          {
+            transaction.Start();
+
+            foreach (var element in elements)
+              element.Pinned = false;
+
+            transaction.Commit();
+          }
+        }
+        catch (Autodesk.Revit.Exceptions.ArgumentException)
+        {
+          TaskDialog.Show("Unpin elements", $"One or more of the {TypeName} cannot be unpinned.");
+        }
+      }
     }
 
     void Menu_DeleteElements(object sender, EventArgs args)
