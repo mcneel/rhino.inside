@@ -236,22 +236,6 @@ namespace RhinoInside.Revit.GH.Types
     #endregion
 
     #region IGH_PreviewData
-    //BoundingBox clippingBox = BoundingBox.Empty;
-    //public BoundingBox ClippingBox
-    //{
-    //  get
-    //  {
-    //    if (!clippingBox.IsValid)
-    //    {
-    //      var element = (DB.Element) this;
-    //      if (element is object)
-    //        clippingBox = element.get_BoundingBox(null).ToRhino().ChangeUnits(Revit.ModelUnits);
-    //    }
-
-    //    return clippingBox;
-    //  }
-    //}
-
     void IGH_PreviewData.DrawViewportMeshes(GH_PreviewMeshArgs args)
     {
       if (!IsValid)
