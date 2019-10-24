@@ -926,7 +926,7 @@ namespace RhinoInside.Revit.GH.Parameters
     {
       var uiDocument = Revit.ActiveUIDocument;
       var elementIds = ToElementIds(VolatileData).
-                       Where(x => x.Document == uiDocument.Document).
+                       Where(x => x.Document.Equals(uiDocument.Document)).
                        Select(x => x.Id);
 
       if (elementIds.Any())
