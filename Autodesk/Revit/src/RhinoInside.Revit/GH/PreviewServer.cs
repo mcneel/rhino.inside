@@ -164,15 +164,19 @@ namespace RhinoInside.Revit.GH
               case Rhino.Geometry.Mesh mesh:        primitives.Add(new ParamPrimitive(docObject, mesh)); break;
               case Rhino.Geometry.Box box:
               {
-                var boxMeshes = Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1);
-                if(boxMeshes != null)
-                  primitives.Add(new ParamPrimitive(docObject, boxMeshes));
+                if(Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1) is Rhino.Geometry.Mesh previewMesh)
+                  primitives.Add(new ParamPrimitive(docObject, previewMesh));
+              }
+              break;
+              case Rhino.Geometry.SubD subd:
+              {
+                if (Rhino.Geometry.Mesh.CreateFromSubD(subd, 3) is Rhino.Geometry.Mesh previewMesh)
+                  primitives.Add(new ParamPrimitive(docObject, previewMesh));
               }
               break;
               case Rhino.Geometry.Brep brep:
               {
-                var brepMeshes = Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters());
-                if (brepMeshes != null)
+                if (Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters()) is Rhino.Geometry.Mesh[] brepMeshes)
                 {
                   var previewMesh = new Rhino.Geometry.Mesh();
                   previewMesh.Append(brepMeshes);
