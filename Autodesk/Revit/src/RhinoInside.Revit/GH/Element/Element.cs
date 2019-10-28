@@ -668,11 +668,7 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
       base.RegisterInputParams(manager);
-      var detail = manager[manager.AddIntegerParameter("DetailLevel", "LOD", ObjectType.Name + " LOD [1, 3]", GH_ParamAccess.item)] as Grasshopper.Kernel.Parameters.Param_Integer;
-      detail.Optional = true;
-      detail.AddNamedValue("Coarse", 1);
-      detail.AddNamedValue("Medium", 2);
-      detail.AddNamedValue("Fine",   3);
+      manager[manager.AddParameter(new Parameters.Param_Enum<Types.ViewDetailLevel>(), "DetailLevel", "LOD", ObjectType.Name + " LOD [1, 3]", GH_ParamAccess.item)].Optional = true;
       manager[manager.AddNumberParameter("Quality", "Q", ObjectType.Name + " meshes quality [0.0, 1.0]", GH_ParamAccess.item)].Optional = true;
     }
 
@@ -685,39 +681,36 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Types.Element element = null;
+      var element = default(DB.Element);
       if (!DA.GetData(ObjectType.Name, ref element))
         return;
 
       var detailLevel = DB.ViewDetailLevel.Undefined;
-      int detailLevelValue = (int) detailLevel;
-      if (DA.GetData(1, ref detailLevelValue))
+      if (DA.GetData(1, ref detailLevel))
       {
-        if ((int) DB.ViewDetailLevel.Coarse > detailLevelValue || detailLevelValue > (int) DB.ViewDetailLevel.Fine)
+        if (DB.ViewDetailLevel.Coarse > detailLevel || detailLevel > DB.ViewDetailLevel.Fine)
         {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' range is [1, 3].", Params.Input[1].Name));
-          return;
-        }
-
-        detailLevel = (DB.ViewDetailLevel) detailLevelValue;
-      }
-
-      double RelativeTolerance = double.NaN;
-      if (DA.GetData(2, ref RelativeTolerance))
-      {
-        if(0.0 > RelativeTolerance || RelativeTolerance > 1.0)
-        {
-          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' range is [0.0, 1.0].", Params.Input[2].Name));
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Parameter '{Params.Input[1].Name}' range is [1, 3].");
           return;
         }
       }
 
-      var meshingParameters = !double.IsNaN(RelativeTolerance) ? new Rhino.Geometry.MeshingParameters(RelativeTolerance, Revit.VertexTolerance) : null;
-      Types.GeometricElement.BuildPreview((DB.Element) element, meshingParameters, detailLevel, out var materials, out var meshes, out var wires);
+      var relativeTolerance = double.NaN;
+      if (DA.GetData(2, ref relativeTolerance))
+      {
+        if(0.0 > relativeTolerance || relativeTolerance > 1.0)
+        {
+          AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Parameter '{Params.Input[2].Name}' range is [0.0, 1.0].");
+          return;
+        }
+      }
 
-      DA.SetDataList(0, meshes?.Select((x) => new GH_Mesh(x)));
+      var meshingParameters = !double.IsNaN(relativeTolerance) ? new Rhino.Geometry.MeshingParameters(relativeTolerance, Revit.VertexTolerance) : null;
+      Types.GeometricElement.BuildPreview(element, meshingParameters, detailLevel, out var materials, out var meshes, out var wires);
+
+      DA.SetDataList(0, meshes?.Select((x) =>    new GH_Mesh(x)));
       DA.SetDataList(1, materials?.Select((x) => new GH_Material(x)));
-      DA.SetDataList(2, wires?.Select((x) => new GH_Curve(x)));
+      DA.SetDataList(2, wires?.Select((x) =>     new GH_Curve(x)));
     }
   }
 
@@ -732,7 +725,7 @@ namespace RhinoInside.Revit.GH.Components
     {
       base.RegisterInputParams(manager);
       manager[manager.AddTextParameter("Name", "N", "Filter params by Name", GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddParameter(new Parameters.BuiltInParameterGroup(), "Group", "G", "Filter params by the group they belong", GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddParameter(new Parameters.Param_Enum<Types.BuiltInParameterGroup>(), "Group", "G", "Filter params by the group they belong", GH_ParamAccess.item)].Optional = true;
       manager[manager.AddBooleanParameter("ReadOnly", "R", "Filter params by its ReadOnly property", GH_ParamAccess.item)].Optional = true;
     }
 

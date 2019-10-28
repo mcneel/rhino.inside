@@ -126,7 +126,7 @@ namespace RhinoInside.Revit.GH.Components
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
       manager.AddTextParameter("Name", "N", "Parameter name", GH_ParamAccess.item);
-      manager.AddIntegerParameter("StorageType", "S", "Parameter value type", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Param_Enum<Types.StorageType>(), "StorageType", "S", "Parameter value type", GH_ParamAccess.item);
       manager.AddBooleanParameter("Visible", "V", "Parameter is visible in UI", GH_ParamAccess.item);
       manager.AddParameter(new Param_Guid(), "Guid", "ID", "Shared Parameter global identifier", GH_ParamAccess.item);
     }
@@ -171,9 +171,9 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.BuiltInParameterGroup(), "Group", "G", "Parameter group", GH_ParamAccess.item);
-      manager.AddIntegerParameter("Type", "T", "Parameter type", GH_ParamAccess.item);
-      manager.AddIntegerParameter("Unit", "U", "Unit type", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Param_Enum<Types.BuiltInParameterGroup>(), "Group", "G", "Parameter group", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Param_Enum<Types.ParameterType>(),"Type", "T", "Parameter type", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Param_Enum<Types.UnitType>(), "Unit", "U", "Unit type", GH_ParamAccess.item);
       manager.AddBooleanParameter("IsReadOnly", "R", "Parameter is Read Only", GH_ParamAccess.item);
       manager.AddBooleanParameter("UserModifiable", "U", "Parameter is UserModifiable ", GH_ParamAccess.item);
     }
@@ -185,8 +185,8 @@ namespace RhinoInside.Revit.GH.Components
         return;
 
       DA.SetData("Group", parameter?.Definition.ParameterGroup);
-      DA.SetData("Type", (int) parameter?.Definition.ParameterType);
-      DA.SetData("Unit", (int) parameter?.Definition.UnitType);
+      DA.SetData("Type", parameter?.Definition.ParameterType);
+      DA.SetData("Unit", parameter?.Definition.UnitType);
       DA.SetData("IsReadOnly", parameter?.IsReadOnly);
       DA.SetData("UserModifiable", parameter?.UserModifiable);
     }

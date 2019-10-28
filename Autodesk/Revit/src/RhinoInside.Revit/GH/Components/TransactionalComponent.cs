@@ -60,11 +60,18 @@ namespace RhinoInside.Runtime.InteropServices
     public static bool operator !=(Optional<T> value, Optional<T> other) => value.HasValue != other.HasValue || !Equals(value.value, other.value);
   }
 
-  [AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
+  [AttributeUsage(AttributeTargets.Class | AttributeTargets.Parameter, AllowMultiple = false, Inherited = false)]
   public class NickNameAttribute : Attribute
   {
     public readonly string NickName;
-    public NickNameAttribute(string nickName) => NickName = nickName;
+    public NickNameAttribute(string value) => NickName = value;
+  }
+
+  [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+  public class ExposureAttribute : Attribute
+  {
+    public readonly GH_Exposure Exposure;
+    public ExposureAttribute(GH_Exposure value) => Exposure = value;
   }
 }
 
@@ -253,7 +260,9 @@ namespace RhinoInside.Revit.GH.Components
     {
       if (type.IsEnum)
       {
-        paramTypes = Tuple.Create(typeof(Param_Integer), typeof(GH_Integer));
+        if(!Types.GH_Enumerate.TryGetParamTypes(type, out paramTypes))
+          paramTypes = Tuple.Create(typeof(Param_Integer), typeof(GH_Integer));
+
         return true;
       }
 

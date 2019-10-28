@@ -1,4 +1,7 @@
 using System;
+using System.Linq;
+using System.Windows.Forms;
+using Grasshopper.GUI;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Types;
 using DB = Autodesk.Revit.DB;
@@ -231,6 +234,117 @@ namespace RhinoInside.Revit.GH.Parameters
     public Category() : base("Category", "Category", "Represents a Revit document category.", "Params", "Revit") { }
 
     protected override Types.Category PreferredCast(object data) => Types.Category.FromValue(data);
+
+    public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
+    {
+      if (Kind > GH_ParamKind.input || DataType == GH_ParamData.remote)
+      {
+        base.AppendAdditionalMenuItems(menu);
+        return;
+      }
+
+      Menu_AppendWireDisplay(menu);
+      Menu_AppendDisconnectWires(menu);
+
+      Menu_AppendReverseParameter(menu);
+      Menu_AppendFlattenParameter(menu);
+      Menu_AppendGraftParameter(menu);
+      Menu_AppendSimplifyParameter(menu);
+
+      {
+        var listBox = new ListBox();
+        listBox.BorderStyle = BorderStyle.FixedSingle;
+
+        listBox.SelectedIndexChanged += ListBox_SelectedIndexChanged;
+
+        listBox.Width = (int) (200 * GH_GraphicsUtil.UiScale);
+        listBox.Height = (int) (100 * GH_GraphicsUtil.UiScale);
+        RefreshCategoryList(listBox, DB.CategoryType.Model);
+
+        var comboBox = new ComboBox();
+        comboBox.Items.Add("Model");
+        comboBox.Items.Add("Annotation");
+        comboBox.Items.Add("Tags");
+        comboBox.Items.Add("Internal");
+        comboBox.Items.Add("Analytical");
+        comboBox.Tag = listBox;
+        comboBox.Width = (int) (200 * GH_GraphicsUtil.UiScale);
+        comboBox.SelectedIndexChanged += ComboBox_SelectedIndexChanged;
+
+        comboBox.SelectedIndex = 0;
+        if
+        (
+          SourceCount == 0 && PersistentDataCount == 1 &&
+          PersistentData.get_FirstItem(true) is Types.Category firstValue &&
+          firstValue.LoadElement() &&
+          (DB.Category) firstValue is DB.Category current
+        )
+        {
+          comboBox.SelectedIndex = (int) current.CategoryType - 1;
+          if (current.IsTagCategory)
+            comboBox.SelectedIndex = 2;
+        }
+
+        Menu_AppendCustomItem(menu, comboBox);
+        Menu_AppendCustomItem(menu, listBox);
+      }
+
+      Menu_AppendDestroyPersistent(menu);
+      Menu_AppendInternaliseData(menu);
+
+      if (Exposure != GH_Exposure.hidden)
+        Menu_AppendExtractParameter(menu);
+    }
+
+    private void ComboBox_SelectedIndexChanged(object sender, EventArgs e)
+    {
+      if(sender is ComboBox comboBox)
+      {
+        if(comboBox.Tag is ListBox listBox)
+          RefreshCategoryList(listBox, (DB.CategoryType) comboBox.SelectedIndex + 1);
+      }
+    }
+
+    private void RefreshCategoryList(ListBox listBox, DB.CategoryType categoryType)
+    {
+      var current = InstantiateT();
+      if (SourceCount == 0 && PersistentDataCount == 1)
+      {
+        if (PersistentData.get_FirstItem(true) is Types.Category firstValue)
+          current = firstValue.Duplicate() as Types.Category;
+      }
+
+      var categories = Revit.ActiveUIDocument.Document.Settings.Categories.Cast<DB.Category>().Where(x => x.CategoryType == categoryType && !x.IsTagCategory);
+      if(categoryType == (DB.CategoryType) 3)
+        categories = Revit.ActiveUIDocument.Document.Settings.Categories.Cast<DB.Category>().Where(x => x.IsTagCategory);
+
+      listBox.Items.Clear();
+      foreach (var category in categories.OrderBy(x => x.Name))
+      {
+        var tag = Types.Category.FromCategory(category);
+        int index = listBox.Items.Add(tag);
+        if (tag.UniqueID == current.UniqueID)
+          listBox.SelectedIndex = index;
+      }
+    }
+
+    private void ListBox_SelectedIndexChanged(object sender, EventArgs e)
+    {
+      if (sender is ListBox listBox)
+      {
+        if (listBox.SelectedIndex != -1)
+        {
+          if (listBox.Items[listBox.SelectedIndex] is Types.Category value)
+          {
+            RecordUndoEvent($"Set: {value}");
+            PersistentData.Clear();
+            PersistentData.Append(value.Duplicate() as Types.Category);
+          }
+        }
+
+        ExpireSolution(true);
+      }
+    }
   }
 
   public class GraphicsStyle : ElementIdNonGeometryParam<Types.GraphicsStyle, DB.GraphicsStyle>

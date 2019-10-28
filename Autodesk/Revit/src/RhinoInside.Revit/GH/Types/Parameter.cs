@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
 using Grasshopper.Kernel;
-using Grasshopper.Kernel.Expressions;
-using Grasshopper.Kernel.Parameters;
 using Grasshopper.Kernel.Types;
 using DB = Autodesk.Revit.DB;
 
@@ -344,12 +341,6 @@ namespace RhinoInside.Revit.GH.Types
       return "Null " + TypeName;
     }
   }
-
-  public class BuiltInParameterGroup : GH_Enum<DB.BuiltInParameterGroup>
-  {
-    public BuiltInParameterGroup() { Value = (int) DB.BuiltInParameterGroup.INVALID; }
-    public override string ToString() => DB.LabelUtils.GetLabelFor(this);
-  }
 }
 
 namespace RhinoInside.Revit.GH.Parameters
@@ -412,13 +403,5 @@ namespace RhinoInside.Revit.GH.Parameters
       catch (Autodesk.Revit.Exceptions.InvalidOperationException)
       { Description = p.Definition.UnitType == DB.UnitType.UT_Number ? "Enumerate" : DB.LabelUtils.GetLabelFor(p.Definition.UnitType); }
     }
-  }
-
-  public class BuiltInParameterGroup : Param_Enum<Types.BuiltInParameterGroup>
-  {
-    public override Guid ComponentGuid => new Guid("3D9979B4-65C8-447F-BCEA-3705249DF3B6");
-    public override GH_Exposure Exposure => GH_Exposure.quarternary;
-
-    public BuiltInParameterGroup() : base("Parameter Group", "Parameter Group", "Represents a Revit parameter group.", "Params", "Revit") { }
   }
 }
