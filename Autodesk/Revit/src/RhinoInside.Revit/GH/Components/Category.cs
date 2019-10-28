@@ -22,6 +22,7 @@ namespace RhinoInside.Revit.GH.Parameters
       ListItems.Clear();
       ListItems.Add(new GH_ValueListItem("Model", ((int) DB.CategoryType.Model).ToString()));
       ListItems.Add(new GH_ValueListItem("Annotation", ((int) DB.CategoryType.Annotation).ToString()));
+      ListItems.Add(new GH_ValueListItem("Internal", ((int) DB.CategoryType.Internal).ToString()));
       ListItems.Add(new GH_ValueListItem("Analytical", ((int) DB.CategoryType.AnalyticalModel).ToString()));
     }
   }
@@ -46,7 +47,7 @@ namespace RhinoInside.Revit.GH.Components
     {
       manager.AddTextParameter("Name", "N", "Category name", GH_ParamAccess.item);
       manager.AddParameter(new Parameters.Category(), "Parent", "P", "Category parent category", GH_ParamAccess.item);
-      manager.AddIntegerParameter("Type", "T", "Category type", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.Param_Enum<Types.CategoryType>(), "Type", "T", "Category type", GH_ParamAccess.item);
       manager.AddBooleanParameter("AllowsSubcategories", "A", "Category allows subcategories to be added", GH_ParamAccess.item);
       manager.AddBooleanParameter("AllowsParameters", "A", "Category allows bound parameters", GH_ParamAccess.item);
       manager.AddBooleanParameter("HasMaterialQuantities", "M", "Category has material quantities", GH_ParamAccess.item);

@@ -31,6 +31,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{D6C256D4-B518-464F-9E68-CB282202E846}</ProjectGuid>
     <OutputType>Library</OutputType>
+    <LangVersion>7.3</LangVersion>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RhinoInside</RootNamespace>
     <AssemblyName>RhinoInside.Revit</AssemblyName>
@@ -207,6 +208,7 @@
     <Compile Include="GH\Solid.cs" />
     <Compile Include="GH\Types\Category.cs" />
     <Compile Include="GH\Types\ElementType.cs" />
+    <Compile Include="GH\Types\Enums.cs" />
     <Compile Include="GH\Types\Family.cs" />
     <Compile Include="GH\Types\GeometryObject.cs" />
     <Compile Include="GH\Types\ID.cs" />
