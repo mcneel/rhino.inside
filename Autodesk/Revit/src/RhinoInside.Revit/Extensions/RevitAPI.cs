@@ -103,7 +103,7 @@ namespace RhinoInside.Revit
       return !category.CanAddSubcategory;
     }
 
-    static bool IsBuiltInCategoryValid(this BuiltInCategory category)
+    public static bool IsBuiltInCategoryValid(this BuiltInCategory category)
     {
       if (-3000000 < (int) category && (int) category < -2000000)
         return Enum.IsDefined(typeof(BuiltInCategory), (int) category);

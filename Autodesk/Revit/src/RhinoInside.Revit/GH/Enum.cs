@@ -210,7 +210,7 @@ namespace RhinoInside.Revit.GH.Parameters
 
     public override void AppendAdditionalMenuItems(ToolStripDropDown menu)
     {
-      if (Kind > GH_ParamKind.input)
+      if (Kind > GH_ParamKind.input || DataType == GH_ParamData.remote)
       {
         base.AppendAdditionalMenuItems(menu);
         return;
@@ -235,7 +235,7 @@ namespace RhinoInside.Revit.GH.Parameters
       if (values.Length < 7)
       {
         Menu_AppendSeparator(menu);
-        foreach (var e in current.GetEnumValues())
+        foreach (var e in values)
         {
           var tag = InstantiateT(); tag.Value = (int) e;
           var item = Menu_AppendItem(menu, tag.ToString(), Menu_NamedValueClicked, SourceCount == 0, (int) e == current.Value);
@@ -246,7 +246,7 @@ namespace RhinoInside.Revit.GH.Parameters
       else
       {
         var listBox = new ListBox();
-        foreach (var e in current.GetEnumValues())
+        foreach (var e in values)
         {
           var tag = InstantiateT(); tag.Value = (int) e;
           int index = listBox.Items.Add(tag);

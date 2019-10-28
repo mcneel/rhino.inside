@@ -23,7 +23,13 @@ namespace RhinoInside.Revit.GH.Types
   public class BuiltInParameterGroup : GH_Enum<DB.BuiltInParameterGroup>
   {
     public BuiltInParameterGroup() : base(DB.BuiltInParameterGroup.INVALID) { }
-    public override string ToString() => DB.LabelUtils.GetLabelFor(Value);
+    public override string ToString()
+    {
+      try { return DB.LabelUtils.GetLabelFor(Value); }
+      catch (Autodesk.Revit.Exceptions.InvalidOperationException) { }
+
+      return base.ToString();
+    }
 
     public override Array GetEnumValues() =>
       Enum.GetValues(typeof(DB.BuiltInParameterGroup)).
@@ -78,6 +84,4 @@ namespace RhinoInside.Revit.GH.Types
       return base.ToString();
     }
   }
-
-
 }
