@@ -868,13 +868,32 @@ namespace RhinoInside.Revit.GH.Components
       {
         RecordUndoEvent("Get Common Parameters");
 
+        var connectedParams = new Dictionary<int, IList<IGH_Param>>();
         foreach (var output in Params.Output.ToArray())
+        {
+          if
+          (
+            output.Recipients.Count > 0 &&
+            output is Parameters.ParameterParam param
+          )
+            connectedParams.Add(param.ParameterId, param.Recipients.ToArray());
+
           Params.UnregisterOutputParameter(output);
+        }
 
         foreach (var group in common.GroupBy((x) => x.Value.Definition.ParameterGroup).OrderBy((x) => x.Key))
         {
-          foreach (var pair in group.OrderBy(x => x.Value.Id.IntegerValue))
-            AddOutputParameter(new Parameters.ParameterParam(pair.Value));
+          foreach (var definition in group.OrderBy(x => x.Value.Id.IntegerValue))
+          {
+            var param = new Parameters.ParameterParam(definition.Value);
+            AddOutputParameter(param);
+
+            if (connectedParams.TryGetValue(param.ParameterId, out var recipients))
+            {
+              foreach (var recipient in recipients)
+                recipient.AddSource(param);
+            }
+          }
         }
 
         Params.OnParametersChanged();
@@ -903,13 +922,32 @@ namespace RhinoInside.Revit.GH.Components
       {
         RecordUndoEvent("Get All Parameters");
 
+        var connectedParams = new Dictionary<int, IList<IGH_Param>>();
         foreach (var output in Params.Output.ToArray())
+        {
+          if
+          (
+            output.Recipients.Count > 0 &&
+            output is Parameters.ParameterParam param
+          )
+            connectedParams.Add(param.ParameterId, param.Recipients.ToArray());
+          
           Params.UnregisterOutputParameter(output);
+        }
 
         foreach (var group in definitions.GroupBy((x) => x.Value.Definition.ParameterGroup).OrderBy((x) => x.Key))
         {
           foreach (var definition in group.OrderBy(x => x.Value.Id.IntegerValue))
-            AddOutputParameter(new Parameters.ParameterParam(definition.Value));
+          {
+            var param = new Parameters.ParameterParam(definition.Value);
+            AddOutputParameter(param);
+
+            if (connectedParams.TryGetValue(param.ParameterId, out var recipients))
+            {
+              foreach (var recipient in recipients)
+                recipient.AddSource(param);
+            }
+          }
         }
 
         Params.OnParametersChanged();
