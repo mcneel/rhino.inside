@@ -1080,7 +1080,7 @@ namespace RhinoInside.Revit
 
         case Rhino.Geometry.NurbsCurve nurbsCurve:
 
-          if (curve.TryGetEllipse(out var ellipse, out var interval, Revit.VertexTolerance))
+          if (curve.TryGetEllipse(out var ellipse, out var interval, Revit.VertexTolerance) && ellipse.Radius1 <= 30000 && ellipse.Radius2 <= 30000)
             return ellipse.ToHost(interval);
 
           return nurbsCurve.ToHost();
@@ -1136,7 +1136,7 @@ namespace RhinoInside.Revit
             yield break;
           }
 
-          if (nurbsCurve.TryGetEllipse(out var ellipse, out var interval, Revit.VertexTolerance))
+          if (nurbsCurve.TryGetEllipse(out var ellipse, out var interval, Revit.VertexTolerance) && ellipse.Radius1 <= 30000 && ellipse.Radius2 <= 30000)
           {
             yield return ellipse.ToHost(interval);
             yield break;
