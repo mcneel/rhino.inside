@@ -1,6 +1,5 @@
 using System;
 using Rhino.Geometry;
-using GH_IO.Serialization;
 
 namespace RunGrasshopper
 {
@@ -28,45 +27,48 @@ namespace RunGrasshopper
       // Extract definition to sample location as executable
       var assembly = typeof(Program).Assembly;
       string dir = System.IO.Path.GetDirectoryName(assembly.Location);
-      string definitionPath = System.IO.Path.Combine(dir, "simple_def.gh");
+      string filePath = System.IO.Path.Combine(dir, "simple_def.gh");
+
       using (var resStream = assembly.GetManifestResourceStream("RunGrasshopper.simple_def.gh"))
-      using (var outStream = new System.IO.FileStream(definitionPath, System.IO.FileMode.Create))
+      using (var outStream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
       {
         resStream.CopyTo(outStream);
       }
-
 
       // Start grasshopper in "headless" mode
       var pluginObject = Rhino.RhinoApp.GetPlugInObject("Grasshopper") as Grasshopper.Plugin.GH_RhinoScriptInterface;
       pluginObject.RunHeadless();
 
-      var archive = new GH_Archive();
-      archive.ReadFromFile(definitionPath);
-
-      using (var definition = new Grasshopper.Kernel.GH_Document())
+      var io = new Grasshopper.Kernel.GH_DocumentIO();
+      if (!io.Open(filePath))
+        Console.WriteLine("File loading failed.");
+      else
       {
-        archive.ExtractObject(definition, "Definition");
-        foreach(var obj in definition.Objects)
-        {
+        var doc = io.Document;
+
+        // Documents are typically only enabled when they are loaded
+        // into the Grasshopper canvas. In this case we -may- want to
+        // make sure our document is enabled before using it.
+        doc.Enabled = true;
+
+        foreach (var obj in doc.Objects)
           if (obj is Grasshopper.Kernel.IGH_Param param)
-          {
-            if (obj.NickName == "CollectMe")
+            if (param.NickName == "CollectMe")
             {
               param.CollectData();
               param.ComputeData();
+
               foreach (var item in param.VolatileData.AllData(true))
-              {
-                Line computedLine = Line.Unset;
-                if ( item.CastTo(out computedLine) )
-                {
-                  Console.WriteLine($"Got a line ... {computedLine}");
-                }
-              }
+                if (item.CastTo(out Line line))
+                  Console.WriteLine($"Got a line: {line:0.000}");
+                else
+                  Console.WriteLine($"Unexpected data of type: {item.TypeName}");
+
+              break;
             }
-          }
-        }
       }
-      Console.WriteLine("Done... press and key to exit");
+
+      Console.WriteLine("Done... press any key to exit");
       Console.ReadKey();
     }
   }
