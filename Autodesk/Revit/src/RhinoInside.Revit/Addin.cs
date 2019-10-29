@@ -19,6 +19,7 @@ namespace RhinoInside.Revit
     static readonly string SystemDir =
       Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path", null) as string ??
       Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
+
     internal static readonly string RhinoExePath = Path.Combine(SystemDir, "Rhino.exe");
     internal static readonly FileVersionInfo RhinoVersionInfo = File.Exists(RhinoExePath) ? FileVersionInfo.GetVersionInfo(RhinoExePath) : null ;
     static readonly Version MinimumRhinoVersion = new Version(7, 0, 19183);
@@ -156,21 +157,6 @@ namespace RhinoInside.Revit
     #endregion
 
     internal static UIControlledApplication ApplicationUI { get; private set; }
-  }
-
-  static class TaskDialogIcons
-  {
-    public const TaskDialogIcon IconNone = TaskDialogIcon.TaskDialogIconNone;
-#if REVIT_2018
-    public const TaskDialogIcon IconShield = TaskDialogIcon.TaskDialogIconShield;
-    public const TaskDialogIcon IconInformation = TaskDialogIcon.TaskDialogIconInformation;
-    public const TaskDialogIcon IconError = TaskDialogIcon.TaskDialogIconError;
-#else
-    public const TaskDialogIcon IconShield = TaskDialogIcon.TaskDialogIconWarning;
-    public const TaskDialogIcon IconInformation = TaskDialogIcon.TaskDialogIconWarning;
-    public const TaskDialogIcon IconError = TaskDialogIcon.TaskDialogIconWarning;
-#endif
-    public const TaskDialogIcon IconWarning = TaskDialogIcon.TaskDialogIconWarning;
   }
 }
 
