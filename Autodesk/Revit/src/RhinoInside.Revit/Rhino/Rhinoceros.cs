@@ -43,16 +43,27 @@ namespace RhinoInside.Revit
   {
     #region Revit Interface
     static RhinoCore core;
-    public static string SchemeName = $"Inside-Revit-{Revit.ApplicationUI.ControlledApplication.VersionNumber}";
+    public static readonly string SchemeName = $"Inside-Revit-{Revit.ApplicationUI.ControlledApplication.VersionNumber}";
 
     internal static Result Startup()
     {
-      if (core == null)
+      if (core is null)
       {
         // Load RhinoCore
         try
         {
-          core = new RhinoCore(new string[] { $"/scheme={SchemeName}", "/nosplash" }, WindowStyle.Hidden, Revit.MainWindowHandle);
+          core = new RhinoCore
+          (
+            new string[]
+            {
+              "/nosplash",
+              "/notemplate",
+              $"/scheme={SchemeName}",
+              $"/language={Revit.ApplicationUI.ControlledApplication.Language.ToLCID()}"
+            },
+            WindowStyle.Hidden,
+            Revit.MainWindowHandle
+          );
         }
         catch (Exception /*e*/)
         {
@@ -85,7 +96,7 @@ namespace RhinoInside.Revit
 
     internal static Result Shutdown()
     {
-      if (core != null)
+      if (core is object)
       {
         RhinoApp.MainLoop -= MainLoop;
         RhinoDoc.NewDocument -= OnNewDocument;
@@ -144,7 +155,7 @@ namespace RhinoInside.Revit
       //  {
       //    case Eto.Forms.DialogResult.Yes:
       //      var docFileName = doc.Path;
-      //      if (docFileName == null)
+      //      if (docFileName is null)
       //      {
       //        using (var dialog = new Eto.Forms.SaveFileDialog())
       //        {
@@ -183,7 +194,7 @@ namespace RhinoInside.Revit
     {
       foreach (var guestInfo in guests)
       {
-        if (guestInfo.Guest != null)
+        if (guestInfo.Guest is object)
           continue;
 
         bool load = true;
@@ -228,7 +239,7 @@ namespace RhinoInside.Revit
     {
       foreach (var guestInfo in Enumerable.Reverse(guests))
       {
-        if (guestInfo.Guest == null)
+        if (guestInfo.Guest is null)
           continue;
 
         if (guestInfo.LoadReturnCode == LoadReturnCode.Success)
@@ -334,7 +345,7 @@ namespace RhinoInside.Revit
       bool docModified = rhinoDoc.Modified;
       try
       {
-        if (revitDoc == null)
+        if (revitDoc is null)
         {
           rhinoDoc.ModelUnitSystem = Rhino.UnitSystem.None;
           rhinoDoc.ModelAbsoluteTolerance = Revit.VertexTolerance;
@@ -497,7 +508,7 @@ namespace RhinoInside.Revit
             ModalForm.BringWindowToTop(activePopup);
           }
 
-          while (ModalForm.ActiveForm != null)
+          while (ModalForm.ActiveForm is object)
           {
             while (Rhinoceros.Run())
             {
