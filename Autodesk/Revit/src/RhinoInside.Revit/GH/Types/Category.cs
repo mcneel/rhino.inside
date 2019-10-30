@@ -289,6 +289,9 @@ namespace RhinoInside.Revit.GH.Parameters
         Menu_AppendCustomItem(menu, listBox);
       }
 
+      Menu_AppendManageCollection(menu);
+      Menu_AppendSeparator(menu);
+
       Menu_AppendDestroyPersistent(menu);
       Menu_AppendInternaliseData(menu);
 
