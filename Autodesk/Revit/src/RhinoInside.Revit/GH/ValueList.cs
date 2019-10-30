@@ -761,13 +761,13 @@ namespace RhinoInside.Revit.GH.Parameters
       public static bool IsComparable(IGH_Goo goo)
       {
         return
-        (goo is Types.IGH_ElementId id) ||
-        (goo is IGH_GeometricGoo geometry) ||
+        goo is Types.IGH_ElementId id ||
+        goo is IGH_GeometricGoo geometry ||
         goo is IGH_QuickCast ||
         goo is GH_StructurePath ||
         goo is GH_Culture ||
         (
-          goo.ScriptVariable() is object obj &&
+          goo?.ScriptVariable() is object obj &&
           (
             obj is ValueType ||
             obj is IComparable
