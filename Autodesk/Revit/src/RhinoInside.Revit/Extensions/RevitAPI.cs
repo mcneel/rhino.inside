@@ -493,6 +493,34 @@ namespace RhinoInside.Revit
       return AppearanceAssetElement.Create(element.Document, name, element.GetRenderingAsset());
     }
 #endif
+
+    public static int ToLCID(this Autodesk.Revit.ApplicationServices.LanguageType value)
+    {
+      switch (value)
+      {
+        case Autodesk.Revit.ApplicationServices.LanguageType.English_USA:   return 1033;
+        case Autodesk.Revit.ApplicationServices.LanguageType.German:        return 1031;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Spanish:       return 1034;
+        case Autodesk.Revit.ApplicationServices.LanguageType.French:        return 1036;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Italian:       return 1040;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Dutch:         return 1043;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Simplified: return 2052;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Chinese_Traditional: return 1028;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Japanese:      return 1041;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Korean:        return 1042;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Russian:       return 1049;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Czech:         return 1029;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Polish:        return 1045;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Hungarian:     return 1038;
+        case Autodesk.Revit.ApplicationServices.LanguageType.Brazilian_Portuguese: return 1046;
+#if REVIT_2018
+        case Autodesk.Revit.ApplicationServices.LanguageType.English_GB: return 2057;
+#endif
+      }
+
+      return 1033;
+    }
+
     #endregion
   }
 
