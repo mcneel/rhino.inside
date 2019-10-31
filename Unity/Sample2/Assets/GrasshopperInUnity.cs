@@ -39,7 +39,6 @@ public class GrasshopperInUnity : MonoBehaviour
 
   Rhino.Geometry.Mesh _mesh;
 
-
   // Start is called before the first frame update
   void Start()
   {
@@ -49,11 +48,20 @@ public class GrasshopperInUnity : MonoBehaviour
     {
       color = new Color(1.0f, 0.0f, 0.0f, 1f)
     };
+
   }
 
   // Update is called once per frame
   void Update()
   {
+    var pt = Camera.main.gameObject.transform.position.ToRhino();
+    using (var args = new Rhino.Runtime.NamedParametersEventArgs())
+    {
+      args.Set("point", new Rhino.Geometry.Point(pt));
+      Rhino.Runtime.HostUtils.ExecuteNamedCallback("ToGrasshopper", args);
+    }
+
   }
+
 }
 
