@@ -186,6 +186,41 @@ namespace Sample3
       return list;
     }
 
-    
+    [UFunction, BlueprintCallable]
+    public void CameraToGH(FVector vector)
+    {
+      FMessage.Log(ELogVerbosity.Warning, "x:" + vector.X + " y:" + vector.Y + " z:" + vector.Z );
+      var pt = new Rhino.Geometry.Point3d(vector.X, vector.Y, vector.Z);
+      /*
+      using (var args = new Rhino.Runtime.NamedParametersEventArgs())
+      {
+        args.Set("point", new Rhino.Geometry.Point(pt));
+        Rhino.Runtime.HostUtils.ExecuteNamedCallback("ToGrasshopper", args);
+      }
+      */
+      string Name = "receive";
+
+      var comp = FindComponentByName(Name, definition);
+
+      if(comp is Grasshopper.Kernel.Special.GH_Panel)
+      {
+        var panel = comp as Grasshopper.Kernel.Special.GH_Panel;
+        panel.UserText = "{" + vector.X + "," + vector.Y + "," + vector.Z + "}";
+      }
+
+      comp.ExpireSolution(true);
+ 
+    }
+
+
+    public GH_DocumentObject FindComponentByName(string Name, GH_Document GrasshopperDocument)
+    {
+      foreach (GH_DocumentObject obj in GrasshopperDocument.Objects)
+        if (obj.NickName == Name)
+          return obj;
+      return null;
+    }
+
+
   }
 }
