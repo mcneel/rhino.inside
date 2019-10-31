@@ -54,6 +54,81 @@ namespace RhinoInside.Revit
 
       return geometry;
     }
+
+#if !REVIT_2018
+    public static Surface GetSurface(this Face face)
+    {
+      switch(face)
+      {
+        case PlanarFace planarFace:
+          return Plane.CreateByOriginAndBasis(planarFace.Origin, planarFace.XVector, planarFace.YVector);
+
+        case ConicalFace conicalFace:
+        {
+          var basisX = conicalFace.get_Radius(0).Normalize();
+          var basisY = conicalFace.get_Radius(1).Normalize();
+          var basisZ = conicalFace.Axis.Normalize();
+          return ConicalSurface.Create(new Frame(conicalFace.Origin, basisX, basisY, basisZ), conicalFace.HalfAngle);
+        }
+
+        case CylindricalFace cylindricalFace:
+        {
+          double radius = cylindricalFace.get_Radius(0).GetLength();
+          var basisX = cylindricalFace.get_Radius(0).Normalize();
+          var basisY = cylindricalFace.get_Radius(1).Normalize();
+          var basisZ = cylindricalFace.Axis.Normalize();
+          return CylindricalSurface.Create(new Frame(cylindricalFace.Origin, basisX, basisY, basisZ), radius);
+        }
+
+        case RevolvedFace revolvedFace:
+        {
+          var ECStoWCS = new Transform(Transform.Identity)
+          {
+            Origin = revolvedFace.Origin,
+            BasisX = revolvedFace.get_Radius(0).Normalize(),
+            BasisY = revolvedFace.get_Radius(1).Normalize(),
+            BasisZ = revolvedFace.Axis.Normalize()
+          };
+
+          var profileInWCS = revolvedFace.Curve.CreateTransformed(ECStoWCS);
+
+          return RevolvedSurface.Create(new Frame(ECStoWCS.Origin, ECStoWCS.BasisX, ECStoWCS.BasisY, ECStoWCS.BasisZ), profileInWCS);
+        }
+        case RuledFace ruledFace:
+        {
+          var profileCurve0 = ruledFace.get_Curve(0);
+          var profileCurve1 = ruledFace.get_Curve(1);
+          return RuledSurface.Create(profileCurve0, profileCurve1);
+        }
+      }
+
+      return null;
+    }
+
+    public static Curve GetProfileCurveInWorldCoordinates(this RevolvedSurface revolvedSurface)
+    {
+      var profileCurve = revolvedSurface.GetProfileCurve();
+      var ECStoWCS = new Transform(Transform.Identity)
+      {
+        Origin = revolvedSurface.Origin,
+        BasisX = revolvedSurface.XDir.Normalize(),
+        BasisY = revolvedSurface.YDir.Normalize(),
+        BasisZ = revolvedSurface.Axis.Normalize()
+      };
+
+      return profileCurve.CreateTransformed(ECStoWCS);
+    }
+
+    public static bool HasFirstProfilePoint(this RuledSurface ruledSurface)
+    {
+      return ruledSurface.GetFirstProfilePoint() is object;
+    }
+
+    public static bool HasSecondProfilePoint(this RuledSurface ruledSurface)
+    {
+      return ruledSurface.GetSecondProfilePoint() is object;
+    }
+#endif
     #endregion
 
     #region ElementId
@@ -217,6 +292,51 @@ namespace RhinoInside.Revit
             case StorageType.ElementId: param.Set(previousParameter.AsElementId()); break;
           }
         }
+    }
+
+    public static StorageType ToStorageType(this ParameterType parameterType)
+    {
+      switch (parameterType)
+      {
+        case ParameterType.Invalid:
+          return StorageType.None;
+        case ParameterType.Text:
+        case ParameterType.MultilineText:
+        case ParameterType.URL:
+          return StorageType.String;
+        case ParameterType.YesNo:
+        case ParameterType.Integer:
+        case ParameterType.LoadClassification:
+          return StorageType.Integer;
+        case ParameterType.Material:
+        case ParameterType.FamilyType:
+        case ParameterType.Image:
+          return StorageType.ElementId;
+        case ParameterType.Number:
+        default:
+          return StorageType.Double;
+      }
+    }
+
+    public static string ToParameterIdString(this int value)
+    {
+      switch (value)
+      {
+        case (int) BuiltInParameter.GENERIC_THICKNESS:          return "GENERIC_THICKNESS";
+        case (int) BuiltInParameter.GENERIC_WIDTH:              return "GENERIC_WIDTH";
+        case (int) BuiltInParameter.GENERIC_HEIGHT:             return "GENERIC_HEIGHT";
+        case (int) BuiltInParameter.GENERIC_DEPTH:              return "GENERIC_DEPTH";
+        case (int) BuiltInParameter.GENERIC_FINISH:             return "GENERIC_FINISH";
+        case (int) BuiltInParameter.GENERIC_CONSTRUCTION_TYPE:  return "GENERIC_CONSTRUCTION_TYPE";
+        case (int) BuiltInParameter.FIRE_RATING:                return "FIRE_RATING";
+        case (int) BuiltInParameter.ALL_MODEL_COST:             return "ALL_MODEL_COST";
+        case (int) BuiltInParameter.ALL_MODEL_MARK:             return "ALL_MODEL_MARK";
+        case (int) BuiltInParameter.ALL_MODEL_FAMILY_NAME:      return "ALL_MODEL_FAMILY_NAME";
+        case (int) BuiltInParameter.ALL_MODEL_TYPE_NAME:        return "ALL_MODEL_TYPE_NAME";
+        case (int) BuiltInParameter.ALL_MODEL_TYPE_MARK:        return "ALL_MODEL_TYPE_MARK";
+      }
+
+      return ((BuiltInParameter) value).ToString();
     }
     #endregion
 
