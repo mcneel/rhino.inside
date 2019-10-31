@@ -1,17 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
-
-using Autodesk;
-using Autodesk.Revit;
+using System.Linq;
 using Autodesk.Revit.DB;
-using Autodesk.Revit.UI;
-using Autodesk.Revit.ApplicationServices;
-
 using Rhino;
 using Rhino.Geometry;
 using Rhino.Geometry.Collections;
@@ -20,53 +11,6 @@ namespace RhinoInside.Revit
 {
   public static class Convert
   {
-    #region Enums
-    public static StorageType ToStorageType(this ParameterType parameterType)
-    {
-      switch (parameterType)
-      {
-        case ParameterType.Invalid:
-          return StorageType.None;
-        case ParameterType.Text:
-        case ParameterType.MultilineText:
-        case ParameterType.URL:
-          return StorageType.String;
-        case ParameterType.YesNo:
-        case ParameterType.Integer:
-        case ParameterType.LoadClassification:
-          return StorageType.Integer;
-        case ParameterType.Material:
-        case ParameterType.FamilyType:
-        case ParameterType.Image:
-          return StorageType.ElementId;
-        case ParameterType.Number:
-        default:
-          return StorageType.Double;
-      }
-    }
-
-    public static string ToParameterIdString(this int value)
-    {
-      switch (value)
-      {
-        case (int) BuiltInParameter.GENERIC_THICKNESS:          return "GENERIC_THICKNESS";
-        case (int) BuiltInParameter.GENERIC_WIDTH:              return "GENERIC_WIDTH";
-        case (int) BuiltInParameter.GENERIC_HEIGHT:             return "GENERIC_HEIGHT";
-        case (int) BuiltInParameter.GENERIC_DEPTH:              return "GENERIC_DEPTH";
-        case (int) BuiltInParameter.GENERIC_FINISH:             return "GENERIC_FINISH";
-        case (int) BuiltInParameter.GENERIC_CONSTRUCTION_TYPE:  return "GENERIC_CONSTRUCTION_TYPE";
-        case (int) BuiltInParameter.FIRE_RATING:                return "FIRE_RATING";
-        case (int) BuiltInParameter.ALL_MODEL_COST:             return "ALL_MODEL_COST";
-        case (int) BuiltInParameter.ALL_MODEL_MARK:             return "ALL_MODEL_MARK";
-        case (int) BuiltInParameter.ALL_MODEL_FAMILY_NAME:      return "ALL_MODEL_FAMILY_NAME";
-        case (int) BuiltInParameter.ALL_MODEL_TYPE_NAME:        return "ALL_MODEL_TYPE_NAME";
-        case (int) BuiltInParameter.ALL_MODEL_TYPE_MARK:        return "ALL_MODEL_TYPE_MARK";
-      }
-
-      return ((BuiltInParameter) value).ToString();
-    }
-    #endregion
-
     #region GraphicAttributes
     public sealed class GraphicAttributes : State<GraphicAttributes>
     {
@@ -80,7 +24,7 @@ namespace RhinoInside.Revit
     #region ToRhino
     public static System.Drawing.Color ToRhino(this Color c)
     {
-      return System.Drawing.Color.FromArgb((int) c.Red, (int) c.Green, (int) c.Blue);
+      return System.Drawing.Color.FromArgb(c.Red, c.Green, c.Blue);
     }
 
     static readonly Rhino.Display.DisplayMaterial defaultMaterial = new Rhino.Display.DisplayMaterial(System.Drawing.Color.WhiteSmoke);
@@ -364,78 +308,6 @@ namespace RhinoInside.Revit
              brepFaces.JoinAndMerge(Revit.VertexTolerance);
     }
 
-#if !REVIT_2018
-    internal static Autodesk.Revit.DB.Surface GetSurface(this Autodesk.Revit.DB.Face face)
-    {
-      switch(face)
-      {
-        case PlanarFace planarFace:
-          return Autodesk.Revit.DB.Plane.CreateByOriginAndBasis(planarFace.Origin, planarFace.XVector, planarFace.YVector);
-        case ConicalFace conicalFace:
-        {
-          var basisX = conicalFace.get_Radius(0).Normalize();
-          var basisY = conicalFace.get_Radius(1).Normalize();
-          var basisZ = conicalFace.Axis.Normalize();
-          return Autodesk.Revit.DB.ConicalSurface.Create(new Frame(conicalFace.Origin, basisX, basisY, basisZ), conicalFace.HalfAngle);
-        }
-        case CylindricalFace cylindricalFace:
-        {
-          double radius = cylindricalFace.get_Radius(0).GetLength();
-          var basisX = cylindricalFace.get_Radius(0).Normalize();
-          var basisY = cylindricalFace.get_Radius(1).Normalize();
-          var basisZ = cylindricalFace.Axis.Normalize();
-          return Autodesk.Revit.DB.CylindricalSurface.Create(new Frame(cylindricalFace.Origin, basisX, basisY, basisZ), radius);
-        }
-        case RevolvedFace revolvedFace:
-        {
-          var ECStoWCS = new Autodesk.Revit.DB.Transform(Autodesk.Revit.DB.Transform.Identity)
-          {
-            Origin = revolvedFace.Origin,
-            BasisX = revolvedFace.get_Radius(0).Normalize(),
-            BasisY = revolvedFace.get_Radius(1).Normalize(),
-            BasisZ = revolvedFace.Axis.Normalize()
-          };
-
-          var profileInWCS = revolvedFace.Curve.CreateTransformed(ECStoWCS);
-
-          return Autodesk.Revit.DB.RevolvedSurface.Create(new Frame(ECStoWCS.Origin, ECStoWCS.BasisX, ECStoWCS.BasisY, ECStoWCS.BasisZ), profileInWCS);
-        }
-        case RuledFace ruledFace:
-        {
-          var profileCurve0 = ruledFace.get_Curve(0);
-          var profileCurve1 = ruledFace.get_Curve(1);
-          return Autodesk.Revit.DB.RuledSurface.Create(profileCurve0, profileCurve1);
-        }
-      }
-
-      return null;
-    }
-
-    internal static Autodesk.Revit.DB.Curve GetProfileCurveInWorldCoordinates(this RevolvedSurface revolvedSurface)
-    {
-      var profileCurve = revolvedSurface.GetProfileCurve();
-      var ECStoWCS = new Autodesk.Revit.DB.Transform(Autodesk.Revit.DB.Transform.Identity)
-      {
-        Origin = revolvedSurface.Origin,
-        BasisX = revolvedSurface.XDir.Normalize(),
-        BasisY = revolvedSurface.YDir.Normalize(),
-        BasisZ = revolvedSurface.Axis.Normalize()
-      };
-
-      return profileCurve.CreateTransformed(ECStoWCS);
-    }
-
-    internal static bool HasFirstProfilePoint(this RuledSurface ruledSurface)
-    {
-      return ruledSurface.GetFirstProfilePoint() is object;
-    }
-
-    internal static bool HasSecondProfilePoint(this RuledSurface ruledSurface)
-    {
-      return ruledSurface.GetSecondProfilePoint() is object;
-    }
-#endif
-
     public static Rhino.Geometry.Brep ToRhino(this Autodesk.Revit.DB.Face face, bool untrimmed = false)
     {
       using (var surface = face.GetSurface())
@@ -525,58 +397,61 @@ namespace RhinoInside.Revit
           }
           case Autodesk.Revit.DB.HermiteSurface hermiteSurface:
           {
-            using (var nurbsData = ExportUtils.GetNurbsSurfaceDataForFace(face))
+            try
             {
-              var degreeU = nurbsData.DegreeU;
-              var degreeV = nurbsData.DegreeV;
-
-              var knotsU = nurbsData.GetKnotsU();
-              var knotsV = nurbsData.GetKnotsV();
-
-              int controlPointCountU = knotsU.Count - degreeU - 1;
-              int controlPointCountV = knotsV.Count - degreeV - 1;
-
-              var nurbsSurface = NurbsSurface.Create(3, nurbsData.IsRational, degreeU + 1, degreeV + 1, controlPointCountU, controlPointCountV);
-
-              var controlPoints = nurbsData.GetControlPoints();
-              var weights = nurbsData.GetWeights();
-
-              var points = nurbsSurface.Points;
-              for (int u = 0; u < controlPointCountU; u++)
+              using (var nurbsData = ExportUtils.GetNurbsSurfaceDataForFace(face))
               {
-                int u_offset = u * controlPointCountV;
-                for (int v = 0; v < controlPointCountV; v++)
+                var degreeU = nurbsData.DegreeU;
+                var degreeV = nurbsData.DegreeV;
+
+                var knotsU = nurbsData.GetKnotsU();
+                var knotsV = nurbsData.GetKnotsV();
+
+                int controlPointCountU = knotsU.Count - degreeU - 1;
+                int controlPointCountV = knotsV.Count - degreeV - 1;
+
+                var nurbsSurface = NurbsSurface.Create(3, nurbsData.IsRational, degreeU + 1, degreeV + 1, controlPointCountU, controlPointCountV);
+
+                var controlPoints = nurbsData.GetControlPoints();
+                var weights = nurbsData.GetWeights();
+
+                var points = nurbsSurface.Points;
+                for (int u = 0; u < controlPointCountU; u++)
                 {
-                  var pt = controlPoints[u_offset + v];
-                  if (nurbsData.IsRational)
+                  int u_offset = u * controlPointCountV;
+                  for (int v = 0; v < controlPointCountV; v++)
                   {
-                    double w = weights[u_offset + v];
-                    points.SetPoint(u, v, pt.X * w, pt.Y * w, pt.Z * w, w);
-                  }
-                  else
-                  {
-                    points.SetPoint(u, v, pt.X, pt.Y, pt.Z);
+                    var pt = controlPoints[u_offset + v];
+                    if (nurbsData.IsRational)
+                    {
+                      double w = weights[u_offset + v];
+                      points.SetPoint(u, v, pt.X * w, pt.Y * w, pt.Z * w, w);
+                    }
+                    else
+                    {
+                      points.SetPoint(u, v, pt.X, pt.Y, pt.Z);
+                    }
                   }
                 }
-              }
 
-              {
-                var knots = nurbsSurface.KnotsU;
-                int index = 0;
-                foreach (var w in knotsU.Skip(1).Take(knots.Count))
-                  knots[index++] = w;
-              }
+                {
+                  var knots = nurbsSurface.KnotsU;
+                  int index = 0;
+                  foreach (var w in knotsU.Skip(1).Take(knots.Count))
+                    knots[index++] = w;
+                }
 
-              {
-                var knots = nurbsSurface.KnotsV;
-                int index = 0;
-                foreach (var w in knotsV.Skip(1).Take(knots.Count))
-                  knots[index++] = w;
-              }
+                {
+                  var knots = nurbsSurface.KnotsV;
+                  int index = 0;
+                  foreach (var w in knotsV.Skip(1).Take(knots.Count))
+                    knots[index++] = w;
+                }
 
-              brep = Brep.CreateFromSurface(nurbsSurface);
+                brep = Brep.CreateFromSurface(nurbsSurface);
+              }
             }
-
+            catch (Autodesk.Revit.Exceptions.ArgumentException) { }
             break;
           }
           default: throw new NotImplementedException();
@@ -770,12 +645,12 @@ namespace RhinoInside.Revit
             var facesMeshes = useMultipleMaterials ? null : new List<Rhino.Geometry.Mesh>(solid.Faces.Size);
             foreach (var face in solidFaces)
             {
-              var f = (meshingParameters is null ? face.Triangulate() : face.Triangulate(meshingParameters.RelativeTolerance)).ToRhino();
-              f = f?.ChangeUnits(scaleFactor);
+              var faceMesh = (meshingParameters is null ? face.Triangulate() : face.Triangulate(meshingParameters.RelativeTolerance));
+              var f = faceMesh?.ToRhino().ChangeUnits(scaleFactor);
 
               if (facesMeshes is null)
                 yield return f;
-              else
+              else if (f is object)
                 facesMeshes.Add(f);
             }
 
