@@ -753,7 +753,7 @@ namespace RhinoInside.Revit.GH.Components
       if (element is object)
       {
         parameters = new List<DB.Parameter>(element.Parameters.Size);
-        foreach (var group in element.GetParameters(RevitAPI.ParameterSource.Any).GroupBy((x) => x.Definition?.ParameterGroup ?? DB.BuiltInParameterGroup.INVALID).OrderBy((x) => x.Key))
+        foreach (var group in element.GetParameters(RevitAPI.ParameterSet.Any).GroupBy((x) => x.Definition?.ParameterGroup ?? DB.BuiltInParameterGroup.INVALID).OrderBy((x) => x.Key))
         {
           foreach (var param in group.OrderBy(x => x.Id.IntegerValue))
           {
@@ -1071,7 +1071,7 @@ namespace RhinoInside.Revit.GH.Components
           break;
 
         case string parameterName:
-          parameter = element.LookupParameter(parameterName);
+          parameter = element.GetParameter(parameterName, RevitAPI.ParameterSet.Any);
           if (parameter is null)
             obj.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Parameter '{parameterName}' not defined in 'Element'");
           break;
@@ -1108,6 +1108,12 @@ namespace RhinoInside.Revit.GH.Components
           }
           else
             obj.AddRuntimeMessage(GH_RuntimeMessageLevel.Error, $"Data conversion failed from {key.TypeName} to Revit Parameter element");
+          break;
+
+        case Guid guid:
+          parameter = element.get_Parameter(guid);
+          if (parameter is null)
+            obj.AddRuntimeMessage(GH_RuntimeMessageLevel.Warning, $"Parameter '{guid}' not defined in 'Element'");
           break;
 
         default:
