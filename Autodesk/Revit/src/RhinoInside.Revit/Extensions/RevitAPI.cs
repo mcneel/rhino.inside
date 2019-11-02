@@ -209,7 +209,7 @@ namespace RhinoInside.Revit
     #endregion
 
     #region Parameters
-    public enum ParameterSource
+    public enum ParameterSet
     {
       Any,
       BuiltIn,
@@ -217,11 +217,11 @@ namespace RhinoInside.Revit
       Shared
     }
 
-    public static IEnumerable<Parameter> GetParameters(this Element element, ParameterSource parameterSource)
+    public static IEnumerable<Parameter> GetParameters(this Element element, ParameterSet set)
     {
-      switch (parameterSource)
+      switch (set)
       {
-        case ParameterSource.Any:
+        case ParameterSet.Any:
           return Enum.GetValues(typeof(BuiltInParameter)).
             Cast<BuiltInParameter>().
             Select
@@ -233,10 +233,10 @@ namespace RhinoInside.Revit
               }
             ).
             Where(x => x is object).
-            Union(element.Parameters.Cast<Parameter>()).
+            Union(element.Parameters.Cast<Parameter>().OrderBy(x => x.Id.IntegerValue)).
             GroupBy(x => x.Id).
             Select(x => x.First());
-        case ParameterSource.BuiltIn:
+        case ParameterSet.BuiltIn:
           return Enum.GetValues(typeof(BuiltInParameter)).
             Cast<BuiltInParameter>().
             GroupBy(x => x).
@@ -250,15 +250,35 @@ namespace RhinoInside.Revit
               }
             ).
             Where(x => x is object);
-        case ParameterSource.Project:
+        case ParameterSet.Project:
           return element.Parameters.Cast<Parameter>().
-            Where(p => !p.IsShared);
-        case ParameterSource.Shared:
+            Where(p => !p.IsShared && p.Id.IntegerValue > 0).
+            OrderBy(x => x.Id.IntegerValue);
+        case ParameterSet.Shared:
           return element.Parameters.Cast<Parameter>().
-            Where(p => p.IsShared);
+            Where(p => p.IsShared).
+            OrderBy(x => x.Id.IntegerValue);
       }
 
       return Enumerable.Empty<Parameter>();
+    }
+
+    public static Parameter GetParameter(this Element element, string name, ParameterSet set)
+    {
+      var parameters = element.
+        GetParameters(set).
+        Where(x => x.Definition.Name == name);
+
+      return parameters.FirstOrDefault(x => !x.IsReadOnly) ?? parameters.FirstOrDefault();
+    }
+
+    public static Parameter GetParameter(this Element element, string name, ParameterType type, ParameterSet set)
+    {
+      var parameters = element.
+        GetParameters(set).
+        Where(x => x.Definition.ParameterType == type && x.Definition.Name == name);
+
+      return parameters.FirstOrDefault(x => !x.IsReadOnly) ?? parameters.FirstOrDefault();
     }
 
     public static void CopyParametersFrom(this Element to, Element from, ICollection<BuiltInParameter> parametersMask = null)
@@ -269,7 +289,7 @@ namespace RhinoInside.Revit
       if(!from.Document.Equals(to.Document))
         throw new InvalidOperationException();
 
-      foreach (var previousParameter in from.GetParameters(ParameterSource.Any))
+      foreach (var previousParameter in from.GetParameters(ParameterSet.Any))
         using (previousParameter)
         using (var param = to.get_Parameter(previousParameter.Definition))
         {
