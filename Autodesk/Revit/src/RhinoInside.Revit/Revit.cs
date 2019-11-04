@@ -115,12 +115,12 @@ namespace RhinoInside.Revit
       (
         (doc) =>
         {
-          using (var attributes = Convert.GraphicAttributes.Push())
+          using (var ctx = Convert.Context.Push())
           {
             using (var collector = new FilteredElementCollector(ActiveDBDocument))
             {
               var materials = collector.OfClass(typeof(Material)).Cast<Material>();
-              attributes.MaterialId = (materials.Where((x) => x.Name == "Debug").FirstOrDefault()?.Id) ?? ElementId.InvalidElementId;
+              ctx.MaterialId = (materials.Where((x) => x.Name == "Debug").FirstOrDefault()?.Id) ?? ElementId.InvalidElementId;
             }
 
             foreach (var geometryToBake in geometries.ToHost())

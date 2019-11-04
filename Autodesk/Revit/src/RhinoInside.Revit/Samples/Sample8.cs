@@ -271,21 +271,21 @@ namespace RhinoInside.Revit.Samples
       var layer = model.AllLayers.FindIndex(attributes.LayerIndex);
       if (layer?.IsVisible ?? false)
       {
-        using (var ga = Convert.GraphicAttributes.Push())
+        using (var ctx = Convert.Context.Push())
         {
           switch (attributes.MaterialSource)
           {
             case ObjectMaterialSource.MaterialFromObject:
               {
                 var modelMaterial = attributes.MaterialIndex < 0 ? Rhino.DocObjects.Material.DefaultMaterial : model.AllMaterials.FindIndex(attributes.MaterialIndex);
-                ga.MaterialId = ToHost(modelMaterial, doc, materials);
+                ctx.MaterialId = ToHost(modelMaterial, doc, materials);
                 break;
               }
             case ObjectMaterialSource.MaterialFromLayer:
               {
                 var modelLayer = model.AllLayers.FindIndex(attributes.LayerIndex);
                 var modelMaterial = modelLayer.RenderMaterialIndex < 0 ? Rhino.DocObjects.Material.DefaultMaterial : model.AllMaterials.FindIndex(modelLayer.RenderMaterialIndex);
-                ga.MaterialId = ToHost(modelMaterial, doc, materials);
+                ctx.MaterialId = ToHost(modelMaterial, doc, materials);
                 break;
               }
           }
