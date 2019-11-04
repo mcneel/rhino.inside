@@ -134,7 +134,7 @@ namespace RhinoInside.Revit.GH.Types
       return base.CastTo<Q>(ref target);
     }
 
-    public override object ScriptVariable() => (T) (object) Value;
+    public override object ScriptVariable() => Value;
 
     class Proxy : IGH_GooProxy
     {
