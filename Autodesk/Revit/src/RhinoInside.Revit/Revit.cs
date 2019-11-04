@@ -320,7 +320,7 @@ namespace RhinoInside.Revit
       // there is no more work to do
       return false;
     }
-#endregion
+    #endregion
 
     #region Public Properties
     public static IntPtr MainWindowHandle { get; private set; }
@@ -337,19 +337,19 @@ namespace RhinoInside.Revit
     );
 #endif
 
-    public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI => Addin.ApplicationUI;
-    public static Autodesk.Revit.UI.UIApplication ActiveUIApplication { get; private set; }
-    public static Autodesk.Revit.ApplicationServices.Application Services => ActiveUIApplication?.Application;
+    public static Autodesk.Revit.UI.UIControlledApplication       ApplicationUI => Addin.ApplicationUI;
+    public static Autodesk.Revit.UI.UIApplication                 ActiveUIApplication { get; private set; }
+    public static Autodesk.Revit.ApplicationServices.Application  ActiveDBApplication => ActiveUIApplication?.Application;
 
-    public static Autodesk.Revit.UI.UIDocument ActiveUIDocument => ActiveUIApplication?.ActiveUIDocument;
-    public static Autodesk.Revit.DB.Document   ActiveDBDocument => ActiveUIDocument?.Document;
+    public static Autodesk.Revit.UI.UIDocument                    ActiveUIDocument => ActiveUIApplication?.ActiveUIDocument;
+    public static Autodesk.Revit.DB.Document                      ActiveDBDocument => ActiveUIDocument?.Document;
 
-    private const double AbsoluteTolerance = (1.0 / 12.0) / 16.0; // 1/16 inch in feet
-    public static double AngleTolerance => Services != null ? Services.AngleTolerance : Math.PI / 180.0; // in rad
-    public static double ShortCurveTolerance => Services != null ? Services.ShortCurveTolerance : AbsoluteTolerance / 2.0;
-    public static double VertexTolerance => Services != null ? Services.VertexTolerance : AbsoluteTolerance / 10.0;
-    public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
-    public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
+    private const double AbsoluteTolerance                        = (1.0 / 12.0) / 16.0; // 1/16 inch in feet
+    public static double AngleTolerance                           => ActiveDBApplication?.AngleTolerance       ?? Math.PI / 180.0; // in rad
+    public static double ShortCurveTolerance                      => ActiveDBApplication?.ShortCurveTolerance  ?? AbsoluteTolerance / 2.0;
+    public static double VertexTolerance                          => ActiveDBApplication?.VertexTolerance      ?? AbsoluteTolerance / 10.0;
+    public const Rhino.UnitSystem ModelUnitSystem                 = Rhino.UnitSystem.Feet; // Always feet
+    public static double ModelUnits => RhinoDoc.ActiveDoc is null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
     #endregion
   }
 }
