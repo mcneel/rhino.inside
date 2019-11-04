@@ -155,7 +155,7 @@ namespace RhinoInside.Revit.GH.Types
             if (geometry is object)
             {
               var mesh = new Rhino.Geometry.Mesh();
-              mesh.Append(geometry.GetPreviewMeshes().Where(x => x is object));
+              mesh.Append(geometry.GetPreviewMeshes(null).Where(x => x is object));
               mesh.Normals.ComputeNormals();
               if (mesh.Faces.Count > 0)
               {

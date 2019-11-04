@@ -246,6 +246,8 @@
     <Compile Include="Operator.cs" />
     <Compile Include="State.cs" />
     <Compile Include="Convert.cs" />
+    <Compile Include="Convert.ToHost.cs" />
+    <Compile Include="Convert.ToRhino.cs" />
     <Compile Include="Revit.cs" />
     <Compile Include="Revit.KeyboardShortcuts.cs" />
     <Compile Include="Revit.FailuresPreprocessor.cs" />

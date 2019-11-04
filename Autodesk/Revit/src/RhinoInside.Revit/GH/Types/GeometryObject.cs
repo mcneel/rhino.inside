@@ -57,17 +57,12 @@ namespace RhinoInside.Revit.GH.Types
           var categoryMaterial = element.Category?.Material.ToRhino(null);
           var elementMaterial = geometry.MaterialElement.ToRhino(categoryMaterial);
 
-          using (var ga = Convert.GraphicAttributes.Push())
-          {
-            ga.MeshingParameters = meshingParameters;
+          meshes = geometry.GetPreviewMeshes(meshingParameters).Where(x => x is object).ToArray();
+          wires = geometry.GetPreviewWires().Where(x => x is object).ToArray();
+          materials = geometry.GetPreviewMaterials(element.Document, elementMaterial).Where(x => x is object).ToArray();
 
-            meshes = geometry.GetPreviewMeshes().Where(x => x is object).ToArray();
-            wires = geometry.GetPreviewWires().Where(x => x is object).ToArray();
-            materials = geometry.GetPreviewMaterials(element.Document, elementMaterial).Where(x => x is object).ToArray();
-
-            foreach (var mesh in meshes)
-              mesh.Normals.ComputeNormals();
-          }
+          foreach (var mesh in meshes)
+            mesh.Normals.ComputeNormals();
         }
       }
     }
@@ -76,7 +71,7 @@ namespace RhinoInside.Revit.GH.Types
     {
       readonly DB.ElementId elementId;
       readonly BoundingBox clippingBox;
-      public readonly MeshingParameters MeshingParameters = Convert.GraphicAttributes.Peek.MeshingParameters;
+      public readonly MeshingParameters MeshingParameters;
       public Rhino.Display.DisplayMaterial[] materials;
       public Mesh[] meshes;
       public Curve[] wires;
@@ -120,7 +115,7 @@ namespace RhinoInside.Revit.GH.Types
         while ((count = previews.Count) > 0)
         {
           // Draw the biggest elements first.
-          // The biggest element ia at the end of previews List, this way no realloc occurs when removing it
+          // The biggest element is at the end of previews List, this way no realloc occurs when removing it
 
           int last = count - 1;
           var preview = previews[last];
@@ -149,6 +144,7 @@ namespace RhinoInside.Revit.GH.Types
       {
         elementId = element;
         clippingBox = element.ClippingBox;
+        MeshingParameters = element.meshingParameters;
       }
 
       public static Preview OrderNew(GeometricElement element)
@@ -179,6 +175,7 @@ namespace RhinoInside.Revit.GH.Types
       }
     }
 
+    MeshingParameters meshingParameters;
     Preview geometryPreview;
     Preview GeometryPreview
     {
@@ -191,19 +188,15 @@ namespace RhinoInside.Revit.GH.Types
       return GeometryPreview.materials;
     }
 
-    public Mesh[] TryGetPreviewMeshes()
+    public Mesh[] TryGetPreviewMeshes(MeshingParameters parameters = default)
     {
-      if (geometryPreview is object)
+      if (parameters is object && !ReferenceEquals(meshingParameters, parameters))
       {
-        var newMeshingParameters = Convert.GraphicAttributes.Peek.MeshingParameters;
-        if (newMeshingParameters is object)
+        meshingParameters = parameters;
+        if (geometryPreview is object)
         {
-          var currentMeshingParameters = geometryPreview.MeshingParameters;
-          if (currentMeshingParameters != newMeshingParameters)
-          {
-            if (currentMeshingParameters is null || currentMeshingParameters.RelativeTolerance != newMeshingParameters.RelativeTolerance)
-              GeometryPreview = null;
-          }
+          if (geometryPreview.MeshingParameters?.RelativeTolerance != meshingParameters.RelativeTolerance)
+            GeometryPreview = null;
         }
       }
 
@@ -241,59 +234,54 @@ namespace RhinoInside.Revit.GH.Types
       if (!IsValid)
         return;
 
-      using (var ga = Convert.GraphicAttributes.Push())
+      var meshes = TryGetPreviewMeshes(args.MeshingParameters);
+      if (meshes is null)
+        return;
+
+      var material = args.Material;
+      var element = Document?.GetElement(Id);
+      if (element is null)
       {
-        ga.MeshingParameters = args.MeshingParameters;
+        const int factor = 3;
 
-        var meshes = TryGetPreviewMeshes();
-        if (meshes is null)
-          return;
-
-        var material = args.Material;
-        var element = Document?.GetElement(Id);
-        if (element is null)
+        // Erased element
+        material = new Rhino.Display.DisplayMaterial(material)
         {
-          const int factor = 3;
-
-          // Erased element
-          material = new Rhino.Display.DisplayMaterial(material)
-          {
-            Diffuse = System.Drawing.Color.FromArgb(20, 20, 20),
-            Emission = System.Drawing.Color.FromArgb(material.Emission.R / factor, material.Emission.G / factor, material.Emission.B / factor),
-            Shine = 0.0,
-          };
-        }
-        else if (!element.Pinned)
+          Diffuse = System.Drawing.Color.FromArgb(20, 20, 20),
+          Emission = System.Drawing.Color.FromArgb(material.Emission.R / factor, material.Emission.G / factor, material.Emission.B / factor),
+          Shine = 0.0,
+        };
+      }
+      else if (!element.Pinned)
+      {
+        if (args.Pipeline.DisplayPipelineAttributes.ShadingEnabled)
         {
-          if (args.Pipeline.DisplayPipelineAttributes.ShadingEnabled)
+          // Unpinned element
+          if (args.Pipeline.DisplayPipelineAttributes.UseAssignedObjectMaterial)
           {
-            // Unpinned element
-            if (args.Pipeline.DisplayPipelineAttributes.UseAssignedObjectMaterial)
+            var materials = TryGetPreviewMaterials();
+
+            for (int m = 0; m < meshes.Length; ++m)
+              args.Pipeline.DrawMeshShaded(meshes[m], materials[m]);
+
+            return;
+          }
+          else
+          {
+            material = new Rhino.Display.DisplayMaterial(material)
             {
-              var materials = TryGetPreviewMaterials();
+              Diffuse = element.Category?.LineColor.ToRhino() ?? System.Drawing.Color.White,
+              Transparency = 0.0
+            };
 
-              for (int m = 0; m < meshes.Length; ++m)
-                args.Pipeline.DrawMeshShaded(meshes[m], materials[m]);
-
-              return;
-            }
-            else
-            {
-              material = new Rhino.Display.DisplayMaterial(material)
-              {
-                Diffuse = element.Category?.LineColor.ToRhino() ?? System.Drawing.Color.White,
-                Transparency = 0.0
-              };
-
-              if (material.Diffuse == System.Drawing.Color.Black)
-                material.Diffuse = System.Drawing.Color.White;
-            }
+            if (material.Diffuse == System.Drawing.Color.Black)
+              material.Diffuse = System.Drawing.Color.White;
           }
         }
-
-        foreach (var mesh in meshes)
-          args.Pipeline.DrawMeshShaded(mesh, material);
       }
+
+      foreach (var mesh in meshes)
+        args.Pipeline.DrawMeshShaded(mesh, material);
     }
 
     void IGH_PreviewData.DrawViewportWires(GH_PreviewWireArgs args)
@@ -842,28 +830,24 @@ namespace RhinoInside.Revit.GH.Types
 
       if (meshes is null)
       {
-        using (var ga = Convert.GraphicAttributes.Push())
+        meshes = Enumerable.Repeat(Value, 1).GetPreviewMeshes(args.MeshingParameters).ToArray();
+
+        var element = Value.IsElementGeometry ?
+          Document?.GetElement(DB.Reference.ParseFromStableRepresentation(Document, UniqueID)) :
+          null;
+
+        if (element is DB.Instance instance)
         {
-          ga.MeshingParameters = args.MeshingParameters;
-          meshes = Enumerable.Repeat(Value, 1).GetPreviewMeshes().ToArray();
-
-          var element = Value.IsElementGeometry ?
-            Document?.GetElement(DB.Reference.ParseFromStableRepresentation(Document, UniqueID)) :
-            null;
-
-          if (element is DB.Instance instance)
-          {
-            var transform = instance.GetTransform();
-            transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
-            var xform = transform.ToRhino();
-
-            foreach (var mesh in meshes)
-              mesh.Transform(xform);
-          }
+          var transform = instance.GetTransform();
+          transform.Origin = transform.Origin.Multiply(Revit.ModelUnits);
+          var xform = transform.ToRhino();
 
           foreach (var mesh in meshes)
-            mesh.Normals.ComputeNormals();
+            mesh.Transform(xform);
         }
+
+        foreach (var mesh in meshes)
+          mesh.Normals.ComputeNormals();
       }
 
       foreach (var mesh in meshes ?? Enumerable.Empty<Mesh>())

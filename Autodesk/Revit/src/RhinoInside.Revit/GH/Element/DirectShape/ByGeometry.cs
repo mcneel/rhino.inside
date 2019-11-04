@@ -83,7 +83,7 @@ namespace RhinoInside.Revit.GH.Components
       if (element is DirectShape ds && ds.Category.Id == category.Value.Id) { }
       else ds = DirectShape.CreateElement(doc, category.Value.Id);
 
-      using (var ga = Convert.GraphicAttributes.Push())
+      using (var ga = Convert.Context.Push())
       {
         var materialIndex = 0;
         var materialCount = material?.Count ?? 0;
@@ -170,7 +170,7 @@ namespace RhinoInside.Revit.GH.Components
       if (elementType is DirectShapeType directShapeType && directShapeType.Category.Id == category.Value.Id) { }
       else directShapeType = DirectShapeType.Create(doc, name, category.Value.Id);
 
-      using (var ga = Convert.GraphicAttributes.Push())
+      using (var ga = Convert.Context.Push())
       {
         var materialIndex = 0;
         var materialCount = material?.Count ?? 0;

@@ -22,7 +22,7 @@ namespace RhinoInside.Revit
     public const TaskDialogIcon IconWarning     = TaskDialogIcon.TaskDialogIconWarning;
   }
 
-  public static partial class RevitAPI
+  public static class RevitAPI
   {
     #region XYZ
     public static bool IsParallelTo(this XYZ a, XYZ b)
@@ -129,6 +129,51 @@ namespace RhinoInside.Revit
       return ruledSurface.GetSecondProfilePoint() is object;
     }
 #endif
+
+    public static IEnumerable<GeometryObject> ToDirectShapeGeometry(this GeometryObject geometry)
+    {
+      switch (geometry)
+      {
+        case Point p: yield return p; yield break;
+        case Curve c:
+          foreach (var unbounded in ToBoundedCurves(c))
+            yield return unbounded;
+          yield break;
+        case Solid s: yield return s; yield break;
+        case Mesh m: yield return m; yield break;
+        case GeometryInstance i: yield return i; yield break;
+        default: throw new ArgumentException("DirectShape only supports Point, Curve, Solid, Mesh and GeometryInstance.");
+      }
+    }
+
+    public static IEnumerable<Curve> ToBoundedCurves(this Curve curve)
+    {
+      switch (curve)
+      {
+        case Arc arc:
+          if (!arc.IsBound)
+          {
+            yield return Arc.Create(arc.Center, arc.Radius, 0.0, Math.PI, arc.XDirection, arc.YDirection);
+            yield return Arc.Create(arc.Center, arc.Radius, Math.PI, Math.PI * 2.0, arc.XDirection, arc.YDirection);
+          }
+          else yield return arc;
+          yield break;
+        case Ellipse ellipse:
+          if (!ellipse.IsBound)
+          {
+#if REVIT_2018
+            yield return Ellipse.CreateCurve(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, 0.0, Math.PI);
+            yield return Ellipse.CreateCurve(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, Math.PI, Math.PI * 2.0);
+#else
+            yield return Ellipse.Create(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, 0.0, Math.PI);
+            yield return Ellipse.Create(ellipse.Center, ellipse.RadiusX, ellipse.RadiusY, ellipse.XDirection, ellipse.YDirection, Math.PI, Math.PI * 2.0);
+#endif
+          }
+          else yield return ellipse;
+          yield break;
+        case Curve c: yield return c; yield break;
+      }
+    }
     #endregion
 
     #region ElementId
