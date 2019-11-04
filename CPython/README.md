@@ -1,31 +1,5 @@
 # rhinoinside python package
 Embed Rhino in CPython
 
-`pip install --user rhinoinside`
-
-## Requirements:
-- Rhino 7
-- Windows
-- 64 bit version of CPython (2.7, 3.5, 3.6, 3.7)
-
-## Join the discussion
-
-https://discourse.mcneel.com/t/rhino-inside-python/78987
-
-## How to use
-```
-import rhinoinside
-rhinoinside.load()
-import System
-import Rhino
-
-# for now, you need to explicitly use floating point
-# numbers in Point3d constructor
-pts = System.Collections.Generic.List[Rhino.Geometry.Point3d]()
-pts.Add(Rhino.Geometry.Point3d(0.0,0.0,0.0))
-pts.Add(Rhino.Geometry.Point3d(1.0,0.0,0.0))
-pts.Add(Rhino.Geometry.Point3d(1.5,2.0,0.0))
-
-crv = Rhino.Geometry.Curve.CreateInterpolatedCurve(pts,3)
-print (crv.GetLength())
-```
+This code has "graduated" beyond a sample and has moved to its own repository at
+https://github.com/mcneel/rhino.inside-cpython
