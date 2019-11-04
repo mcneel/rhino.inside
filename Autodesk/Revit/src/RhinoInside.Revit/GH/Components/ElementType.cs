@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Autodesk.Revit.DB;
+using DB = Autodesk.Revit.DB;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Special;
 using Grasshopper.Kernel.Types;
@@ -35,12 +35,12 @@ namespace RhinoInside.Revit.GH.Parameters
       if (FamilyName.Length == 0 || FamilyName[0] == '\'')
         return;
 
-      if (Revit.ActiveDBDocument != null)
+      if (Revit.ActiveDBDocument is object)
       {
         int selectedItemsCount = 0;
-        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+        using (var collector = new DB.FilteredElementCollector(Revit.ActiveDBDocument))
         {
-          foreach (var elementType in collector.WhereElementIsElementType().Cast<Autodesk.Revit.DB.ElementType>())
+          foreach (var elementType in collector.WhereElementIsElementType().Cast<DB.ElementType>())
           {
             if (!elementType.FamilyName.IsSymbolNameLike(FamilyName))
               continue;
@@ -68,10 +68,10 @@ namespace RhinoInside.Revit.GH.Parameters
         else if (selectedItemsCount == 0 && ListMode != GH_ValueListMode.CheckList)
         {
           var defaultElementTypeIds = new HashSet<string>();
-          foreach (var typeGroup in Enum.GetValues(typeof(ElementTypeGroup)).Cast<ElementTypeGroup>())
+          foreach (var typeGroup in Enum.GetValues(typeof(DB.ElementTypeGroup)).Cast<DB.ElementTypeGroup>())
           {
             var elementTypeId = Revit.ActiveDBDocument.GetDefaultElementTypeId(typeGroup);
-            if (elementTypeId != Autodesk.Revit.DB.ElementId.InvalidElementId)
+            if (elementTypeId != DB.ElementId.InvalidElementId)
               defaultElementTypeIds.Add(elementTypeId.IntegerValue.ToString());
           }
 
@@ -86,10 +86,10 @@ namespace RhinoInside.Revit.GH.Parameters
       var selectedItems = ListItems.Where(x => x.Selected).Select(x => x.Expression).ToList();
       ListItems.Clear();
 
-      if (Revit.ActiveDBDocument != null)
+      if (Revit.ActiveDBDocument is object)
       {
         int selectedItemsCount = 0;
-        using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+        using (var collector = new DB.FilteredElementCollector(Revit.ActiveDBDocument))
         using (var elementTypeCollector = collector.WhereElementIsElementType())
         {
           foreach (var goo in goos)
@@ -97,10 +97,10 @@ namespace RhinoInside.Revit.GH.Parameters
             var e = new Types.Element();
             if (e.CastFrom(goo))
             {
-              switch ((Autodesk.Revit.DB.Element) e)
+              switch ((DB.Element) e)
               {
-                case Autodesk.Revit.DB.Family family:
-                  foreach (var elementType in elementTypeCollector.Cast<Autodesk.Revit.DB.ElementType>())
+                case DB.Family family:
+                  foreach (var elementType in elementTypeCollector.Cast<DB.ElementType>())
                   {
                     if (elementType.FamilyName != family.Name)
                       continue;
@@ -112,7 +112,7 @@ namespace RhinoInside.Revit.GH.Parameters
                     selectedItemsCount += item.Selected ? 1 : 0;
                   }
                   break;
-                case Autodesk.Revit.DB.ElementType elementType:
+                case DB.ElementType elementType:
                 {
                   var item = new GH_ValueListItem(elementType.FamilyName + " : " + elementType.Name, elementType.Id.IntegerValue.ToString());
                   item.Selected = selectedItems.Contains(item.Expression);
@@ -121,9 +121,9 @@ namespace RhinoInside.Revit.GH.Parameters
                   selectedItemsCount += item.Selected ? 1 : 0;
                 }
                 break;
-                case Autodesk.Revit.DB.Element element:
+                case DB.Element element:
                 {
-                  var type = Revit.ActiveDBDocument.GetElement(element.GetTypeId()) as Autodesk.Revit.DB.ElementType;
+                  var type = Revit.ActiveDBDocument.GetElement(element.GetTypeId()) as DB.ElementType;
                   var item = new GH_ValueListItem(type.FamilyName + " : " + type.Name, type.Id.IntegerValue.ToString());
                   item.Selected = selectedItems.Contains(item.Expression);
                   ListItems.Add(item);
@@ -138,7 +138,7 @@ namespace RhinoInside.Revit.GH.Parameters
               var c = new Types.Category();
               if (c.CastFrom(goo))
               {
-                foreach (var elementType in elementTypeCollector.OfCategoryId(c.Value).Cast<Autodesk.Revit.DB.ElementType>())
+                foreach (var elementType in elementTypeCollector.OfCategoryId(c.Value).Cast<DB.ElementType>())
                 {
                   var item = new GH_ValueListItem(elementType.FamilyName + " : " + elementType.Name, elementType.Id.IntegerValue.ToString());
                   item.Selected = selectedItems.Contains(item.Expression);
@@ -159,10 +159,10 @@ namespace RhinoInside.Revit.GH.Parameters
         if (ListItems.Count > 0 && selectedItemsCount == 0 && ListMode != GH_ValueListMode.CheckList)
         {
           var defaultElementTypeIds = new HashSet<string>();
-          foreach (var typeGroup in Enum.GetValues(typeof(ElementTypeGroup)).Cast<ElementTypeGroup>())
+          foreach (var typeGroup in Enum.GetValues(typeof(DB.ElementTypeGroup)).Cast<DB.ElementTypeGroup>())
           {
             var elementTypeId = Revit.ActiveDBDocument.GetDefaultElementTypeId(typeGroup);
-            if (elementTypeId != Autodesk.Revit.DB.ElementId.InvalidElementId)
+            if (elementTypeId != DB.ElementId.InvalidElementId)
               defaultElementTypeIds.Add(elementTypeId.IntegerValue.ToString());
           }
 
@@ -224,7 +224,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.ElementType elementType = null;
+      var elementType = default(DB.ElementType);
       if (!DA.GetData("Type", ref elementType))
         return;
 
@@ -255,7 +255,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.ElementType elementType = null;
+      var elementType = default(DB.ElementType);
       if (!DA.GetData("Type", ref elementType))
         return;
 
@@ -284,10 +284,10 @@ namespace RhinoInside.Revit.GH.Components
 
     void ReconstructElementTypeDuplicate
     (
-      Document doc,
-      ref Autodesk.Revit.DB.ElementType elementType,
+      DB.Document doc,
+      ref DB.ElementType elementType,
 
-      Autodesk.Revit.DB.ElementType type,
+      DB.ElementType type,
       string name
     )
     {
