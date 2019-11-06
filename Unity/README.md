@@ -3,7 +3,7 @@ The Rhino Inside technology allows Rhino and Grasshopper to be embedded within o
 
 This folder contains a sample project that demonstrates:
 
-1. Starting Rhino and Grasshopper in Unity.
+1. Starting Rhino in Unity.
 2. Call directly into RhinoCommon APIs from Unity.
 
 [**Questions?** *Visit the discussion forum...*](https://discourse.mcneel.com/c/serengeti/inside)

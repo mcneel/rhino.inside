@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 
 using UnityEngine;
 using UnityEditor;
@@ -11,14 +12,17 @@ namespace RhinoInside.Unity.UI
   [InitializeOnLoad]
   public static class Menu
   {
-    static readonly Guid GrasshopperGuid = new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF);
+    [DllImport("USER32", SetLastError = true)]
+    static extern IntPtr BringWindowToTop(IntPtr hWnd);
 
-    [MenuItem("Window/Grasshopper")]
-    public static void ToggleGrasshopperWindow()
+    [DllImport("USER32", SetLastError = true)]
+    static extern int ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [MenuItem("Window/Rhino")]
+    public static void ShowRhinoWindow()
     {
-      PlugIn.LoadPlugIn(GrasshopperGuid);
-
-      RhinoApp.RunScript("!_-Grasshopper _W _T ENTER", false);
+      ShowWindow(RhinoApp.MainWindowHandle(), 1);
+      BringWindowToTop(RhinoApp.MainWindowHandle());
     }
   }
 }
