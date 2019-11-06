@@ -11,298 +11,80 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 
 using Rhino;
-using Rhino.Runtime.InProcess;
-using Rhino.PlugIns;
 
 using Grasshopper;
 using Grasshopper.Kernel;
 
 namespace RhinoInside.Revit
 {
-  [Autodesk.Revit.Attributes.Transaction(Autodesk.Revit.Attributes.TransactionMode.Manual)]
-  [Autodesk.Revit.Attributes.Regeneration(Autodesk.Revit.Attributes.RegenerationOption.Manual)]
-  [Autodesk.Revit.Attributes.Journaling(Autodesk.Revit.Attributes.JournalingMode.NoCommandData)]
-  public partial class Revit : IExternalApplication
+  public static partial class Revit
   {
-    #region Revit static constructor
-    static Revit()
+    internal static Result OnStartup(UIControlledApplication applicationUI)
     {
-      ResolveEventHandler OnRhinoCommonResolve = null;
-      AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
+      if (MainWindowHandle == IntPtr.Zero)
       {
-        const string rhinoCommonAssemblyName = "RhinoCommon";
-        var assemblyName = new AssemblyName(args.Name).Name;
-
-        if (assemblyName != rhinoCommonAssemblyName)
-          return null;
-
-        AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        var rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
-      };
-    }
-    #endregion
-
-    #region IExternalApplication Members
-    RhinoCore rhinoCore;
-    GH.PreviewServer grasshopperPreviewServer;
-
-    public Result OnStartup(UIControlledApplication applicationUI)
-    {
-      ApplicationUI = applicationUI;
-
 #if REVIT_2019
-      MainWindowHandle = ApplicationUI.MainWindowHandle;
+        MainWindowHandle = applicationUI.MainWindowHandle;
 #else
-      MainWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
+        MainWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
 #endif
 
-      // Load Rhino
-      try
-      {
-        var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
-        rhinoCore = new RhinoCore(new string[] { $"/scheme={schemeName}", "/nosplash" }, WindowStyle.Hidden, MainWindowHandle);
+        var result = Rhinoceros.Startup();
+        if (result != Result.Succeeded)
+        {
+          MainWindowHandle = IntPtr.Zero;
+          return result;
+        }
+
+        // Register some events
+        applicationUI.Idling += OnIdle;
+        applicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
       }
-      catch (Exception e)
-      {
-        Debug.Fail(e.Source, e.Message);
-        return Result.Failed;
-      }
-
-      // Reset document units
-      UI.RhinoCommand.UpdateDocumentUnits(Rhino.RhinoDoc.ActiveDoc);
-
-      // Register UI on Revit
-      {
-        var ribbonPanel = ApplicationUI.CreateRibbonPanel("Rhinoceros");
-
-        UI.RhinoCommand.CreateUI(ribbonPanel);
-        UI.GrasshopperCommand.CreateUI(ribbonPanel);
-        UI.PythonCommand.CreateUI(ribbonPanel);
-        ribbonPanel.AddSeparator();
-        Samples.Sample1.CreateUI(ribbonPanel);
-        Samples.Sample4.CreateUI(ribbonPanel);
-        Samples.Sample6.CreateUI(ribbonPanel);
-        ribbonPanel.AddSeparator();
-        UI.HelpCommand.CreateUI(ribbonPanel);
-      }
-
-      // Register some events
-      ApplicationUI.Idling += OnIdle;
-      ApplicationUI.ControlledApplication.DocumentChanged += OnDocumentChanged;
-
-      // Register GrasshopperPreviewServer
-      grasshopperPreviewServer = new GH.PreviewServer();
-      grasshopperPreviewServer.Register();
 
       return Result.Succeeded;
     }
 
-    public Result OnShutdown(UIControlledApplication applicationUI)
+    internal static Result OnShutdown(UIControlledApplication applicationUI)
     {
-      // Unregister GrasshopperPreviewServer
-      grasshopperPreviewServer?.Unregister();
-      grasshopperPreviewServer = null;
-
-      // Unregister some events
-      ApplicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
-      ApplicationUI.Idling -= OnIdle;
-
-      // Unload Rhino
-      try
+      if (MainWindowHandle != IntPtr.Zero)
       {
-        rhinoCore.Dispose();
-      }
-      catch (Exception e)
-      {
-        Debug.Fail(e.Source, e.Message);
-        return Result.Failed;
+        // Unregister some events
+        applicationUI.ControlledApplication.DocumentChanged -= OnDocumentChanged;
+        applicationUI.Idling -= OnIdle;
+
+        Rhinoceros.Shutdown();
+
+        MainWindowHandle = IntPtr.Zero;
       }
 
-      ApplicationUI = null;
       return Result.Succeeded;
     }
 
-    static bool pendingRefreshActiveView = false;
-    public static void RefreshActiveView() { pendingRefreshActiveView = true; }
+    static bool isRefreshActiveViewPending = false;
+    public static void RefreshActiveView() => isRefreshActiveViewPending = true;
 
-    public static bool Committing = false;
-    static bool LoadGrasshopperComponents()
+    static void OnIdle(object sender, IdlingEventArgs args)
     {
-      var LoadGHAProc = Instances.ComponentServer.GetType().GetMethod("LoadGHA", BindingFlags.NonPublic | BindingFlags.Instance);
-      if (LoadGHAProc == null)
-        return false;
-
-      var bCoff = Instances.Settings.GetValue("Assemblies:COFF", true);
-      Instances.Settings.SetValue("Assemblies:COFF", false);
-
-      var rc = (bool) LoadGHAProc.Invoke
-      (
-        Instances.ComponentServer,
-        new object[] { new GH_ExternalFile(Assembly.GetExecutingAssembly().Location), false }
-      );
-
-      // Load all the gha installed under the %APPDATA%\Grasshopper\Libraries-Autodesk-Revit-20XX
-      var schemeName = ApplicationUI.ControlledApplication.VersionName.Replace(' ', '-');
-      var revitAssemblyFolder = Grasshopper.Folders.DefaultAssemblyFolder.Substring(0, Grasshopper.Folders.DefaultAssemblyFolder.Length - 1) + '-' + schemeName;
-      var assemblyFolder = new DirectoryInfo(revitAssemblyFolder);
-      try
-      {
-        foreach (var file in assemblyFolder.EnumerateFiles("*.gha"))
-          LoadGHAProc.Invoke(Instances.ComponentServer, new object[] { new GH_ExternalFile(file.FullName), false });
-      }
-      catch (System.IO.DirectoryNotFoundException) { }
-
-      Instances.Settings.SetValue("Assemblies:COFF", bCoff);
-
-      if (rc)
-        GH_ComponentServer.UpdateRibbonUI();
-
-      return rc;
-    }
-
-    static bool LoadedAsGHA = false;
-    void OnIdle(object sender, IdlingEventArgs args)
-    {
-      // 1. Do Rhino pending OnIdle tasks
-      if (rhinoCore.OnIdle())
-      {
-        args.SetRaiseWithoutDelay();
-        return;
-      }
-
-      // Load this assembly as a Grasshopper assembly
-      if (!LoadedAsGHA && PlugIn.GetPlugInInfo(new Guid(0xB45A29B1, 0x4343, 0x4035, 0x98, 0x9E, 0x04, 0x4E, 0x85, 0x80, 0xD9, 0xCF)).IsLoaded)
-        LoadedAsGHA = LoadGrasshopperComponents();
-
-      // Document dependant tasks need a document
       ActiveUIApplication = (sender as UIApplication);
-      if (ActiveDBDocument != null)
-      {
-        // 1. Do all document read actions
-        if (ProcessReadActions())
-        {
-          args.SetRaiseWithoutDelay();
-          return;
-        }
 
-        // 2. Do all document write actions
-        if (!ActiveDBDocument.IsReadOnly)
-          ProcessWriteActions();
-
-        // 3. Refresh Active View if necesary
-        bool regenComplete = DirectContext3DServer.RegenComplete();
-        if (pendingRefreshActiveView || !regenComplete || GH.PreviewServer.PreviewChanged())
-        {
-          pendingRefreshActiveView = false;
-
-          var RefreshTime = new Stopwatch();
-          RefreshTime.Start();
-          ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
-          RefreshTime.Stop();
-          DirectContext3DServer.RegenThreshold = Math.Min(RefreshTime.ElapsedMilliseconds, 200);
-        }
-
-        if (!regenComplete)
-          args.SetRaiseWithoutDelay();
-      }
+      if (ProcessIdleActions())
+        args.SetRaiseWithoutDelay();
     }
 
-    private void OnDocumentChanged(object sender, DocumentChangedEventArgs e)
+    public static event EventHandler<DocumentChangedEventArgs> DocumentChanged;
+    private static void OnDocumentChanged(object sender, DocumentChangedEventArgs args)
     {
-      if (Committing)
+      if (isCommitting)
         return;
 
-      var document = e.GetDocument();
+      var document = args.GetDocument();
       if (!document.Equals(ActiveDBDocument))
         return;
 
       CancelReadActions();
 
-      var added    = e.GetAddedElementIds();
-      var deleted  = e.GetDeletedElementIds();
-      var modified = e.GetModifiedElementIds();
-
-      if (added.Count > 0 || deleted.Count > 0 || modified.Count > 0)
-      {
-        var materialsChanged = modified.Select((x) => document.GetElement(x)).OfType<Material>().Any();
-
-        foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
-        {
-          foreach (var obj in definition.Objects)
-          {
-            if (obj is IGH_Param param)
-            {
-              if (param.SourceCount > 0)
-                continue;
-
-              if (param.Phase == GH_SolutionPhase.Blank)
-                continue;
-
-              if (obj is GH.Parameters.IGH_PersistentGeometryParam persistent)
-              {
-                if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                  param.ExpireSolution(false);
-              }
-            }
-            else if (obj is IGH_Component component)
-            {
-              if (component is GH.Components.DocumentElements)
-              {
-                component.ExpireSolution(false);
-              }
-              else
-              {
-                bool needsToBeExpired = false;
-                foreach (var inputParam in component.Params.Input)
-                {
-                  if (inputParam.SourceCount > 0)
-                    continue;
-
-                  if (inputParam.Phase == GH_SolutionPhase.Blank)
-                    continue;
-
-                  if (inputParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
-                  {
-                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                    {
-                      needsToBeExpired = true;
-                      break;
-                    }
-                  }
-                }
-
-                if (needsToBeExpired) component.ExpireSolution(true);
-                else foreach (var outParam in component.Params.Output)
-                {
-                  if (outParam is GH.Parameters.IGH_PersistentGeometryParam persistent)
-                  {
-                    if (persistent.NeedsToBeExpired(document, added, deleted, modified))
-                    {
-                      foreach (var r in outParam.Recipients)
-                        r.ExpireSolution(false);
-                    }
-                    else if (materialsChanged)
-                    {
-                      foreach (var goo in outParam.VolatileData.AllData(true))
-                      {
-                        if (goo is IGH_PreviewMeshData previewMeshData)
-                          previewMeshData.DestroyPreviewMeshes();
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          if (definition.Enabled)
-            definition.NewSolution(false);
-        }
-      }
+      DocumentChanged?.Invoke(sender, args);
     }
-    #endregion
 
     #region Bake Recipe
     public static void BakeGeometry(IEnumerable<Rhino.Geometry.GeometryBase> geometries, BuiltInCategory categoryToBakeInto = BuiltInCategory.OST_GenericModel)
@@ -389,7 +171,43 @@ namespace RhinoInside.Revit
     }
     #endregion
 
-    #region Document Actions
+    #region Actions
+    static bool isCommitting = false;
+    internal static bool ProcessIdleActions()
+    {
+      bool pendingIdleActions = false;
+
+      // Document dependant tasks need a document
+      if (ActiveDBDocument != null)
+      {
+        // 1. Do all document read actions
+        if (ProcessReadActions())
+          pendingIdleActions = true;
+
+        // 2. Do all document write actions
+        if (!ActiveDBDocument.IsReadOnly)
+          ProcessWriteActions();
+
+        // 3. Refresh Active View if necesary
+        bool regenComplete = DirectContext3DServer.RegenComplete();
+        if (isRefreshActiveViewPending || !regenComplete || GH.PreviewServer.PreviewChanged())
+        {
+          isRefreshActiveViewPending = false;
+
+          var RefreshTime = new Stopwatch();
+          RefreshTime.Start();
+          ActiveUIApplication.ActiveUIDocument.RefreshActiveView();
+          RefreshTime.Stop();
+          DirectContext3DServer.RegenThreshold = Math.Max(RefreshTime.ElapsedMilliseconds / 3, 100);
+        }
+
+        if (!regenComplete)
+          pendingIdleActions = true;
+      }
+
+      return pendingIdleActions;
+    }
+
     private static Queue<Action<Document>> docWriteActions = new Queue<Action<Document>>();
     public static void EnqueueAction(Action<Document> action)
     {
@@ -397,7 +215,7 @@ namespace RhinoInside.Revit
         docWriteActions.Enqueue(action);
     }
 
-    void ProcessWriteActions()
+    static void ProcessWriteActions()
     {
       lock (docWriteActions)
       {
@@ -407,7 +225,7 @@ namespace RhinoInside.Revit
           {
             try
             {
-              Committing = true;
+              isCommitting = true;
 
               if (trans.Start("RhinoInside") == TransactionStatus.Started)
               {
@@ -415,15 +233,39 @@ namespace RhinoInside.Revit
                   docWriteActions.Dequeue().Invoke(ActiveDBDocument);
 
                 var options = trans.GetFailureHandlingOptions();
+#if !DEBUG
                 options = options.SetClearAfterRollback(true);
+#endif
                 options = options.SetDelayedMiniWarnings(true);
-                options = options.SetForcedModalHandling(false);
+                options = options.SetForcedModalHandling(true);
                 options = options.SetFailuresPreprocessor(new FailuresPreprocessor());
-                var status = trans.Commit(options);
 
-                if (status == TransactionStatus.Committed)
+                // Hide Rhino UI in case any warning-error dialog popups
                 {
-                  foreach (GH_Document definition in Grasshopper.Instances.DocumentServer)
+                  ModalForm.EditScope editScope = null;
+                  EventHandler<DialogBoxShowingEventArgs> _ = null;
+                  try
+                  {
+                    ApplicationUI.DialogBoxShowing += _ = (sender, args) =>
+                    {
+                      if (editScope == null)
+                        editScope = new ModalForm.EditScope();
+                    };
+
+                    trans.Commit(options);
+                  }
+                  finally
+                  {
+                    ApplicationUI.DialogBoxShowing -= _;
+
+                    if(editScope is IDisposable disposable)
+                      disposable.Dispose();
+                  }
+                }
+
+                if (trans.GetStatus() == TransactionStatus.Committed)
+                {
+                  foreach (GH_Document definition in Instances.DocumentServer)
                   {
                     if (definition.Enabled)
                       definition.NewSolution(false);
@@ -434,15 +276,11 @@ namespace RhinoInside.Revit
             catch (Exception e)
             {
               Debug.Fail(e.Source, e.Message);
-
               docWriteActions.Clear();
-
-              if (trans.HasStarted())
-                trans.RollBack();
             }
             finally
             {
-              Committing = false;
+              isCommitting = false;
             }
           }
         }
@@ -482,14 +320,24 @@ namespace RhinoInside.Revit
       // there is no more work to do
       return false;
     }
-    #endregion
+#endregion
 
     #region Public Properties
-    static string CallerFilePath([System.Runtime.CompilerServices.CallerFilePath] string CallerFilePath = "") => CallerFilePath;
-    static public string SourceCodePath => Path.GetDirectoryName(CallerFilePath());
-
     public static IntPtr MainWindowHandle { get; private set; }
-    public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI { get; private set; }
+
+#if REVIT_2019
+    public static string CurrentUsersDataFolderPath => ApplicationUI.ControlledApplication.CurrentUsersDataFolderPath;
+#else
+    public static string CurrentUsersDataFolderPath => Path.Combine
+    (
+      Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+      "Autodesk",
+      "Revit",
+      ApplicationUI.ControlledApplication.VersionName
+    );
+#endif
+
+    public static Autodesk.Revit.UI.UIControlledApplication ApplicationUI => Addin.ApplicationUI;
     public static Autodesk.Revit.UI.UIApplication ActiveUIApplication { get; private set; }
     public static Autodesk.Revit.ApplicationServices.Application Services => ActiveUIApplication?.Application;
 
@@ -503,56 +351,5 @@ namespace RhinoInside.Revit
     public const Rhino.UnitSystem ModelUnitSystem = Rhino.UnitSystem.Feet; // Always feet
     public static double ModelUnits => RhinoDoc.ActiveDoc == null ? double.NaN : RhinoMath.UnitScale(ModelUnitSystem, RhinoDoc.ActiveDoc.ModelUnitSystem); // 1 feet in Rhino units
     #endregion
-  }
-
-  public static class Operator
-  {
-    enum CompareMethod
-    {
-      Nothing,
-      Equals,
-      StartsWith, // >
-      EndsWith,   // <
-      Contains,   // ?
-      Wildcard,   // :
-      Regex,      // ;
-    }
-
-    static CompareMethod CompareMethodFromPattern(ref string pattern, ref bool not)
-    {
-      if (string.IsNullOrEmpty(pattern))
-        return CompareMethod.Nothing;
-
-      switch (pattern[0])
-      {
-        case '~': not = !not; pattern = pattern.Substring(1); return CompareMethodFromPattern(ref pattern, ref not);
-        case '>':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.StartsWith;
-        case '<':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.EndsWith;
-        case '?':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Contains;
-        case ':':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Wildcard;
-        case ';':             pattern = pattern.Substring(1); return string.IsNullOrEmpty(pattern) ? CompareMethod.Nothing : CompareMethod.Regex;
-        default: return CompareMethod.Equals;
-      }
-    }
-
-    public static bool IsSymbolNameLike(this string source, string pattern)
-    {
-      if (pattern.Length == 0)
-        return false;
-
-      bool not = false;
-      switch (CompareMethodFromPattern(ref pattern, ref not))
-      {
-        case CompareMethod.Nothing:     return not ^ false;
-        case CompareMethod.Equals:      return not ^ string.Equals(source, pattern, StringComparison.OrdinalIgnoreCase);
-        case CompareMethod.StartsWith:  return not ^ source.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
-        case CompareMethod.EndsWith:    return not ^ source.EndsWith(pattern, StringComparison.OrdinalIgnoreCase);
-        case CompareMethod.Contains:    return not ^ (source.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0);
-        case CompareMethod.Wildcard:    return not ^ Microsoft.VisualBasic.CompilerServices.LikeOperator.LikeString(source, pattern, Microsoft.VisualBasic.CompareMethod.Text);
-        case CompareMethod.Regex:       var regex = new System.Text.RegularExpressions.Regex(pattern); return not ^ regex.IsMatch(source);
-      }
-
-      return false;
-    }
   }
 }

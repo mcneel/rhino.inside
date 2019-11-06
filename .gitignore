@@ -12,6 +12,9 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
+# Rhino sepcific ignores
+*.3dmbak
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -332,3 +335,4 @@ ASALocalRun/
 /CPython/build
 /CPython/rhinoinside.egg-info
 /CPython/rhinoinside/RhinoInsidePythonShim.dll
+/Autodesk/Revit/src/RhinoInside.Revit/RhinoInside.Revit.sln

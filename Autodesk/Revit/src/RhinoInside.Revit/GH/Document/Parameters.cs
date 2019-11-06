@@ -13,11 +13,11 @@ using Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentParameters : GH_Component
+  public class DocumentParameters : DocumentComponent
   {
     public override Guid ComponentGuid => new Guid("189F0A94-D077-4B96-8A92-6D5334EF7157");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{K}");
+    protected override ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementClassFilter(typeof(ParameterElement));
 
     public DocumentParameters() : base
     (
@@ -35,17 +35,21 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.ParameterKey(), "ParameterKeys", "ParameterKeys", "Parameter definitions list", GH_ParamAccess.list);
+      manager.AddParameter(new Parameters.ParameterKey(), "ParameterKeys", "K", "Parameter definitions list", GH_ParamAccess.list);
     }
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
+      var category = default(Category);
       if (!DA.GetData("Category", ref category))
         return;
 
-      var parameterKeys = TableView.GetAvailableParameters(Revit.ActiveDBDocument, category.Id);
-      DA.SetDataList("ParameterKeys", parameterKeys);
+      var doc = category.Document();
+      if(doc is object)
+      {
+        var parameterKeys = TableView.GetAvailableParameters(doc, category.Id);
+        DA.SetDataList("ParameterKeys", parameterKeys.Select(paramId => Types.ParameterKey.FromElementId(doc, paramId)));
+      }
     }
   }
 }

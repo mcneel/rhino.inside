@@ -11,6 +11,11 @@ namespace HelloWorld
   class Program
   {
     #region Program static constructor
+    static readonly string SystemDir = (string) Microsoft.Win32.Registry.GetValue
+    (
+      @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
+      Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
+    );
     static Program()
     {
       ResolveEventHandler OnRhinoCommonResolve = null;
@@ -23,9 +28,7 @@ namespace HelloWorld
           return null;
 
         AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
+        return Assembly.LoadFrom(Path.Combine(SystemDir, rhinoCommonAssemblyName + ".dll"));
       };
     }
     #endregion
@@ -42,7 +45,7 @@ namespace HelloWorld
           Console.WriteLine("Enter path to directory which contains files to convert and press ENTER:");
           string path = Console.ReadLine();
 
-          String[] filePaths = null;
+          string[] filePaths = null;
 
           try
           {
@@ -61,17 +64,34 @@ namespace HelloWorld
             Console.ReadKey();
             return;
           }
-
-          var doc = RhinoDoc.ActiveDoc;
           
           foreach (string file in filePaths)
           {
+
+            var doc = RhinoDoc.ActiveDoc;
 
             var script = string.Format("_-Import \"{0}\" _Enter", file);
             RhinoApp.RunScript(script, false);
 
             // Change the original extension to .obj
             var objPath = System.IO.Path.ChangeExtension(file, ".obj");
+
+            // Change the original extension to .png
+            var pngPath = System.IO.Path.ChangeExtension(file, ".png");
+
+            var imgScript = string.Format("_-ViewCaptureToFile \"{0}\" _Enter", pngPath);
+            RhinoApp.RunScript(imgScript, false);
+            /*
+                        try
+                        {
+                          var img = doc.Views.ActiveView.CaptureToBitmap(true, true, true);
+                          img.Save(pngPath, System.Drawing.Imaging.ImageFormat.Png);
+                          img.Dispose();
+                        }
+                        catch (Exception) { }
+
+              */
+
 
             // Export options:
 
@@ -94,8 +114,7 @@ namespace HelloWorld
 
             // Delete all of the imported objects before importing a new file
 
-            foreach (Rhino.DocObjects.RhinoObject ro in doc.Objects)
-              doc.Objects.Delete(ro);
+            RhinoDoc.Create(null);
 
           }
 

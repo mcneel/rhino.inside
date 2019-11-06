@@ -11,99 +11,13 @@ using Grasshopper.Kernel.Special;
 
 using Autodesk.Revit.DB;
 
-namespace RhinoInside.Revit.GH.Components
+namespace RhinoInside.Revit.GH.Parameters
 {
-  public class DocumentElementTypes : GH_Component
-  {
-    public override Guid ComponentGuid => new Guid("7B00F940-4C6E-4F3F-AB81-C3EED430DE96");
-    public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{T}");
-
-    public DocumentElementTypes() : base(
-      "Document.ElementTypes", "ElementTypes",
-      "Get active document element types list",
-      "Revit", "Document")
-    {
-    }
-
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager[manager.AddParameter(new Parameters.Category(), "FamilyCategory", "C", "Category of the requested element type", GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddTextParameter("FamilyName", "F", string.Empty, GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddTextParameter("TypeName", "N", string.Empty, GH_ParamAccess.item)].Optional = true;
-    }
-
-    protected override void RegisterOutputParams(GH_OutputParamManager manager)
-    {
-      manager.AddParameter(new Parameters.ElementType(), "ElementTypes", "T", "Requested element type", GH_ParamAccess.list);
-    }
-
-    protected override void SolveInstance(IGH_DataAccess DA)
-    {
-      Autodesk.Revit.DB.Category category = null;
-      DA.GetData("FamilyCategory", ref category);
-
-      string familyName = null;
-      DA.GetData("FamilyName", ref familyName);
-
-      string name = null;
-      DA.GetData("TypeName", ref name);
-
-      var elementTypes = new List<ElementType>();
-
-      using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
-      {
-        if (category != null)
-        {
-          using (var familyCollector = new FilteredElementCollector(Revit.ActiveDBDocument))
-          {
-            var familiesSet = new HashSet<string>
-            (
-              familyCollector.OfClass(typeof(Family)).
-              Cast<Family>().
-              Where((x) => x.FamilyCategory.Id == category.Id).
-              Select((x) => x.Name)
-            );
-
-            foreach (var elementType in collector.WhereElementIsElementType().Cast<ElementType>())
-            {
-              if (elementType.Category?.Id != category.Id && !familiesSet.Contains(elementType.FamilyName))
-                continue;
-
-              if (familyName != null && elementType.FamilyName != familyName)
-                continue;
-
-              if (name != null && elementType.Name != name)
-                continue;
-
-              elementTypes.Add(elementType);
-            }
-          }
-        }
-        else
-        {
-          foreach (var elementType in collector.WhereElementIsElementType().ToElements().OfType<ElementType>())
-          {
-            if (familyName != null && elementType.FamilyName != familyName)
-              continue;
-
-            if (name != null && elementType.Name != name)
-              continue;
-
-            elementTypes.Add(elementType);
-          }
-        }
-      }
-
-      DA.SetDataList("ElementTypes", elementTypes);
-    }
-  }
-
-  public class DocumentFamiliesPicker : GH_ValueList
+  public class DocumentFamiliesPicker : DocumentPicker
   {
     public override Guid ComponentGuid => new Guid("45CEE087-4194-4E55-AA20-9CC5D2193CE0");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("F*");
+    protected override Autodesk.Revit.DB.ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementClassFilter(typeof(Family));
 
     public DocumentFamiliesPicker()
     {
@@ -125,9 +39,9 @@ namespace RhinoInside.Revit.GH.Components
       {
         using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
         {
-          foreach (var family in collector.OfClass(typeof(Family)).Cast<Family>().OrderBy((x) => x.Name))
+          foreach (var family in collector.OfClass(typeof(Autodesk.Revit.DB.Family)).Cast<Autodesk.Revit.DB.Family>().OrderBy((x) => $"{x.FamilyCategory.Name} : {x.Name}"))
           {
-            var item = new GH_ValueListItem(family.Name, family.Id.IntegerValue.ToString());
+            var item = new GH_ValueListItem($"{family.FamilyCategory.Name} : {family.Name}", family.Id.IntegerValue.ToString());
             item.Selected = selectedItems.Contains(item.Expression);
             ListItems.Add(item);
           }
@@ -142,5 +56,63 @@ namespace RhinoInside.Revit.GH.Components
       base.CollectVolatileData_Custom();
     }
   }
+}
 
+namespace RhinoInside.Revit.GH.Components
+{
+  public class DocumentElementTypes : DocumentComponent
+  {
+    public override Guid ComponentGuid => new Guid("7B00F940-4C6E-4F3F-AB81-C3EED430DE96");
+    public override GH_Exposure Exposure => GH_Exposure.primary;
+    protected override ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementIsElementTypeFilter(false);
+
+    public DocumentElementTypes() : base(
+      "Document.ElementTypes", "ElementTypes",
+      "Get active document element types list",
+      "Revit", "Document")
+    {
+    }
+
+    protected override void RegisterInputParams(GH_InputParamManager manager)
+    {
+      manager[manager.AddParameter(new Parameters.ElementFilter(), "Filter", "F", "Filter", GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddTextParameter("FamilyName", "F", string.Empty, GH_ParamAccess.item)].Optional = true;
+      manager[manager.AddTextParameter("TypeName", "N", string.Empty, GH_ParamAccess.item)].Optional = true;
+    }
+
+    protected override void RegisterOutputParams(GH_OutputParamManager manager)
+    {
+      manager.AddParameter(new Parameters.ElementType(), "ElementTypes", "T", "Requested element type", GH_ParamAccess.list);
+    }
+
+    protected override void SolveInstance(IGH_DataAccess DA)
+    {
+      Autodesk.Revit.DB.ElementFilter filter = null;
+      DA.GetData("Filter", ref filter);
+
+      string familyName = null;
+      DA.GetData("FamilyName", ref familyName);
+
+      string name = null;
+      DA.GetData("TypeName", ref name);
+
+      using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+      {
+        var elementCollector = collector.WherePasses(ElementFilter);
+
+        if (filter is object)
+          elementCollector = elementCollector.WherePasses(filter);
+
+        var elementTypes = elementCollector.Cast<ElementType>();
+
+        if (familyName is object)
+          elementTypes = elementTypes.Where(x => x.FamilyName == familyName);
+
+        if (name is object)
+          elementTypes = elementTypes.Where(x => x.Name == name);
+
+        DA.SetDataList("ElementTypes", elementTypes.Select(x => new Types.ElementType(x)));
+      }
+    }
+  }
 }

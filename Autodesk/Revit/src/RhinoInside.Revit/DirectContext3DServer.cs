@@ -55,6 +55,21 @@ namespace RhinoInside.Revit
       }
     }
 
+    protected static bool IsModelView(View dBView)
+    {
+      if
+      (
+        dBView.ViewType == ViewType.FloorPlan ||
+        dBView.ViewType == ViewType.CeilingPlan ||
+        dBView.ViewType == ViewType.Elevation ||
+        dBView.ViewType == ViewType.Section ||
+        dBView.ViewType == ViewType.ThreeD
+      )
+        return true;
+
+      return false;
+    }
+
     public const int VertexThreshold = ushort.MaxValue + 1;
 
     static IndexBuffer indexPointsBuffer;
@@ -600,29 +615,33 @@ namespace RhinoInside.Revit
           if (!BeginRegen())
             return false;
 
-          if (geometry is Rhino.Geometry.Mesh mesh)
+          if (geometry.IsValid)
           {
-            vertexBuffer = ToVertexBuffer(mesh, part, out vertexFormatBits);
-            vertexCount = part.VertexCount;
+            if (geometry is Rhino.Geometry.Mesh mesh)
+            {
+              vertexBuffer = ToVertexBuffer(mesh, part, out vertexFormatBits);
+              vertexCount = part.VertexCount;
 
-            triangleBuffer = ToTrianglesBuffer(mesh, part, out triangleCount);
-            linesBuffer = ToEdgeBuffer(mesh, part, out linesCount);
-          }
-          else if (geometry is Rhino.Geometry.Curve curve)
-          {
-            using (var polyline = curve.ToPolyline(Revit.VertexTolerance * Revit.ModelUnits, Revit.AngleTolerance, Revit.ShortCurveTolerance * Revit.ModelUnits, 0.0))
-              linesCount = ToPolylineBuffer(polyline.ToPolyline(), out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
-          }
-          else if (geometry is Rhino.Geometry.Point point)
-          {
-            linesCount = -ToPointsBuffer(point, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
-          }
-          else if (geometry is Rhino.Geometry.PointCloud pointCloud)
-          {
-            linesCount = -ToPointsBuffer(pointCloud, part, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+              triangleBuffer = ToTrianglesBuffer(mesh, part, out triangleCount);
+              linesBuffer = ToEdgeBuffer(mesh, part, out linesCount);
+            }
+            else if (geometry is Rhino.Geometry.Curve curve)
+            {
+              using (var polyline = curve.ToPolyline(Revit.VertexTolerance * Revit.ModelUnits, Revit.AngleTolerance, Revit.ShortCurveTolerance * Revit.ModelUnits, 0.0))
+                linesCount = ToPolylineBuffer(polyline.ToPolyline(), out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+            }
+            else if (geometry is Rhino.Geometry.Point point)
+            {
+              linesCount = -ToPointsBuffer(point, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+            }
+            else if (geometry is Rhino.Geometry.PointCloud pointCloud)
+            {
+              linesCount = -ToPointsBuffer(pointCloud, part, out vertexFormatBits, out vertexBuffer, out vertexCount, out linesBuffer);
+            }
+
+            vertexFormat = new VertexFormat(vertexFormatBits);
           }
 
-          vertexFormat = new VertexFormat(vertexFormatBits);
           geometry = null;
 
           EndRegen();

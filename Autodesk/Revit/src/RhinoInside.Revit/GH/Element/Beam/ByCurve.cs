@@ -1,21 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-
 using Grasshopper.Kernel;
-
-using Autodesk.Revit.DB;
+using RhinoInside.Runtime.InteropServices;
+using DB = Autodesk.Revit.DB;
 
 namespace RhinoInside.Revit.GH.Components
 {
-  public class BeamByCurve : GH_TransactionalComponentItem
+  public class BeamByCurve : ReconstructElementComponent
   {
     public override Guid ComponentGuid => new Guid("26411AA6-8187-49DF-A908-A292A07918F1");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("B");
 
     public BeamByCurve() : base
     (
@@ -25,101 +19,114 @@ namespace RhinoInside.Revit.GH.Components
     )
     { }
 
-    protected override void RegisterInputParams(GH_InputParamManager manager)
-    {
-      manager.AddCurveParameter("Axis", "A", string.Empty, GH_ParamAccess.item);
-      manager[manager.AddParameter(new Parameters.ElementType(), "Type", "T", string.Empty, GH_ParamAccess.item)].Optional = true;
-      manager[manager.AddParameter(new Parameters.Element(), "Level", "L", string.Empty, GH_ParamAccess.item)].Optional = true;
-    }
-
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
     {
-      manager.AddParameter(new Parameters.Element(), "Beam", "B", "New Beam", GH_ParamAccess.item);
+      manager.AddParameter(new Parameters.GeometricElement(), "Beam", "B", "New Beam", GH_ParamAccess.item);
     }
 
-    protected override void SolveInstance(IGH_DataAccess DA)
+    protected override void OnAfterStart(DB.Document document, string strTransactionName)
     {
-      Rhino.Geometry.Curve axis = null;
-      DA.GetData("Axis", ref axis);
+      base.OnAfterStart(document, strTransactionName);
 
-      FamilySymbol familySymbol = null;
-      if (!DA.GetData("Type", ref familySymbol) && Params.Input[1].Sources.Count == 0)
-        familySymbol = Revit.ActiveDBDocument.GetElement(Revit.ActiveDBDocument.GetDefaultFamilyTypeId(new ElementId(BuiltInCategory.OST_StructuralFraming))) as FamilySymbol;
-
-      if (familySymbol == null)
+      // Reset all previous beams joins
+      if (PreviousStructure is object)
       {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, string.Format("Parameter '{0}' There is no default structural framing family loaded.", Params.Input[1].Name));
-        DA.AbortComponentSolution();
-        return;
+        var beamsToUnjoin = PreviousStructure.OfType<Types.Element>().
+                            Select(x => document.GetElement(x)).
+                            OfType<DB.FamilyInstance>().
+                            Where(x => x.Pinned);
+
+        foreach (var unjoinedBeam in beamsToUnjoin)
+        {
+          if (DB.Structure.StructuralFramingUtils.IsJoinAllowedAtEnd(unjoinedBeam, 0))
+          {
+            DB.Structure.StructuralFramingUtils.DisallowJoinAtEnd(unjoinedBeam, 0);
+            DB.Structure.StructuralFramingUtils.AllowJoinAtEnd(unjoinedBeam, 0);
+          }
+
+          if (DB.Structure.StructuralFramingUtils.IsJoinAllowedAtEnd(unjoinedBeam, 1))
+          {
+            DB.Structure.StructuralFramingUtils.DisallowJoinAtEnd(unjoinedBeam, 1);
+            DB.Structure.StructuralFramingUtils.AllowJoinAtEnd(unjoinedBeam, 1);
+          }
+        }
       }
-
-      if (!familySymbol.IsActive)
-        familySymbol.Activate();
-
-      Autodesk.Revit.DB.Level level = null;
-      DA.GetData("Level", ref level);
-
-      DA.DisableGapLogic();
-      int Iteration = DA.Iteration;
-      Revit.EnqueueAction((doc) => CommitInstance(doc, DA, Iteration, axis, familySymbol, level));
     }
 
-    void CommitInstance
+    void ReconstructBeamByCurve
     (
-      Document doc, IGH_DataAccess DA, int Iteration,
-      Rhino.Geometry.Curve curve,
-      Autodesk.Revit.DB.FamilySymbol familySymbol,
-      Autodesk.Revit.DB.Level level
+      DB.Document doc,
+      ref DB.FamilyInstance element,
+
+               Rhino.Geometry.Curve curve,
+      Optional<DB.FamilySymbol> type,
+      Optional<DB.Level> level
     )
     {
-      var element = PreviousElement(doc, Iteration);
-      if (!element?.Pinned ?? false)
-      {
-        ReplaceElement(doc, DA, Iteration, element);
-      }
-      else try
-      {
-        var scaleFactor = 1.0 / Revit.ModelUnits;
-        if (scaleFactor != 1.0)
-        {
-          curve?.Scale(scaleFactor);
-        }
+      var scaleFactor = 1.0 / Revit.ModelUnits;
 
-        if
+      if
+      (
+        ((curve = curve.ChangeUnits(scaleFactor)) is null) ||
+        curve.IsClosed ||
+        !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
+        curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C2_continuous, curve.Domain.Min, curve.Domain.Max, out var _)
+      )
+        ThrowArgumentException(nameof(curve), "Curve must be a C2 continuous planar non closed curve.");
+
+      SolveOptionalType(ref type, doc, DB.BuiltInCategory.OST_StructuralFraming, nameof(type));
+
+      if (!type.Value.IsActive)
+        type.Value.Activate();
+
+      SolveOptionalLevel(ref level, doc, curve, nameof(level));
+
+      var centerLine = curve.ToHost();
+
+      // Type
+      ChangeElementTypeId(ref element, type.Value.Id);
+
+      DB.FamilyInstance newBeam = null;
+      if (element is DB.FamilyInstance previousBeam && element.Location is DB.LocationCurve locationCurve && centerLine.IsSameKindAs(locationCurve.Curve))
+      {
+        newBeam = previousBeam;
+
+        locationCurve.Curve = centerLine;
+      }
+      else
+      {
+        newBeam = doc.Create.NewFamilyInstance
         (
-          curve == null ||
-          curve.IsShort(Revit.ShortCurveTolerance) ||
-          curve.IsClosed ||
-          !curve.TryGetPlane(out var axisPlane, Revit.VertexTolerance) ||
-          curve.GetNextDiscontinuity(Rhino.Geometry.Continuity.C1_continuous, curve.Domain.Min, curve.Domain.Max, out double discontinuity)
-        )
-          throw new Exception(string.Format("Parameter '{0}' must be a C1 continuous planar non closed curve.", Params.Input[0].Name));
+          centerLine,
+          type.Value,
+          level.Value,
+          DB.Structure.StructuralType.Beam
+        );
 
-        var axisList = curve.ToHost().ToList();
-        Debug.Assert(axisList.Count == 1);
+        newBeam.get_Parameter(DB.BuiltInParameter.Y_JUSTIFICATION).Set((int) DB.Structure.YJustification.Origin);
+        newBeam.get_Parameter(DB.BuiltInParameter.Z_JUSTIFICATION).Set((int) DB.Structure.ZJustification.Origin);
 
-        if (element is FamilyInstance && familySymbol.Id != element.GetTypeId())
-        {
-          var newElmentId = element.ChangeTypeId(familySymbol.Id);
-          if (newElmentId != ElementId.InvalidElementId)
-            element = doc.GetElement(newElmentId);
-        }
+        var beam = element as DB.FamilyInstance;
 
-        if (element is FamilyInstance familyInstance && element.Location is LocationCurve locationCurve)
-        {
-          locationCurve.Curve = axisList[0];
-        }
+        if(beam is object && DB.Structure.StructuralFramingUtils.IsJoinAllowedAtEnd(beam, 0))
+          DB.Structure.StructuralFramingUtils.AllowJoinAtEnd(newBeam, 0);
         else
-        {
-          element = CopyParametersFrom(doc.Create.NewFamilyInstance(axisList[0], familySymbol, level, Autodesk.Revit.DB.Structure.StructuralType.Beam), element);
-        }
+          DB.Structure.StructuralFramingUtils.DisallowJoinAtEnd(newBeam, 0);
 
-        ReplaceElement(doc, DA, Iteration, element);
-      }
-      catch (Exception e)
-      {
-        AddRuntimeMessage(GH_RuntimeMessageLevel.Error, e.Message);
-        ReplaceElement(doc, DA, Iteration, null);
+        if (beam is object && DB.Structure.StructuralFramingUtils.IsJoinAllowedAtEnd(beam, 1))
+          DB.Structure.StructuralFramingUtils.AllowJoinAtEnd(newBeam, 1);
+        else
+          DB.Structure.StructuralFramingUtils.DisallowJoinAtEnd(newBeam, 1);
+
+        var parametersMask = new DB.BuiltInParameter[]
+        {
+          DB.BuiltInParameter.ELEM_FAMILY_AND_TYPE_PARAM,
+          DB.BuiltInParameter.ELEM_FAMILY_PARAM,
+          DB.BuiltInParameter.ELEM_TYPE_PARAM,
+          DB.BuiltInParameter.LEVEL_PARAM
+        };
+
+        ReplaceElement(ref element, newBeam, parametersMask);
       }
     }
   }

@@ -12,32 +12,27 @@ using Autodesk.Revit.UI;
 
 using Rhino.Geometry;
 
+using RhinoInside.Revit.UI;
+
 namespace RhinoInside.Revit.Samples
 {
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  public class Sample1 : IExternalCommand
+  public class Sample1 : RhinoCommand
   {
     public static void CreateUI(RibbonPanel ribbonPanel)
     {
-      // Create a push button to trigger a command add it to the ribbon panel.
-      var thisAssembly = Assembly.GetExecutingAssembly();
-
-      var buttonData = new PushButtonData
-      (
-        "cmdRhinoInsideSample1", "Sample 1",
-        thisAssembly.Location,
-        MethodBase.GetCurrentMethod().DeclaringType.FullName
-      );
+      var buttonData = NewPushButtonData<Sample1, Availability>("Sample 1");
 
       if (ribbonPanel.AddItem(buttonData) is PushButton pushButton)
       {
         pushButton.ToolTip = "Creates a mesh sphere";
+        pushButton.Image = ImageBuilder.BuildImage("1");
         pushButton.LargeImage = ImageBuilder.BuildLargeImage("1");
         pushButton.SetContextualHelp(new ContextualHelp(ContextualHelpType.Url, "https://github.com/mcneel/rhino.inside/blob/master/Autodesk/Revit/README.md#sample-1"));
       }
     }
 
-    public Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
       // RhinoCommon code
       var sphere = new Sphere(Point3d.Origin, 12 * Revit.ModelUnits);
@@ -52,7 +47,7 @@ namespace RhinoInside.Revit.Samples
 
       using (var trans = new Transaction(doc))
       {
-        if (trans.Start(MethodBase.GetCurrentMethod().DeclaringType.Name) == TransactionStatus.Started)
+        if (trans.Start(MethodBase.GetCurrentMethod().DeclaringType.FullName) == TransactionStatus.Started)
         {
           var categoryId = new ElementId(BuiltInCategory.OST_GenericModel);
 

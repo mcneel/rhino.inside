@@ -1,22 +1,14 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
-using System.Diagnostics;
-
 using Grasshopper.Kernel;
-
-using Autodesk.Revit.DB;
-
+using DB = Autodesk.Revit.DB;
 namespace RhinoInside.Revit.GH.Components
 {
-  public class DocumentElements : GH_Component
+  public class DocumentElements : DocumentComponent
   {
     public override Guid ComponentGuid => new Guid("0F7DA57E-6C05-4DD0-AABF-69E42DF38859");
     public override GH_Exposure Exposure => GH_Exposure.primary;
-    protected override System.Drawing.Bitmap Icon => ImageBuilder.BuildIcon("{E}");
+    protected override DB.ElementFilter ElementFilter => new Autodesk.Revit.DB.ElementIsElementTypeFilter(true);
 
     public DocumentElements() : base(
       "Document.Elements", "Elements",
@@ -27,7 +19,7 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void RegisterInputParams(GH_InputParamManager manager)
     {
-      manager[manager.AddParameter(new Parameters.Category(), "Category", "C", "Category", GH_ParamAccess.item)].Optional = true;
+      manager.AddParameter(new Parameters.ElementFilter(), "Filter", "F", "Filter", GH_ParamAccess.item);
     }
 
     protected override void RegisterOutputParams(GH_OutputParamManager manager)
@@ -37,26 +29,23 @@ namespace RhinoInside.Revit.GH.Components
 
     protected override void SolveInstance(IGH_DataAccess DA)
     {
-      Autodesk.Revit.DB.Category category = null;
-      DA.GetData("Category", ref category);
+      DA.DisableGapLogic();
 
-      var elements = new List<Types.Element>();
+      Autodesk.Revit.DB.ElementFilter filter = null;
+      if (!DA.GetData("Filter", ref filter))
+        return;
 
-      using (var collector = new FilteredElementCollector(Revit.ActiveDBDocument))
+      using (var collector = new DB.FilteredElementCollector(Revit.ActiveDBDocument))
       {
-        if (category == null)
-        {
-          foreach (var element in collector.WhereElementIsNotElementType().ToElementIds())
-            elements.Add(Types.Element.Make(element));
-        }
-        else
-        {
-          foreach (var element in collector.WhereElementIsNotElementType().OfCategoryId(category.Id).ToElementIds())
-            elements.Add(Types.Element.Make(element));
-        }
+        DA.SetDataList
+        (
+          "Elements",
+          collector.
+          WherePasses(ElementFilter).
+          WherePasses(filter).
+          Select(x => Types.Element.FromElement(x))
+        );
       }
-
-      DA.SetDataList("Elements", elements);
     }
   }
 }

@@ -13,7 +13,7 @@ using System.IO;
 
 namespace RhinoInside.Revit.UI
 {
-  abstract class HelpCommand : Command
+  abstract class HelpCommand : ExternalCommand
   {
     static protected PulldownButton helpButton = null;
     internal static void CreateUI(RibbonPanel ribbonPanel)
@@ -21,26 +21,42 @@ namespace RhinoInside.Revit.UI
       if (ribbonPanel.AddItem(new PulldownButtonData("cmdRhinoInside.Help", "Help")) is PulldownButton pullDownButton)
       {
         helpButton = pullDownButton;
+        helpButton.Image = ImageBuilder.BuildImage("?");
         helpButton.LargeImage = ImageBuilder.BuildLargeImage("?");
 
-        helpButton.AddPushButton(typeof(APIDocsCommand),           "APIDocs",           "Opens apidocs.co website",                   typeof(AllwaysAvailable));
-        helpButton.AddPushButton(typeof(TheBuildingCoderCommand),  "TheBuildingCoder",  "Opens thebuildingcoder.typepad.com website", typeof(AllwaysAvailable));
+        helpButton.AddPushButton(typeof(CommandSampleFiles),       "Sample files",      "Opens sample files folder",                   typeof(AllwaysAvailable));
+        helpButton.AddPushButton(typeof(CommandAPIDocs),           "APIDocs",           "Opens apidocs.co website",                   typeof(AllwaysAvailable));
+        helpButton.AddPushButton(typeof(CommandTheBuildingCoder),  "TheBuildingCoder",  "Opens thebuildingcoder.typepad.com website", typeof(AllwaysAvailable));
         helpButton.AddSeparator();
-        helpButton.AddPushButton(typeof(RhinoDevDocsCommand),      "Rhino Dev Docs",    "Opens developer.rhino3d.com website",        typeof(AllwaysAvailable));
-        helpButton.AddPushButton(typeof(DiscourseCommand),         "McNeel Discourse",  "Opens discourse.mcneel.com website",         typeof(AllwaysAvailable));
+        helpButton.AddPushButton(typeof(CommandRhinoDevDocs),      "Rhino Dev Docs",    "Opens developer.rhino3d.com website",        typeof(AllwaysAvailable));
+        helpButton.AddPushButton(typeof(CommandDiscourse),         "McNeel Discourse",  "Opens discourse.mcneel.com website",         typeof(AllwaysAvailable));
         helpButton.AddSeparator();
-#if DEBUG
-        helpButton.AddPushButton(typeof(CheckForUpdatesCommand),    "Check for updates", "Checks if there are updates in GitHub",      typeof(AllwaysAvailable));
-#endif
-        helpButton.AddPushButton(typeof(AboutCommand),              "About",             "Opens GitHub Repo website",                  typeof(AllwaysAvailable));
+        helpButton.AddPushButton(typeof(CommandCheckForUpdates),   "Updates",           "Checks if there are updates in GitHub",      typeof(AllwaysAvailable));
+        helpButton.AddPushButton(typeof(CommandAbout),             "About",             "Opens GitHub Repo website",                  typeof(AllwaysAvailable));
       }
 
-      CheckForUpdatesCommand.CheckUpdates();
+      CommandCheckForUpdates.CheckUpdates();
     }
   }
 
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class APIDocsCommand : HelpCommand
+  class CommandSampleFiles : HelpCommand
+  {
+    public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
+    {
+#if DEBUG
+      var location = Path.Combine(Addin.SourceCodePath, "Samples");
+#else
+      var location = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+#endif
+      using (System.Diagnostics.Process.Start(location)) { }
+
+      return Result.Succeeded;
+    }
+  }
+
+  [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
+  class CommandAPIDocs : HelpCommand
   {
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
@@ -51,7 +67,7 @@ namespace RhinoInside.Revit.UI
   }
 
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class TheBuildingCoderCommand : HelpCommand
+  class CommandTheBuildingCoder : HelpCommand
   {
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
@@ -62,7 +78,7 @@ namespace RhinoInside.Revit.UI
   }
   
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class RhinoDevDocsCommand : HelpCommand
+  class CommandRhinoDevDocs : HelpCommand
   {
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
@@ -73,18 +89,18 @@ namespace RhinoInside.Revit.UI
   }
 
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class DiscourseCommand : HelpCommand
+  class CommandDiscourse : HelpCommand
   {
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {
-      using (System.Diagnostics.Process.Start("https://discourse.mcneel.com/c/serengeti/inside")) { }
+      using (System.Diagnostics.Process.Start("https://discourse.mcneel.com/c/rhino-inside/Revit")) { }
 
       return Result.Succeeded;
     }
   }
 
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class CheckForUpdatesCommand : HelpCommand
+  class CommandCheckForUpdates : HelpCommand
   {
     static public int CheckUpdates(bool quiet = true, bool forceFetch = false)
     {
@@ -92,7 +108,7 @@ namespace RhinoInside.Revit.UI
       int retCode = -1;
       using (var powerShell = PowerShell.Create())
       {
-        powerShell.AddScript(string.Format(@"Set-Location {0}", Revit.SourceCodePath));
+        powerShell.AddScript(string.Format(@"Set-Location {0}", Addin.SourceCodePath));
         powerShell.AddScript(@"git rev-parse --absolute-git-dir");
         var gitdir = powerShell.Invoke();
         if (powerShell.HadErrors)
@@ -104,17 +120,13 @@ namespace RhinoInside.Revit.UI
         {
           using
           (
-            var taskDialog = new TaskDialog("RhinoInside.Revit.CheckForUpdates")
+            var taskDialog = new TaskDialog(MethodBase.GetCurrentMethod().DeclaringType.FullName)
             {
               Title = "Updates",
-#if REVIT_2018
-              MainIcon = TaskDialogIcon.TaskDialogIconInformation,
-#else
-              MainIcon = TaskDialogIcon.TaskDialogIconWarning,
-#endif
+              MainIcon = TaskDialogIcons.IconInformation,
               TitleAutoPrefix = true,
               AllowCancellation = true,
-              FooterText = Revit.SourceCodePath
+              FooterText = Addin.SourceCodePath
             }
           )
           {
@@ -133,11 +145,7 @@ namespace RhinoInside.Revit.UI
 
             if (forceFetch && powerShell.HadErrors)
             {
-#if REVIT_2018
-              taskDialog.MainIcon = TaskDialogIcon.TaskDialogIconError;
-#else
-              taskDialog.MainIcon = TaskDialogIcon.TaskDialogIconWarning;
-#endif
+              taskDialog.MainIcon = TaskDialogIcons.IconError;
               taskDialog.MainInstruction = "Failed to fetch changes from the repository";
 
               foreach (var f in powerShell.Streams.Error)
@@ -169,7 +177,6 @@ namespace RhinoInside.Revit.UI
               }
             }
 
-
             if (!quiet)
               taskDialog.Show();
           }
@@ -184,7 +191,15 @@ namespace RhinoInside.Revit.UI
 
       return retCode;
 #else
-              return 0;
+      Addin.IsExpired(quiet);
+
+      if (helpButton != null)
+      {
+        helpButton.LargeImage = Addin.DaysUntilExpiration <= 15 ? ImageBuilder.BuildLargeImage(Addin.DaysUntilExpiration.ToString(), System.Drawing.Color.DarkRed) : ImageBuilder.BuildLargeImage("?");
+        helpButton.ToolTip = Addin.DaysUntilExpiration > 1 ? string.Format("This WIP build expires in {0} days", Addin.DaysUntilExpiration) : "This WIP build has expired";
+      }
+
+      return (Addin.DaysUntilExpiration < 1) ? 1 : 0;
 #endif
     }
 
@@ -195,7 +210,7 @@ namespace RhinoInside.Revit.UI
   }
 
   [Transaction(TransactionMode.Manual), Regeneration(RegenerationOption.Manual)]
-  class AboutCommand : HelpCommand
+  class CommandAbout : HelpCommand
   {
     public override Result Execute(ExternalCommandData data, ref string message, ElementSet elements)
     {

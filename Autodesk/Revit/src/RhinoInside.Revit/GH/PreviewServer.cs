@@ -10,6 +10,7 @@ using Autodesk.Revit.DB.ExternalService;
 
 using Grasshopper;
 using Grasshopper.Kernel;
+using System.Threading;
 
 namespace RhinoInside.Revit.GH
 {
@@ -18,26 +19,9 @@ namespace RhinoInside.Revit.GH
     static GH_Document activeDefinition = null;
     List<ParamPrimitive> primitives = new List<ParamPrimitive>();
     Rhino.Geometry.BoundingBox primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
+    int RebuildPrimitives = 1;
 
-    public override void Register()
-    {
-      base.Register();
-    }
-
-    public override void Unregister()
-    {
-      Clear();
-      base.Unregister();
-    }
-
-    public void Clear()
-    {
-      foreach (var buffer in primitives)
-        ((IDisposable) buffer).Dispose();
-      primitives.Clear();
-
-      primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
-    }
+    public static GH_PreviewMode PreviewMode = GH_PreviewMode.Shaded;
 
     #region IExternalServer
     public override string GetName() => "Grasshopper";
@@ -46,11 +30,10 @@ namespace RhinoInside.Revit.GH
     #endregion
 
     #region IDirectContext3DServer
-    public override bool UseInTransparentPass(View dBView) => ((activeDefinition?.PreviewMode ?? GH_PreviewMode.Disabled) == GH_PreviewMode.Shaded);
+    public override bool UseInTransparentPass(View dBView) => ((activeDefinition != null ? PreviewMode : GH_PreviewMode.Disabled) == GH_PreviewMode.Shaded);
 
     public override bool CanExecute(View dBView)
     {
-      var editor = Instances.DocumentEditor;
       var canvas = Instances.ActiveCanvas;
       var definition = canvas?.Document;
 
@@ -58,14 +41,13 @@ namespace RhinoInside.Revit.GH
       {
         if (activeDefinition != null)
         {
-          if (editor != null) editor.VisibleChanged       -= Editor_VisibleChanged;
           activeDefinition.SolutionEnd                    -= ActiveDefinition_SolutionEnd;
           activeDefinition.SettingsChanged                -= ActiveDefinition_SettingsChanged;
           GH_Document.DefaultSelectedPreviewColourChanged -= Document_DefaultPreviewColourChanged;
           GH_Document.DefaultPreviewColourChanged         -= Document_DefaultPreviewColourChanged;
         }
 
-        Clear();
+        RebuildPrimitives = 1;
         activeDefinition = definition;
 
         if (activeDefinition != null)
@@ -74,14 +56,13 @@ namespace RhinoInside.Revit.GH
           GH_Document.DefaultSelectedPreviewColourChanged += Document_DefaultPreviewColourChanged;
           activeDefinition.SettingsChanged                += ActiveDefinition_SettingsChanged;
           activeDefinition.SolutionEnd                    += ActiveDefinition_SolutionEnd;
-          if (editor != null) editor.VisibleChanged       += Editor_VisibleChanged;
         }
       }
 
       return
-      activeDefinition != null &&
-      ((definition?.PreviewMode ?? GH_PreviewMode.Disabled) != GH_PreviewMode.Disabled) &&
-      (editor?.Visible ?? false);
+      PreviewMode != GH_PreviewMode.Disabled &&
+      IsModelView(dBView) &&
+      activeDefinition != null;
     }
 
     static List<IGH_DocumentObject> lastSelection = new List<IGH_DocumentObject>();
@@ -108,18 +89,16 @@ namespace RhinoInside.Revit.GH
     void ActiveDefinition_SettingsChanged(object sender, GH_DocSettingsEventArgs e)
     {
       if (e.Kind == GH_DocumentSettings.Properties)
-        Clear();
+        RebuildPrimitives = 1;
 
       Revit.RefreshActiveView();
     }
 
     void ActiveDefinition_SolutionEnd(object sender, GH_SolutionEventArgs e)
     {
-      Clear();
+      RebuildPrimitives = 1;
       Revit.RefreshActiveView();
     }
-
-    static void Editor_VisibleChanged(object sender, EventArgs e) => Revit.RefreshActiveView();
 
     protected class ParamPrimitive : Primitive
     {
@@ -183,14 +162,27 @@ namespace RhinoInside.Revit.GH
               case Rhino.Geometry.Ellipse ellipse:  primitives.Add(new ParamPrimitive(docObject, ellipse.ToNurbsCurve())); break;
               case Rhino.Geometry.Curve curve:      primitives.Add(new ParamPrimitive(docObject, curve)); break;
               case Rhino.Geometry.Mesh mesh:        primitives.Add(new ParamPrimitive(docObject, mesh)); break;
-              case Rhino.Geometry.Box box:          primitives.Add(new ParamPrimitive(docObject, Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1))); break;
+              case Rhino.Geometry.Box box:
+              {
+                if(Rhino.Geometry.Mesh.CreateFromBox(box, 1, 1, 1) is Rhino.Geometry.Mesh previewMesh)
+                  primitives.Add(new ParamPrimitive(docObject, previewMesh));
+              }
+              break;
+              case Rhino.Geometry.SubD subd:
+              {
+                if (Rhino.Geometry.Mesh.CreateFromSubD(subd, 3) is Rhino.Geometry.Mesh previewMesh)
+                  primitives.Add(new ParamPrimitive(docObject, previewMesh));
+              }
+              break;
               case Rhino.Geometry.Brep brep:
               {
-                var previewMesh = new Rhino.Geometry.Mesh();
-                previewMesh.Append(Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters()));
-                //previewMesh.Weld(Rhino.RhinoMath.ToRadians(10.0));
+                if (Rhino.Geometry.Mesh.CreateFromBrep(brep, activeDefinition.PreviewCurrentMeshParameters()) is Rhino.Geometry.Mesh[] brepMeshes)
+                {
+                  var previewMesh = new Rhino.Geometry.Mesh();
+                  previewMesh.Append(brepMeshes);
 
-                primitives.Add(new ParamPrimitive(docObject, previewMesh));
+                  primitives.Add(new ParamPrimitive(docObject, previewMesh));
+                }
               }
               break;
             }
@@ -201,8 +193,18 @@ namespace RhinoInside.Revit.GH
 
     Rhino.Geometry.BoundingBox BuildScene(View dBView)
     {
-      if (!primitivesBoundingBox.IsValid)
+      if (Interlocked.Exchange(ref RebuildPrimitives, 0) != 0)
       {
+        primitivesBoundingBox = Rhino.Geometry.BoundingBox.Empty;
+
+        // Dispose previous primitives
+        {
+          foreach (var primitive in primitives)
+            ((IDisposable) primitive).Dispose();
+
+          primitives.Clear();
+        }
+
         var previewColour = activeDefinition.PreviewColour;
         var previewColourSelected = activeDefinition.PreviewColourSelected;
 
@@ -236,7 +238,7 @@ namespace RhinoInside.Revit.GH
 
     public override Outline GetBoundingBox(View dBView)
     {
-      var bbox = activeDefinition.PreviewBoundingBox.Scale(1.0 / Revit.ModelUnits);
+      var bbox = primitivesBoundingBox.ChangeUnits(1.0 / Revit.ModelUnits);
       return new Outline(bbox.Min.ToHost(), bbox.Max.ToHost());
     }
 
@@ -248,7 +250,7 @@ namespace RhinoInside.Revit.GH
 
         DrawContext.SetWorldTransform(Transform.Identity.ScaleBasis(1.0 / Revit.ModelUnits));
 
-        var CropBox = new Rhino.Geometry.BoundingBox(dBView.CropBox.Min.ToRhino(), dBView.CropBox.Max.ToRhino()).Scale(Revit.ModelUnits);
+        var CropBox = dBView.CropBox.ToRhino().ChangeUnits(Revit.ModelUnits);
 
         foreach (var primitive in primitives)
         {

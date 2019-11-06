@@ -32,14 +32,6 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BrxMgd">
-      <HintPath>C:\Program Files\Bricsys\BricsCAD V18 en_US\BrxMgd.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="RhinoCommon">
-      <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -48,10 +40,9 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="TD_Mgd">
-      <HintPath>C:\Program Files\Bricsys\BricsCAD V18 en_US\TD_Mgd.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
+    <PackageReference Include="RhinoCommon" Version="7.0.19183.10495-wip" IncludeAssets="compile; build" />
+    <PackageReference Include="BricsCAD.19.BrxMgd" Version="19.2.*" IncludeAssets="compile; build" />
+    <PackageReference Include="BricsCAD.19.TD_Mgd" Version="19.5.*" IncludeAssets="compile; build" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands.cs" />
