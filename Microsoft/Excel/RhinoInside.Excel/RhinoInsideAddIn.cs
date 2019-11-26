@@ -20,7 +20,7 @@ namespace RhinoInside.Excel
         Rhino.Runtime.InProcess.RhinoCore m_rhino_core;
 
         #region Plugin static constructor
-        static readonly string SystemDir = (string) Registry.GetValue
+        static readonly string SystemDir = (string) Microsoft.Win32.Registry.GetValue
         (
           @"HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path",
           Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
