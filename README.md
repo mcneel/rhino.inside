@@ -11,7 +11,7 @@ The Rhino.Inside® technology allows Rhino and Grasshopper to be embedded within
 * Grasshopper definitions can be opened and previewed in Rhino within the same process as the parent.
 * Object can be natively created by Rhino or Grasshopper within the parent product.
 
-![sample-shot](https://github.com/mcneel/rhino.inside-revit/blob/master/doc/images/Sample5.gif)
+![sample-shot](https://github.com/mcneel/rhino.inside-revit/blob/master/docs/static/images/Sample5.gif)
 
 This repository contains all the sample developer code for loading Rhino inside other 64-bit Windows applications.
 
@@ -23,7 +23,7 @@ The samples in this repository are organized by folders that correspond to the C
 This repository contains samples for:
 - [Autodesk](Autodesk)
    - [AutoCAD](Autodesk/AutoCAD)
-   - [Revit](Autodesk/Revit)
+   - _[Revit](Autodesk/Revit) → moved to [mcneel/rhino.inside-revit](https://github.com/mcneel/rhino.inside-revit)_
 - [Bricsys BricsCAD](https://github.com/Bricsys/rhino.inside-bricscad)
 - [ArcGIS](https://github.com/nicoazel/ArcRhino)
 - [Unity](Unity)
