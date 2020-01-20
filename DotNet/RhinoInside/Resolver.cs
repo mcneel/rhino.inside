@@ -36,7 +36,9 @@ namespace RhinoInside
             string versionName = "";
             for(int i=children.Length-1; i>=0; i--)
             {
-              if(double.TryParse(children[i], out double d))
+              // 20 Jan 2020 S. Baer (https://github.com/mcneel/rhino.inside/issues/248)
+              // A generic double.TryParse is failing when run under certain locales.
+              if (double.TryParse(children[i], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double d))
               {
                 versionName = children[i];
                 using (var installKey = baseKey.OpenSubKey($"{versionName}\\Install"))
