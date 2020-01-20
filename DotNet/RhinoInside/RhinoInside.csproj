@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -16,7 +16,7 @@
     </NuGetPackageImportStamp>
     <!-- nuget properties -->
     <PackageId>Rhino.Inside</PackageId>
-    <Version>0.1.2</Version>
+    <Version>0.2.0</Version>
     <Authors>Robert McNeel and Associates</Authors>
     <Description>Rhino.Inside assembly resolver.</Description>
     <PackageOutputPath>$(MSBuildThisFileDirectory)\artifacts</PackageOutputPath>
@@ -55,9 +55,15 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="RhinoCommon" Version="7.0.19302.12525-wip" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="7.0.19302.12525-wip" ExcludeAssets="runtime" />
-    <PackageReference Include="RhinoWindows" Version="7.0.19302.12525-wip" ExcludeAssets="runtime" />
+    <PackageReference Include="RhinoCommon" Version="7.0.20007.12535-wip" ExcludeAssets="runtime">
+      <IncludeAssets>compile; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Grasshopper" Version="7.0.20007.12535-wip" ExcludeAssets="runtime">
+      <IncludeAssets>compile; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="RhinoWindows" Version="7.0.20007.12535-wip" ExcludeAssets="runtime">
+      <IncludeAssets>compile; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="NuGet.Build.Tasks.Pack" Version="5.3.0" PrivateAssets="all" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
