@@ -11,6 +11,7 @@ This sample has two parts:
 
 Beyond RhinoCommon and Grasshopper APIs, this project depends on the following libraries / frameworks:
 - [`Rhino 7 WIP`](https://www.rhino3d.com/download/rhino-for-windows/wip) (Required install)
+- [`RhinoInside NuGet`](https://www.nuget.org/packages/Rhino.Inside/) (Referenced in the csproj)
 - [`CefSharp`](http://cefsharp.github.io/) (CefSharp.WinForms.dll, CefSharp.Core.dll, and CefSharp.dll referenced via the NuGet Package)
 - [`Json.NET`](https://www.newtonsoft.com/json) (Referenced via the NuGet package)
 - [`rhino3dm.js`](https://www.rhino3d.com/rhino3dm) (Referenced via URL)
