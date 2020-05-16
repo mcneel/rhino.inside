@@ -36,12 +36,14 @@ function run() {
     var scene = new THREE.Scene();
     scene.background = new THREE.Color(10,10,10);
     var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-    var controls = new THREE.OrbitControls( camera );
+    
 
     var renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
+
+    var controls = new THREE.OrbitControls( camera, renderer.domElement );
 
     camera.position.z = 5;
 
@@ -50,7 +52,9 @@ function run() {
         console.log('Rhino has started.');
     });
 
-    doSomething('', function(error, result) {
+    var params = {radius: 2.00, countU: 20, countV:10};
+
+    doSomething(params, function(error, result) {
         if (error) throw JSON.stringify(error);
         
         //convert this to object
@@ -98,7 +102,7 @@ function meshToThreejs(mesh, material) {
       vertexbuffer[i*3+2] = pt[2];
     }
     // itemSize = 3 because there are 3 values (components) per vertex
-    geometry.addAttribute( 'position', new THREE.BufferAttribute( vertexbuffer, 3 ) );
+    geometry.setAttribute( 'position', new THREE.BufferAttribute( vertexbuffer, 3 ) );
   
     indices = [];
     var faces = mesh.faces();
@@ -119,6 +123,6 @@ function meshToThreejs(mesh, material) {
       normalBuffer[i*3+1] = pt[1];
       normalBuffer[i*3+2] = pt[1];
     }
-    geometry.addAttribute( 'normal', new THREE.BufferAttribute( normalBuffer, 3 ) );
+    geometry.setAttribute( 'normal', new THREE.BufferAttribute( normalBuffer, 3 ) );
     return new THREE.Mesh( geometry, material );
   }

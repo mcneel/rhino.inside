@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.3.0" />
     <PackageReference Include="Microsoft.DotNet.InternalAbstractions" Version="1.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="2.0.0" />
+    <PackageReference Include="Rhino.Inside" Version="0.2.0" />
   </ItemGroup>
   
   <ItemGroup>
@@ -24,7 +25,7 @@
       <HintPath>..\InsideElectronApp\node_modules\electron-edge-js\lib\bootstrap\bin\Release\netcoreapp1.1\EdgeJs.dll</HintPath>
     </Reference>
     <Reference Include="RhinoCommon">
-      <HintPath>C:\Program Files\Rhino WIP\System\RhinoCommon.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files\Rhino 7 WIP\System\RhinoCommon.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>

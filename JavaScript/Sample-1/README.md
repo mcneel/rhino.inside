@@ -11,6 +11,7 @@ There are two projects:
 
 ### Dependencies
 - [`Rhino 7 WIP`](https://www.rhino3d.com/download/rhino-for-windows/wip) (Required install)
+- [`RhinoInside NuGet`](https://www.nuget.org/packages/Rhino.Inside/) (Referenced in the csproj)
 - [`Node.js (8.11.2 or newer)`](https://nodejs.org/) (Required install)
 - [`edge.js (^11.3.1)`](https://github.com/agracio/edge-js) (Referenced via npm)
 
@@ -19,9 +20,9 @@ This assumes you've already installed Rhino 7 WIP and Node.js for Windows, and h
 1. Once you've cloned the Rhino.Inside repository, open the `insideNode.sln` in Visual Studio and build `insideNode.csproj`. This builds the .dll which is referenced in the Node.js project.
 2. Open a console from the `insideNodeApp` directory.
 3. Run `npm install` to install any dependencies.
-4. Run `node app.js` to run the sample. In the terminal, you should see:
+4. Run `node app.js` to run the sample. In the terminal, you should see something similar to:
 ```
 Starting Rhino, please wait...
-The mesh has 561 vertices and 512 faces.
+The mesh has 92 vertices and 100 faces.
 ```
 

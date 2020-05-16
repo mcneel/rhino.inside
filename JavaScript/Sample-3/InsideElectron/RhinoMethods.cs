@@ -17,20 +17,7 @@ namespace InsideElectron
 
     public RhinoMethods()
     {
-      ResolveEventHandler OnRhinoCommonResolve = null;
-      AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
-      {
-        const string rhinoCommonAssemblyName = "RhinoCommon";
-        var assemblyName = new AssemblyName(args.Name).Name;
-
-        if (assemblyName != rhinoCommonAssemblyName)
-          return null;
-
-        AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
-      };
+      RhinoInside.Resolver.Initialize();
     }
 
     public async Task<object> StartRhino(dynamic input)
@@ -48,8 +35,8 @@ namespace InsideElectron
 
     public async Task<object> DoSomething(dynamic input)
     {
-      var sphere = new Rhino.Geometry.Sphere(Rhino.Geometry.Point3d.Origin, 2.00);
-      var sphereMesh = Rhino.Geometry.Mesh.CreateFromBrep(sphere.ToBrep(), Rhino.Geometry.MeshingParameters.Default)[0];
+      var sphere = new Rhino.Geometry.Sphere(Rhino.Geometry.Point3d.Origin, input.radius);
+      var sphereMesh = Rhino.Geometry.Mesh.CreateFromSphere(sphere, input.countU, input.countV);
       return Newtonsoft.Json.JsonConvert.SerializeObject(sphereMesh, GeometryResolver.Settings);
     }
   }

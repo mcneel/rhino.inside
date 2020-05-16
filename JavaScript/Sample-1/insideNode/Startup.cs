@@ -14,32 +14,19 @@ namespace insideNode
 
         static Startup()
         {
-            ResolveEventHandler OnRhinoCommonResolve = null;
-            AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
-            {
-                const string rhinoCommonAssemblyName = "RhinoCommon";
-                var assemblyName = new AssemblyName(args.Name).Name;
-
-                if (assemblyName != rhinoCommonAssemblyName)
-                    return null;
-
-                AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-                string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-                return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
-            };
+          RhinoInside.Resolver.Initialize();
         }
 
         public async Task<object> Invoke(dynamic input)
         {
-
+      
             try
             {
                 using (new RhinoCore(new string[] { "/NOSPLASH" }, WindowStyle.NoWindow))
                 {
                     var sphere = new Rhino.Geometry.Sphere(Rhino.Geometry.Point3d.Origin, 10.00);
-                    var sphereMesh = Rhino.Geometry.Mesh.CreateFromBrep(sphere.ToBrep(), Rhino.Geometry.MeshingParameters.Default);
-                    return "The mesh has " + sphereMesh[0].Vertices.Count + " vertices and " + sphereMesh[0].Faces.Count + " faces.";
+                    var sphereMesh = Rhino.Geometry.Mesh.CreateFromSphere(sphere, input, input);
+                    return "The mesh has " + sphereMesh.Vertices.Count + " vertices and " + sphereMesh.Faces.Count + " faces.";
                 }
 
             }
@@ -49,7 +36,6 @@ namespace insideNode
                 return ex.Message;
             }
 
-            //return "Hello from dotnet";
         }
     }
 }

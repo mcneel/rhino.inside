@@ -27,7 +27,10 @@ startRhino('', function (error, result) {
   console.log(result);
 });
 
-doSomething('', function (error, result) {
+// Try changing these parameters to get different results from the 'doSomething' call.
+var params = {radius: 10.00, countU: 10, countV:10 };
+
+doSomething(params, function (error, result) {
   if (error) throw error;
   console.log(result);
 });

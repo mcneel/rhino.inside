@@ -10,7 +10,8 @@ namespace TestInsideElectron
       var rhinoTaskManager = new InsideElectron.RhinoInsideTaskManager();
       //rhinoTaskManager.StartRhinoTask(null);
       rhinoTaskManager.StartGrasshopperTask(null);
-      rhinoTaskManager.DoSomethingTask(null);
+      ////rhinoTaskManager.DoSomethingTask(null);
+      
     }
   }
 }
