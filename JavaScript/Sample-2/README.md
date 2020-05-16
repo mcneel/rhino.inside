@@ -12,6 +12,7 @@ There are two projects:
 
 ### Dependencies
 - [`Rhino 7 WIP`](https://www.rhino3d.com/download/rhino-for-windows/wip) (Required install)
+- [`RhinoInside NuGet`](https://www.nuget.org/packages/Rhino.Inside/) (Referenced in the csproj)
 - [`Node.js (8.11.2 or newer)`](https://nodejs.org/) (Required install)
 - [`edge.js (^11.3.1)`](https://github.com/agracio/edge-js) (Referenced via npm)
 
@@ -23,6 +24,6 @@ This assumes you've already installed Rhino 7 WIP and Node.js for Windows, and h
 4. Run `node app.js` to run the sample. In the terminal, you should see:
 ```
 Rhino has started.
-The mesh has 561 vertices and 512 faces.
+The mesh has 92 vertices and 100 faces.
 ```
 

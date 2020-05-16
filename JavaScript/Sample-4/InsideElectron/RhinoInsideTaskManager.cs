@@ -36,38 +36,8 @@ namespace InsideElectron
 
     public RhinoInsideTaskManager()
     {
-      rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
 
-      ResolveEventHandler OnRhinoCommonResolve = null;
-      ResolveEventHandler OnGrasshopperCommonResolve = null;
-
-      AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
-      {
-        const string rhinoCommonAssemblyName = "RhinoCommon";
-        var assemblyName = new AssemblyName(args.Name).Name;
-
-        if (assemblyName != rhinoCommonAssemblyName)
-          return null;
-
-        AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        //rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
-      };
-
-      AppDomain.CurrentDomain.AssemblyResolve += OnGrasshopperCommonResolve = (sender, args) =>
-      {
-        const string grasshopperAssemblyName = "Grasshopper";
-        var assemblyName = new AssemblyName(args.Name).Name;
-
-        if (assemblyName != grasshopperAssemblyName)
-          return null;
-
-        AppDomain.CurrentDomain.AssemblyResolve -= OnGrasshopperCommonResolve;
-
-        string rhinoGHDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", @"Plug-ins\Grasshopper");
-        return Assembly.LoadFrom(Path.Combine(rhinoGHDir, grasshopperAssemblyName + ".dll"));
-      };
+      RhinoInside.Resolver.Initialize();
       
       mainThread = new Thread(new ThreadStart(Execute));
       mainThread.TrySetApartmentState(ApartmentState.STA);

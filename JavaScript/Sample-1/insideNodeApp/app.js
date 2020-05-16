@@ -10,7 +10,10 @@ console.log('Starting Rhino, please wait...')
 // This function creates a NURBS sphere, meshes this, and returns some information related to the faces and vertices of the mesh. 
 // See insideNode/Startup.cs for the code that is run by this method.
 
-rhinoInside('', function (error, result) {
+// Change the value of 'faceCount' to give the mesh sphere more or less faces in both u and v
+var faceCount = 10;
+
+rhinoInside(faceCount, function (error, result) {
 
     if (error) throw error;
 

@@ -37,12 +37,12 @@ var doSomething = edge.func({
 */
 
 // Launch Rhino and Grasshopper from Javascript
-/*
+
 startRhino('', function(error, result) {
   if (error) throw JSON.stringify(error);
   console.log(result);
 });
-*/
+
 
 var payload = {
   cb: function (data, callback) {
@@ -148,12 +148,13 @@ function run() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(10,10,10);
     camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-    controls = new THREE.OrbitControls( camera );
 
     renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
+
+    controls = new THREE.OrbitControls( camera, renderer.domElement );
 
     camera.position.z = 5;
 

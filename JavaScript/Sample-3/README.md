@@ -12,6 +12,7 @@ There are two projects in this sample:
 
 ### Dependencies
 - [`Rhino 7 WIP`](https://www.rhino3d.com/download/rhino-for-windows/wip) (Required install)
+- [`RhinoInside NuGet`](https://www.nuget.org/packages/Rhino.Inside/) (Referenced in the csproj)
 - [`Node.js (8.11.2 or newer)`](https://nodejs.org/) (Required install)
 - [`edge.js (^11.3.1)`](https://github.com/agracio/edge-js) (Referenced via npm)
 - [`Electron.js`](https://electronjs.org/) (Referenced via npm)

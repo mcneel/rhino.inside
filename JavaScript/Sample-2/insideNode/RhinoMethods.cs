@@ -12,24 +12,11 @@ namespace InsideNode
   public class RhinoMethods
   {
 
-    RhinoCore rhinoCore;
+    static RhinoCore rhinoCore;
 
     static RhinoMethods()
     {
-      ResolveEventHandler OnRhinoCommonResolve = null;
-      AppDomain.CurrentDomain.AssemblyResolve += OnRhinoCommonResolve = (sender, args) =>
-      {
-        const string rhinoCommonAssemblyName = "RhinoCommon";
-        var assemblyName = new AssemblyName(args.Name).Name;
-
-        if (assemblyName != rhinoCommonAssemblyName)
-          return null;
-
-        AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-
-        string rhinoSystemDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System");
-        return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"));
-      };
+      RhinoInside.Resolver.Initialize();
     }
 
     public async Task<object> StartRhino(dynamic input)
@@ -37,7 +24,7 @@ namespace InsideNode
       try
       {
         rhinoCore = new RhinoCore(new string[] { "/NOSPLASH" }, WindowStyle.NoWindow);
-        return "Rhino has started.";
+        return "Rhino has started";
       }
       catch (Exception ex)
       {
@@ -47,9 +34,9 @@ namespace InsideNode
 
     public async Task<object> DoSomething(dynamic input)
     {
-      var sphere = new Rhino.Geometry.Sphere(Rhino.Geometry.Point3d.Origin, 10.00);
-      var sphereMesh = Rhino.Geometry.Mesh.CreateFromBrep(sphere.ToBrep(), Rhino.Geometry.MeshingParameters.Default);
-      return "The mesh has " + sphereMesh[0].Vertices.Count + " vertices and " + sphereMesh[0].Faces.Count + " faces.";
+      var sphere = new Rhino.Geometry.Sphere(Rhino.Geometry.Point3d.Origin, input.radius);
+      var sphereMesh = Rhino.Geometry.Mesh.CreateFromSphere(sphere, input.countU, input.countV);
+      return "The mesh has " + sphereMesh.Vertices.Count + " vertices and " + sphereMesh.Faces.Count + " faces.";
     }
 
     public async Task<object> ShutdownRhino(dynamic input)
