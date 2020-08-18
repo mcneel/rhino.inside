@@ -1,0 +1,3 @@
+{
+   "sdk": { "version": "5.0.100-preview.7", "rollForward": "latestFeature" }
+}
