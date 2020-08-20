@@ -58,7 +58,15 @@ namespace HelloWorld
           return null;
 
         AppDomain.CurrentDomain.AssemblyResolve -= OnRhinoCommonResolve;
-        return Assembly.LoadFrom(Path.Combine(SystemDir, rhinoCommonAssemblyName + ".dll"));
+        string rhinocommonPath = Path.Combine(SystemDir, rhinoCommonAssemblyName + ".dll");
+#if DEBUG
+        // used internally for debugging core rhino code
+        if (File.Exists(@"C:\dev\github\mcneel\rhino\src4\bin\Debug\RhinoCommon.dll"))
+        {
+          rhinocommonPath = @"C:\dev\github\mcneel\rhino\src4\bin\Debug\RhinoCommon.dll";
+        }
+#endif
+        return Assembly.LoadFrom(rhinocommonPath);
       };
     }
     #endregion
