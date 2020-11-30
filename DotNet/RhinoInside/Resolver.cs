@@ -26,34 +26,8 @@ namespace RhinoInside
     {
       get
       {
-        if(string.IsNullOrWhiteSpace(_rhinoSystemDirectory))
-        {
-          string baseName = @"SOFTWARE\McNeel\Rhinoceros";
-          using (var baseKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseName))
-          {
-            string[] children = baseKey.GetSubKeyNames();
-            Array.Sort(children);
-            string versionName = "";
-            for(int i=children.Length-1; i>=0; i--)
-            {
-              // 20 Jan 2020 S. Baer (https://github.com/mcneel/rhino.inside/issues/248)
-              // A generic double.TryParse is failing when run under certain locales.
-              if (double.TryParse(children[i], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double d))
-              {
-                versionName = children[i];
-                using (var installKey = baseKey.OpenSubKey($"{versionName}\\Install"))
-                {
-                  string corePath = installKey.GetValue("CoreDllPath") as string;
-                  if( System.IO.File.Exists(corePath))
-                  {
-                    _rhinoSystemDirectory = System.IO.Path.GetDirectoryName(corePath);
-                    break;
-                  }
-                }
-              }
-            }
-          }
-        }
+        if (string.IsNullOrWhiteSpace(_rhinoSystemDirectory))
+          _rhinoSystemDirectory = FindRhinoSystemDirectory();
         return _rhinoSystemDirectory;
       }
       set
@@ -62,6 +36,12 @@ namespace RhinoInside
       }
     }
 
+    /// <summary>
+    /// Whether or not to use the newest installation of Rhino on the system. By default the resolver will only use an
+    /// installation with a matching major version.
+    /// </summary>
+    public static bool UseLatest { get; set; } = false;
+
     static Assembly ResolveForRhinoAssemblies(object sender, ResolveEventArgs args)
     {
       var assemblyName = new AssemblyName(args.Name).Name;
@@ -69,6 +49,40 @@ namespace RhinoInside
       if (System.IO.File.Exists(path))
         return Assembly.LoadFrom(path);
 
+      return null;
+    }
+
+    static string FindRhinoSystemDirectory()
+    {
+      var major = Assembly.GetExecutingAssembly().GetName().Version.Major;
+      string baseName = @"SOFTWARE\McNeel\Rhinoceros";
+      using (var baseKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(baseName))
+      {
+        string[] children = baseKey.GetSubKeyNames();
+        Array.Sort(children);
+        string versionName = "";
+        for (int i = children.Length - 1; i >= 0; i--)
+        {
+          // 20 Jan 2020 S. Baer (https://github.com/mcneel/rhino.inside/issues/248)
+          // A generic double.TryParse is failing when run under certain locales.
+          if (double.TryParse(children[i], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double d))
+          {
+            versionName = children[i];
+
+            if (!UseLatest && (int)Math.Floor(d) != major)
+              continue;
+
+            using (var installKey = baseKey.OpenSubKey($"{versionName}\\Install"))
+            {
+              string corePath = installKey.GetValue("CoreDllPath") as string;
+              if (System.IO.File.Exists(corePath))
+              {
+                return System.IO.Path.GetDirectoryName(corePath);
+              }
+            }
+          }
+        }
+      }
       return null;
     }
   }
