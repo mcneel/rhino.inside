@@ -8,7 +8,6 @@ namespace RunGrasshopper
     static Program()
     {
       RhinoInside.Resolver.Initialize();
-      //RhinoInside.Resolver.RhinoSystemDirectory = @"C:\dev\github\mcneel\rhino\src4\bin\Debug\";
     }
 
     static void Main(string[] args)

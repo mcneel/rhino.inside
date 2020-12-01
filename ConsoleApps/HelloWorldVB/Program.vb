@@ -6,29 +6,10 @@ Imports Rhino.Geometry
 
 Namespace HelloWorld
   Class Program
-    Private Shared OnRhinoCommonResolve As ResolveEventHandler
-    Private Shared Function RhinoCommonResolver(s As Object, args As System.ResolveEventArgs) As Object
-      Const rhinoCommonAssemblyName As String = "RhinoCommon"
-      Dim AssemblyName As String = New AssemblyName(args.Name).Name
-      If Not AssemblyName.Equals(rhinoCommonAssemblyName) Then
-        Return Nothing
-      End If
-
-      RemoveHandler AppDomain.CurrentDomain.AssemblyResolve, OnRhinoCommonResolve
-
-      Dim rhinoSystemDir As String = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Rhino WIP", "System")
-      rhinoSystemDir = DirectCast(Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\7.0\Install", "Path", rhinoSystemDir), String)
-
-      Return Assembly.LoadFrom(Path.Combine(rhinoSystemDir, rhinoCommonAssemblyName + ".dll"))
-    End Function
-
-    Shared Sub New()
-      OnRhinoCommonResolve = AddressOf RhinoCommonResolver
-      AddHandler AppDomain.CurrentDomain.AssemblyResolve, OnRhinoCommonResolve
-    End Sub
 
     <System.STAThread>
     Public Shared Sub Main(ByVal args As String())
+
       Try
         Using New RhinoCore(args)
           MeshABrep()
