@@ -30,6 +30,4 @@ This is a list of projects or examples which make use of Rhino.Inside:
    - [How to use compute.rhino3d with Unity](https://youtu.be/zUbm83ynn0Q)
 - [Unreal Engine](Epic%20Games/UE)
 
-
-
-**If you have any questions, [visit the discussion forum...](https://discourse.mcneel.com/c/serengeti/inside)**
+**If you have any questions, [visit the discussion forum...](https://discourse.mcneel.com/c/rhino-inside/110)**
