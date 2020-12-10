@@ -19,7 +19,7 @@ This is a list of projects or examples which make use of Rhino.Inside:
 - [ArcGIS](https://github.com/nicoazel/ArcRhino)
 - [Autodesk](Autodesk)
    - [AutoCAD](Autodesk/AutoCAD)
-   - [Revit](Ahttps://github.com/mcneel/rhino.inside-revit)
+   - [Revit](https://github.com/mcneel/rhino.inside-revit)
 - [Bricsys BricsCAD](https://github.com/Bricsys/rhino.inside-bricscad)
 - [CPython](https://github.com/mcneel/rhino.inside-cpython)
 - [dotnet](https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside/dotnet)
