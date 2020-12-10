@@ -1,0 +1,1 @@
+Samples are available in the [Rhino Developer Samples repository](https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside/dotnet)
