@@ -2,7 +2,6 @@
 
 [![Discourse users](https://img.shields.io/discourse/https/discourse.mcneel.com/users.svg)](https://discourse.mcneel.com/c/serengeti/inside)
 
-
 The Rhino.Inside® technology allows Rhino and Grasshopper to be embedded within other products.  It may be possible to:
 
 * Starting Rhino and Grasshopper as an add in another product.
@@ -10,10 +9,6 @@ The Rhino.Inside® technology allows Rhino and Grasshopper to be embedded within
 * Access Rhino's APIs through the host application.
 * Grasshopper definitions can be opened and previewed in Rhino within the same process as the parent.
 * Object can be natively created by Rhino or Grasshopper within the parent product.
-
-This repository contains all the sample developer code for loading Rhino inside other 64-bit Windows applications.
-
-The version of Rhino that these samples are compatible with is the Rhino WIP version that you can found [here](https://www.rhino3d.com/download/rhino/wip) .
 
 ## Samples by host application.
 🚧 Samples are moving to https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside 🚧
