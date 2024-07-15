@@ -10,8 +10,12 @@ The Rhino.Inside® technology allows Rhino and Grasshopper to be embedded within
 * Grasshopper definitions can be opened and previewed in Rhino within the same process as the parent.
 * Object can be natively created by Rhino or Grasshopper within the parent product.
 
-## Samples by host application.
-🚧 Samples are moving to https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside 🚧
+## Examples:
+  - [Rhino 8](https://github.com/mcneel/rhino-developer-samples/tree/8/rhino.inside/dotnet)
+  - [Rhino 7](https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside/dotnet)
+
+
+## Examples by Host Application
 
 This is a list of projects or examples which make use of Rhino.Inside:
 - [Adobe](Adobe)
@@ -22,7 +26,6 @@ This is a list of projects or examples which make use of Rhino.Inside:
    - [Revit](https://github.com/mcneel/rhino.inside-revit)
 - [Bricsys BricsCAD](https://github.com/Bricsys/rhino.inside-bricscad)
 - [CPython](https://github.com/mcneel/rhino.inside-cpython)
-- [dotnet](https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside/dotnet)
 - [JavaScript](https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside/javascript)
 - [Microsoft](Microsoft)
   - [Excel](Microsoft/Excel)
