@@ -1,24 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net7.0;net7.0-windows;</TargetFrameworks>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-    <LangVersion>10</LangVersion>
-  </PropertyGroup>
-
-  <!-- for Rhino>=8 in dotnet core -->
-  <PropertyGroup Condition="!$(TargetFramework.StartsWith('net4'))">
-    <RhinoAPIVersion>8.*</RhinoAPIVersion>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
-  </PropertyGroup>
-
-  <!-- for Rhino>=7 in dotnet framework -->
-  <PropertyGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <RhinoAPIVersion>7.*</RhinoAPIVersion>
-    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
 
   <!-- nuget properties -->
@@ -29,7 +15,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Product>Rhino.Inside</Product>
     <Version>8.0.0</Version>
-    <PackageVersion>$(Version)</PackageVersion>
+    <PackageVersion>$(Version)-beta</PackageVersion>
     <Title>Rhino.Inside Assembly Resolver</Title>
     <Description>Rhino.Inside assembly resolver for Rhino3D</Description>
     <Authors>Robert McNeel and Associates</Authors>
@@ -50,11 +36,6 @@
     <None Include="$(MSBuildThisFileDirectory)..\..\README.md" Pack="true" PackagePath="" />
     <!-- <None Include="$(MSBuildThisFileDirectory)..\..\art\icon.png" Pack="true" PackagePath="" /> -->
   </ItemGroup>
-
-  <PropertyGroup Condition="$(TargetFramework.EndsWith('windows'))">
-    <UseWpf>true</UseWpf>
-    <UseWinForms>true</UseWinForms>
-  </PropertyGroup>
 
   <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('8'))">
     <Compile Remove="Resolver.cs" />

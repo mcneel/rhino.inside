@@ -5,3 +5,4 @@ echo "DYLD_LIBRARY_PATH =     "$DYLD_LIBRARY_PATH
 echo "RHINOINSIDE_RHINOPATH = "$RHINOINSIDE_RHINOPATH
 dotnet clean RhinoInside.sln
 dotnet test RhinoInside.sln
+export -n RHINOINSIDE_RHINOPATH

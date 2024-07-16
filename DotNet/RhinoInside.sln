@@ -1,12 +1,13 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.852
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35027.167
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RhinoInside", "RhinoInside\RhinoInside.csproj", "{DCA05C2E-00A2-48C5-AE52-43BFDCA63C15}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RhinoInside", "RhinoInside\RhinoInside.csproj", "{DCA05C2E-00A2-48C5-AE52-43BFDCA63C15}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RhinoInside.TestClient", "RhinoInside.TestClient\RhinoInside.TestClient.csproj", "{CC2FEF45-A1B4-40C2-811A-6CBCD1896966}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RhinoInside.TestClient", "RhinoInside.TestClient\RhinoInside.TestClient.csproj", "{CC2FEF45-A1B4-40C2-811A-6CBCD1896966}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RhinoInside.Tests", "RhinoInside.Tests\RhinoInside.Tests.csproj", "{21CB2FA0-027F-40FB-B02A-E378BB2F6998}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RhinoInside.Tests", "RhinoInside.Tests\RhinoInside.Tests.csproj", "{21CB2FA0-027F-40FB-B02A-E378BB2F6998}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

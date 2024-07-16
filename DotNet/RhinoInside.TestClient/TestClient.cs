@@ -4,9 +4,8 @@ using System.Reflection;
 
 using Rhino.Runtime.InProcess;
 using Rhino.Geometry;
-using RhinoInside;
 
-namespace HelloWorld
+namespace RhinoInside.TestClient
 {
   static class TestClient
   {
@@ -20,6 +19,8 @@ namespace HelloWorld
       Resolver.RhinoSystemDirectory = rhinoPath;
       Resolver.Initialize();
 #endif
+
+      Console.WriteLine($"Loading Rhino @ {Resolver.RhinoSystemDirectory}");
     }
 
     [System.STAThread]
@@ -30,13 +31,14 @@ namespace HelloWorld
         string arg = args[0];
         switch (arg)
         {
-          case "mesh-test":
-            Environment.Exit(TestCases.RunMeshABrep());
+          case "test_MeshFromBrep":
+            Environment.Exit(TestCases.RunMeshFromBrep());
             break;
         }
       }
       catch (Exception ex)
       {
+        Console.Error.WriteLine(ex.ToString());
         Environment.Exit(1);
       }
     }
@@ -44,21 +46,18 @@ namespace HelloWorld
 
   static class TestCases
   {
-    public static int RunMeshABrep()
+    public static int RunMeshFromBrep()
     {
       using (new RhinoCore())
       {
-        return MeshABrep() ? 0 : 1;
+        Console.WriteLine("Running Mesh From Brep Test");
+        var sphere = new Sphere(Point3d.Origin, 12);
+        var brep = sphere.ToBrep();
+        var mp = new MeshingParameters(0.5);
+        var mesh = Mesh.CreateFromBrep(brep, mp);
+        Console.WriteLine($"Mesh Vertices: {mesh[0].Vertices.Count}");
+        return mesh[0].Vertices.Count > 0 ? 0 : 1;
       }
-    }
-
-    static bool MeshABrep()
-    {
-      var sphere = new Sphere(Point3d.Origin, 12);
-      var brep = sphere.ToBrep();
-      var mp = new MeshingParameters(0.5);
-      var mesh = Mesh.CreateFromBrep(brep, mp);
-      return mesh[0].Vertices.Count > 0;
     }
   }
 }

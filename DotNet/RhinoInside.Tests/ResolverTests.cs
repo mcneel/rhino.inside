@@ -1,7 +1,8 @@
 using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 using NUnit.Framework;
-using System.Diagnostics;
 
 namespace RhinoInside.Tests
 {
@@ -11,7 +12,7 @@ namespace RhinoInside.Tests
     [Test]
     public void TestRhinoCore()
     {
-      var p = RunRhinoInsideTest("mesh-test");
+      var p = RunRhinoInsideTest("test_MeshFromBrep");
       Assert.AreEqual(0, p.ExitCode);
     }
 
@@ -22,6 +23,9 @@ namespace RhinoInside.Tests
         FileName = "rhinoinside-testclient",
         Arguments = args
       };
+
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        pinfo.UseShellExecute = false;
 
       var p = Process.Start(pinfo);
       p.WaitForExit();

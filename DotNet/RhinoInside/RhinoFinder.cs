@@ -91,7 +91,8 @@ namespace RhinoInside
       }
 
       if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            && !rhinoPath.EndsWith("System", StringComparison.InvariantCultureIgnoreCase))
+            && !rhinoPath.EndsWith("System", StringComparison.InvariantCultureIgnoreCase)
+            && !File.Exists(Path.Combine(rhinoPath, "RhinoLibrary.dll")))
       {
         return Path.Combine(rhinoPath, "System");
       }
