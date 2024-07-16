@@ -12,14 +12,7 @@ namespace RhinoInside.TestClient
     static TestClient()
     {
       string rhinoPath = Environment.GetEnvironmentVariable("RHINOINSIDE_RHINOPATH");
-
-#if NET7_0_OR_GREATER
       Resolver.Initialize(rhinoPath);
-#else
-      Resolver.RhinoSystemDirectory = rhinoPath;
-      Resolver.Initialize();
-#endif
-
       Console.WriteLine($"Loading Rhino @ {Resolver.RhinoSystemDirectory}");
     }
 
