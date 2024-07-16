@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFrameworks>net48;net7.0;net7.0-windows</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
@@ -14,7 +18,7 @@
     <AssemblyName>Rhino.Inside</AssemblyName>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Product>Rhino.Inside</Product>
-    <Version>8.0.0</Version>
+    <Version>8.0.1</Version>
     <PackageVersion>$(Version)-beta</PackageVersion>
     <Title>Rhino.Inside Assembly Resolver</Title>
     <Description>Rhino.Inside assembly resolver for Rhino3D</Description>
@@ -49,4 +53,9 @@
     <PackageReference Include="RhinoCommon" Version="7.0.20314.3001" ExcludeAssets="runtime" />
     <PackageReference Include="Grasshopper" Version="7.0.20314.3001" ExcludeAssets="runtime" />
   </ItemGroup>
+
+  <Target Name="CopyPackage" AfterTargets="Pack">
+    <Copy SourceFiles="$(OutputPath)\$(PackageId).$(PackageVersion).nupkg"
+      DestinationFolder="..\build" />
+  </Target>
 </Project>
