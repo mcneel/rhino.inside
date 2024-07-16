@@ -3,22 +3,9 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
-
-[assembly: InternalsVisibleTo("RhinoInside.Tests")]
 
 namespace RhinoInside
 {
-  /// <summary>
-  /// Rhino.Inside initialization exception
-  /// </summary>
-  public sealed class RhinoInsideInitializationException : Exception
-  {
-    public RhinoInsideInitializationException() { }
-    public RhinoInsideInitializationException(string message) : base(message) { }
-    public RhinoInsideInitializationException(string message, Exception innerException) : base(message, innerException) { }
-  }
-
   public static class Resolver
   {
     static bool s_initialized;

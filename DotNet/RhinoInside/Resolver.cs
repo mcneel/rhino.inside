@@ -16,6 +16,17 @@ namespace RhinoInside
       AppDomain.CurrentDomain.AssemblyResolve += ResolveForRhinoAssemblies;
     }
 
+    /// <summary>
+    /// Set up an assembly resolver to load RhinoCommon and other Rhino
+    /// assemblies from where Rhino is installed
+    /// </summary>
+    /// <param name="rhinoPath">Rhino installation path (e.g. 'C:/Program Files/Rhino 8' or '/Application/Rhino 8.app')</param>
+    public static void Initialize(string rhinoPath)
+    {
+      _rhinoSystemDirectory = RhinoFinder.PrepareSystemPath(rhinoPath);
+      Initialize();
+    }
+
     static string _rhinoSystemDirectory;
 
     /// <summary>
