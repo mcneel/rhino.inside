@@ -18,7 +18,7 @@
     <AssemblyName>Rhino.Inside</AssemblyName>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Product>Rhino.Inside</Product>
-    <Version>8.0.2</Version>
+    <Version>8.0.3</Version>
     <PackageVersion>$(Version)-beta</PackageVersion>
     <Title>Rhino.Inside Assembly Resolver</Title>
     <Description>Rhino.Inside assembly resolver for Rhino3D</Description>
