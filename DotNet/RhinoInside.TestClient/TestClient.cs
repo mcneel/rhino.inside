@@ -12,7 +12,14 @@ namespace HelloWorld
   {
     static TestClient()
     {
-      Resolver.Initialize(Environment.GetEnvironmentVariable("RHINOINSIDE_RHINOPATH"));
+      string rhinoPath = Environment.GetEnvironmentVariable("RHINOINSIDE_RHINOPATH");
+
+#if NET7_0_OR_GREATER
+      Resolver.Initialize(rhinoPath);
+#else
+      Resolver.RhinoSystemDirectory = rhinoPath;
+      Resolver.Initialize();
+#endif
     }
 
     [System.STAThread]
