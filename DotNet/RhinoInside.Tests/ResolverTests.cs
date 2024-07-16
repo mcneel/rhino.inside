@@ -10,16 +10,13 @@ namespace RhinoInside.Tests
   [TestFixture]
   public class ResolverTests
   {
-    [OneTimeSetUp]
-    public void OneTimeSetUpRhinoCore()
-    {
-      string rhinoPath = Environment.GetEnvironmentVariable("RHINOINSIDE_RHINOPATH");
-      Resolver.Initialize(rhinoPath);
-    }
-
     [Test]
     public void TestRhinoCore()
     {
+      // ensures this error is detected:
+      // Microsoft.macOS: Aborting due to unhandled Objective-C exception: NSWindow should only be instantiated on the main thread!
+      string rhinoPath = Environment.GetEnvironmentVariable("RHINOINSIDE_RHINOPATH");
+      Resolver.Initialize(rhinoPath);
       RhinoCoreUtils.RunRhinoCore();
     }
 
