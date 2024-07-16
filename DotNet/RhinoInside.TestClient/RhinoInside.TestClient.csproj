@@ -8,7 +8,13 @@
     <ProjectReference Include="..\RhinoInside\RhinoInside.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="RhinoCommon" Version="$(RhinoAPIVersion)" IncludeAssets="build;compile" />
+  <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('8'))">
+    <Compile Remove="Resolver.cs" />
+    <PackageReference Include="RhinoCommon" Version="8.0.23304.9001" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="8.0.23304.9001" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('7'))">
+    <PackageReference Include="RhinoCommon" Version="7.*" IncludeAssets="build;compile" />
   </ItemGroup>
 </Project>
