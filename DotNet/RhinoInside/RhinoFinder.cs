@@ -114,10 +114,12 @@ namespace RhinoInside
 
       else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
       {
-        var appPaths = new string[] {
-          "/Applications",
-          Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Applications")
-        };
+        List<string> appPaths = new() { "/Applications" };
+        string userApps = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Applications");
+        if (Directory.Exists(userApps))
+        {
+          appPaths.Add(userApps);
+        }
 
         if (TryFindRhino_macOS(appPaths, major, useLatest, out string rhinoPath))
         {
