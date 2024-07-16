@@ -1,10 +1,8 @@
 using System;
 using System.IO;
 using System.Reflection;
-using System.Globalization;
 using System.Runtime.Loader;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("RhinoInside.Tests")]

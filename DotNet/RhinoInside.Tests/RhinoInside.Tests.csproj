@@ -11,5 +11,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RhinoInside\RhinoInside.csproj" />
+    <ProjectReference Include="..\RhinoInside.TestClient\RhinoInside.TestClient.csproj" />
   </ItemGroup>
 </Project>

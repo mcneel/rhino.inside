@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <AssemblyName>rhinoinside-testclient</AssemblyName>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RhinoInside\RhinoInside.csproj" />
+    <PackageReference Include="RhinoCommon" Version="8.*" IncludeAssets="build;compile" />
+  </ItemGroup>
+</Project>
