@@ -16,6 +16,7 @@ namespace RhinoInside.Tests
       // ensures this error is detected:
       // Microsoft.macOS: Aborting due to unhandled Objective-C exception: NSWindow should only be instantiated on the main thread!
       string rhinoPath = Environment.GetEnvironmentVariable("RHINOINSIDE_RHINOPATH");
+      TestContext.WriteLine($"Testing Load Rhino @ {rhinoPath}");
       Resolver.Initialize(rhinoPath);
       RhinoCoreUtils.RunRhinoCore();
     }
@@ -33,13 +34,23 @@ namespace RhinoInside.Tests
       {
         FileName = "rhinoinside-testclient",
         Arguments = args
+        // RedirectStandardError = true,
       };
+
+      string rhinoPath = Environment.GetEnvironmentVariable("RHINOINSIDE_RHINOPATH");
+      pinfo.Environment.Add("RHINOINSIDE_RHINOPATH", rhinoPath);
 
       if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         pinfo.UseShellExecute = false;
 
       var p = Process.Start(pinfo);
       p.WaitForExit();
+
+      // if (p.ExitCode > 0)
+      // {
+      //   TestContext.WriteLine(p.StandardError.ReadToEnd());
+      // }
+
       return p;
     }
   }
