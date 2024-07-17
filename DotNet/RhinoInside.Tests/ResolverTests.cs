@@ -23,7 +23,6 @@ namespace RhinoInside.Tests
     [Test]
     public void TestMeshFromBrep()
     {
-      Assert.Ignore();
       var p = RunRhinoInsideTest("test_MeshFromBrep");
       Assert.AreEqual(0, p.ExitCode);
     }
