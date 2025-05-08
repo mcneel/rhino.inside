@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net7.0;net7.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net7.0;net7.0-windows;net9.0;net9.0-windows</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -9,6 +9,7 @@
     <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <NoWarn>IDE0130</NoWarn>
   </PropertyGroup>
 
   <!-- nuget properties -->
@@ -18,13 +19,13 @@
     <AssemblyName>Rhino.Inside</AssemblyName>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Product>Rhino.Inside</Product>
-    <Version>8.0.3</Version>
+    <Version>8.0.4</Version>
     <PackageVersion>$(Version)-beta</PackageVersion>
     <Title>Rhino.Inside Assembly Resolver</Title>
     <Description>Rhino.Inside assembly resolver for Rhino3D</Description>
     <Authors>Robert McNeel and Associates</Authors>
     <Company>McNeel</Company>
-    <Copyright>Copyright (c) 1997-2024 Robert McNeel and Associates</Copyright>
+    <Copyright>Copyright (c) 1997-2025 Robert McNeel and Associates</Copyright>
     <RepositoryUrl>https://github.com/mcneel/Rhino.Inside.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>Rhino Rhino3D Rhino.Inside</PackageTags>
@@ -41,6 +42,12 @@
     <!-- <None Include="$(MSBuildThisFileDirectory)..\..\art\icon.png" Pack="true" PackagePath="" /> -->
   </ItemGroup>
 
+  <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('9'))">
+    <Compile Remove="Resolver.cs" />
+    <PackageReference Include="RhinoCommon" Version="9.0.25051.305-wip" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="9.0.25051.305-wip" ExcludeAssets="runtime" />
+  </ItemGroup>
+
   <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('8'))">
     <Compile Remove="Resolver.cs" />
     <PackageReference Include="RhinoCommon" Version="8.0.23304.9001" ExcludeAssets="runtime" />
@@ -54,7 +61,6 @@
   </ItemGroup>
 
   <Target Name="CopyPackage" AfterTargets="Pack">
-    <Copy SourceFiles="$(OutputPath)\$(PackageId).$(PackageVersion).nupkg"
-      DestinationFolder="..\build" />
+    <Copy SourceFiles="$(OutputPath)\$(PackageId).$(PackageVersion).nupkg" DestinationFolder="..\build" />
   </Target>
 </Project>
