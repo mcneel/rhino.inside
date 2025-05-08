@@ -11,26 +11,5 @@ The Rhino.Inside® technology allows Rhino and Grasshopper to be embedded within
 * Object can be natively created by Rhino or Grasshopper within the parent product.
 
 ## Examples:
-  - [Rhino 8](https://github.com/mcneel/rhino-developer-samples/tree/8/rhino.inside/dotnet)
-  - [Rhino 7](https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside/dotnet)
-
-
-## Examples by Host Application
-
-This is a list of projects or examples which make use of Rhino.Inside:
-- [Adobe](Adobe)
-  - [Illustrator](Adobe/Illustrator)
-- [ArcGIS](https://github.com/nicoazel/ArcRhino)
-- [Autodesk](Autodesk)
-   - [AutoCAD](Autodesk/AutoCAD)
-   - [Revit](https://github.com/mcneel/rhino.inside-revit)
-- [Bricsys BricsCAD](https://github.com/Bricsys/rhino.inside-bricscad)
-- [CPython](https://github.com/mcneel/rhino.inside-cpython)
-- [JavaScript](https://github.com/mcneel/rhino-developer-samples/tree/7/rhino.inside/javascript)
-- [Microsoft](Microsoft)
-  - [Excel](Microsoft/Excel)
-- [Unity](Unity)
-   - [How to use compute.rhino3d with Unity](https://youtu.be/zUbm83ynn0Q)
-- [Unreal Engine](Epic%20Games/UE)
-
-**If you have any questions, [visit the discussion forum...](https://discourse.mcneel.com/c/rhino-inside/110)**
+  - [Rhino 9 (dotnet core)](https://github.com/mcneel/rhino-developer-samples/tree/9/rhino.inside/dotnet-netcore)
+  - [Rhino 9](https://github.com/mcneel/rhino-developer-samples/tree/9/rhino.inside/dotnet)
