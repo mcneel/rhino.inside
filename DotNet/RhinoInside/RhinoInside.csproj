@@ -1,9 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Include all builds in the nuget package for all platforms -->
-  <PropertyGroup>
-    <TargetFrameworks>net48;net7.0;net7.0-windows</TargetFrameworks>
-  </PropertyGroup>
-
   <PropertyGroup>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
@@ -20,7 +15,7 @@
     <AssemblyName>Rhino.Inside</AssemblyName>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Product>Rhino.Inside</Product>
-    <Version>8.0.4</Version>
+    <Version>$(RhinoInsideVersion)</Version>
     <PackageVersion>$(Version)-beta</PackageVersion>
     <Title>Rhino.Inside Assembly Resolver</Title>
     <Description>Rhino.Inside assembly resolver for Rhino3D</Description>
@@ -43,17 +38,23 @@
     <!-- <None Include="$(MSBuildThisFileDirectory)..\..\art\icon.png" Pack="true" PackagePath="" /> -->
   </ItemGroup>
 
-  <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('8'))">
-    <Compile Remove="Resolver.cs" />
-    <PackageReference Include="RhinoCommon" Version="8.0.23304.9001" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="8.0.23304.9001" ExcludeAssets="runtime" />
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" Version="$(RhinoAPIVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="$(RhinoAPIVersion)" ExcludeAssets="runtime" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('7'))">
-    <Compile Remove="Resolver_R8.cs" />
-    <PackageReference Include="RhinoCommon" Version="7.0.20314.3001" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="7.0.20314.3001" ExcludeAssets="runtime" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="$(TargetFramework.StartsWith('net48'))">
+      <ItemGroup>
+        <Compile Remove="Resolver_NetCore.cs" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <Compile Remove="Resolver.cs" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
 
   <Target Name="CopyPackage" AfterTargets="Pack">
     <Copy SourceFiles="$(OutputPath)\$(PackageId).$(PackageVersion).nupkg" DestinationFolder="..\build" />
