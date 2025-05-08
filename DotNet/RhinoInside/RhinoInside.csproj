@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net48;net7.0;net7.0-windows;net9.0;net9.0-windows</TargetFrameworks>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
