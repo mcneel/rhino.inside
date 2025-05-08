@@ -10,10 +10,6 @@
     <ProjectReference Include="..\RhinoInside.TestClient\RhinoInside.TestClient.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('9'))">
-    <PackageReference Include="RhinoCommon" Version="9.0.25051.305-wip" ExcludeAssets="runtime" />
-  </ItemGroup>
-
   <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('8'))">
     <PackageReference Include="RhinoCommon" Version="8.0.23304.9001" ExcludeAssets="runtime" />
   </ItemGroup>

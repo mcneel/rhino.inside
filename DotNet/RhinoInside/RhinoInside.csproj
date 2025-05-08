@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Include all builds in the nuget package for all platforms -->
   <PropertyGroup>
-    <TargetFrameworks>net48;net7.0;net7.0-windows;net9.0;net9.0-windows</TargetFrameworks>
+    <TargetFrameworks>net48;net7.0;net7.0-windows</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -41,12 +41,6 @@
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\..\README.md" Pack="true" PackagePath="" />
     <!-- <None Include="$(MSBuildThisFileDirectory)..\..\art\icon.png" Pack="true" PackagePath="" /> -->
-  </ItemGroup>
-
-  <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('9'))">
-    <Compile Remove="Resolver.cs" />
-    <PackageReference Include="RhinoCommon" Version="9.0.25051.305-wip" ExcludeAssets="runtime" />
-    <PackageReference Include="Grasshopper" Version="9.0.25051.305-wip" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup Condition="$(RhinoAPIVersion.StartsWith('8'))">
