@@ -9,6 +9,7 @@
     <RhinoInsideVersion>8.0.4</RhinoInsideVersion>
     <RhinoAPIVersion>8.0.23304.9001</RhinoAPIVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <PackageReleaseNotes>https://github.com/mcneel/rhino.inside/blob/rhino-8.x/DotNet/CHANGELOG.md</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.EndsWith('windows'))">
