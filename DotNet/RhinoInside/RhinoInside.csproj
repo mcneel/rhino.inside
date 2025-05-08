@@ -27,7 +27,6 @@
     <PackageTags>Rhino Rhino3D Rhino.Inside</PackageTags>
     <PackageProjectUrl>https://github.com/mcneel/Rhino.Inside</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>https://github.com/mcneel/Rhino.Inside/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <!-- <PackageIcon>icon.png</PackageIcon> -->
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
