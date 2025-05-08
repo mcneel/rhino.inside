@@ -1,4 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Include all builds in the nuget package for all platforms -->
+  <PropertyGroup>
+    <TargetFrameworks>net48;net7.0;net7.0-windows;net9.0;net9.0-windows</TargetFrameworks>
+  </PropertyGroup>
+
   <PropertyGroup>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
