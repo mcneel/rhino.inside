@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <EnableNETAnalyzers>True</EnableNETAnalyzers>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <NoWarn>IDE0130</NoWarn>
+  </PropertyGroup>
+
+  <!-- nuget properties -->
+  <PropertyGroup>
+    <PackageId>Rhino.Inside</PackageId>
+    <RootNamespace>Rhino.Inside</RootNamespace>
+    <AssemblyName>Rhino.Inside</AssemblyName>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Product>Rhino.Inside</Product>
+    <Version>$(RhinoInsideVersion)</Version>
+    <PackageVersion>$(Version)-beta</PackageVersion>
+    <Title>Rhino.Inside Assembly Resolver</Title>
+    <Description>Rhino.Inside assembly resolver for Rhino3D</Description>
+    <Authors>Robert McNeel and Associates</Authors>
+    <Company>McNeel</Company>
+    <Copyright>Copyright (c) 1997-2025 Robert McNeel and Associates</Copyright>
+    <RepositoryUrl>https://github.com/mcneel/Rhino.Inside.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>Rhino Rhino3D Rhino.Inside</PackageTags>
+    <PackageProjectUrl>https://github.com/mcneel/Rhino.Inside</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <!-- <PackageIcon>icon.png</PackageIcon> -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <!-- embedded stuff for NuGet -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\..\README.md" Pack="true" PackagePath="" />
+    <!-- <None Include="$(MSBuildThisFileDirectory)..\..\art\icon.png" Pack="true" PackagePath="" /> -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" Version="$(RhinoAPIVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="Grasshopper" Version="$(RhinoAPIVersion)" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <Choose>
+    <When Condition="$(TargetFramework.StartsWith('net48'))">
+      <ItemGroup>
+        <Compile Remove="Resolver_NetCore.cs" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <Compile Remove="Resolver.cs" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+  <Target Name="CopyPackage" AfterTargets="Pack">
+    <Copy SourceFiles="$(OutputPath)\$(PackageId).$(PackageVersion).nupkg" DestinationFolder="..\build" />
+  </Target>
+</Project>
