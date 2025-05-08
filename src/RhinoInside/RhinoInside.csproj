@@ -21,11 +21,9 @@
     <Description>Rhino.Inside assembly resolver for Rhino3D</Description>
     <Authors>Robert McNeel and Associates</Authors>
     <Company>McNeel</Company>
-    <Copyright>Copyright (c) 1997-2025 Robert McNeel and Associates</Copyright>
-    <RepositoryUrl>https://github.com/mcneel/Rhino.Inside.git</RepositoryUrl>
+    <Copyright>Copyright (c) 1997-$(CopyrightYear) Robert McNeel and Associates</Copyright>
     <RepositoryType>git</RepositoryType>
     <PackageTags>Rhino Rhino3D Rhino.Inside</PackageTags>
-    <PackageProjectUrl>https://github.com/mcneel/Rhino.Inside</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <!-- <PackageIcon>icon.png</PackageIcon> -->
     <PackageReadmeFile>README.md</PackageReadmeFile>
