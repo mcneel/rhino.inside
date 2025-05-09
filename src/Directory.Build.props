@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net48;net7.0;net7.0-windows;net8.0;net8.0-windows</TargetFrameworks>
     <LangVersion>10</LangVersion>
+    <NoWarn>NETSDK1138;NU1701;MSB3277;CA1416</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
