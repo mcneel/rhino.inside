@@ -5,6 +5,7 @@
     <RunAnalyzersDuringBuild>True</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>True</RunAnalyzersDuringLiveAnalysis>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <SignAssembly>True</SignAssembly>
     <AssemblyOriginatorKeyFile>Rhino.Inside.snk</AssemblyOriginatorKeyFile>
     <NoWarn>$(NoWarn);IDE0130</NoWarn>
   </PropertyGroup>
