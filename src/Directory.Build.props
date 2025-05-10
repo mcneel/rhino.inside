@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <RhinoInsideVersion>8.0.5</RhinoInsideVersion>
+    <RhinoInsideVersion>8.0.6</RhinoInsideVersion>
     <RhinoAPIVersion>8.0.23304.9001</RhinoAPIVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyrightYear>2025</CopyrightYear>
