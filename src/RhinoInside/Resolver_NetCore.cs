@@ -3,12 +3,16 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace RhinoInside
 {
   public static class Resolver
   {
     static bool s_initialized;
+    static AssemblyLoadContext s_context;
+    static readonly ConcurrentDictionary<string, IntPtr> s_nativeCache = new();
 
     /// <summary>
     /// Directory used by assembly resolver to attempt load core Rhino assemblies.
@@ -46,10 +50,9 @@ namespace RhinoInside
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void SetLoaderProc(Action p);
     static void PrepareRhinoEnv()
     {
-      AppDomain.CurrentDomain.AssemblyResolve += ResolveForRhinoAssemblies;
+      AppDomain.CurrentDomain.AssemblyResolve += ManagedAssemblyResolver;
 
       SetupXamarin();
-      SetupDefaultResolver();
 
       nint rhinoLibraryHandle = 0;
       if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -59,7 +62,6 @@ namespace RhinoInside
       else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
       {
         rhinoLibraryHandle = NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "RhinoLibrary.framework/Versions/A/RhinoLibrary"));
-        AssemblyLoadContext.Default.ResolvingUnmanagedDll += ResolvingUnmanagedDll;
       }
       else
         throw new RhinoInsideInitializationException($"Unsupported platform");
@@ -87,14 +89,23 @@ namespace RhinoInside
       {
         throw new RhinoInsideInitializationException($"Initialization error: {loadEx.Message} ", loadEx);
       }
+
+      s_context = AssemblyLoadContext.GetLoadContext(typeof(Resolver).Assembly);
+      s_context.ResolvingUnmanagedDll += ResolvingUnmanagedDll;
+      AppDomain.CurrentDomain.AssemblyLoad += ManageAssemblyLoaded;
     }
 
-    static Assembly ResolveForRhinoAssemblies(object sender, ResolveEventArgs args)
+    static void ManageAssemblyLoaded(object sender, AssemblyLoadEventArgs args)
     {
-      string path = AssemblyPathFromName(args.Name);
-      if (File.Exists(path))
-        return Assembly.LoadFrom(path);
-      return default;
+      var assembly = args.LoadedAssembly;
+
+      if (assembly.IsDynamic
+              || AssemblyLoadContext.GetLoadContext(assembly) == s_context)
+      {
+        return;
+      }
+
+      NativeLibrary.SetDllImportResolver(assembly, NativeAssemblyResolver);
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int GetCLRRuntimeHost(ref Guid ptr, out IntPtr handle);
@@ -120,16 +131,55 @@ namespace RhinoInside
       }
     }
 
-    static void SetupDefaultResolver()
+    static IntPtr NativeAssemblyResolver(string libname, Assembly assembly, DllImportSearchPath? searchPath)
     {
-      AssemblyLoadContext.Default.Resolving += (ctx, arg) =>
+      if (s_nativeCache.TryGetValue(libname, out var ptr))
       {
-        string path = AssemblyPathFromName(arg.Name);
-        if (File.Exists(path))
-          return ctx.LoadFromAssemblyPath(path);
+        return ptr;
+      }
 
+      foreach (string path in new List<string>
+      {
+          assembly.Location,
+          Path.Combine(RhinoSystemDirectory, "netcore"),
+          RhinoSystemDirectory,
+      })
+      {
+        var file = Path.Combine(path, libname + ".dll");
+        if (File.Exists(file))
+        {
+          ptr = NativeLibrary.Load(file);
+          s_nativeCache[libname] = ptr;
+          return ptr;
+        }
+      }
+
+      s_nativeCache[libname] = IntPtr.Zero;
+      return IntPtr.Zero;
+    }
+
+    static Assembly ManagedAssemblyResolver(object sender, ResolveEventArgs args)
+    {
+      // only use the plain name to resolve assemblies, not the full name.
+      string name = new AssemblyName(args.Name).Name;
+
+      if (name == null || name.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
+      {
         return default;
-      };
+      }
+
+      // load Microsoft.macOS in the default context as xamarin initialization requires it there
+      if (name == "Microsoft.macOS")
+      {
+        return default;
+      }
+
+      if (TryGetAssemblyPathFromName(name, out var path))
+      {
+        return Assembly.LoadFrom(path);
+      }
+
+      return default;
     }
 
     static IntPtr ResolvingUnmanagedDll(Assembly assembly, string unmanagedDllName)
@@ -140,34 +190,87 @@ namespace RhinoInside
       return IntPtr.Zero;
     }
 
-    static string AssemblyPathFromName(string name)
+    static bool TryGetAssemblyPathFromName(string name, out string file)
     {
-      if (name == null || name.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
-        return default;
+      file = default;
 
-      // load Microsoft.macOS in the default context as xamarin initialization requires it there
-      if (name == "Microsoft.macOS")
-        return default;
+      foreach (string path in GetSearchPaths())
+        if (TryGetAssemblyPathFromName(path, name, out string f))
+        {
+          file = f;
+          return true;
+        }
 
-      // only use the plain name to resolve assemblies, not the full name.
-      name = new AssemblyName(name).Name;
+      return false;
+    }
 
+    static bool TryGetAssemblyPathFromName(string path, string name, out string file)
+    {
+      file = default;
+
+      string f = Path.Combine(path, name + ".dll");
+      if (File.Exists(f))
+      {
+        file = f;
+        return true;
+      }
+
+      f = Path.ChangeExtension(f, ".rhp");
+      if (File.Exists(f))
+      {
+        file = f;
+        return true;
+      }
+
+      f = Path.ChangeExtension(f, ".gha");
+      if (File.Exists(f))
+      {
+        file = f;
+        return true;
+      }
+
+      return false;
+    }
+
+    static IEnumerable<string> GetSearchPaths()
+    {
       if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
       {
-        return Path.Combine(RhinoSystemDirectory, "RhCore.framework/Resources", name + ".dll");
+        yield return Path.Combine(RhinoSystemDirectory, "RhCore.framework/Resources");
       }
       else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
       {
-        if (Path.Combine(RhinoSystemDirectory, "netcore", name + ".dll") is string netcorePath
-              && File.Exists(netcorePath))
-        {
-          return netcorePath;
-        }
-
-        return Path.Combine(RhinoSystemDirectory, name + ".dll");
+        yield return Path.Combine(RhinoSystemDirectory, "netcore");
+        yield return Path.Combine(RhinoSystemDirectory);
       }
 
-      return default;
+      foreach (var path in GetPluginSearchPaths())
+      {
+        yield return path;
+
+        // Grasshopper.dll is here
+        yield return Path.Combine(path, @"Grasshopper");
+
+        // RhinoCodePluginGH is here
+        yield return Path.Combine(path, @"Grasshopper\Components");
+      }
+
+      yield return Path.GetDirectoryName(typeof(Resolver).Assembly.Location);
+    }
+
+    static IEnumerable<string> GetPluginSearchPaths()
+    {
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+      {
+        const string MANAGED_PLUGINS = "RhCore.framework/Versions/A/Resources/ManagedPlugIns";
+        yield return Path.Combine(RhinoSystemDirectory, MANAGED_PLUGINS);
+      }
+      else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+      {
+        const string PLUGINS = "Plug-ins";
+        yield return Path.Combine(RhinoSystemDirectory, PLUGINS);
+        yield return Path.Combine(Path.GetDirectoryName(RhinoSystemDirectory), PLUGINS);
+      }
     }
 
     static void ExecuteLoadProc(AssemblyLoadContext context)
