@@ -1,8 +1,7 @@
 name: Build
 on:
-  push:
-    branches: [ ein/8.x/github ]
   pull_request:
+    branches: [ 'rhino-8.x' ]
   workflow_dispatch:
 
 env:
@@ -55,12 +54,6 @@ jobs:
         with:
           name: rhinoinside-nupkg
           path: src/build/*.nupkg
-
-      # - name: Upload NuGet Package
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: Rhino.Inside NuGet Package
-      #     path: src/build/*.nupkg
 
   # publish:
   #   needs: [ build ]
