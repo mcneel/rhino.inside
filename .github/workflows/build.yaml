@@ -33,7 +33,7 @@ jobs:
       - name: Run Tests (net48)
         shell: pwsh
         working-directory: ./src
-        run: src/rhinoinside-tests-net48.ps1 "C:\Program Files\Rhino 8\System" net48
+        run: src/rhinoinside-tests.ps1 "C:\Program Files\Rhino 8\System" net48
 
       - name: Run Tests (net8.0-windows)
         shell: pwsh
