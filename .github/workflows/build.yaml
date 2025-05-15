@@ -1,0 +1,66 @@
+name: Build
+on:
+  pull_request:
+    branches: [ 'rhino-8.x' ]
+  workflow_dispatch:
+
+env:
+  RHINO_TOKEN: ${{ secrets.RHINO_TOKEN }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Install dotnet 8.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: dotnet build -c Release src/RhinoInside.sln
+
+      - name: Install Rhino
+        uses: mcneel/setup-rhino3d@v2
+        id: setup_rhino
+        with:
+          release-version: latest
+          email-address: ${{ secrets.EMAIL_ADDRESS }}
+
+      - name: Run Tests (net48)
+        shell: pwsh
+        working-directory: ./src
+        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 8\System" net48
+
+      - name: Run Tests (net8.0-windows)
+        shell: pwsh
+        working-directory: ./src
+        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 8\System" net8.0-windows
+
+      - name: Install dotnet 7.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Run Tests (net7.0-windows)
+        shell: pwsh
+        working-directory: ./src
+        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 8\System" net7.0-windows
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rhinoinside-nupkg
+          path: src/build/*.nupkg
+
+  # publish:
+  #   needs: [ build ]
+  #   runs-on: windows-latest
+  #   if: (github.event_name == 'workflow_dispatch')
+  #   steps:
+  #     - name: Download artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: rhinoinside-nupkg
