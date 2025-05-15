@@ -1,0 +1,25 @@
+# this workflow automates the process of merging changes made to release and
+# development branches down into development branches for future versions
+
+# see https://github.com/mcneel/merge-down-action
+
+name: merge_down
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+        # use token from "merge-down-robot" app
+      - name: Get token
+        id: my-app
+        uses: getsentry/action-github-app-token@v1
+        with:
+          app_id: ${{ secrets.MERGE_DOWN_APP_ID }}
+          private_key: ${{ secrets.MERGE_DOWN_APP_PRIVATE_KEY }}
+      - uses: mcneel/merge-down-action@v1.1
+        with:
+          token: ${{ steps.my-app.outputs.token }}
