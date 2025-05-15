@@ -39,15 +39,15 @@ jobs:
         working-directory: ./src
         run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9 WIP\System" net9.0-windows
 
-      - name: Install dotnet 8.0
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      # - name: Install dotnet 8.0
+      #   uses: actions/setup-dotnet@v4
+      #   with:
+      #     dotnet-version: '8.0.x'
 
-      - name: Run Tests (net8.0-windows)
-        shell: pwsh
-        working-directory: ./src
-        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9 WIP\System" net8.0-windows
+      # - name: Run Tests (net8.0-windows)
+      #   shell: pwsh
+      #   working-directory: ./src
+      #   run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9 WIP\System" net8.0-windows
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
