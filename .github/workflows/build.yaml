@@ -1,0 +1,45 @@
+name: Build
+on:
+  push:
+    branches: [ ein/8.x/github ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: dotnet build -c Release src/RhinoInside.sln
+
+      # - name: Run Tests
+        # run: dotnet test
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rhinoinside-nupkg
+          path: src/build/*.nupkg
+
+      # - name: Upload NuGet Package
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: Rhino.Inside NuGet Package
+      #     path: src/build/*.nupkg
+
+  # publish:
+  #   needs: [ build ]
+  #   runs-on: windows-latest
+  #   if: (github.event_name == 'workflow_dispatch')
+  #   steps:
+  #     - name: Download artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: rhinoinside-nupkg
