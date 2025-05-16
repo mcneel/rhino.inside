@@ -16,10 +16,11 @@ jobs:
         # use token from "merge-down-robot" app
       - name: Get token
         id: my-app
-        uses: getsentry/action-github-app-token@v1
+        uses: getsentry/action-github-app-token@v3
         with:
           app_id: ${{ secrets.MERGE_DOWN_APP_ID }}
           private_key: ${{ secrets.MERGE_DOWN_APP_PRIVATE_KEY }}
-      - uses: mcneel/merge-down-action@v1.1
+      - uses: mcneel/merge-down-action@v2-beta
         with:
           token: ${{ steps.my-app.outputs.token }}
+          branch-prefix: rhino-
