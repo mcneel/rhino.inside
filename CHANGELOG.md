@@ -1,7 +1,7 @@
 # Change Log
 
 ## [8.0.7]
-- Improved Resolver
+- Improved Resolver (use load context api)
 
 ## [8.0.6]
 - Improved Resolver
