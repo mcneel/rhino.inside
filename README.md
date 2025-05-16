@@ -11,5 +11,5 @@ The Rhino.Inside® technology allows Rhino and Grasshopper to be embedded within
 * Object can be natively created by Rhino or Grasshopper within the parent product.
 
 ## Examples:
-  - [Rhino 8 (dotnet core)](https://github.com/mcneel/rhino-developer-samples/tree/8/rhino.inside/dotnet-netcore)
-  - [Rhino 8](https://github.com/mcneel/rhino-developer-samples/tree/8/rhino.inside/dotnet)
+  - [Rhino 9 (dotnet core)](https://github.com/mcneel/rhino-developer-samples/tree/9/rhino.inside/dotnet-netcore)
+  - [Rhino 9](https://github.com/mcneel/rhino-developer-samples/tree/9/rhino.inside/dotnet)
