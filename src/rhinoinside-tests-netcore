@@ -11,6 +11,6 @@ export DYLD_LIBRARY_PATH=$RHINOINSIDE_RHINOPATH/Contents/Frameworks
 echo "DYLD_LIBRARY_PATH =     "$DYLD_LIBRARY_PATH
 echo "RHINOINSIDE_RHINOPATH = "$RHINOINSIDE_RHINOPATH
 dotnet clean RhinoInside.sln
-dotnet test RhinoInside.sln /tl:off -v:normal --framework net7.0 -e RHINOINSIDE_RHINOPATH=$1
+dotnet test RhinoInside.sln /tl:off -v:normal --framework net9.0 -e RHINOINSIDE_RHINOPATH=$1
 export -n DYLD_LIBRARY_PATH
 export -n RHINOINSIDE_RHINOPATH

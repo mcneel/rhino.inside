@@ -1,19 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <TargetFrameworks>net48;net7.0;net7.0-windows;net8.0;net8.0-windows</TargetFrameworks>
+    <!-- Rhino.Inside for Rhino >= 9 is gonna support only the latest netcore version supported by Rhino -->
+    <!-- This is to avoid conflict between dll versions Rhino is built agaist, with dlls or older dotnet runtime -->
+    <!-- If you absolutely need this to work, talk to curtis @ mcneel -->
+    <TargetFrameworks>net48;net9.0;net9.0-windows</TargetFrameworks>
     <LangVersion>10</LangVersion>
     <NoWarn>NETSDK1138;NU1701;MSB3277;CA1416</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
-    <RhinoInsideVersion>8.0.7</RhinoInsideVersion>
-    <RhinoAPIVersion>8.0.23304.9001</RhinoAPIVersion>
+    <RhinoInsideVersion>9.0.3</RhinoInsideVersion>
+    <RhinoAPIVersion>9.0.25051.305-wip</RhinoAPIVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyrightYear>2025</CopyrightYear>
     <RepositoryUrl>https://github.com/mcneel/Rhino.Inside.git</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/mcneel/rhino.inside/tree/rhino-8.x</PackageProjectUrl>
-    <PackageReleaseNotes>https://github.com/mcneel/rhino.inside/blob/rhino-8.x/CHANGELOG.md</PackageReleaseNotes>
+    <PackageProjectUrl>https://github.com/mcneel/rhino.inside/tree/rhino-9.x</PackageProjectUrl>
+    <PackageReleaseNotes>https://github.com/mcneel/rhino.inside/blob/rhino-9.x/CHANGELOG.md</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.EndsWith('windows'))">
