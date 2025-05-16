@@ -10,6 +10,8 @@ env:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN }}
     steps:
       - uses: kenhowardpdx/auto-merge-action@v1
 
