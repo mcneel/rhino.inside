@@ -11,6 +11,8 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
+      - uses: kenhowardpdx/auto-merge-action@v1
+
       - name: Install dotnet 8.0
         uses: actions/setup-dotnet@v4
         with:
