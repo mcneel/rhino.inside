@@ -10,9 +10,9 @@ namespace RhinoInside
 {
   public static class Resolver
   {
-    static bool s_initialized;
-    static AssemblyLoadContext s_context;
     static readonly ConcurrentDictionary<string, IntPtr> s_nativeCache = new();
+    static AssemblyLoadContext s_context;
+    static bool s_initialized;
 
     /// <summary>
     /// Directory used by assembly resolver to attempt load core Rhino assemblies.
@@ -50,8 +50,6 @@ namespace RhinoInside
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void SetLoaderProc(Action p);
     static void PrepareRhinoEnv()
     {
-      AppDomain.CurrentDomain.AssemblyResolve += ManagedAssemblyResolver;
-
       SetupXamarin();
 
       nint rhinoLibraryHandle = 0;
@@ -91,21 +89,10 @@ namespace RhinoInside
       }
 
       s_context = AssemblyLoadContext.GetLoadContext(typeof(Resolver).Assembly);
-      s_context.ResolvingUnmanagedDll += ResolvingUnmanagedDll;
-      AppDomain.CurrentDomain.AssemblyLoad += ManageAssemblyLoaded;
-    }
+      s_context.ResolvingUnmanagedDll += NativeAssemblyResolve;
+      s_context.Resolving += ManagedAssemblyResolve;
 
-    static void ManageAssemblyLoaded(object sender, AssemblyLoadEventArgs args)
-    {
-      var assembly = args.LoadedAssembly;
-
-      if (assembly.IsDynamic
-              || AssemblyLoadContext.GetLoadContext(assembly) == s_context)
-      {
-        return;
-      }
-
-      NativeLibrary.SetDllImportResolver(assembly, NativeAssemblyResolver);
+      AppDomain.CurrentDomain.AssemblyLoad += ManagedAssemblyLoaded;
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int GetCLRRuntimeHost(ref Guid ptr, out IntPtr handle);
@@ -131,7 +118,30 @@ namespace RhinoInside
       }
     }
 
-    static IntPtr NativeAssemblyResolver(string libname, Assembly assembly, DllImportSearchPath? searchPath)
+    static void ExecuteLoadProc(AssemblyLoadContext context)
+    {
+      int dotnetMajor = Environment.Version.Major;
+      TryGetAssemblyPathFromName($"dotnetstart.{dotnetMajor}", out string dotnetstartLib);
+      var assembly = context.LoadFromAssemblyPath(dotnetstartLib);
+      var programType = assembly?.GetType("dotnetstart.DotNetInitialization");
+      var method = programType?.GetMethod("Start");
+      method?.Invoke(null, new object[] { "headless" });
+    }
+
+    static void ManagedAssemblyLoaded(object sender, AssemblyLoadEventArgs args)
+    {
+      var assembly = args.LoadedAssembly;
+
+      if (assembly.IsDynamic
+              || AssemblyLoadContext.GetLoadContext(assembly) == s_context)
+      {
+        return;
+      }
+
+      NativeLibrary.SetDllImportResolver(assembly, NativeAssemblyResolve);
+    }
+
+    static IntPtr NativeAssemblyResolve(string libname, Assembly assembly, DllImportSearchPath? searchPath)
     {
       if (s_nativeCache.TryGetValue(libname, out var ptr))
       {
@@ -158,12 +168,22 @@ namespace RhinoInside
       return IntPtr.Zero;
     }
 
-    static Assembly ManagedAssemblyResolver(object sender, ResolveEventArgs args)
+    static IntPtr NativeAssemblyResolve(Assembly assembly, string name)
     {
-      // only use the plain name to resolve assemblies, not the full name.
-      string name = new AssemblyName(args.Name).Name;
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+      {
+        if (!string.IsNullOrEmpty(name) && name == "RhinoLibrary")
+          return NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "RhinoLibrary.framework/Versions/A/RhinoLibrary"));
+      }
 
-      if (name == null || name.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
+      return IntPtr.Zero;
+    }
+
+    static Assembly ManagedAssemblyResolve(AssemblyLoadContext arg1, AssemblyName assemblyName)
+    {
+      string name = assemblyName.Name;
+
+      if (string.IsNullOrEmpty(name) || name.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
       {
         return default;
       }
@@ -176,18 +196,10 @@ namespace RhinoInside
 
       if (TryGetAssemblyPathFromName(name, out var path))
       {
-        return Assembly.LoadFrom(path);
+        return arg1.LoadFromAssemblyPath(path);
       }
 
       return default;
-    }
-
-    static IntPtr ResolvingUnmanagedDll(Assembly assembly, string unmanagedDllName)
-    {
-      if (unmanagedDllName == "RhinoLibrary")
-        return NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "RhinoLibrary.framework/Versions/A/RhinoLibrary"));
-
-      return IntPtr.Zero;
     }
 
     static bool TryGetAssemblyPathFromName(string name, out string file)
@@ -271,14 +283,6 @@ namespace RhinoInside
         yield return Path.Combine(RhinoSystemDirectory, PLUGINS);
         yield return Path.Combine(Path.GetDirectoryName(RhinoSystemDirectory), PLUGINS);
       }
-    }
-
-    static void ExecuteLoadProc(AssemblyLoadContext context)
-    {
-      var assembly = context.LoadFromAssemblyName(new AssemblyName("dotnetstart"));
-      var programType = assembly?.GetType("dotnetstart.DotNetInitialization");
-      var method = programType?.GetMethod("Start");
-      method?.Invoke(null, new object[] { "headless" });
     }
   }
 }
