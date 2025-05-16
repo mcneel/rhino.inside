@@ -1,5 +1,11 @@
 # Change Log
 
+## [9.0.3]
+- Improved Resolver (use load context api)
+
+## [9.0.2]
+- Improved Resolver
+
 ## [9.0.1]
 - Storng-named the library
 

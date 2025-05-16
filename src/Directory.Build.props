@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <TargetFrameworks>net48;net8.0;net8.0-windows;net9.0;net9.0-windows</TargetFrameworks>
+    <!-- Rhino.Inside for Rhino >= 9 is gonna support only the latest netcore version supported by Rhino -->
+    <!-- This is to avoid conflict between dll versions Rhino is built agaist, with dlls or older dotnet runtime -->
+    <!-- If you absolutely need this to work, talk to curtis @ mcneel -->
+    <TargetFrameworks>net48;net9.0;net9.0-windows</TargetFrameworks>
     <LangVersion>10</LangVersion>
     <NoWarn>NETSDK1138;NU1701;MSB3277;CA1416</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
-    <RhinoInsideVersion>9.0.2</RhinoInsideVersion>
+    <RhinoInsideVersion>9.0.3</RhinoInsideVersion>
     <RhinoAPIVersion>9.0.25051.305-wip</RhinoAPIVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyrightYear>2025</CopyrightYear>
