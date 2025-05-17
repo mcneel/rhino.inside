@@ -10,10 +10,17 @@ env:
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.PAT_ACTION_TOKEN }}
     steps:
+      - name: Get token
+        id: my-app
+        uses: getsentry/action-github-app-token@v3
+        with:
+          app_id: ${{ secrets.MERGE_DOWN_APP_ID }}
+          private_key: ${{ secrets.MERGE_DOWN_APP_PRIVATE_KEY }}
+
       - uses: kenhowardpdx/auto-merge-action@v1
+        with:
+          token: ${{ steps.my-app.outputs.token }}
 
       - name: Install dotnet 8.0
         uses: actions/setup-dotnet@v4
