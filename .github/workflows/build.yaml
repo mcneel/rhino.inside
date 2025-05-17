@@ -1,7 +1,7 @@
 name: Build
 on:
   pull_request:
-    branches: [ 'rhino-8.x' ]
+    branches: [ 'rhino-9.x' ]
   workflow_dispatch:
 
 env:
@@ -22,10 +22,10 @@ jobs:
         with:
           token: ${{ steps.my-app.outputs.token }}
 
-      - name: Install dotnet 8.0
+      - name: Install dotnet 9.0
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,28 +37,18 @@ jobs:
         uses: mcneel/setup-rhino3d@v2
         id: setup_rhino
         with:
-          release-version: latest
+          release-version: wip
           email-address: ${{ secrets.EMAIL_ADDRESS }}
 
       - name: Run Tests (net48)
         shell: pwsh
         working-directory: ./src
-        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 8\System" net48
+        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9 WIP\System" net48
 
-      - name: Run Tests (net8.0-windows)
+      - name: Run Tests (net9.0-windows)
         shell: pwsh
         working-directory: ./src
-        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 8\System" net8.0-windows
-
-      - name: Install dotnet 7.0
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '7.0.x'
-
-      - name: Run Tests (net7.0-windows)
-        shell: pwsh
-        working-directory: ./src
-        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 8\System" net7.0-windows
+        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9 WIP\System" net9.0-windows
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
