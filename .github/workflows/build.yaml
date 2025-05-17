@@ -18,7 +18,8 @@ jobs:
           app_id: ${{ secrets.MERGE_DOWN_APP_ID }}
           private_key: ${{ secrets.MERGE_DOWN_APP_PRIVATE_KEY }}
 
-      - uses: kenhowardpdx/auto-merge-action@v1
+      - name: Enable Auto-Merge
+        uses: kenhowardpdx/auto-merge-action@v1
         with:
           token: ${{ steps.my-app.outputs.token }}
 
