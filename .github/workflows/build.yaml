@@ -12,6 +12,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Get token
+        if: (github.event_name == 'pull_request')
         id: my-app
         uses: getsentry/action-github-app-token@v3
         with:
@@ -19,6 +20,7 @@ jobs:
           private_key: ${{ secrets.MERGE_DOWN_APP_PRIVATE_KEY }}
 
       - name: Enable Auto-Merge
+        if: (github.event_name == 'pull_request')
         uses: kenhowardpdx/auto-merge-action@v1
         with:
           token: ${{ steps.my-app.outputs.token }}
