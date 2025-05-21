@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.4]
+- Added linux path to Resover_NetCore.cs
+
 ## [9.0.3]
 - Improved Resolver (use load context api)
 
