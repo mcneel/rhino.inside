@@ -61,6 +61,10 @@ namespace RhinoInside
       {
         rhinoLibraryHandle = NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "RhinoLibrary.framework/Versions/A/RhinoLibrary"));
       }
+      else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+      {
+        rhinoLibraryHandle = NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "libRhinoLibrary.so"));
+      }
       else
         throw new RhinoInsideInitializationException($"Unsupported platform");
 
