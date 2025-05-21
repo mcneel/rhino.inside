@@ -6,3 +6,8 @@ To publish NuGet packages created by the build action, select the *build* action
 
 - [ ] Increased Version Number?
 - [ ] Updated CHANGELOG.md?
+- [ ] Added tests for your changes?
+- [ ] Notified project maintainers of this change and PR?
+  - [ ] Rhino.Inside-CPython
+  - [ ] Rhino.Compute
+  - [ ] Rhino.Testing
