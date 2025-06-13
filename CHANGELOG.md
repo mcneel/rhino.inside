@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.5]
+- Added linux plugin search path to Resover_NetCore.cs
+
 ## [9.0.4]
 - Added linux path to Resover_NetCore.cs
 
