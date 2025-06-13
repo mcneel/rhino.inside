@@ -281,11 +281,15 @@ namespace RhinoInside
         const string MANAGED_PLUGINS = "RhCore.framework/Versions/A/Resources/ManagedPlugIns";
         yield return Path.Combine(RhinoSystemDirectory, MANAGED_PLUGINS);
       }
-      else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+      else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
       {
         const string PLUGINS = "Plug-ins";
         yield return Path.Combine(RhinoSystemDirectory, PLUGINS);
         yield return Path.Combine(Path.GetDirectoryName(RhinoSystemDirectory), PLUGINS);
+      }
+      else
+      {
+        throw new RhinoInsideInitializationException($"Unsupported platform");
       }
     }
   }
