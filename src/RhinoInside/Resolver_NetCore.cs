@@ -259,6 +259,10 @@ namespace RhinoInside
         yield return Path.Combine(RhinoSystemDirectory, "netcore");
         yield return Path.Combine(RhinoSystemDirectory);
       }
+      else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+      { 
+        yield return Path.Combine(RhinoSystemDirectory);
+      }
 
       foreach (var path in GetPluginSearchPaths())
       {
