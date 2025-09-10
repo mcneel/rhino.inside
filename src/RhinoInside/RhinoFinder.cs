@@ -127,6 +127,11 @@ namespace RhinoInside
         }
       }
 
+      else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+      {
+        return "/usr/lib/rhino3d";
+      }
+
       throw new RhinoInsideInitializationException("Can not find Rhino >=8 installation");
     }
   }
