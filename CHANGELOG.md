@@ -1,7 +1,11 @@
 # Change Log
 
+## [9.0.6]
+- Updated rhino and grasshopper dependencies to 9.0.25252.12305-wip
+- Added linux rhino install path
+
 ## [9.0.5]
-- Added linux plugin search path to Resover_NetCore.cs
+- Added linux plugin search path to Resolver_NetCore.cs
 
 ## [9.0.4]
 - Added linux path to Resover_NetCore.cs
