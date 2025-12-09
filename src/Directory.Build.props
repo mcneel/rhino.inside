@@ -9,9 +9,18 @@
     <NoWarn>NETSDK1138;NU1701;MSB3277;CA1416</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
+    <!-- Linux can only work with this version of the GH and Rhinocommon nuget packages for now -->
+    <RhinoAPIVersion>9.0.25051.305-wip</RhinoAPIVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="!$([MSBuild]::IsOSPlatform(linux))">
+    <!-- Not Linux -->
+    <RhinoAPIVersion>9.0.25252.12305-wip</RhinoAPIVersion>
+  </PropertyGroup>
+
   <PropertyGroup>
     <RhinoInsideVersion>9.0.6</RhinoInsideVersion>
-    <RhinoAPIVersion>9.0.25051.305-wip</RhinoAPIVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyrightYear>2025</CopyrightYear>
     <RepositoryUrl>https://github.com/mcneel/Rhino.Inside.git</RepositoryUrl>

@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.7]
+- Support two versions of the RhinoAPIVersion to allow Linux to use the Rhino.Inside nuget package
+
 ## [9.0.6]
 - Updated rhino and grasshopper dependencies to 9.0.25252.12305-wip
 - Added linux rhino install path
