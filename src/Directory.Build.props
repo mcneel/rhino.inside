@@ -1,15 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <!-- Rhino.Inside for Rhino >= 9 is gonna support only the latest netcore version supported by Rhino -->
-    <!-- This is to avoid conflict between dll versions Rhino is built agaist, with dlls or older dotnet runtime -->
-    <!-- If you absolutely need this to work, talk to curtis @ mcneel -->
-    <TargetFrameworks>net48;net9.0;net9.0-windows</TargetFrameworks>
     <LangVersion>10</LangVersion>
     <NoWarn>NETSDK1138;NU1701;MSB3277;CA1416</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform(windows))">
+    <!-- Rhino.Inside for Rhino >= 9 is gonna support only the latest netcore version supported by Rhino -->
+    <!-- This is to avoid conflict between dll versions Rhino is built agaist, with dlls or older dotnet runtime -->
+    <!-- If you absolutely need this to work, talk to curtis @ mcneel -->
+    <TargetFrameworks>net48;net9.0;net9.0-windows</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(TargetFramework.EndsWith('windows'))">
+    <UseWpf>true</UseWpf>
+    <UseWinForms>true</UseWinForms>
+  </PropertyGroup>
+
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform(linux))">
+    <TargetFrameworks>net9.0</TargetFrameworks>
     <!-- Linux can only work with this version of the GH and Rhinocommon nuget packages for now -->
     <RhinoAPIVersion>9.0.25051.305-wip</RhinoAPIVersion>
   </PropertyGroup>
@@ -20,7 +29,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <RhinoInsideVersion>9.0.7</RhinoInsideVersion>
+    <RhinoInsideVersion>9.0.8</RhinoInsideVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyrightYear>2025</CopyrightYear>
     <RepositoryUrl>https://github.com/mcneel/Rhino.Inside.git</RepositoryUrl>
@@ -28,8 +37,4 @@
     <PackageReleaseNotes>https://github.com/mcneel/rhino.inside/blob/rhino-9.x/CHANGELOG.md</PackageReleaseNotes>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$(TargetFramework.EndsWith('windows'))">
-    <UseWpf>true</UseWpf>
-    <UseWinForms>true</UseWinForms>
-  </PropertyGroup>
 </Project>

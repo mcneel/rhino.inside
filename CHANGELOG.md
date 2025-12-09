@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.8]
+- Do not build net9.0-windows or net48 framework targets on Linux
+
 ## [9.0.7]
 - Support two versions of the RhinoAPIVersion to allow Linux to use the Rhino.Inside nuget package
 
