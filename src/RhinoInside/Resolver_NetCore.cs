@@ -193,10 +193,10 @@ namespace RhinoInside
       }
 
       // load Microsoft.macOS in the default context as xamarin initialization requires it there
-      if (name == "Microsoft.macOS")
-      {
-        return default;
-      }
+      // if (name == "Microsoft.macOS")
+      // {
+      //   return default;
+      // }
 
       if (TryGetAssemblyPathFromName(name, out var path))
       {
