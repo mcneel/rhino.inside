@@ -29,7 +29,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <RhinoInsideVersion>9.0.8</RhinoInsideVersion>
+    <RhinoInsideVersion>9.0.9</RhinoInsideVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyrightYear>2025</CopyrightYear>
     <RepositoryUrl>https://github.com/mcneel/Rhino.Inside.git</RepositoryUrl>
