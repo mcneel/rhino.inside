@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.9]
+- Allow resolving Microsoft.macOS assembly
+
 ## [9.0.8]
 - Do not build net9.0-windows or net48 framework targets on Linux
 
