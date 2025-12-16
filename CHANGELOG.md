@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.10]
+- Updated rhino and grasshopper dependencies to 9.0.25350.305-wip
+
 ## [9.0.9]
 - Allow resolving Microsoft.macOS assembly
 
