@@ -59,14 +59,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: version-files
-
-      - name: List files after download
-        shell: pwsh
-        run: Get-ChildItem -Recurse
-
-      - name: Overwrite versioned files
-        run: |
-          Copy-Item "version-files/*" "src/" -Force
+          path: src/
 
       - name: Build
         run: dotnet build -c Release src/RhinoInside.sln
