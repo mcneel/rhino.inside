@@ -21,6 +21,7 @@ jobs:
 
       - name: Update Version Numbers
         run: ./src/version/version.sh
+
       - name: Upload versioned files
         uses: actions/upload-artifact@v4
         with:
@@ -54,10 +55,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: List files after download
+        shell: pwsh
+        run: Get-ChildItem -Recurse
+      
       - name: Download versioned files
         uses: actions/download-artifact@v4
         with:
           name: version-files
+          path: src/
 
       - name: Overwrite versioned files
         run: |
