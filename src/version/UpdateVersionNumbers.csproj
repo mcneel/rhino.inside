@@ -60,11 +60,9 @@
        Condition="!Exists('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity)')  OR $([System.IO.File]::GetLastWriteTime('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity).template').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity)').Ticks)"
        />
 
-    <Exec Command="git rev-parse HEAD &gt; .sha" Condition="$(OfficialBuild)=='true'" />
-    <ReadLinesFromFile File=".sha" Condition="$(OfficialBuild)=='true'" >
-      <Output TaskParameter="Lines" PropertyName="GitCurrentCommitSHA" />
-    </ReadLinesFromFile>
-    <Delete Files=".sha" Condition="$(OfficialBuild)=='true'" />
+    <PropertyGroup>
+      <OfficialBuild>true</OfficialBuild>
+    </PropertyGroup>
 
     <!-- C# (version.cs) -->
     <Message Text="------------- version.cs ----------------"/>
