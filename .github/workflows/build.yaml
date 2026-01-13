@@ -22,13 +22,6 @@ jobs:
       - name: Update Version Numbers
         run: ./src/version/version.sh
 
-      - name: Commit version changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "Update version numbers" || echo "No changes to commit"
-          git push
-
   build:
     runs-on: windows-latest
     steps:
