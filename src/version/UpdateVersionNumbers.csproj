@@ -1,0 +1,99 @@
+﻿<Project Sdk="Microsoft.Build.NoTargets/3.0.4">
+  <Import Project="build_dates.msbuild"/>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="version.*.template" />
+  </ItemGroup>
+
+  <UsingTask TaskName="ReplaceInFile" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <FileName ParameterType="System.String" Required="True" />
+      <Pattern ParameterType="System.String" Required="True" />
+      <Replacement ParameterType="System.String" Required="True" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+  // 2017-06-15, Brian Gillespie:
+  // For some reason, MSBuild replaces all backslashes with forward slashes
+  // before calling the customer task, at least on Mac. This totally breaks
+  // regular expressions! A hack of a fix is to put them back, and hope nobody
+  // really meant to pass in forward slashes. What a drag!
+  Pattern = Pattern.Replace("/", "\\");
+  // Log.LogMessage(string.Format("{0} > {1}", Pattern, Replacement));
+  var f = File.ReadAllText(FileName);
+  var re = new Regex(Pattern);
+  var b = re.Replace(f, Replacement);
+  if (b != f) {
+    Log.LogMessage(string.Format("{0}: Replaced {1} > {2}", FileName, Pattern, Replacement));
+    File.WriteAllText(FileName, b);
+  }
+  ]]></Code>
+    </Task>
+  </UsingTask>
+
+
+  <!--
+  *********************************************************************
+  BUILD
+  *********************************************************************
+  -->
+  <Target Name="BuildVersion" BeforeTargets="BeforeBuild" DependsOnTargets="SetBuildDates">
+    <PropertyGroup>
+      <PreviousMajorVersion>$([MSBuild]::Subtract($(MajorVersion), 1))</PreviousMajorVersion>
+    </PropertyGroup>
+
+    <Message Text="$(BuildDate)" Importance="high"/>
+    <Message Text="**** Updating version numbers to $(BuildVersion) ****" />
+    <ItemGroup>
+      <SourceFileExtensions Include="cs" />
+    </ItemGroup>
+    <Copy SourceFiles="$(BuildRoot)\version\version.%(SourceFileExtensions.Identity).template"
+       DestinationFiles="$(BuildRoot)\version\version.%(SourceFileExtensions.Identity)"
+       Condition="!Exists('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity)')  OR $([System.IO.File]::GetLastWriteTime('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity).template').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity)').Ticks)"
+       />
+
+    <Exec Command="git rev-parse HEAD &gt; .sha" Condition="$(OfficialBuild)=='true'" />
+    <ReadLinesFromFile File=".sha" Condition="$(OfficialBuild)=='true'" >
+      <Output TaskParameter="Lines" PropertyName="GitCurrentCommitSHA" />
+    </ReadLinesFromFile>
+    <Delete Files=".sha" Condition="$(OfficialBuild)=='true'" />
+
+    <!-- C# (version.cs) -->
+    <Message Text="------------- version.cs ----------------"/>
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="AssemblyVersion\(&quot;[\dx\.]+&quot;\)" Replacement="AssemblyVersion(&quot;$(BuildVersion)&quot;)" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern=" MAJOR_MINOR_VERSION_STRING\s*=\s*&quot;[\dx\.]+&quot;;" Replacement=" MAJOR_MINOR_VERSION_STRING = &quot;$(MajorVersion).$(MinorVersion)&quot;;" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern=" MAJOR_VERSION_STRING\s*=\s*&quot;[\dx\.]+&quot;;" Replacement=" MAJOR_VERSION_STRING = &quot;$(MajorVersion)&quot;;" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern=" VERSION_STRING\s*=\s*&quot;[\dx\.]+&quot;;" Replacement=" VERSION_STRING = &quot;$(BuildVersion)&quot;;" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern=" MAJOR_VERSION\s*=\s*[\dx]+;" Replacement=" MAJOR_VERSION = $(MajorVersion);" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern=" MINOR_VERSION\s*=\s*[\dx]+;" Replacement=" MINOR_VERSION = $(MinorVersion);" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="YEAR\s*=\s*[\dx]+;" Replacement="YEAR = $(BuildYear);" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern=" MONTH\s*=\s*[\dx]+;" Replacement=" MONTH = $(BuildMonth);" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern=" DAY_OF_MONTH\s*=\s*[\dx]+;" Replacement=" DAY_OF_MONTH = $(BuildDayOfMonth);" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="HOUR\s*=\s*[\dx]+;" Replacement="HOUR = $(BuildHour);" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="MINUTE\s*=\s*[\dx]+;" Replacement="MINUTE = $(BuildMinute);" />
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="USE_COMMERCIAL_LICENSE = .*;" Replacement="USE_COMMERCIAL_LICENSE = true;" Condition="$(BUILD_TYPE)==COMMERCIAL OR $(DEVELOPER_BUILD_TYPE)==COMMERCIAL"/>
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="USE_COMMERCIAL_LICENSE = .*;" Replacement="USE_COMMERCIAL_LICENSE = false;" Condition="$(BUILD_TYPE)!=COMMERCIAL AND $(DEVELOPER_BUILD_TYPE)!=COMMERCIAL"/>
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="PRE_RELEASE = .*;" Replacement="PRE_RELEASE = false;" Condition="$(BUILD_TYPE)==COMMERCIAL OR $(DEVELOPER_BUILD_TYPE)==COMMERCIAL"/>
+    <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="PRE_RELEASE = .*;" Replacement="PRE_RELEASE = true;" Condition="$(BUILD_TYPE)!=COMMERCIAL AND $(DEVELOPER_BUILD_TYPE)!=COMMERCIAL"/>
+  </Target>
+
+  <!--
+  *********************************************************************
+  CLEAN
+  *********************************************************************
+  -->
+  <Target Name="CleanVersion" AfterTargets="AfterClean">
+    <ItemGroup>
+      <DeleteFiles Include="$(BuildRoot)\version\version.cs" />
+    </ItemGroup>
+    <Delete Files="@(DeleteFiles)" />
+  </Target>
+</Project>

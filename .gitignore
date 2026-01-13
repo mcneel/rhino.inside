@@ -332,3 +332,5 @@ ASALocalRun/
 # Visual Studio Code settings
 .vscode
 .DS_Store
+
+src/version/version.cs
