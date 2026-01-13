@@ -55,10 +55,8 @@
       <BuildMonth>$([System.DateTime]::Parse($(BuildDate)).ToString("MM"))</BuildMonth>
       <BuildYear>$([System.DateTime]::Parse($(BuildDate)).Year)</BuildYear>
       <BuildYearTwoDigit>$([System.DateTime]::Parse($(BuildDate)).ToString("yy"))</BuildYearTwoDigit>
-      <BuildHour Condition="$(OfficialBuild)!='true'">01</BuildHour>
-      <BuildHour Condition="$(OfficialBuild)=='true'">$([System.DateTime]::Parse($(BuildDate)).ToString("HH"))</BuildHour>
-      <BuildMinute Condition="$(OfficialBuild)!='true'">00</BuildMinute>
-      <BuildMinute Condition="$(OfficialBuild)=='true'">$([System.DateTime]::Parse($(BuildDate)).ToString("mm"))</BuildMinute>
+      <BuildHour>$([System.DateTime]::Parse($(BuildDate)).ToString("HH"))</BuildHour>
+      <BuildMinute>$([System.DateTime]::Parse($(BuildDate)).ToString("mm"))</BuildMinute>
     
       <BuildBranchId>0</BuildBranchId>
     
