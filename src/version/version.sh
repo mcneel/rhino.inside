@@ -16,3 +16,6 @@ echo "$VERSION_STRING" " → " "$VERSION_STRING_FIXED"
 
 # set version in Directory.Build.props
 sed -i 's|<RhinoInsideVersion>.*</RhinoInsideVersion>|<RhinoInsideVersion>'"$VERSION_STRING_FIXED"'</RhinoInsideVersion>|' ../Directory.Build.props
+
+# expose version to GitHub Actions
+echo "version=$VERSION_STRING_FIXED" >> "$GITHUB_OUTPUT"
