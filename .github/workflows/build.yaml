@@ -60,7 +60,7 @@ jobs:
 
       - name: Overwrite versioned files
         run: |
-          cp version-files/* src/
+          Copy-Item "version-files/*" "src/" -Force
 
       - name: Build
         run: dotnet build -c Release src/RhinoInside.sln
