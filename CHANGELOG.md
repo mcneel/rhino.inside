@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.26013.1000]
+- Added version number generation
+
 ## [9.0.10]
 - Updated rhino and grasshopper dependencies to 9.0.25350.305-wip
 
