@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+***********************************************************************************************
+version.cs.props
+
+Import this for sdk-style projects to include copyright and version information.
+
+***********************************************************************************************
+-->
+
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Company>Robert McNeel &amp; Associates</Company>
+    <Copyright>Copyright (C) 1993-2022, Robert McNeel &amp; Associates. All Rights Reserved.</Copyright>
+    <Authors>Robert McNeel &amp; Associates</Authors>
+    
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+  </PropertyGroup>
+  <Target Name="IncludeVersionInBuild" BeforeTargets="BeforeBuild">
+    <!-- 
+      Include version.cs before the build starts, which should guarantee that it exists as UpdateVersionNumbers 
+      should have been built before this happens.
+      -->
+    <ItemGroup>
+      <Compile Include="$(MSBuildThisFileDirectory)version.cs" />
+    </ItemGroup>
+  </Target>
+</Project>

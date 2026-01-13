@@ -8,6 +8,20 @@ env:
   RHINO_TOKEN: ${{ secrets.RHINO_TOKEN }}
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Update Version Numbers
+        run: ./src/version/version.sh
+
   build:
     runs-on: windows-latest
     steps:

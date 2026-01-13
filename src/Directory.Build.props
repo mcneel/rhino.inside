@@ -22,7 +22,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <RhinoInsideVersion>9.0.10</RhinoInsideVersion>
+    <RhinoInsideVersion>9.0.26013.1000</RhinoInsideVersion>
     <RhinoAPIVersion>9.0.25350.305-wip</RhinoAPIVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyrightYear>2025</CopyrightYear>

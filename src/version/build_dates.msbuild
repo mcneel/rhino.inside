@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <!-- 
+  Properties are declared here, and set in SetBuildDates task, below
+  For details, see https://mcneel.myjetbrains.com/youtrack/issue/RH-52713
+  -->
+  <PropertyGroup>
+    <IsWindows>false</IsWindows>
+    <IsMac>false</IsMac>
+    <IsWindows Condition="'$(OS)' == 'Windows_NT'">true</IsWindows>
+    <IsMac Condition="('$(MSBuildRuntimeType)' == 'Core' OR '$(MSBuildRuntimeType)' == 'Mono') AND $([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))">true</IsMac>
+
+    <BuildRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</BuildRoot>
+    <!-- ToString("s") returns yyyy-MM-ddTHH:mm:ss in all locales -->
+    <BuildDate Condition="'$(BuildDate)'==''">default-build-date</BuildDate>
+    <MajorVersion Condition="'$(MajorVersion)'==''">9</MajorVersion>
+    <MinorVersion Condition="'$(MinorVersion)'==''">0</MinorVersion>
+    <DEVELOPER_BUILD_TYPE>WIP</DEVELOPER_BUILD_TYPE>
+    <DEVELOPER_BUILD_TYPE Condition="'$(MajorVersion)'=='8'">COMMERCIAL</DEVELOPER_BUILD_TYPE>
+    <BuildMonthName>XXX</BuildMonthName>
+    <BuildDayOfYear>X</BuildDayOfYear>
+    <BuildDayOfYearPadded>X</BuildDayOfYearPadded>
+    <BuildDayOfMonth>XXX</BuildDayOfMonth>
+    <BuildMonth>X</BuildMonth>
+    <BuildYear>X</BuildYear>
+    <BuildYearTwoDigit>XX</BuildYearTwoDigit>
+    <BuildHour>X</BuildHour>
+    <BuildMinute>X</BuildMinute>
+    <BuildBranchId>0</BuildBranchId>
+    <BuildDescription>X</BuildDescription>
+    <GitCurrentCommitSHA>X</GitCurrentCommitSHA>
+    <BuildVersion>X.X.X.X</BuildVersion>
+    <BuildVersionWithCommas>X,X,X,X</BuildVersionWithCommas>
+    <BuildDateSet Condition="'$(BuildDateSet)'==''">0</BuildDateSet>
+	<BuildDatesFileIncluded>true</BuildDatesFileIncluded>
+  </PropertyGroup>
+
+  <Target Name="SetBuildDates">
+    <PropertyGroup>
+      <IsWindows>false</IsWindows>
+      <IsMac>false</IsMac>
+      <IsWindows Condition="'$(OS)' == 'Windows_NT'">true</IsWindows>
+      <IsMac Condition="('$(MSBuildRuntimeType)' == 'Core' OR '$(MSBuildRuntimeType)' == 'Mono') AND   $([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))">true</IsMac>
+    
+      <BuildRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))</BuildRoot>
+      <!-- ToString("s") returns yyyy-MM-ddTHH:mm:ss in all locales -->
+      <BuildDate Condition="('$(BuildDate)'=='' OR '$(BuildDate)'=='default-build-date') AND '$(FastIncrementalBuild)'!='true'">$([System.DateTime]::Now.ToString("s"))</BuildDate>
+      <BuildDate Condition="'$(FastIncrementalBuild)'=='true'">2011-11-11T11:11:11</BuildDate>
+      <MajorVersion Condition="'$(MajorVersion)'==''">7</MajorVersion>
+      <MinorVersion Condition="'$(MinorVersion)'==''">0</MinorVersion>
+      <BuildMonthName>$([System.DateTime]::Parse($(BuildDate)).ToString("MMM"))</BuildMonthName>
+      <BuildDayOfYear>$([System.DateTime]::Parse($(BuildDate)).DayOfYear)</BuildDayOfYear>
+      <BuildDayOfYearPadded>$([System.String]::Format('{0:000}', $([MSBuild]::Add($(BuildDayOfYear),0 ))))</BuildDayOfYearPadded>
+      <BuildDayOfMonth>$([System.DateTime]::Parse($(BuildDate)).ToString("dd"))</BuildDayOfMonth>
+      <BuildMonth>$([System.DateTime]::Parse($(BuildDate)).ToString("MM"))</BuildMonth>
+      <BuildYear>$([System.DateTime]::Parse($(BuildDate)).Year)</BuildYear>
+      <BuildYearTwoDigit>$([System.DateTime]::Parse($(BuildDate)).ToString("yy"))</BuildYearTwoDigit>
+      <BuildHour Condition="$(OfficialBuild)!='true'">01</BuildHour>
+      <BuildHour Condition="$(OfficialBuild)=='true'">$([System.DateTime]::Parse($(BuildDate)).ToString("HH"))</BuildHour>
+      <BuildMinute Condition="$(OfficialBuild)!='true'">00</BuildMinute>
+      <BuildMinute Condition="$(OfficialBuild)=='true'">$([System.DateTime]::Parse($(BuildDate)).ToString("mm"))</BuildMinute>
+    
+      <BuildBranchId>0</BuildBranchId>
+    
+      <BuildBranchId Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='COMMERCIAL' AND $(IsWindows)">1</BuildBranchId>
+      <BuildBranchId Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='COMMERCIAL' AND $(IsMac)">2</BuildBranchId>
+    
+      <BuildBranchId Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='BETA' AND $(IsWindows)">3</BuildBranchId>
+      <BuildBranchId Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='BETA' AND  $(IsMac)">4</BuildBranchId>
+    
+      <BuildBranchId Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='WIP' AND $(IsWindows)">5</BuildBranchId>
+      <BuildBranchId Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='WIP' AND  $(IsMac)">6</BuildBranchId>
+    
+      <BuildDescription>Private Developer Build</BuildDescription>
+      <BuildDescription Condition="$(OfficialBuild)=='true'">Public Build</BuildDescription>
+      <BuildDescription Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='WIP'">Rhino WIP</BuildDescription>
+      <BuildDescription Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='BETA'">Rhino $(MajorVersion) BETA</BuildDescription>
+      <BuildDescription Condition="$(OfficialBuild)=='true' AND $(BUILD_TYPE)=='COMMERCIAL'">Rhino $(MajorVersion)</BuildDescription>
+
+      <GitCurrentCommitSHA>0</GitCurrentCommitSHA>
+      <BuildVersion>$(MajorVersion).$(MinorVersion).$(BuildYearTwoDigit)$(BuildDayOfYearPadded).$(BuildHour)$(BuildMinute)$(BuildBranchId)</BuildVersion>
+      <BuildVersionWithCommas>$(BuildVersion.Replace('.',','))</BuildVersionWithCommas>
+      <BuildVersionWithCommas>$(BuildVersionWithCommas.Replace(',0',','))</BuildVersionWithCommas>
+      <BuildVersionWithCommas>$(BuildVersionWithCommas.Replace(',0',','))</BuildVersionWithCommas>
+      <BuildVersionWithCommas>$(BuildVersionWithCommas.Replace(',0',','))</BuildVersionWithCommas>
+      <BuildVersionWithCommas>$(BuildVersionWithCommas.Replace(',0',','))</BuildVersionWithCommas>
+      <BuildVersionWithCommas>$(BuildVersionWithCommas.Replace(',,',',0,'))</BuildVersionWithCommas>
+
+	  <BuildDateSet Condition="'$(BuildDateSet)' != 'true' ">true</BuildDateSet>
+    </PropertyGroup>
+    <Message Text="--------------------===========&gt;&gt;&gt; BUILD DATE SET: $(BuildDate) &lt;&lt;&lt;============------------------"/>
+    <Message Text="OfficialBuild        = $(OfficialBuild)" />
+    <Message Text="BUILD_TYPE           = $(BUILD_TYPE)" />
+    <Message Text="DEVELOPER_BUILD_TYPE = $(DEVELOPER_BUILD_TYPE)" />
+    <Message Text="BuildDescription     = $(BuildDescription)" />
+    <Message Text="BuildVersion         = $(BuildVersion)" />
+  </Target>
+</Project>

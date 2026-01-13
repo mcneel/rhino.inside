@@ -1,0 +1,31 @@
+// Version information for an assembly consists of the following four values:
+//
+//      Major Version
+//      Minor Version
+//      Build Number
+//      Revision
+//
+// Version.cs controls all version numbers for all plug-ins and other C# projects
+// that ship with Rhino 6.
+
+namespace RhinoVersion {
+
+static class RhinoBuildConstants
+{
+  // To update version numbers, edit build_dates.msbuild
+  public const string VERSION_STRING = "x.x.0.0";
+  public const string MAJOR_MINOR_VERSION_STRING = "x.x";
+  public const string MAJOR_VERSION_STRING = "x";
+  public const int MAJOR_VERSION = x;
+  public const int MINOR_VERSION = x;
+  public const int YEAR = 2015;
+  public const int MONTH = 10;
+  public const int DAY_OF_MONTH = 14;
+  public const int HOUR = 13;
+  public const int MINUTE = 19;
+  public const bool PRE_RELEASE = true;
+
+}
+
+}
+
