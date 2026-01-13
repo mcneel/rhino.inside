@@ -30,6 +30,7 @@ jobs:
 
   build:
     runs-on: windows-latest
+    needs: [ version ]
     steps:
       - name: Get token
         if: (github.event_name == 'pull_request')
