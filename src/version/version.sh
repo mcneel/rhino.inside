@@ -18,4 +18,8 @@ echo "$VERSION_STRING" " → " "$VERSION_STRING_FIXED"
 sed -i 's|<RhinoInsideVersion>.*</RhinoInsideVersion>|<RhinoInsideVersion>'"$VERSION_STRING_FIXED"'</RhinoInsideVersion>|' ../Directory.Build.props
 
 # expose version to GitHub Actions
-echo "version=$VERSION_STRING_FIXED" >> "$GITHUB_OUTPUT"
+if [[ -n "$GITHUB_OUTPUT" ]]; then
+  echo "version=$VERSION_STRING_FIXED" >> "$GITHUB_OUTPUT"
+else
+  echo "Version: $VERSION_STRING_FIXED"
+fi
