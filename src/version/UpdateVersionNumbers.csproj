@@ -60,10 +60,6 @@
        Condition="!Exists('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity)')  OR $([System.IO.File]::GetLastWriteTime('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity).template').Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(BuildRoot)\version\version.%(SourceFileExtensions.Identity)').Ticks)"
        />
 
-    <PropertyGroup>
-      <OfficialBuild>true</OfficialBuild>
-    </PropertyGroup>
-
     <!-- C# (version.cs) -->
     <Message Text="------------- version.cs ----------------"/>
     <ReplaceInFile FileName="$(BuildRoot)\version\version.cs" Pattern="AssemblyVersion\(&quot;[\dx\.]+&quot;\)" Replacement="AssemblyVersion(&quot;$(BuildVersion)&quot;)" />
