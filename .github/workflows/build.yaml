@@ -63,7 +63,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: version-files
-          path: src/
 
       - name: Overwrite versioned files
         run: |
