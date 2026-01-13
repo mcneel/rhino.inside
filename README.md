@@ -1,6 +1,6 @@
 # Rhino.Inside®
 
-[![Discourse users](https://img.shields.io/discourse/https/discourse.mcneel.com/users.svg)](https://discourse.mcneel.com/c/serengeti/inside)
+[![Discourse users](https://img.shields.io/discourse/https/discourse.mcneel.com/users.svg)](https://discourse.mcneel.com/c/rhino-inside/110)
 
 The Rhino.Inside® technology allows Rhino and Grasshopper to be embedded within other products.  It may be possible to:
 
