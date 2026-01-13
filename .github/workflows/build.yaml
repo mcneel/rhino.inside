@@ -1,4 +1,4 @@
-name: Build
+name: Build & Release
 on:
   pull_request:
     branches: [ 'rhino-9.x' ]
@@ -10,6 +10,8 @@ env:
 jobs:
   version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version_step.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,6 +22,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Update Version Numbers
+        id: version_step
         run: ./src/version/version.sh
 
       - name: Upload versioned files
@@ -87,8 +90,34 @@ jobs:
           name: rhinoinside-nupkg
           path: src/build/*.nupkg
 
+  tag:
+    needs: [ version, build ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/rhino-9.x'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag
+        run: |
+          TAG="v${{ needs.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "❌ Tag $TAG already exists"
+            exit 1
+          fi
+
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
   publish:
-    needs: [ build ]
+    needs: [ build, tag ]
     runs-on: ubuntu-latest
     if: (github.event_name == 'workflow_dispatch')
     steps:
