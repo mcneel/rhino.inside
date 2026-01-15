@@ -54,21 +54,36 @@ namespace RhinoInside
 
       int foundVersion = -1;
       string foundPath = string.Empty;
-      foreach (string appPath in searchPaths)
-        foreach (string rhPath in Directory.GetDirectories(appPath, "Rhino *.app"))
+
+      if (useLatest)
+      {
+        string wipPath = "/Applications/RhinoWIP.app";
+        if (File.Exists(wipPath))
         {
-          var m = versionFinder.Match(rhPath);
-          if (m.Success
-                && int.TryParse(m.Groups["ver"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out int d))
+          foundPath = wipPath;
+        }
+      }
+
+      if (string.IsNullOrEmpty(foundPath))
+      {
+        foreach (string appPath in searchPaths)
+        {
+          foreach (string rhPath in Directory.GetDirectories(appPath, "Rhino *.app"))
           {
-            if ((useLatest && d >= (foundVersion > -1 ? foundVersion : minMajor)) ||
-                  (d == minMajor && !useLatest))
+            var m = versionFinder.Match(rhPath);
+            if (m.Success
+                  && int.TryParse(m.Groups["ver"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out int d))
             {
-              foundVersion = d;
-              foundPath = rhPath;
+              if ((useLatest && d >= (foundVersion > -1 ? foundVersion : minMajor)) ||
+                    (d == minMajor && !useLatest))
+              {
+                foundVersion = d;
+                foundPath = rhPath;
+              }
             }
           }
         }
+      }
 
       if (foundVersion >= minMajor)
       {
