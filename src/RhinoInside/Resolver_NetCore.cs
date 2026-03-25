@@ -137,6 +137,8 @@ namespace RhinoInside
         if (TryGetAssemblyPathFromName($"dotnetstart.{version}", out dotnetstartLib))
           break;
       }
+      if (dotnetstartLib is null)
+        throw new RhinoInsideInitializationException($"Could not find dotnetstart dll for .NET {Environment.Version.Major} or earlier in '{RhinoSystemDirectory}'");
       var assembly = context.LoadFromAssemblyPath(dotnetstartLib);
       var programType = assembly?.GetType("dotnetstart.DotNetInitialization");
       var method = programType?.GetMethod("Start");
