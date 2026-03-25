@@ -124,8 +124,21 @@ namespace RhinoInside
 
     static void ExecuteLoadProc(AssemblyLoadContext context)
     {
-      int dotnetMajor = Environment.Version.Major;
-      TryGetAssemblyPathFromName($"dotnetstart.{dotnetMajor}", out string dotnetstartLib);
+      // Revert to this once dotnetstart.10.dll is available.
+      // int dotnetMajor = Environment.Version.Major;
+      // TryGetAssemblyPathFromName($"dotnetstart.{dotnetMajor}", out string dotnetstartLib);
+
+      // 2026.03.25 - Luis Fraguada
+      // Temp workaround to build against .net10 and find dotnetstart.9.dll until dotnetstart.10.dll is available. 
+      // We should remove this loop and directly look for dotnetstart.10.dll once it's available.
+      string dotnetstartLib = null;
+      for (int version = Environment.Version.Major; version >= 8; --version)
+      {
+        if (TryGetAssemblyPathFromName($"dotnetstart.{version}", out dotnetstartLib))
+          break;
+      }
+      if (dotnetstartLib is null)
+        throw new RhinoInsideInitializationException($"Could not find dotnetstart dll for .NET {Environment.Version.Major} or earlier in '{RhinoSystemDirectory}'");
       var assembly = context.LoadFromAssemblyPath(dotnetstartLib);
       var programType = assembly?.GetType("dotnetstart.DotNetInitialization");
       var method = programType?.GetMethod("Start");
