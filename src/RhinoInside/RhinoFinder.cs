@@ -55,32 +55,36 @@ namespace RhinoInside
       int foundVersion = -1;
       string foundPath = string.Empty;
 
-      if (useLatest)
+      void Consider(string appPath, int major)
       {
-        string wipPath = "/Applications/RhinoWIP.app";
-        if (File.Exists(wipPath))
+        if ((useLatest && major >= (foundVersion > -1 ? foundVersion : minMajor))
+              || (major == minMajor && !useLatest))
         {
-          foundPath = wipPath;
+          foundVersion = major;
+          foundPath = appPath;
         }
       }
 
-      if (string.IsNullOrEmpty(foundPath))
+      foreach (string appPath in searchPaths)
       {
-        foreach (string appPath in searchPaths)
+        foreach (string rhPath in Directory.GetDirectories(appPath, "Rhino *.app"))
         {
-          foreach (string rhPath in Directory.GetDirectories(appPath, "Rhino *.app"))
+          Match match = versionFinder.Match(rhPath);
+          if (!match.Success) continue;
+          if (int.TryParse(match.Groups["ver"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out int major))
           {
-            var m = versionFinder.Match(rhPath);
-            if (m.Success
-                  && int.TryParse(m.Groups["ver"].Value, NumberStyles.Any, CultureInfo.InvariantCulture, out int d))
-            {
-              if ((useLatest && d >= (foundVersion > -1 ? foundVersion : minMajor)) ||
-                    (d == minMajor && !useLatest))
-              {
-                foundVersion = d;
-                foundPath = rhPath;
-              }
-            }
+            Consider(rhPath, major);
+          }
+        }
+
+        // WIP and BETA carry no version in the bundle name, so read it from Info.plist.
+        // BETA (the newer channel) wins same-major ties under useLatest, so consider WIP first.
+        foreach (string named in new[] { "RhinoWIP.app", "RhinoBETA.app" })
+        {
+          string p = Path.Combine(appPath, named);
+          if (Directory.Exists(p) && TryGetAppMajorVersion_macOS(p, out int major))
+          {
+            Consider(p, major);
           }
         }
       }
@@ -92,6 +96,25 @@ namespace RhinoInside
       }
 
       return false;
+    }
+
+    static bool TryGetAppMajorVersion_macOS(string appPath, out int major)
+    {
+      major = -1;
+      string plist = Path.Combine(appPath, "Contents", "Info.plist");
+      if (!File.Exists(plist))
+        return false;
+
+      try
+      {
+        var m = Regex.Match(File.ReadAllText(plist),
+                            @"<key>CFBundleShortVersionString</key>\s*<string>\s*(?<v>\d+)");
+        return m.Success && int.TryParse(m.Groups["v"].Value, out major);
+      }
+      catch
+      {
+        return false;
+      }
     }
 
     public static string PrepareSystemPath(string rhinoPath)
