@@ -90,6 +90,40 @@ jobs:
           name: rhinoinside-nupkg
           path: src/build/*.nupkg
 
+  build-macos:
+    runs-on: macos-latest
+    needs: [ version ]
+    steps:
+      - name: Install dotnet 10.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download versioned files
+        uses: actions/download-artifact@v4
+        with:
+          name: version-files
+          path: src/
+
+      - name: Build
+        run: dotnet build -c Release src/RhinoInside.sln
+
+      - name: Install Rhino WIP
+        uses: mcneel/setup-rhino3d@v2
+        with:
+          release-version: wip
+          email-address: ${{ secrets.EMAIL_ADDRESS }}
+
+      - name: Run Tests (net10.0)
+        working-directory: ./src
+        run: |
+          RHINOINSIDE_RHINOPATH="$(ls -d /Applications/Rhino*.app/Contents/Frameworks | head -1)"
+          echo "Using RHINOINSIDE_RHINOPATH=$RHINOINSIDE_RHINOPATH"
+          RHINOINSIDE_RHINOPATH="$RHINOINSIDE_RHINOPATH" dotnet test RhinoInside.sln /tl:off --framework net10.0
+
   tag:
     needs: [ version, build ]
     runs-on: ubuntu-latest
