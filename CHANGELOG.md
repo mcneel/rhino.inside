@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.26013.16420]
+- Added .net 10 targets
+
 ## [9.0.26013.1000]
 - Added version number generation
 
