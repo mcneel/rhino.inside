@@ -68,7 +68,7 @@ jobs:
         run: dotnet build -c Release src/RhinoInside.sln
 
       - name: Install Rhino
-        uses: mcneel/setup-rhino3d@v3
+        uses: mcneel/setup-rhino3d@v3.0.0
         id: setup_rhino
         with:
           release-version: wip
@@ -112,7 +112,7 @@ jobs:
         run: dotnet build -c Release src/RhinoInside.sln
 
       - name: Install Rhino WIP
-        uses: mcneel/setup-rhino3d@v3
+        uses: mcneel/setup-rhino3d@v3.0.0
         with:
           release-version: wip
           email-address: ${{ secrets.EMAIL_ADDRESS }}
