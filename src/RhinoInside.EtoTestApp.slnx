@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RhinoInside/RhinoInside.csproj" />
+  <Project Path="RhinoInside.EtoTestApp/RhinoInside.EtoTestApp.csproj" />
+</Solution>

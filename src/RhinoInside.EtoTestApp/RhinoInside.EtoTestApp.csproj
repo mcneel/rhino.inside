@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>rhinoinside-etotestapp</AssemblyName>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <!-- Only the runtime Rhino 9 uses: Eto, RhinoCommon and the platform assemblies all come from Rhino. -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform(windows))">
+    <TargetFrameworks>net10.0-windows</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="!$([MSBuild]::IsOSPlatform(windows))">
+    <TargetFrameworks>net10.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RhinoInside\RhinoInside.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Compile against RhinoCommon, Rhino.UI and Eto; at run time they are Rhino's own. -->
+    <PackageReference Include="RhinoCommon" Version="$(RhinoAPIVersion)" ExcludeAssets="runtime" />
+  </ItemGroup>
+</Project>
