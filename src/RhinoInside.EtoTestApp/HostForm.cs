@@ -20,7 +20,11 @@ sealed class HostForm : Form
     Title = HostApplication.MenuTitle;
     ClientSize = new Size(640, 420);
 
-    var mode = $"Rhino {RhinoApp.Version}, {(options.Headless ? "headless" : "full UI")}, "
+    // What Rhino did, not what was asked for: it falls back to headless when it cannot show its UI.
+    var ui = RhinoApp.IsRunningHeadless
+      ? (options.Headless ? "headless" : "headless (full UI was asked for)")
+      : "full UI";
+    var mode = $"Rhino {RhinoApp.Version}, {ui}, "
       + (options.HostApp ? "the host owns the app" : "Rhino owns the app")
       + (options.LateStart ? ", started after the host" : "");
 
