@@ -1,5 +1,8 @@
 # Change Log
 
+## [9.0.26314.20380]
+- Find Grasshopper and other bundled plug-ins on macOS
+
 ## [9.0.26013.16420]
 - Added .net 10 targets
 
