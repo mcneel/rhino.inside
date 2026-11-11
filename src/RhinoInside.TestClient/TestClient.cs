@@ -27,6 +27,9 @@ namespace RhinoInside.TestClient
           case "test_MeshFromBrep":
             Environment.Exit(TestCases.RunMeshFromBrep());
             break;
+          case "test_LoadGrasshopper":
+            Environment.Exit(TestCases.RunLoadGrasshopper());
+            break;
         }
       }
       catch (Exception ex)
@@ -52,5 +55,17 @@ namespace RhinoInside.TestClient
         return mesh[0].Vertices.Count > 0 ? 0 : 1;
       }
     }
+
+    public static int RunLoadGrasshopper()
+    {
+      // Resolve before Rhino starts so only Rhino.Inside's search paths can find it
+      var location = GetGrasshopperLocation();
+      Console.WriteLine($"Grasshopper loaded from {location}");
+      return location.StartsWith(Resolver.RhinoSystemDirectory) ? 0 : 1;
+    }
+
+    // Separate method so Grasshopper is only resolved when called
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    static string GetGrasshopperLocation() => typeof(Grasshopper.Instances).Assembly.Location;
   }
 }
