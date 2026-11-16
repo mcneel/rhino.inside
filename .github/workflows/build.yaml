@@ -71,18 +71,18 @@ jobs:
         uses: mcneel/setup-rhino3d@v2
         id: setup_rhino
         with:
-          release-version: wip
+          download-url: https://files.mcneel.com/dujour/exe/20261116/rhino_9.2.26320.11001.exe
           email-address: ${{ secrets.EMAIL_ADDRESS }}
 
       - name: Run Tests (net48)
         shell: pwsh
         working-directory: ./src
-        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9 WIP\System" net48
+        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9\System" net48
 
       - name: Run Tests (net10.0-windows)
         shell: pwsh
         working-directory: ./src
-        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9 WIP\System" net10.0-windows
+        run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9\System" net10.0-windows
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
