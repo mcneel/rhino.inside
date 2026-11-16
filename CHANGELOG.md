@@ -2,6 +2,7 @@
 
 ## [9.0.26314.20380]
 - Find Grasshopper and other bundled plug-ins on macOS
+- Find Grasshopper from the Rhino install on Windows when using .NET Framework
 
 ## [9.0.26013.16420]
 - Added .net 10 targets

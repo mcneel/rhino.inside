@@ -61,7 +61,9 @@ namespace RhinoInside.TestClient
       // Resolve before Rhino starts so only Rhino.Inside's search paths can find it
       var location = GetGrasshopperLocation();
       Console.WriteLine($"Grasshopper loaded from {location}");
-      return location.StartsWith(Resolver.RhinoSystemDirectory) ? 0 : 1;
+      // Windows keeps plug-ins beside the System folder, so compare against the install folder
+      var installDirectory = Path.GetDirectoryName(Resolver.RhinoSystemDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+      return location.StartsWith(installDirectory, StringComparison.OrdinalIgnoreCase) ? 0 : 1;
     }
 
     // Separate method so Grasshopper is only resolved when called
