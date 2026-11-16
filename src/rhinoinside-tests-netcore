@@ -6,11 +6,12 @@ if [ -z "$1" ]; then
   echo "Usage: $0 <rhino_system_path>"
   exit 1
 fi
-export RHINOINSIDE_RHINOPATH=$1
-export DYLD_LIBRARY_PATH=$RHINOINSIDE_RHINOPATH/Contents/Frameworks
-echo "DYLD_LIBRARY_PATH =     "$DYLD_LIBRARY_PATH
-echo "RHINOINSIDE_RHINOPATH = "$RHINOINSIDE_RHINOPATH
+export RHINOINSIDE_RHINOPATH="$1"
+export DYLD_LIBRARY_PATH="$RHINOINSIDE_RHINOPATH/Contents/Frameworks"
+echo "DYLD_LIBRARY_PATH =     $DYLD_LIBRARY_PATH"
+echo "RHINOINSIDE_RHINOPATH = $RHINOINSIDE_RHINOPATH"
 dotnet clean RhinoInside.sln
-dotnet test RhinoInside.sln /tl:off -v:normal --framework net9.0 -e RHINOINSIDE_RHINOPATH=$1
+# Rhino 8.36+ and Rhino 9 run on .NET 10
+dotnet test RhinoInside.sln /tl:off -v:normal --framework net10.0 -e RHINOINSIDE_RHINOPATH="$1"
 export -n DYLD_LIBRARY_PATH
 export -n RHINOINSIDE_RHINOPATH
