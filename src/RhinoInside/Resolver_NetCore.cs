@@ -281,11 +281,26 @@ namespace RhinoInside
       {
         yield return path;
 
-        // Grasshopper.dll is here
-        yield return Path.Combine(path, @"Grasshopper");
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+          // Each plug-in has its own folder on Mac, e.g. GrasshopperPlugin.rhp/Grasshopper.dll
+          if (Directory.Exists(path))
+          {
+            foreach (var pluginDirectory in Directory.EnumerateDirectories(path, "*.rhp"))
+              yield return pluginDirectory;
+          }
 
-        // RhinoCodePluginGH is here
-        yield return Path.Combine(path, @"Grasshopper\Components");
+          // RhinoCodePluginGH is here
+          yield return Path.Combine(path, "GrasshopperPlugin.rhp", "Components");
+        }
+        else
+        {
+          // Grasshopper.dll is here
+          yield return Path.Combine(path, "Grasshopper");
+
+          // RhinoCodePluginGH is here
+          yield return Path.Combine(path, "Grasshopper", "Components");
+        }
       }
 
       yield return Path.GetDirectoryName(typeof(Resolver).Assembly.Location);
@@ -295,7 +310,8 @@ namespace RhinoInside
     {
       if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
       {
-        const string MANAGED_PLUGINS = "RhCore.framework/Versions/A/Resources/ManagedPlugIns";
+        // Must match the path Rhino uses (not Versions/A), or Grasshopper finds its components twice and shows a conflict dialog
+        const string MANAGED_PLUGINS = "RhCore.framework/Resources/ManagedPlugIns";
         yield return Path.Combine(RhinoSystemDirectory, MANAGED_PLUGINS);
       }
       else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))

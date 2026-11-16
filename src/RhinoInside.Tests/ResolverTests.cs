@@ -28,6 +28,13 @@ namespace RhinoInside.Tests
       Assert.AreEqual(0, p.ExitCode);
     }
 
+    [Test]
+    public void TestLoadGrasshopper()
+    {
+      var p = RunRhinoInsideTest("test_LoadGrasshopper");
+      Assert.AreEqual(0, p.ExitCode);
+    }
+
     static Process RunRhinoInsideTest(string args)
     {
       var pinfo = new ProcessStartInfo

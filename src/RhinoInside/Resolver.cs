@@ -56,11 +56,28 @@ namespace RhinoInside
     static Assembly ResolveForRhinoAssemblies(object sender, ResolveEventArgs args)
     {
       var assemblyName = new AssemblyName(args.Name).Name;
-      string path = System.IO.Path.Combine(RhinoSystemDirectory, assemblyName + ".dll");
-      if (System.IO.File.Exists(path))
-        return Assembly.LoadFrom(path);
+      foreach (var directory in GetSearchPaths())
+      {
+        string path = System.IO.Path.Combine(directory, assemblyName + ".dll");
+        if (System.IO.File.Exists(path))
+          return Assembly.LoadFrom(path);
+      }
 
       return null;
+    }
+
+    static System.Collections.Generic.IEnumerable<string> GetSearchPaths()
+    {
+      yield return RhinoSystemDirectory;
+
+      // Grasshopper.dll is in Plug-ins\Grasshopper, and RhinoCodePluginGH in its Components folder
+      const string PLUGINS = "Plug-ins";
+      var systemDirectory = RhinoSystemDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+      foreach (var pluginsDirectory in new[] { System.IO.Path.Combine(systemDirectory, PLUGINS), System.IO.Path.Combine(System.IO.Path.GetDirectoryName(systemDirectory), PLUGINS) })
+      {
+        yield return System.IO.Path.Combine(pluginsDirectory, "Grasshopper");
+        yield return System.IO.Path.Combine(pluginsDirectory, "Grasshopper", "Components");
+      }
     }
 
     static string FindRhinoSystemDirectory()
