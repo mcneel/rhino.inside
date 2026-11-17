@@ -120,11 +120,19 @@ jobs:
     needs: [ build, tag ]
     runs-on: ubuntu-latest
     if: (github.event_name == 'workflow_dispatch')
+    permissions:
+      id-token: write # needed for NuGet trusted publishing
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: rhinoinside-nupkg
 
+      - name: NuGet login
+        uses: NuGet/login@v1
+        id: nuget_login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push packages to nuget.org
-        run: dotnet nuget push '*.nupkg' --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}}
+        run: dotnet nuget push '*.nupkg' --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{ steps.nuget_login.outputs.NUGET_API_KEY }}
