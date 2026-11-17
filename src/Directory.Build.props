@@ -23,7 +23,7 @@
 
   <PropertyGroup>
     <RhinoInsideVersion>9.0.26013.16420</RhinoInsideVersion>
-    <RhinoAPIVersion>9.0.25350.305-wip</RhinoAPIVersion>
+    <RhinoAPIVersion>9.0.26300.9401</RhinoAPIVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <CopyrightYear>2025</CopyrightYear>
     <RepositoryUrl>https://github.com/mcneel/Rhino.Inside.git</RepositoryUrl>
