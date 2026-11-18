@@ -47,26 +47,61 @@ namespace RhinoInside
       s_initialized = true;
     }
 
+    /// <summary>
+    /// The RhinoLibrary loaded by PrepareRhinoEnv.
+    /// </summary>
+    static string s_rhinoLibraryPath;
+
+    /// <summary>
+    /// RhinoLibrary locations relative to RhinoSystemDirectory, in the order they are tried.
+    /// Listing every layout lets one Rhino.Inside work with a full Rhino and with the
+    /// RhinoCore build, as the search paths below do.
+    /// </summary>
+    static IEnumerable<string> RhinoLibraryCandidates()
+    {
+      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+      {
+        yield return "RhinoLibrary.dll";
+      }
+      else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+      {
+        // Rhino.app
+        yield return "RhinoLibrary.framework/Versions/A/RhinoLibrary";
+        // RhinoCore
+        yield return "libRhinoLibrary.dylib";
+      }
+      else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+      {
+        yield return "libRhinoLibrary.so";
+      }
+      else
+        throw new RhinoInsideInitializationException($"Unsupported platform");
+    }
+
+    /// <summary>
+    /// The first RhinoLibrary candidate that exists, or the first candidate when none does,
+    /// so that loading it reports the file a full Rhino would have.
+    /// </summary>
+    static string FindRhinoLibrary()
+    {
+      string first = null;
+      foreach (var candidate in RhinoLibraryCandidates())
+      {
+        var path = Path.Combine(RhinoSystemDirectory, candidate);
+        if (File.Exists(path))
+          return path;
+        first ??= path;
+      }
+      return first;
+    }
+
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void SetLoaderProc(Action p);
     static void PrepareRhinoEnv()
     {
       SetupXamarin();
 
-      nint rhinoLibraryHandle = 0;
-      if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-      {
-        rhinoLibraryHandle = NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "RhinoLibrary.dll"));
-      }
-      else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-      {
-        rhinoLibraryHandle = NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "RhinoLibrary.framework/Versions/A/RhinoLibrary"));
-      }
-      else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-      {
-        rhinoLibraryHandle = NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "libRhinoLibrary.so"));
-      }
-      else
-        throw new RhinoInsideInitializationException($"Unsupported platform");
+      s_rhinoLibraryPath = FindRhinoLibrary();
+      nint rhinoLibraryHandle = NativeLibrary.Load(s_rhinoLibraryPath);
 
       try
       {
@@ -190,7 +225,7 @@ namespace RhinoInside
       if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
       {
         if (!string.IsNullOrEmpty(name) && name == "RhinoLibrary")
-          return NativeLibrary.Load(Path.Combine(RhinoSystemDirectory, "RhinoLibrary.framework/Versions/A/RhinoLibrary"));
+          return NativeLibrary.Load(s_rhinoLibraryPath);
       }
 
       return IntPtr.Zero;
@@ -265,7 +300,10 @@ namespace RhinoInside
     {
       if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
       {
+        // Rhino.app
         yield return Path.Combine(RhinoSystemDirectory, "RhCore.framework/Resources");
+        // RhinoCore
+        yield return Path.Combine(RhinoSystemDirectory);
       }
       else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
       {
@@ -281,26 +319,20 @@ namespace RhinoInside
       {
         yield return path;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        // Each plug-in has its own folder in Rhino.app, e.g. GrasshopperPlugin.rhp/Grasshopper.dll.
+        // Elsewhere a .rhp is a file, so nothing matches.
+        if (Directory.Exists(path))
         {
-          // Each plug-in has its own folder on Mac, e.g. GrasshopperPlugin.rhp/Grasshopper.dll
-          if (Directory.Exists(path))
-          {
-            foreach (var pluginDirectory in Directory.EnumerateDirectories(path, "*.rhp"))
-              yield return pluginDirectory;
-          }
-
-          // RhinoCodePluginGH is here
-          yield return Path.Combine(path, "GrasshopperPlugin.rhp", "Components");
+          foreach (var pluginDirectory in Directory.EnumerateDirectories(path, "*.rhp"))
+            yield return pluginDirectory;
         }
-        else
-        {
-          // Grasshopper.dll is here
-          yield return Path.Combine(path, "Grasshopper");
 
-          // RhinoCodePluginGH is here
-          yield return Path.Combine(path, "Grasshopper", "Components");
-        }
+        // Grasshopper.dll is here everywhere else: Windows, Linux and the Mac RhinoCore build
+        yield return Path.Combine(path, "Grasshopper");
+
+        // RhinoCodePluginGH is here
+        yield return Path.Combine(path, "GrasshopperPlugin.rhp", "Components");
+        yield return Path.Combine(path, "Grasshopper", "Components");
       }
 
       yield return Path.GetDirectoryName(typeof(Resolver).Assembly.Location);
@@ -312,7 +344,10 @@ namespace RhinoInside
       {
         // Must match the path Rhino uses (not Versions/A), or Grasshopper finds its components twice and shows a conflict dialog
         const string MANAGED_PLUGINS = "RhCore.framework/Resources/ManagedPlugIns";
+        // Rhino.app
         yield return Path.Combine(RhinoSystemDirectory, MANAGED_PLUGINS);
+        // RhinoCore
+        yield return Path.Combine(RhinoSystemDirectory, "Plug-ins");
       }
       else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
       {
