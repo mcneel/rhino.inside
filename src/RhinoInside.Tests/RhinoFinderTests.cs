@@ -79,6 +79,15 @@ namespace RhinoInside.Tests
         Assert.Ignore();
       }
     }
+
+    [Test, TestCase("/Applications/Rhino 9.app"), TestCase("/Applications/Rhino 9.app/"), TestCase("/Applications/Rhino 9.app//")]
+    public void TestPrepareSystemPath_macOS(string rhinoPath)
+    {
+      if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        Assert.Ignore();
+
+      Assert.AreEqual("/Applications/Rhino 9.app/Contents/Frameworks", RhinoFinder.PrepareSystemPath(rhinoPath));
+    }
 #endif
   }
 }

@@ -3,6 +3,7 @@
 ## [Unreleased]
 - Updated rhino and grasshopper dependencies to 9.0.26300.9401 (Rhino 9 release)
 - Support the RhinoCore build on macOS: load libRhinoLibrary.dylib and find assemblies and plug-ins in the folder it is in
+- Allow a trailing slash on the Rhino path passed to `Resolver.Initialize`
 
 ## [9.0.26314.20380]
 - Find Grasshopper and other bundled plug-ins on macOS
