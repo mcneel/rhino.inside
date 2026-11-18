@@ -84,6 +84,11 @@ namespace RhinoInside
       if (string.IsNullOrWhiteSpace(rhinoPath))
         return FindRhinoSystemDirectory();
 
+      // Shell tab completion adds a trailing slash, e.g. "/Applications/Rhino 9.app/"
+      var trimmed = rhinoPath.TrimEnd('/', '\\');
+      if (trimmed.Length > 0 && !trimmed.EndsWith(":"))
+        rhinoPath = trimmed;
+
       if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
             && rhinoPath.EndsWith(".app", StringComparison.InvariantCultureIgnoreCase))
       {
