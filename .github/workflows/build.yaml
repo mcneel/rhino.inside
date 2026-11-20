@@ -14,10 +14,10 @@ jobs:
       version: ${{ steps.version_step.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '9.0.x'
 
@@ -26,7 +26,7 @@ jobs:
         run: ./src/version/version.sh
 
       - name: Upload versioned files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: version-files
           path: |
@@ -51,15 +51,15 @@ jobs:
           token: ${{ steps.my-app.outputs.token }}
 
       - name: Install dotnet 10.0
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
   
       - name: Download versioned files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: version-files
           path: src/
@@ -68,10 +68,9 @@ jobs:
         run: dotnet build -c Release src/RhinoInside.sln
 
       - name: Install Rhino
-        uses: mcneel/setup-rhino3d@v2
-        id: setup_rhino
+        uses: mcneel/setup-rhino3d@v4
         with:
-          download-url: https://files.mcneel.com/dujour/exe/20261116/rhino_9.2.26320.11001.exe
+          major-version: 9
           email-address: ${{ secrets.EMAIL_ADDRESS }}
 
       - name: Run Tests (net48)
@@ -85,20 +84,51 @@ jobs:
         run: ./rhinoinside-tests.ps1 "C:\Program Files\Rhino 9\System" net10.0-windows
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rhinoinside-nupkg
           path: src/build/*.nupkg
 
+  build-mac:
+    runs-on: [self-hosted, macos]
+    needs: [ version ]
+    steps:
+      - name: Install dotnet 10.0
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Download versioned files
+        uses: actions/download-artifact@v8
+        with:
+          name: version-files
+          path: src/
+
+      - name: Build
+        run: dotnet build -c Release src/RhinoInside.sln
+
+      - name: Install Rhino
+        uses: mcneel/setup-rhino3d@v4
+        with:
+          major-version: 9
+          email-address: ${{ secrets.EMAIL_ADDRESS }}
+
+      - name: Run Tests (net10.0)
+        working-directory: ./src
+        run: ./rhinoinside-tests-netcore "/Applications/Rhino 9.app"
+
   tag:
-    needs: [ version, build ]
+    needs: [ version, build, build-mac ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/rhino-9.x'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Tag
@@ -124,7 +154,7 @@ jobs:
       id-token: write # needed for NuGet trusted publishing
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: rhinoinside-nupkg
 
